@@ -1,8 +1,8 @@
 {
-	"name": "FHC-Core-Extension",
-	"description": "My pretty Extension",
+	"name": "FHC-Core-Anwesenheiten",
+	"description": "Anwesenheiten Extension",
 	"version": "1",
 	"license": "GPL",
-	"url": "https://github.com/FH-Complete/FHC-Core-Extension",
+	"url": "https://github.com/FH-Complete/FHC-Core-Anwesenheiten",
 	"core_version": "3.4"
 }

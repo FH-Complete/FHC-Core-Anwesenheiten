@@ -2,7 +2,7 @@
 	$this->load->view(
 		'templates/FHC-Header',
 		array(
-			'title' => 'My Extension',
+			'title' => 'Anwesenheiten Extension',
 			'jquery' => true,
 			'jqueryui' => true,
 			'bootstrap' => true,
@@ -23,11 +23,11 @@
 			<div class="container-fluid">
 				<div class="row">
 					<div class="col-lg-12">
-						<h3 class="page-header">My Extension</h3>
+						<h3 class="page-header">Anwesenheiten Extension</h3>
 					</div>
 				</div>
 				<div>
-					This is the My Extension Template
+					This is the Anwesenheiten Extension
 				</div>
 			</div>
 		</div>
