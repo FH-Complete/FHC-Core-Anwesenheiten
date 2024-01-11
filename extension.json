@@ -1,0 +1,8 @@
+{
+	"name": "FHC-Core-Extension",
+	"description": "My pretty Extension",
+	"version": "1",
+	"license": "GPL",
+	"url": "https://github.com/FH-Complete/FHC-Core-Extension",
+	"core_version": "3.4"
+}
