@@ -1,14 +1,14 @@
 <?php
 // Add Header-Menu-Entry to all Pages
 $config['navigation_header']['*']['MyExtension'] = array(
-		'link' => site_url('extensions/FHC-Core-Extension/MyExtension'),
+		'link' => site_url('extensions/FHC-Core-Anwesenheiten/MyExtension'),
 		'icon' => '',
 		'description' => 'MyExtension',
 		'sort' => 1
 	);
 
 // Add Header-Menu-Entry to Extension Page with DropDown
-$config['navigation_header']['extensions/FHC-Core-Extension/MyExtension/index'] = array(
+$config['navigation_header']['extensions/FHC-Core-Anwesenheiten/MyExtension/index'] = array(
 		'FHC-Core-Extension-Advanced-Menu' => array(
 		'link' => '#',
 		'icon' => '',
@@ -36,14 +36,14 @@ $config['navigation_header']['extensions/FHC-Core-Extension/MyExtension/index'] 
 
 // Add Side-Menu-Entry to Main Page
 $config['navigation_menu']['Vilesci/index']['administration']['children']['MyExtension'] = array(
-		'link' => site_url('extensions/FHC-Core-Extension/MyExtension'),
+		'link' => site_url('extensions/FHC-Core-Anwesenheiten/MyExtension'),
 		'icon' => 'cubes',
 		'description' => 'My Extension',
 		'expand' => true
 );
 
 // Add Side-Menu-Entry to Extension Page
-$config['navigation_menu']['extensions/FHC-Core-Extension/MyExtension/index'] = array(
+$config['navigation_menu']['extensions/FHC-Core-Anwesenheiten/MyExtension/index'] = array(
 	'Back' => array(
 		'link' => site_url(),
 		'description' => 'Zurück',

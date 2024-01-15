@@ -9,7 +9,10 @@ class MyExtension extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-			'index'=>'admin:rw'
+                'index'     => 'lehre/anwesenheiteneinsehen:rw',
+                'save'      => 'lehre/anwesenheiteneinsehen:rw',
+                'edit'      => 'lehre/anwesenheiteneinsehen:rw',
+                'delete'    => 'lehre/anwesenheiteneinsehen:rw'
 			)
 		);
 	}
@@ -20,8 +23,13 @@ class MyExtension extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->load->library('WidgetLib');
-		$this->load->view('extensions/FHC-Core-Extension/MyExtension');
+
+        // TODO: get ViewData defined
+//        $viewData = array (
+//
+//        )
+
+		$this->load->view('extensions/FHC-Core-Anwesenheiten/home', $viewData);
 	}
 }
 

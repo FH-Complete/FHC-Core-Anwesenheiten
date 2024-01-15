@@ -27,7 +27,7 @@
 					</div>
 				</div>
 				<div>
-					This is the Anwesenheiten Extension
+					This is the Anwesenheiten Extensionnnnnnnnnnn
 				</div>
 			</div>
 		</div>
