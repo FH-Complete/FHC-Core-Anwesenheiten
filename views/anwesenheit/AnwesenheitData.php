@@ -1,45 +1,40 @@
 <?php
 
-// TODO: actually build Anwesenheit Query
-
 $query = '
-	SELECT "anwesenheit_id", "prestudent_id", "lehreinheit_id", "status"
+	SELECT anwesenheit_id, prestudent_id, lehreinheit_id, status
     FROM extension.tbl_anwesenheit
 ';
 
 $filterWidgetArray = array(
-    'query' => $query,
-    'tableUniqueId' => 'adminAnwesenheit',
-    'requiredPermissions' => 'extension/anwesenheit_admin',
-    'datasetRepresentation' => 'tabulator',
-    'columnsAliases' => array(
-        'anwesenheit_id',
-        'prestudent_id' ,
-        'lehreinheit_id',
-        'status',
-        'insertamum'
-    ),
-    'datasetRepOptions' => '{
+	'query' => $query,
+	'app' => 'core',
+	'tableUniqueId' => 'adminAnwesenheitOverview',
+	'filter_id' => $this->input->get('filter_id'),
+	'requiredPermissions' => 'admin:r',
+	'datasetRepresentation' => 'tabulator',
+	'additionalColumns' => array(
+	),
+	'datasetRepOptions' => '{
+		index: "anwesenheit_id",
 		height: func_height(this),
-		layout: "fitDataFill",
-		persistentLayout:true,
-		autoResize: false,
-	    headerFilterPlaceholder: " ",
-        index: "anwesenheit_id",
-        selectable: false,                  // allow row selection
-		tableWidgetHeader: true,
-		tableBuilt: function(){
-            func_tableBuilt(this);
-        },
-	 }',
-
-    'datasetRepFieldsDefs' => '{
-		anwesenheit_id: {visible: false, headerFilter:"input"},
-		prestudent_id: {headerFilter:"input"},
-		lehreinheit_id: {headerFilter:"input"},
-		status: {headerFilter:"input"},
-	    insertamum: {headerFilter:"input"}
-	 }'
+		layout: "fitColumns",
+		headerFilterPlaceholder: " ",
+		tableWidgetHeader: false,
+		columnVertAlign:"center",
+		columnAlign:"center",
+		fitColumns:true,
+		selectable: true,
+		selectableRangeMode: "click",
+		selectablePersistence: false,
+		selectableCheck: function(row){
+			return func_selectableCheck(row);
+		}
+	}',
+	'datasetRepFieldsDefs' => '{
+		anwesenheit_id: {visible: true},
+		prestudent_id: {visible: true},
+		lehreinheit_id: {width: "150"},
+		status: {visible: false, width: "250"}
+	}'
 );
-
 echo $this->widgetlib->widget('TableWidget', $filterWidgetArray);

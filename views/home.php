@@ -1,48 +1,45 @@
 <?php
-    $includesArray = array(
-        'title' => 'FH-Complete Anwesenheiten Extension Test Test Test',
-        'jquery3' => true,
-        'jqueryui1' => true,
-        'bootstrap3' => true,
-        'fontawesome6' => true,
-        'ajaxlib' => true,
-        'dialoglib' => true,
-        'tabulator4' => true,
-        'tablewidget' => true,
-        'sbadmintemplate3' => true,
-        'navigationwidget' => true
-    );
+$this->load->view(
 
-    $this->load->view('templates/FHC-Header', $includesArray);
+	'templates/FHC-Header',
+	array(
+		'title' => 'Anwesenheiten',
+		'jquery3' => true,
+		'jqueryui1' => true,
+		'bootstrap3' => true,
+		'fontawesome4' => true,
+		'tablewidget' => true,
+		'tabulator4' => true,
+		'ajaxlib' => true,
+		'dialoglib' => true,
+		'phrases' => array(
+			'ui'
+		),
+		'customJSs' => array(
+			'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
+		)
+	)
+);
 ?>
-
 <body>
-	<div id="wrapper">
-
-		<?php echo $this->widgetlib->widget('NavigationWidget'); ?>
-
-		<div id="page-wrapper">
-			<div class="container-fluid">
-				<div class="row">
-					<div class="col-lg-12">
-						<h3 class="page-header">Anwesenheiten Extension</h3>
-					</div>
+<div id="wrapper">
+	<div id="page-wrapper">
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-lg-12">
+					<h3 class="page-header">
+						Anwesenheit
+					</h3>
 				</div>
-				<div>
-					This is the Anwesenheiten Extensionnnnnnnnnnn
-				</div>
+			</div>
 
-                <!-- Tabelle -->
-                <div class="row">
-                    <div class="col-lg-12">
-                        <?php $this->load->view('extensions/FHC-Core-Anwesenheiten/anwesenheit/AnwesenheitData.php'); ?>
-                    </div>
-                </div>
-
+			<div>
+				<?php $this->load->view('extensions/FHC-Core-Anwesenheiten/anwesenheit/AnwesenheitData.php');?>
 			</div>
 		</div>
 	</div>
+</div>
 </body>
 
-<?php $this->load->view('templates/FHC-Footer', $includesArray); ?>
+<?php $this->load->view('templates/FHC-Footer'); ?>
 

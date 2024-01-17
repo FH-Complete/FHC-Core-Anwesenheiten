@@ -3,35 +3,38 @@ if (! defined('BASEPATH')) exit('No direct script access allowed');
 
 class MyExtension extends Auth_Controller
 {
+	
+	private $_ci;
+	private $_uid;
+	
 	/**
 	 * Constructor
 	 */
 	public function __construct()
 	{
 		parent::__construct(array(
-                'index'     => 'extension/anwesenheit_admin:rw',
-                'save'      => 'extension/anwesenheit_admin:rw',
-                'edit'      => 'extension/anwesenheit_admin:rw',
-                'delete'    => 'extension/anwesenheit_admin:rw'
+                'index'     => 'admin:rw',
+                'save'      => 'admin:rw',
+                'edit'      => 'admin:rw',
+                'delete'    => 'admin:rw'
 			)
 		);
-
-        // Load models
-        $this->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-        $this->load->model('person/Benutzer_model', 'BenutzerModel');
-        $this->load->model('person/Person_model', 'PersonModel');
-        $this->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
-        $this->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
-
+		
+		$this->_ci =& get_instance();
 
         // load libraries
-        $this->load->library('PermissionLib');
-        $this->load->library('AuthLib');
-        $this->load->library('WidgetLib');
-
-        // Load helpers
-        $this->load->helper('array');
-        $this->_setAuthUID(); // sets property uid
+        $this->_ci->load->library('PermissionLib');
+        $this->_ci->load->library('WidgetLib');
+		$this->_ci->load->library('PhrasesLib');
+		
+		$this->loadPhrases(
+			array(
+				'ui'
+			)
+		);
+		// Load helpers
+		$this->setControllerId(); // sets the controller id
+		$this->_setAuthUID(); // sets property uid
 	}
 
 	/**
@@ -42,12 +45,11 @@ class MyExtension extends Auth_Controller
 	{
 
         // Set nearest Studiensemester as default
-//        $this->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+//        $this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 //        $result = $this->StudiensemesterModel->getNearest();
 //        $studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
-
-
-		$this->load->view('extensions/FHC-Core-Anwesenheiten/home');
+		
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/home');
 
 	}
 
