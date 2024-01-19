@@ -1,45 +1,35 @@
 <?php
-$this->load->view(
 
-	'templates/FHC-Header',
-	array(
-		'title' => 'Anwesenheiten',
-		'jquery3' => true,
-		'jqueryui1' => true,
-		'bootstrap3' => true,
-		'fontawesome4' => true,
-		'tablewidget' => true,
-		'tabulator4' => true,
-		'ajaxlib' => true,
-		'dialoglib' => true,
-		'phrases' => array(
-			'ui'
-		),
-		'customJSs' => array(
-			'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
-		)
+$includesArray = array(
+	'title' => 'Anwesenheiten',
+	'jquery3' => true,
+	'jqueryui1' => true,
+	'bootstrap5' => true,
+	'fontawesome4' => true,
+	'tablewidget' => true,
+	'tabulator4' => true,
+	'ajaxlib' => true,
+	'axios027' => true,
+	'dialoglib' => true,
+	'vue3' => true,
+	'phrases' => array(
+		'ui'
+	),
+	'customJSs' => array(
+		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
+	),
+	'customJSModules' => (
+		'public/extensions/FHC-Core-Anwesenheiten/js/vue/Overview.js'
 	)
 );
+
+
+$this->load->view('templates/FHC-Header', $includesArray);
 ?>
-<body>
-<div id="wrapper">
-	<div id="page-wrapper">
-		<div class="container-fluid">
-			<div class="row">
-				<div class="col-lg-12">
-					<h3 class="page-header">
-						Anwesenheit
-					</h3>
-				</div>
-			</div>
+<div id="content">
 
-			<div>
-				<?php $this->load->view('extensions/FHC-Core-Anwesenheiten/anwesenheit/AnwesenheitData.php');?>
-			</div>
-		</div>
-	</div>
 </div>
-</body>
 
-<?php $this->load->view('templates/FHC-Footer'); ?>
+
+<?php $this->load->view('templates/FHC-Footer', $includesArray); ?>
 
