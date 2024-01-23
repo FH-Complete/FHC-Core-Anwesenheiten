@@ -1,17 +1,19 @@
 import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
+import OverviewComponent from "./components/OverviewComponent.js";
 
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
-const app = Vue.createApp({
+const overviewApp = Vue.createApp({
 	
 	components: {
-
+		OverviewComponent
 	},
 	data() {
 		return {
+
 		}
 	},
-	props() {
+	props: {
 
 	},
 	methods: {
@@ -24,26 +26,25 @@ const app = Vue.createApp({
 		// 		this.notFoundUID=uid;
 		// 	}else{
 		// 		this.view = res.data?.view;
-		//
 		// 		this.data = res.data?.data;
-		//
-		//
 		// 	}
-		//
-		//
 		// });
+
+	},
+	mounted() {
+		console.log('mounted app');
+		console.log(students);
+		console.log(dates);
+
+	},
+	updated(){
+
 	},
 	template:`
 	<div>
-
-		<div>
-		
-			<p>Vue </p>
-
-		</div>
-	
+		<overview-component v-bind:students v-bind:dates v-bind:parameters></overview-component>
 	</div>`
 	
 	
 });
-app.mount("#content");
+overviewApp.mount("#overviewApp");

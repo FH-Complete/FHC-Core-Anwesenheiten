@@ -50,69 +50,80 @@ class Overview extends Auth_Controller
 	 */
 	public function index()
 	{
-//		$this->LehrveranstaltungModel->addSelect(["lehrveranstaltung_id as ID"]);
-//		$res = $this->LehrveranstaltungModel->addSelect('WS2023', 1149, true);
-
+		$von = '2023-09-01';
+		$bis = '2024-02-01';
+		$sem = 3;
+		$verband = 'A';
+		$gruppe = '';
+		$orgeinheit = 'VZ';
 		$lva_id = 38733; // Microcontroller Software Design Sem 3 Studiengang BEL
+		$le_id = 138879;
+		$studiengang_kz = 254;
 		$studiensemester_kurzbz = 'WS2023';
-		// get LE ceiling
-		$this->LehreinheitModel->addSelect(["Count(lehreinheit_id) AS Anzahl"]);
-		$this->LehreinheitModel->addJoin("lehre.tbl_lehrveranstaltung");
-		$res = $this->LehreinheitModel->loadWhere("lehrveranstaltung_id = {$lva_id}");
 
-		if(!hasData($res)) {
-			echo json_encode($res);
+
+		// TODO: how to get Distinct on date column only?
+		// get LE dates and ceiling
+		$this->LehreinheitModel->addSelect(["lehre.tbl_stundenplan.stunde",
+			"lehre.tbl_stundenplan.datum",
+			"tbl_lehreinheit.lehreinheit_id",
+			"lehre.tbl_lehrveranstaltung.lehrveranstaltung_id",
+			"orgform_kurzbz", "stundenplan_id", "verband", "gruppe", "ort_kurzbz"]);
+		$this->LehreinheitModel->addDistinct();
+		$this->LehreinheitModel->addJoin("lehre.tbl_lehrveranstaltung", "lehrveranstaltung_id");
+		$this->LehreinheitModel->addJoin("lehre.tbl_stundenplan",
+			"(tbl_lehreinheit.lehreinheit_id = tbl_stundenplan.lehreinheit_id 
+			AND tbl_lehrveranstaltung.studiengang_kz = tbl_stundenplan.studiengang_kz 
+			AND tbl_stundenplan.semester = tbl_lehrveranstaltung.semester)");
+		$this->LehreinheitModel->addOrder("lehre.tbl_stundenplan.datum", "ASC");
+		$dates = $this->LehreinheitModel->loadWhere("lehrveranstaltung_id = {$lva_id} 
+		AND lehre.tbl_lehreinheit.lehreinheit_id = {$le_id} 
+		AND tbl_lehreinheit.studiensemester_kurzbz = '{$studiensemester_kurzbz}'
+		AND datum BETWEEN '{$von}' AND '{$bis}'");
+
+		if(!hasData($dates)) {
+//			echo json_encode($dates);
 			return;
 		}
-		$data = getData($res);
-		echo json_encode($data);
 
-		// get all Students of LVA
-//		$res = $this->LehrveranstaltungModel->execReadOnlyQuery(`
-//		SELECT uid, vorname, nachname, prestudent_id
-//		FROM campus.vw_student_lehrveranstaltung
-//		JOIN campus.vw_student USING(uid)
-//		WHERE vw_student_lehrveranstaltung.lehrveranstaltung_id = {$lva_id}
-//		`);
-
+		$datesData = getData($dates);
+//		echo json_encode($datesData);
 
 		$this->LehrveranstaltungModel->resetQuery();
+		// get all Students of LVA
 
-		$this->LehrveranstaltungModel->addSelect(["prestudent_id", "vorname", "nachname"]);
-		$this->LehrveranstaltungModel->addDistinct();
-//		$this->LehrveranstaltungModel->addSelect("Count(*)");
+		$this->StudentModel->addSelect(["prestudent_id", "vorname", "nachname", "semester", "verband", "gruppe"]);
+		$this->StudentModel->addJoin("public.tbl_benutzer", "student_uid = uid");
+		$this->StudentModel->addJoin("public.tbl_person", "person_id");
+		$this->StudentModel->addOrder("vorname, nachname", "DESC");
+		$students = $this->StudentModel->loadWhere("tbl_benutzer.aktiv = true 
+		AND studiengang_kz = {$studiengang_kz} 
+		AND semester = {$sem}
+		AND verband = '{$verband}'
+		");
 
-		$this->LehrveranstaltungModel->addJoin("public.tbl_studiengang", "studiengang_kz");
-		$this->LehrveranstaltungModel->addJoin("public.tbl_prestudent", "studiengang_kz");
-		$this->LehrveranstaltungModel->addJoin("public.tbl_person", "person_id");
-		$this->LehrveranstaltungModel->addJoin("lehre.tbl_lehreinheit", "lehrveranstaltung_id");
-		// count: 50140
-		$res = $this->LehrveranstaltungModel->loadWhere("lehrveranstaltung_id = {$lva_id}");
-
-		// count: 10028 -> Distinct 5014
-//		$res = $this->LehrveranstaltungModel->loadWhere("lehrveranstaltung_id = {$lva_id} AND lehre.tbl_lehreinheit.studiensemester_kurzbz = '{$studiensemester_kurzbz}'");
-
-
-		if(!hasData($res)) {
-			echo json_encode($res);
+		if(!hasData($students)) {
+//			echo json_encode($students);
 			return;
 		}
-		$data = getData($res);
-		echo json_encode($data);
+		$studentsData = getData($students);
+//		echo json_encode($studentsData);
 
-
-
-//		$res = $this->LehreinheitModel->load('13887');
-//		if(!hasData($res)) return;
-//		$data = getData($res);
-//		echo json_encode($data);
-//
-//		$res = $this->LehreinheitModel->getStudenten('13887');
-//		if(!hasData($res)) return;
-//		$data = getData($res);
-//		echo json_encode($data);
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/home');
-
+		$viewData = array(
+			'students' => $studentsData,
+			'dates' => $datesData,
+			'parameters' => array (
+				'semester' => $sem,
+				'verband' => $verband,
+				'gruppe' => $gruppe,
+				'orgeinheit' => $orgeinheit,
+				'lehrveranstaltung_id' => $lva_id,
+				'lehreinheit_id' => $le_id,
+				'studiengang_kz' => $studiengang_kz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			)
+		);
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/home', $viewData);
 	}
 
 	/**
@@ -125,5 +136,8 @@ class Overview extends Auth_Controller
 		if (!$this->_uid) show_error('User authentification failed');
 	}
 
+	private function _compareDates($entry1, $entry2) {
+		return strcmp($entry1['datum'], $entry2['datum']);
+	}
 }
 

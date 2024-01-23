@@ -1,7 +1,6 @@
 export default {
 
-
-	//! API Calls for Profil Views
+	//! API Calls for Anwesenheit Views
 
 	selectProfilRequest: function(uid=null,id=null) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
