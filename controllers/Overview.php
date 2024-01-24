@@ -51,7 +51,10 @@ class Overview extends Auth_Controller
 	public function index()
 	{
 		$von = '2023-09-01';
-		$bis = '2024-02-01';
+		$bis = '2023-10-30';
+
+//		$von = '2023-09-01';
+//		$bis = '2024-02-01';
 		$sem = 3;
 		$verband = 'A';
 		$gruppe = '';
@@ -79,8 +82,9 @@ class Overview extends Auth_Controller
 		$dates = $this->LehreinheitModel->loadWhere("lehrveranstaltung_id = {$lva_id} 
 		AND lehre.tbl_lehreinheit.lehreinheit_id = {$le_id} 
 		AND tbl_lehreinheit.studiensemester_kurzbz = '{$studiensemester_kurzbz}'
-		AND datum BETWEEN '{$von}' AND '{$bis}'");
 
+		");
+//		AND datum BETWEEN '{$von}' AND '{$bis}' // actually always fetch every entry to receive max count
 		if(!hasData($dates)) {
 //			echo json_encode($dates);
 			return;
@@ -92,9 +96,12 @@ class Overview extends Auth_Controller
 		$this->LehrveranstaltungModel->resetQuery();
 		// get all Students of LVA
 
-		$this->StudentModel->addSelect(["prestudent_id", "vorname", "nachname", "semester", "verband", "gruppe"]);
+		$this->StudentModel->addSelect(["prestudent_id", "vorname", "nachname", "semester", "verband", "gruppe",
+			"DATE(datum)", "extension.tbl_anwesenheit_status.bezeichnung as status"]);
 		$this->StudentModel->addJoin("public.tbl_benutzer", "student_uid = uid");
 		$this->StudentModel->addJoin("public.tbl_person", "person_id");
+		$this->StudentModel->addJoin("extension.tbl_anwesenheit", "prestudent_id");
+		$this->StudentModel->addJoin("extension.tbl_anwesenheit_status", "status = status_kurzbz");
 		$this->StudentModel->addOrder("vorname, nachname", "DESC");
 		$students = $this->StudentModel->loadWhere("tbl_benutzer.aktiv = true 
 		AND studiengang_kz = {$studiengang_kz} 
@@ -103,11 +110,11 @@ class Overview extends Auth_Controller
 		");
 
 		if(!hasData($students)) {
-//			echo json_encode($students);
+			echo json_encode($students);
 			return;
 		}
 		$studentsData = getData($students);
-//		echo json_encode($studentsData);
+
 
 		$viewData = array(
 			'students' => $studentsData,
@@ -136,8 +143,5 @@ class Overview extends Auth_Controller
 		if (!$this->_uid) show_error('User authentification failed');
 	}
 
-	private function _compareDates($entry1, $entry2) {
-		return strcmp($entry1['datum'], $entry2['datum']);
-	}
 }
 

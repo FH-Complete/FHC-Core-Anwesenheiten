@@ -32,9 +32,6 @@ const overviewApp = Vue.createApp({
 
 	},
 	mounted() {
-		console.log('mounted app');
-		console.log(students);
-		console.log(dates);
 
 	},
 	updated(){
@@ -42,7 +39,7 @@ const overviewApp = Vue.createApp({
 	},
 	template:`
 	<div>
-		<overview-component v-bind:students v-bind:dates v-bind:parameters></overview-component>
+		<overview-component></overview-component>
 	</div>`
 	
 	
