@@ -1,21 +1,16 @@
-import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
-import {AnwesenheitenTabulatorOptions} from './TabulatorSetup.js';
-import {AnwesenheitenTabulatorEventHandlers} from './TabulatorSetup.js';
 
 
 export default {
 
 	components: {
-		CoreFilterCmpt
+
 	},
 	data() {
 		return {
 			// internalData: this.prepareData(students, dates, parameters),
 			leCount: 0,
 
-			appSideMenuEntries: {},
-			anwesenheitenTabulatorOptions: AnwesenheitenTabulatorOptions,
-			anwesenheitenTabulatorEventHandlers: AnwesenheitenTabulatorEventHandlers
+
 		}
 	},
 	props: {
@@ -80,9 +75,6 @@ export default {
 
 			return ret
 		},
-		newSideMenuEntryHandler: function(payload) {
-			this.appSideMenuEntries = payload;
-		}
 
 	},
 	created(){
@@ -106,14 +98,6 @@ export default {
 <!--		lehreinheit_id: {{internalData.internalParameters.lehreinheit_id}} -->
 <!--		studiengang_kz: {{internalData.internalParameters.studiengang_kz}}-->
 <!--		studiensemester_kurzbz: {{internalData.internalParameters.studiensemester_kurzbz}}</p>-->
-		
-		<core-filter-cmpt
-			title="Anwesenheiten Viewer"
-			filter-type="AnwesenheitenViewer"
-			:tabulator-options="anwesenheitenTabulatorOptions"
-			:tabulator-events="anwesenheitenTabulatorEventHandlers"
-			@nw-new-entry="newSideMenuEntryHandler">
-		</core-filter-cmpt>
 		
 		
 <!--		<table>	-->

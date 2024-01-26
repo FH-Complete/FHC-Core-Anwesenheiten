@@ -133,7 +133,7 @@ class Overview extends Auth_Controller
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			)
 		);
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/home', $viewData);
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Overview', $viewData);
 	}
 
 	/**
