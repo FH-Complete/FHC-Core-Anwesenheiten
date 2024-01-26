@@ -36,7 +36,9 @@ class Overview extends Auth_Controller
 
 		$this->loadPhrases(
 			array(
-				'ui'
+				'global',
+				'ui',
+				'filter'
 			)
 		);
 		// Load helpers
@@ -50,11 +52,11 @@ class Overview extends Auth_Controller
 	 */
 	public function index()
 	{
-		$von = '2023-09-01';
-		$bis = '2023-10-30';
-
 //		$von = '2023-09-01';
-//		$bis = '2024-02-01';
+//		$bis = '2023-10-30';
+
+		$von = '2023-09-01';
+		$bis = '2024-02-01';
 		$sem = 3;
 		$verband = 'A';
 		$gruppe = '';
@@ -82,7 +84,7 @@ class Overview extends Auth_Controller
 		$dates = $this->LehreinheitModel->loadWhere("lehrveranstaltung_id = {$lva_id} 
 		AND lehre.tbl_lehreinheit.lehreinheit_id = {$le_id} 
 		AND tbl_lehreinheit.studiensemester_kurzbz = '{$studiensemester_kurzbz}'
-
+		AND datum BETWEEN '{$von}' AND '{$bis}'
 		");
 //		AND datum BETWEEN '{$von}' AND '{$bis}' // actually always fetch every entry to receive max count
 		if(!hasData($dates)) {
@@ -107,6 +109,7 @@ class Overview extends Auth_Controller
 		AND studiengang_kz = {$studiengang_kz} 
 		AND semester = {$sem}
 		AND verband = '{$verband}'
+		AND datum BETWEEN '{$von}' AND '{$bis}'
 		");
 
 		if(!hasData($students)) {

@@ -1,0 +1,21 @@
+/* Subtitle. Use it in span within main title. */
+.fhc-subtitle {
+	--bs-text-opacity: 1;
+	color: #6c757d!important;
+	font-size: .65em;
+	font-weight: normal;
+	padding-left: 20px;
+}
+
+/* Right align to core side navigation entries. */
+.align-to-coreNav {
+	position: inherit;
+	margin: 0 0 0 250px;
+	padding: 30px 30px;
+}
+
+/* Same style for all action buttons in Tabulator action column */
+.btn-action {
+	max-width: 45px;
+	max-height: 45px;
+}

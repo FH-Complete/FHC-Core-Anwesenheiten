@@ -5,16 +5,18 @@ $includesArray = array(
 	'jquery3' => true,
 	'jqueryui1' => true,
 	'bootstrap5' => true,
-	'fontawesome4' => true,
+	'fontawesome6' => true,
 	'tablewidget' => true,
-	'tabulator4' => true,
+	'tabulator5' => true,
 	'ajaxlib' => true,
 	'axios027' => true,
 	'dialoglib' => true,
 	'vue3' => true,
 	'primevue3' => true,
 	'phrases' => array(
-		'ui'
+			'global',
+			'ui',
+			'filter'
 	),
 	'customJSs' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
@@ -24,21 +26,20 @@ $includesArray = array(
 	)
 );
 
-//echo json_encode($students);
-
 $this->load->view('templates/FHC-Header', $includesArray);
 ?>
-<script>
-	var students = <?= json_encode($students) ?>;
-	var dates = <?= json_encode($dates) ?>;
-	var parameters = <?= json_encode($parameters)?>
-</script>
 
-<div>
 
-	<div id="overviewApp">
-		<overview-component></overview-component>
-	</div>
+<div id="main">
+
+	<core-navigation-cmpt v-bind:add-side-menu-entries="appSideMenuEntries"></core-navigation-cmpt>
+
+
+
+
+
+	<overview-component></overview-component>
+
 
 <!--	<div class="row">-->
 <!--		<div class="col-lg-12">-->

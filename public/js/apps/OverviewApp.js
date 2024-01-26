@@ -1,5 +1,6 @@
 import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
-import OverviewComponent from "./components/OverviewComponent.js";
+import OverviewComponent from "../components/OverviewComponent.js";
+// import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
@@ -44,4 +45,7 @@ const overviewApp = Vue.createApp({
 	
 	
 });
-overviewApp.mount("#overviewApp");
+overviewApp
+	.use(primevue.config.default, {zIndex: {overlay: 9999}})
+	.use(FhcAlert)
+	.mount("#main");
