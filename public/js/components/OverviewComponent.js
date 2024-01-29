@@ -1,15 +1,27 @@
+import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
+import {CoreNavigationCmpt} from '../../../../js/components/navigation/Navigation.js';
 
+import verticalsplit from "../../../../js/components/verticalsplit/verticalsplit.js";
+import searchbar from "../../../../js/components/searchbar/searchbar.js";
+
+import {AnwesenheitenTabulatorOptions} from '../components/TabulatorSetup.js';
+import {AnwesenheitenTabulatorEventHandlers} from '../components/TabulatorSetup.js';
 
 export default {
 
 	components: {
-
+		CoreFilterCmpt,
+		CoreNavigationCmpt,
+		verticalsplit: verticalsplit,
+		searchbar: searchbar
 	},
 	data() {
 		return {
 			// internalData: this.prepareData(students, dates, parameters),
 			leCount: 0,
-
+			appSideMenuEntries: {},
+			anwesenheitenTabulatorOptions: AnwesenheitenTabulatorOptions,
+			anwesenheitenTabulatorEventHandlers: AnwesenheitenTabulatorEventHandlers
 
 		}
 	},
@@ -75,6 +87,15 @@ export default {
 
 			return ret
 		},
+		newSideMenuEntryHandler: function(payload) {
+			this.appSideMenuEntries = payload;
+		},
+		searchfunction: function(searchsettings) {
+			return Vue.$fhcapi.Search.search(searchsettings);
+		},
+		searchfunctiondummy: function(searchsettings) {
+			return Vue.$fhcapi.Search.searchdummy(searchsettings);
+		}
 
 	},
 	created(){
@@ -88,7 +109,18 @@ export default {
 
 	template:`
 	<th>
-		<p>Overview Component </p>
+		<core-navigation-cmpt v-bind:add-side-menu-entries="appSideMenuEntries"></core-navigation-cmpt>
+		
+		<div id="content">
+			<core-filter-cmpt
+				title="Anwesenheiten Viewer"
+				filter-type="AnwesenheitenByLektor"
+				:tabulator-options="anwesenheitenTabulatorOptions"
+				:tabulator-events="anwesenheitenTabulatorEventHandlers"
+				:id-field="'anwesenheiten_id'"
+				@nw-new-entry="newSideMenuEntryHandler">
+			</core-filter-cmpt>
+		</div>
 		
 <!--		<p>Semester: {{internalData.internalParameters.semester}} -->
 <!--		Verband: {{internalData.internalParameters.verband}} -->

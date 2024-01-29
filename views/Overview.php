@@ -40,21 +40,6 @@ $this->load->view('templates/FHC-Header', $includesArray);
 
 <div id="main">
 
-
-	<core-navigation-cmpt v-bind:add-side-menu-entries="appSideMenuEntries"></core-navigation-cmpt>
-
-
-	<div id="content">
-		<core-filter-cmpt
-			title="Anwesenheiten Viewer"
-			filter-type="AnwesenheitenViewer"
-			:tabulator-options="anwesenheitenTabulatorOptions"
-			:tabulator-events="anwesenheitenTabulatorEventHandlers"
-			@nw-new-entry="newSideMenuEntryHandler">
-		</core-filter-cmpt>
-	</div>
-
-
 </div>
 
 
