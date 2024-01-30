@@ -26,7 +26,8 @@ export const AnwesenheitenTabulatorOptions = {
 		{title: 'Anwesenheit ID', field: 'anwesenheit_id', headerFilter: true},
 		{title: 'Prestudent ID', field: 'prestudent_id', headerFilter: true},
 		{title: 'Lehreinheit ID', field: 'lehreinheit_id', headerFilter: true},
-		{title: 'Status', field: 'status', headerFilter: true}
+		{title: 'Status', field: 'status', headerFilter: true},
+		{title: 'Datum', field: 'datum', headerFilter: true},
 	]
 };
 

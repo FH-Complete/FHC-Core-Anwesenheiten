@@ -26,6 +26,9 @@ class Overview extends Auth_Controller
 //		$this->_ci->load->model('crm/Prestudent_model','PrestudentModel');
 //		$this->_ci->load->model('crm/Student_model','StudentModel');
 //
+		$this->_ci->load->model('system/Filters_model', 'FiltersModel');
+
+
 		// load libraries
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('WidgetLib');
@@ -42,6 +45,7 @@ class Overview extends Auth_Controller
 		$this->load->helper('array');
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
+
 	}
 
 	/**

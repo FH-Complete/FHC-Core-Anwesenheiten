@@ -1,15 +1,17 @@
 <?php
 $filterCmptArray = array(
 	'app' => 'core',
-	'datasetName' => 'AnwesenheitenByLektor',
+	'datasetName' => 'AnwesenheitenForLektor',
 	'query' => '
 			SELECT
 				anwesenheit_id,
 				prestudent_id,
 				lehreinheit_id,
-				status
+				tbl_anwesenheit_status.status_kurzbz as status, 
+				extension.tbl_anwesenheit.datum
 			FROM
-				extension.tbl_anwesenheit
+				extension.tbl_anwesenheit 
+			JOIN extension.tbl_anwesenheit_status ON (tbl_anwesenheit.status = tbl_anwesenheit_status.status_kurzbz)
 			
 		',
 	'requiredPermissions' => 'admin' // TODO: lektor permissions

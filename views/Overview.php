@@ -37,10 +37,12 @@ $includesArray = array(
 $this->load->view('templates/FHC-Header', $includesArray);
 ?>
 
+<body>
+	<div id="main">
 
-<div id="main">
+	</div>
+</body>
 
-</div>
 
 
 <?php $this->load->view('templates/FHC-Footer', $includesArray); ?>

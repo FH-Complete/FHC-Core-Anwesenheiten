@@ -17,12 +17,10 @@ export default {
 	},
 	data() {
 		return {
-			// internalData: this.prepareData(students, dates, parameters),
 			leCount: 0,
 			appSideMenuEntries: {},
 			anwesenheitenTabulatorOptions: AnwesenheitenTabulatorOptions,
 			anwesenheitenTabulatorEventHandlers: AnwesenheitenTabulatorEventHandlers
-
 		}
 	},
 	props: {
@@ -120,37 +118,17 @@ export default {
 				:id-field="'anwesenheiten_id'"
 				@nw-new-entry="newSideMenuEntryHandler">
 			</core-filter-cmpt>
-		</div>
-		
-<!--		<p>Semester: {{internalData.internalParameters.semester}} -->
-<!--		Verband: {{internalData.internalParameters.verband}} -->
-<!--		Gruppe: {{internalData.internalParameters.gruppe}} -->
-<!--		Orgeinheit: {{internalData.internalParameters.orgeinheit}} -->
-<!--		Lehrveranstaltung_id: {{internalData.internalParameters.lehrveranstaltung_id}} -->
-<!--		lehreinheit_id: {{internalData.internalParameters.lehreinheit_id}} -->
-<!--		studiengang_kz: {{internalData.internalParameters.studiengang_kz}}-->
-<!--		studiensemester_kurzbz: {{internalData.internalParameters.studiensemester_kurzbz}}</p>-->
-		
-		
-<!--		<table>	-->
-<!--			<tr>-->
-<!--				<th>Vorname </th>-->
-<!--				<th>Nachname</th>-->
-<!--				<th v-for="date in internalData.internalDates">{{date}}</th>-->
-<!--				<th>Summe</th>-->
-<!--			</tr>-->
-<!--			-->
-<!--			<tr v-for="(student, index) in internalData.internalStudents">-->
-<!--				<td>{{student.vorname}}</td>-->
-<!--				<td>{{student.nachname}}</td>-->
-<!--				<td v-for="anwesenheit in student.anwesenheiten">-->
-<!--					<i v-if="anwesenheit.status === 'Ja'" class="fa fa-check"></i>-->
-<!--					<i v-else-if="anwesenheit.status === 'Nein'" class="fa fa-window-close"></i>-->
 
-<!--					</td>-->
-<!--				<td>{{student.sum}} %</td>-->
-<!--			</tr>-->
-<!--		</table>-->
+<!--			<core-filter-cmpt-->
+<!--				title="Anwesenheiten Viewer"-->
+<!--				:tabulator-options="anwesenheitenTabulatorOptions"-->
+<!--				:tabulator-events="anwesenheitenTabulatorEventHandlers"-->
+<!--				:id-field="'anwesenheiten_id'"-->
+<!--				@nw-new-entry="newSideMenuEntryHandler"-->
+<!--				:tableOnly>-->
+<!--			</core-filter-cmpt>-->
+		</div>
+
 			
 	</div>`
 

@@ -5,8 +5,6 @@ $query = '
     FROM extension.tbl_anwesenheit
 ';
 
-echo json_encode($dates);
-
 $filterWidgetArray = array(
 	'query' => $query,
 	'app' => 'core',
