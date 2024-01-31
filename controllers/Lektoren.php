@@ -13,13 +13,13 @@ class Lektoren extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => 'admin:rw'
+				'index' => 'admin:rw',
+				'selectAnwesenheitenByLektor' => 'admin:rw'
 			)
 		);
 
 		$this->_ci =& get_instance();
-		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model','LehreinheitmitarbeiterModel');
-
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
 
 
 		// load libraries
@@ -41,9 +41,16 @@ class Lektoren extends Auth_Controller
 
 	}
 
-	public function selectAnwesenheitenByLektor($ma_uid)
+	public function selectAnwesenheitenByLektor()
 	{
-		// TODO: use appropriate models to query data and provide it 
+		$ma_uid = $this->input->get('ma_uid');
+		$lv_id = $this->input->get('lv_id');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		$res = $this->_ci->AnwesenheitenModel->getAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz);
+
+		if(!hasData($res)) return null;
+		$this->outputJson($res);
 	}
 
 	/**
