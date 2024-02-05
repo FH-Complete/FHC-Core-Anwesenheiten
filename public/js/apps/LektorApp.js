@@ -1,5 +1,5 @@
 import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
-import OverviewComponent from "../components/OverviewComponent.js";
+import LektorComponent from "../components/LektorComponent.js";
 // import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 
 
@@ -7,15 +7,14 @@ import OverviewComponent from "../components/OverviewComponent.js";
 
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
-const overviewApp = Vue.createApp({
+const lektorApp = Vue.createApp({
 	
-	components: {
-		OverviewComponent
+	components: { LektorComponent
 
 	},
 	data() {
 		return {
-			title: "Anwesenheiten App",
+			title: "Lektor Anwesenheitskontrolle App",
 
 		}
 	},
@@ -45,11 +44,11 @@ const overviewApp = Vue.createApp({
 	},
 	template:`
 	<div>
-		<overview-component></overview-component>
+		<lektor-component></lektor-component>
 	</div>`
 	
 	
 });
-overviewApp.mount("#main");
+lektorApp.mount("#main");
 	// .use(primevue.config.default, {zIndex: {overlay: 9999}})
 	// .use(FhcAlert)

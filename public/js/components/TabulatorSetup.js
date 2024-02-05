@@ -18,9 +18,21 @@
 /**
  *
  */
+// export const AnwesenheitenTabulatorOptions = {
+// 	height: 700,
+// 	index: 'prestudent_id',
+// 	layout: 'fitColumns',
+// 	columns: [
+// 		{title: 'Prestudent ID', field: 'prestudent_id', headerFilter: true},
+// 		{title: 'Vorname', field: 'Vorname', headerFilter: true},
+// 		{title: 'Nachname', field: 'Nachname', headerFilter: true},
+// 		{title: 'Sum', field: 'sum', headerFilter: true},
+// 	]
+// };
+
 export const AnwesenheitenTabulatorOptions = {
 	height: 700,
-	index: 'anwesenheit_id',
+	index: 'anwesenheiten_id',
 	layout: 'fitColumns',
 	columns: [
 		{title: 'Anwesenheit ID', field: 'anwesenheit_id', headerFilter: true},

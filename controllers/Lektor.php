@@ -1,7 +1,7 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-class Overview extends Auth_Controller
+class Lektor extends Auth_Controller
 {
 
 	private $_ci;
@@ -13,14 +13,13 @@ class Overview extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => 'admin:rw' // TODO: appropriate rights for opening overview
+				'index' => 'admin:rw',
+				'selectAnwesenheitenByLektor' => 'admin:rw'
 			)
 		);
 
 		$this->_ci =& get_instance();
-
-		// Load models
-
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
 		$this->_ci->load->model('system/Filters_model', 'FiltersModel');
 
 
@@ -43,13 +42,25 @@ class Overview extends Auth_Controller
 
 	}
 
+	public function selectAnwesenheitenByLektor()
+	{
+		$ma_uid = $this->input->get('ma_uid');
+		$lv_id = $this->input->get('lv_id');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		$res = $this->_ci->AnwesenheitenModel->getAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz);
+
+		if(!hasData($res)) return null;
+		$this->outputJson($res);
+	}
+
 	/**
 	 * Index Controller
 	 * @return void
 	 */
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Overview');
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Lektor');
 	}
 
 	/**

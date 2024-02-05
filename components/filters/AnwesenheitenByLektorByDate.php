@@ -1,7 +1,8 @@
 <?php
+
 $filterCmptArray = array(
 	'app' => 'core',
-	'datasetName' => 'AnwesenheitenByLektor',
+	'datasetName' => 'AnwesenheitenByLektorByDate',
 	'query' => '
 			SELECT
 				anwesenheit_id,

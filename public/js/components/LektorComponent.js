@@ -19,6 +19,7 @@ export default {
 		return {
 			leCount: 0,
 			appSideMenuEntries: {},
+			headerMenuEntries: {},
 			anwesenheitenTabulatorOptions: AnwesenheitenTabulatorOptions,
 			anwesenheitenTabulatorEventHandlers: AnwesenheitenTabulatorEventHandlers,
 			constructedAnwesenheitenTabulatorOptions: null,
@@ -110,7 +111,8 @@ export default {
 		// this.$refs.anwesenheitenTable.tabulator.setData(this.tableData)
 
 		Vue.$fhcapi.Anwesenheit.selectAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz).then((res)=>{
-			console.log(res.data);
+
+			console.log('res.data', res.data);
 
 			if(!res.data)return
 
@@ -133,6 +135,7 @@ export default {
 			// const cols = ['prestudent_id', 'Vorname', 'Nachname']
 			// datesData.forEach(date => cols.push(date))
 			// datesData.push('sum')
+
 			const tableStudentData = []
 			namesAndID.forEach(student => {
 				// tableStudentData.push(student.prestudent_id, student.vorname, student.nachname, this.studentsData.get(student.prestudent_id), '100%');
@@ -142,10 +145,10 @@ export default {
 			this.constructedAnwesenheitenTabulatorOptions = {}
 
 
-			this.$refs.anwesenheitenTable.tabulator.on("tableBuilt", () => {
-				debugger
-				this.$refs.anwesenheitenTable.tabulator.setData(tableStudentData);
-			});
+			// this.$refs.anwesenheitenTable.tabulator.on("tableBuilt", () => {
+			// 	debugger
+			// 	this.$refs.anwesenheitenTable.tabulator.setData(tableStudentData);
+			// });
 		})
 	},
 	updated(){
@@ -153,29 +156,32 @@ export default {
 
 	template:`
 	<th>
-		<core-navigation-cmpt v-bind:add-side-menu-entries="appSideMenuEntries"></core-navigation-cmpt>
+		<core-navigation-cmpt 
+			v-bind:add-side-menu-entries="appSideMenuEntries"
+			v-bind:add-header-menu-entries="headerMenuEntries">	
+		></core-navigation-cmpt>
 		
 		<div id="content">
-<!--			<core-filter-cmpt-->
-<!--				title="Anwesenheiten Viewer"-->
-<!--				filter-type="AnwesenheitenByLektor"-->
-<!--				:tabulator-options="anwesenheitenTabulatorOptions"-->
-<!--				:tabulator-events="anwesenheitenTabulatorEventHandlers"-->
-<!--				:id-field="'anwesenheiten_id'"-->
-<!--				@nw-new-entry="newSideMenuEntryHandler">-->
-<!--			</core-filter-cmpt>-->
-
 			<core-filter-cmpt
 				title="Anwesenheiten Viewer"
-				ref="anwesenheitenTable"
+				filter-type="AnwesenheitenByLektor"
 				:tabulator-options="anwesenheitenTabulatorOptions"
 				:tabulator-events="anwesenheitenTabulatorEventHandlers"
 				:id-field="'anwesenheiten_id'"
-				@nw-new-entry="newSideMenuEntryHandler"
-				:tableOnly
-				:sideMenu="false" 
-				noColumnFilter>
+				@nw-new-entry="newSideMenuEntryHandler">
 			</core-filter-cmpt>
+
+<!--			<core-filter-cmpt-->
+<!--				title="Anwesenheiten Viewer"-->
+<!--				ref="anwesenheitenTable"-->
+<!--				:tabulator-options="anwesenheitenTabulatorOptions"-->
+<!--				:tabulator-events="anwesenheitenTabulatorEventHandlers"-->
+<!--				:id-field="'anwesenheiten_id'"-->
+<!--				@nw-new-entry="newSideMenuEntryHandler"-->
+<!--				:tableOnly-->
+<!--				:sideMenu="false" -->
+<!--				noColumnFilter>-->
+<!--			</core-filter-cmpt>-->
 
 <!--			<core-filter-cmpt-->
 <!--				title="Anwesenheiten Viewer"-->
