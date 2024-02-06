@@ -31,18 +31,6 @@ export const AnwesenheitenTabulatorOptions = {
 	]
 };
 
-// export const AnwesenheitenTabulatorOptions = {
-// 	height: 700,
-// 	index: 'anwesenheiten_id',
-// 	layout: 'fitColumns',
-// 	columns: [
-// 		{title: 'Anwesenheit ID', field: 'anwesenheit_id', headerFilter: true},
-// 		{title: 'Prestudent ID', field: 'prestudent_id', headerFilter: true},
-// 		{title: 'Lehreinheit ID', field: 'lehreinheit_id', headerFilter: true},
-// 		{title: 'Status', field: 'status', headerFilter: true},
-// 		{title: 'Datum', field: 'datum', headerFilter: true},
-// 	]
-// };
 
 /**
  *
@@ -51,7 +39,9 @@ export const AnwesenheitenTabulatorEventHandlers = [
 	{
 		event: "rowClick",
 		handler: function(e, row) {
-			alert(row.getData().Data);
+			const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
+
+
 		}
 	}
 ];
