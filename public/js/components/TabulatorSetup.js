@@ -40,8 +40,9 @@ export const AnwesenheitenTabulatorEventHandlers = [
 		event: "rowClick",
 		handler: function(e, row) {
 			const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
-
-
+			console.log('prestudent_id', prestudent_id)
+			Vue.$fhcapi.Anwesenheit.whoCanSeeThis()
+			// Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(prestudent_id, )
 		}
 	}
 ];

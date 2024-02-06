@@ -58,6 +58,8 @@ export default {
 
 	},
 	mounted() {
+
+
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
 			console.log('res.data', res.data);
 			if(!res.data)return
@@ -94,6 +96,9 @@ export default {
 
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 
+			this.anwesenheitenTabulatorEventHandlers.forEach(entry => {
+				entry.handler.bind(this.data)
+			})
 		})
 	},
 	updated(){

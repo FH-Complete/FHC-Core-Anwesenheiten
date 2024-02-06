@@ -14,7 +14,8 @@ class Lektor extends Auth_Controller
 	{
 		parent::__construct(array(
 				'index' => 'admin:rw',
-				'getAllAnwesenheitenByLektor' => 'admin:rw'
+				'getAllAnwesenheitenByLektor' => 'admin:rw',
+				'getAllAnwesenheitenByStudentByLva' => 'admin:rw'
 			)
 		);
 
@@ -47,6 +48,18 @@ class Lektor extends Auth_Controller
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
 		$res = $this->_ci->AnwesenheitenModel->getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz);
+
+		if(!hasData($res)) return null;
+		$this->outputJson($res);
+	}
+
+	public function getAllAnwesenheitenByStudentByLva()
+	{
+		$prestudent_id = $this->input->get('prestudent_id');
+		$lv_id = $this->input->get('lv_id');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		$res = $this->_ci->AnwesenheitenModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
 		$this->outputJson($res);

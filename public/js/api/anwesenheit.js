@@ -11,7 +11,7 @@ export default {
 	},
 	getAllAnwesenheitenByStudentByLva: function(prestudent_id= null, lva_id = null, sem_kurzbz = null) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
-			`/extensions/FHC-Core-Anwesenheiten/lektor/getAllAnwesenheitenByStudentByLva?ma_uid=${ma_uid}&lv_id=${lv_id}&sem_kurzbz=${sem_kurzbz}`;
+			`/extensions/FHC-Core-Anwesenheiten/lektor/getAllAnwesenheitenByStudentByLva?prestudent_id=${prestudent_id}&lv_id=${lv_id}&sem_kurzbz=${sem_kurzbz}`;
 
 
 		return axios.get(url);

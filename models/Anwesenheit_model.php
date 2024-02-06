@@ -13,7 +13,8 @@ class Anwesenheit_model extends \DB_Model
         $this->pk = 'anwesenheit_id';
     }
 
-	public function getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz) {
+	public function getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz)
+	{
 		$query = "
 		SELECT prestudent_id, vorname, nachname, lehreinheit_id, extension.tbl_anwesenheit.status, DATE(extension.tbl_anwesenheit.datum), sum FROM
 			(SELECT DISTINCT vorname, nachname, prestudent_id,
@@ -24,12 +25,12 @@ class Anwesenheit_model extends \DB_Model
 						 lehrveranstaltung_id, lehreinheit_id, studiensemester_kurzbz,
 				   campus.vw_student_lehrveranstaltung.studiengang_kz, campus.vw_student_lehrveranstaltung.semester,
 				   verband, gruppe, vorname, nachname
-		FROM campus.vw_student_lehrveranstaltung
-			JOIN public.tbl_student ON (uid = student_uid)
-			JOIN public.tbl_benutzer USING (uid)
-			JOIN tbl_person USING (person_id)
-		WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND lehrveranstaltung_id = {$lv_id}
-		) students JOIN (
+					FROM campus.vw_student_lehrveranstaltung
+						JOIN public.tbl_student ON (uid = student_uid)
+						JOIN public.tbl_benutzer USING (uid)
+						JOIN tbl_person USING (person_id)
+					WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND lehrveranstaltung_id = {$lv_id}
+				) students JOIN (
 				SELECT tbl_lehreinheit.lehrveranstaltung_id as lehrveranstaltung_id, lehreinheit_id,
 					   mitarbeiter_uid, lehreinheitgruppe_id, studiengang_kz,
 					   tbl_lehreinheit.studiensemester_kurzbz as studiensemester_kurzbz, gruppe, gruppe_kurzbz
@@ -41,10 +42,20 @@ class Anwesenheit_model extends \DB_Model
 					AND tbl_lehreinheit.lehrveranstaltung_id = {$lv_id}
 				) lehrende
 			ON (students.lehrveranstaltung_id = lehrende.lehrveranstaltung_id)) lektorXstudents
-	JOIN extension.tbl_anwesenheit USING (prestudent_id, lehreinheit_id);
-";
+		JOIN extension.tbl_anwesenheit USING (prestudent_id, lehreinheit_id);";
 
-//		, extension.calculate_anwesenheiten_sum(lehrveranstaltung_id, prestudent_id)
+		return $this->execQuery($query);
+	}
+
+	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
+	{
+		$query="
+			SELECT Date(extension.tbl_anwesenheit.datum) as datum, extension.tbl_anwesenheit.status
+			FROM extension.tbl_anwesenheit
+			JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+			JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}';
+		";
 
 		return $this->execQuery($query);
 	}
