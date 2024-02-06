@@ -14,14 +14,12 @@ class Lektor extends Auth_Controller
 	{
 		parent::__construct(array(
 				'index' => 'admin:rw',
-				'selectAnwesenheitenByLektor' => 'admin:rw'
+				'getAllAnwesenheitenByLektor' => 'admin:rw'
 			)
 		);
 
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
-		$this->_ci->load->model('system/Filters_model', 'FiltersModel');
-
 
 		// load libraries
 		$this->_ci->load->library('PermissionLib');
@@ -42,13 +40,13 @@ class Lektor extends Auth_Controller
 
 	}
 
-	public function selectAnwesenheitenByLektor()
+	public function getAllAnwesenheitenByLektor()
 	{
 		$ma_uid = $this->input->get('ma_uid');
 		$lv_id = $this->input->get('lv_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
-		$res = $this->_ci->AnwesenheitenModel->getAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz);
+		$res = $this->_ci->AnwesenheitenModel->getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
 		$this->outputJson($res);

@@ -23,14 +23,15 @@ $includesArray = array(
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',
 		'public/css/components/searchbar.css',
+		'vendor/vuejs/vuedatepicker_css/main.css'
 	),
 	'customJSs' => array(
 //		'vendor/axios/axios/lib/axios.js',
-//		'vendor/axios/axios/axios.min.js',
+		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
 	),
 	'customJSModules' => (
-		'public/extensions/FHC-Core-Anwesenheiten/js/apps/OverviewApp.js'
+		'public/extensions/FHC-Core-Anwesenheiten/js/apps/LektorApp.js'
 	)
 );
 

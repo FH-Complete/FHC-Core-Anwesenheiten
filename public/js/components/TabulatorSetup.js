@@ -18,30 +18,31 @@
 /**
  *
  */
-// export const AnwesenheitenTabulatorOptions = {
-// 	height: 700,
-// 	index: 'prestudent_id',
-// 	layout: 'fitColumns',
-// 	columns: [
-// 		{title: 'Prestudent ID', field: 'prestudent_id', headerFilter: true},
-// 		{title: 'Vorname', field: 'Vorname', headerFilter: true},
-// 		{title: 'Nachname', field: 'Nachname', headerFilter: true},
-// 		{title: 'Sum', field: 'sum', headerFilter: true},
-// 	]
-// };
-
 export const AnwesenheitenTabulatorOptions = {
 	height: 700,
-	index: 'anwesenheiten_id',
+	index: 'prestudent_id',
 	layout: 'fitColumns',
 	columns: [
-		{title: 'Anwesenheit ID', field: 'anwesenheit_id', headerFilter: true},
-		{title: 'Prestudent ID', field: 'prestudent_id', headerFilter: true},
-		{title: 'Lehreinheit ID', field: 'lehreinheit_id', headerFilter: true},
-		{title: 'Status', field: 'status', headerFilter: true},
-		{title: 'Datum', field: 'datum', headerFilter: true},
+		{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
+		{title: 'Vorname', field: 'vorname', headerFilter: true},
+		{title: 'Nachname', field: 'nachname', headerFilter: true},
+		{title: 'Aktuelles Datum', field: 'datum', headerFilter: true},
+		{title: 'Summe', field: 'sum', headerFilter: true},
 	]
 };
+
+// export const AnwesenheitenTabulatorOptions = {
+// 	height: 700,
+// 	index: 'anwesenheiten_id',
+// 	layout: 'fitColumns',
+// 	columns: [
+// 		{title: 'Anwesenheit ID', field: 'anwesenheit_id', headerFilter: true},
+// 		{title: 'Prestudent ID', field: 'prestudent_id', headerFilter: true},
+// 		{title: 'Lehreinheit ID', field: 'lehreinheit_id', headerFilter: true},
+// 		{title: 'Status', field: 'status', headerFilter: true},
+// 		{title: 'Datum', field: 'datum', headerFilter: true},
+// 	]
+// };
 
 /**
  *

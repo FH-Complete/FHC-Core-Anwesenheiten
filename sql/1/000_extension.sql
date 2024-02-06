@@ -27,6 +27,10 @@ BEGIN
 	  AND extension.tbl_anwesenheit.prestudent_id = prestudent_id_param
 	  AND status = 'abw';
 
-	anwesenheit := ((lva_ceiling - abwesenheiten) / lva_ceiling::FLOAT);
+	IF(lva_ceiling = 0) THEN
+    	anwesenheit = 0;
+	ELSE
+		anwesenheit := ((lva_ceiling - abwesenheiten) / lva_ceiling::FLOAT);
+	END IF;
 END;
 $$ LANGUAGE plpgsql;

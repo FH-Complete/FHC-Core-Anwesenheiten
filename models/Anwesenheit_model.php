@@ -13,12 +13,12 @@ class Anwesenheit_model extends \DB_Model
         $this->pk = 'anwesenheit_id';
     }
 
-	public function getAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz) {
+	public function getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz) {
 		$query = "
-		SELECT prestudent_id, vorname, nachname, lehreinheit_id, extension.tbl_anwesenheit.status, DATE(extension.tbl_anwesenheit.datum) FROM
+		SELECT prestudent_id, vorname, nachname, lehreinheit_id, extension.tbl_anwesenheit.status, DATE(extension.tbl_anwesenheit.datum), sum FROM
 			(SELECT DISTINCT vorname, nachname, prestudent_id,
 			  students.lehrveranstaltung_id, students.lehreinheit_id,
-			  students.semester, students.verband
+			  students.semester, students.verband, extension.calculate_anwesenheiten_sum(students.lehrveranstaltung_id, prestudent_id, '{$sem_kurzbz}') AS sum
 			FROM (
 				SELECT person_id, student_uid, prestudent_id, matrikelnr, uid,
 						 lehrveranstaltung_id, lehreinheit_id, studiensemester_kurzbz,
@@ -44,8 +44,9 @@ class Anwesenheit_model extends \DB_Model
 	JOIN extension.tbl_anwesenheit USING (prestudent_id, lehreinheit_id);
 ";
 
-		return $this->execQuery($query);
+//		, extension.calculate_anwesenheiten_sum(lehrveranstaltung_id, prestudent_id)
 
+		return $this->execQuery($query);
 	}
 
 //    /**

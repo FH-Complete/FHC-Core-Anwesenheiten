@@ -1,6 +1,9 @@
+function formatDate (date) {
 
 
-function func_height(table)
-{
-	return $(window).height() * 0.70;
+	let date2 = new Date(date.getTime() - (date.getTimezoneOffset() * 60000 ))
+		.toISOString()
+		.split("T")[0];
+
+	return date2
 }
