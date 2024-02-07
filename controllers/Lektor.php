@@ -14,6 +14,7 @@ class Lektor extends Auth_Controller
 	{
 		parent::__construct(array(
 				'index' => 'admin:rw',
+				'studentByLva' => 'admin:rw',
 				'getAllAnwesenheitenByLektor' => 'admin:rw',
 				'getAllAnwesenheitenByStudentByLva' => 'admin:rw'
 			)
@@ -26,6 +27,8 @@ class Lektor extends Auth_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
+
+		$this->_ci->load->library('AuthLib');
 
 		$this->loadPhrases(
 			array(
@@ -53,6 +56,8 @@ class Lektor extends Auth_Controller
 		$this->outputJson($res);
 	}
 
+
+
 	public function getAllAnwesenheitenByStudentByLva()
 	{
 		$prestudent_id = $this->input->get('prestudent_id');
@@ -64,7 +69,11 @@ class Lektor extends Auth_Controller
 		if(!hasData($res)) return null;
 		$this->outputJson($res);
 	}
+	public function studentByLva()
+	{
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/StudentByLva');
 
+	}
 	/**
 	 * Index Controller
 	 * @return void

@@ -26,7 +26,6 @@ $includesArray = array(
 		'vendor/vuejs/vuedatepicker_css/main.css'
 	),
 	'customJSs' => array(
-//		'vendor/axios/axios/lib/axios.js',
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
 	),
@@ -40,7 +39,9 @@ $this->load->view('templates/FHC-Header', $includesArray);
 
 <body>
 	<div id="main">
+		<router-view
 
+		></router-view>
 	</div>
 </body>
 

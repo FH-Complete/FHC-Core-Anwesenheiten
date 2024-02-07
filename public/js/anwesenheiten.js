@@ -7,3 +7,7 @@ function formatDate (date) {
 
 	return date2
 }
+
+function func_height(){
+	return window.innerHeight * 0.75;
+}

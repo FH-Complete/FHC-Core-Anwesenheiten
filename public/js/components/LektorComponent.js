@@ -4,11 +4,8 @@ import {CoreNavigationCmpt} from '../../../../js/components/navigation/Navigatio
 import verticalsplit from "../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../js/components/searchbar/searchbar.js";
 
-import {AnwesenheitenTabulatorOptions} from '../components/TabulatorSetup.js';
-import {AnwesenheitenTabulatorEventHandlers} from '../components/TabulatorSetup.js';
-
 export default {
-
+	name: 'LektorComponent',
 	components: {
 		CoreFilterCmpt,
 		CoreNavigationCmpt,
@@ -18,11 +15,31 @@ export default {
 	},
 	data() {
 		return {
-			leCount: 0,
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
-			anwesenheitenTabulatorOptions: AnwesenheitenTabulatorOptions,
-			anwesenheitenTabulatorEventHandlers: AnwesenheitenTabulatorEventHandlers,
+			anwesenheitenTabulatorOptions: {
+				height: func_height(),
+				index: 'prestudent_id',
+				layout: 'fitColumns',
+				columns: [
+					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
+					{title: 'Vorname', field: 'vorname', headerFilter: true},
+					{title: 'Nachname', field: 'nachname', headerFilter: true},
+					{title: 'Aktuelles Datum', field: 'datum', headerFilter: true},
+					{title: 'Summe', field: 'sum', headerFilter: true},
+				]
+			},
+			anwesenheitenTabulatorEventHandlers: [{
+				event: "rowClick",
+				handler: (e, row) => {
+					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
+
+					this.$router.push({
+						name: 'StudentByLva',
+						params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
+					})
+				}
+			}],
 			tableData: [],
 			ma_uid: 'ma0144',
 			sem_kurzbz: 'WS2023',
@@ -37,7 +54,10 @@ export default {
 	props: {
 		students: [],
 		dates: [],
-		parameters: []
+		parameters: [],
+		// ma_uid: null,
+		// sem_kurzbz: null,
+		// lv_id: null
 	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
@@ -55,13 +75,13 @@ export default {
 
 	},
 	created(){
-
+		const selectedDateFormatted = formatDate(this.selectedDate)
+		this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'datum').title = selectedDateFormatted
 	},
 	mounted() {
 
 
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
-			console.log('res.data', res.data);
 			if(!res.data)return
 
 			this.studentsData = new Map()
@@ -93,12 +113,8 @@ export default {
 					sum: student.sum});
 			})
 
-
+			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
-
-			this.anwesenheitenTabulatorEventHandlers.forEach(entry => {
-				entry.handler.bind(this.data)
-			})
 		})
 	},
 	updated(){
@@ -106,15 +122,18 @@ export default {
 	watch: {
 		selectedDate(newVal) {
 
+
 			const selectedDateFormatted = formatDate(newVal)
-			this.namesAndID.forEach(student => {
-				debugger
+			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'datum').title = selectedDateFormatted
+
+				this.namesAndID.forEach(student => {
 				const studentDataEntry = this.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum')=== selectedDateFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 				this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id).datum = status
 			})
 
+			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 		}
 	},
