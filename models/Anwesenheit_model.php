@@ -128,4 +128,25 @@ class Anwesenheit_model extends \DB_Model
 //        return $this->execQuery($qry, array($status_kurzbz));
 //    }
 
+	public function getAllByStudent($student, $studiensemester)
+	{
+		$query = '
+			SELECT tbl_lehrveranstaltung.bezeichnung,
+					tbl_anwesenheit_status.bezeichnung as status,
+					DATE(tbl_anwesenheit.datum) as datum,
+					CONCAT(get_anwesenheiten(tbl_anwesenheit.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz), \'%\') as anwesenheit
+			FROM extension.tbl_anwesenheit
+				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
+				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+				JOIN public.tbl_prestudent ON tbl_anwesenheit.prestudent_id = tbl_prestudent.prestudent_id
+				JOIN public.tbl_person ON tbl_prestudent.person_id = tbl_person.person_id
+				JOIN public.tbl_benutzer ON tbl_person.person_id = tbl_benutzer.person_id
+				JOIN extension.tbl_anwesenheit_status ON tbl_anwesenheit.status = tbl_anwesenheit_status.status_kurzbz
+			WHERE tbl_benutzer.uid = ? AND tbl_lehreinheit.studiensemester_kurzbz = ?
+			ORDER BY tbl_lehrveranstaltung.bezeichnung, datum;
+		';
+
+		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
+	}
+
 }
