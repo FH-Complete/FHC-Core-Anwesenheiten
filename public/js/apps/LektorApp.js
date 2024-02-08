@@ -8,38 +8,22 @@ Vue.$fhcapi = fhc_anwesenheitenapifactory;
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 console.log('ciPath', ciPath)
 
-// const router = VueRouter.createRouter({
-// 	history: VueRouter.createWebHistory(),
-// 	base: `/${ciPath}/extensions/FHC-Core-Anwesenheiten/Lektor`,
-// 	routes: [
-// 		{
-// 			path: '/',
-// 			component: LektorComponent,
-// 		},
-// 		{ path: '/anwesenheitByStudent/:id',
-// 			component: StudentByLvaComponent,
-// 			props: true
-// 		}
-// 	]
-// })
-
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/Lektor`),
-
 	routes: [
 		{
-			path: `/`,
+			path: `/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
+			name: 'StudentByLva',
+			component: StudentByLvaComponent,
+			props: true
+		},
+		{
+			path: `/:catchAll(.*)`,
 			name: 'Lektor',
 			component: LektorComponent,
 			children: [
 
 			]
-		},
-		{
-			path: `/anwesenheitByStudent/`,
-			name: 'StudentByLva',
-			component: StudentByLvaComponent,
-			props: true
 		}
 	]
 })

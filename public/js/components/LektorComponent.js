@@ -34,6 +34,10 @@ export default {
 				handler: (e, row) => {
 					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
 
+					// this.$router.push({
+					// 	name: 'StudentByLva',
+					// 	params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
+					// })
 					this.$router.push({
 						name: 'StudentByLva',
 						params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}

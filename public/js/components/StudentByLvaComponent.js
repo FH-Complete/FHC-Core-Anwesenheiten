@@ -54,10 +54,6 @@ export default {
 	},
 	mounted() {
 
-		console.log('this.id', this.id)
-		console.log('this.lv_id', this.lv_id)
-		console.log('this.sem_kz', this.sem_kz)
-
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
 			.then((res) => {
 

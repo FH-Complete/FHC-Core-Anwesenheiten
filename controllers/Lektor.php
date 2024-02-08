@@ -83,6 +83,11 @@ class Lektor extends Auth_Controller
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Lektor');
 	}
 
+
+	public function anwesenheitByStudent()
+	{
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Lektor');
+	}
 	/**
 	 * Retrieve the UID of the logged user and checks if it is valid
 	 */
