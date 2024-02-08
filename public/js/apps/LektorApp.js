@@ -6,7 +6,6 @@ import StudentByLvaComponent from "../components/StudentByLvaComponent";
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
-console.log('ciPath', ciPath)
 
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/Lektor`),
@@ -18,15 +17,18 @@ const router = VueRouter.createRouter({
 			props: true
 		},
 		{
-			path: `/:catchAll(.*)`,
+			path: `/`,
 			name: 'Lektor',
 			component: LektorComponent,
 			children: [
 
 			]
+		},
+		{
+			path: '/:catchAll(.*)',
+			redirect: { name: 'Lektor'}
 		}
 	]
-
 })
 
 const lektorApp = Vue.createApp({
@@ -56,12 +58,6 @@ const lektorApp = Vue.createApp({
 	updated(){
 
 	},
-	// template:`
-	// <div>
-	// 	<lektor-component></lektor-component>
-	// </div>`
-	
-	
 });
 lektorApp
 	.use(router)

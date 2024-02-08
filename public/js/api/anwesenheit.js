@@ -14,5 +14,8 @@ export default {
 			`/extensions/FHC-Core-Anwesenheiten/lektor/getAllAnwesenheitenByStudentByLva?prestudent_id=${prestudent_id}&lv_id=${lva_id}&sem_kurzbz=${sem_kurzbz}`;
 
 		return axios.get(url);
+	},
+	saveChangedAnwesenheiten(){
+
 	}
 };

@@ -21,12 +21,14 @@ export default {
 				height: func_height(),
 				index: 'prestudent_id',
 				layout: 'fitColumns',
+				placeholder: "Keine Daten verfügbar",
 				columns: [
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true},
 					{title: 'Nachname', field: 'nachname', headerFilter: true},
-					{title: 'Aktuelles Datum', field: 'datum', headerFilter: true},
-					{title: 'Summe', field: 'sum', headerFilter: true},
+					{title: 'Aktuelles Datum', field: 'datum', formatter: this.anwesenheitFormatter
+					}, // cell value is anwesenheit not datum
+					{title: 'Summe', field: 'sum'},
 				]
 			},
 			anwesenheitenTabulatorEventHandlers: [{
@@ -34,10 +36,6 @@ export default {
 				handler: (e, row) => {
 					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
 
-					// this.$router.push({
-					// 	name: 'StudentByLva',
-					// 	params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
-					// })
 					this.$router.push({
 						name: 'StudentByLva',
 						params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
@@ -64,6 +62,12 @@ export default {
 		// lv_id: null
 	},
 	methods: {
+		anwesenheitFormatter (cell) {
+			const data = cell.getData().datum
+			if (data === "anw") return '<i class="fa fa-check"></i>'
+			else if (data === "abw") return '<i class="fa fa-xmark"></i>'
+			else return '-'
+		},
 		newSideMenuEntryHandler: function(payload) {
 			this.appSideMenuEntries = payload;
 		},

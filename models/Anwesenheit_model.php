@@ -50,7 +50,7 @@ class Anwesenheit_model extends \DB_Model
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
 		$query="
-			SELECT Date(extension.tbl_anwesenheit.datum) as datum, extension.tbl_anwesenheit.status
+			SELECT extension.tbl_anwesenheit.anwesenheit_id, Date(extension.tbl_anwesenheit.datum) as datum, extension.tbl_anwesenheit.status
 			FROM extension.tbl_anwesenheit
 			JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 			JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
