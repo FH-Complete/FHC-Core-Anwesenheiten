@@ -26,6 +26,7 @@ const router = VueRouter.createRouter({
 			]
 		}
 	]
+
 })
 
 const lektorApp = Vue.createApp({
