@@ -4,11 +4,12 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 
 import {studentViewTabulatorOptions} from './TabulatorSetup.js';
 import {entschuldigungsViewTabulatorOptions} from './TabulatorSetup.js';
-import {StudiensemesterDropdown} from '../Studiensemester.js';
+import {StudiensemesterDropdown} from './Studiensemester.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 
-export const Student = {
+export default {
+	name: 'StudentComponent',
 	components: {
 		CoreNavigationCmpt,
 		CoreFilterCmpt,
@@ -37,6 +38,7 @@ export const Student = {
 		},
 		ssChangedHandler: function(studiensemester) {
 			Vue.$fhcapi.Student.getAll(studiensemester).then(response => {
+				console.log(response.retval)
 				this.$refs.uebersichtTable.tabulator.setData(response.retval);
 			});
 		},

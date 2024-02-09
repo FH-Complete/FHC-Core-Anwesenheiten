@@ -31,8 +31,9 @@ $includesArray = array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
 	),
-	'customJSModules' => (
-		'public/extensions/FHC-Core-Anwesenheiten/js/apps/LektorApp.js'
+	'customJSModules' => array(
+		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
+		'public/extensions/FHC-Core-Anwesenheiten/js/mixins/formatters.js'
 	)
 );
 
@@ -40,14 +41,12 @@ $this->load->view('templates/FHC-Header', $includesArray);
 ?>
 
 <body>
-	<div id="main">
-		<router-view
+<div id="main">
+	<router-view
 
-		></router-view>
-	</div>
+	></router-view>
+</div>
 </body>
-
-
 
 <?php $this->load->view('templates/FHC-Footer', $includesArray); ?>
 

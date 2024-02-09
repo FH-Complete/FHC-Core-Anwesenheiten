@@ -1,8 +1,10 @@
-import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
-import {CoreNavigationCmpt} from '../../../../js/components/navigation/Navigation.js';
+import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
+import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 
-import verticalsplit from "../../../../js/components/verticalsplit/verticalsplit.js";
-import searchbar from "../../../../js/components/searchbar/searchbar.js";
+import { anwesenheitFormatter } from "../../mixins/formatters";
+
+import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
+import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 
 
 export default {
@@ -24,8 +26,7 @@ export default {
 				columns: [
 					{title: 'Anwesenheit ID', field: 'anwesenheit_id', visible: false},
 					{title: 'Datum', field: 'datum', headerFilter: true},
-					// TODO(johann): define anwesenheitFormatter once and import from somewhere
-					{title: 'Status', field: 'status', formatter: this.anwesenheitFormatter},
+					{title: 'Status', field: 'status', formatter: anwesenheitFormatter},
 				]
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [{
@@ -65,13 +66,6 @@ export default {
 
 	},
 	methods: {
-		anwesenheitFormatter (cell) {
-			// TODO: (johann) more sophicitcated check against db fetched status_type values
-			const data = cell.getData().status
-			if (data === "anw") return '<i class="fa fa-check"></i>'
-			else if (data === "abw") return '<i class="fa fa-xmark"></i>'
-			else return '-'
-		},
 		newSideMenuEntryHandler: function(payload) {
 			this.appSideMenuEntries = payload;
 		},

@@ -1,3 +1,5 @@
+import { anwesenheitFormatter } from "../../mixins/formatters";
+
 function customGroupHeader(value, count, data, group){
 	return '<div style="display:flex; justify-content: space-between;">' +
 		'<div>' + value + '</div>' +
@@ -19,7 +21,7 @@ export const studentViewTabulatorOptions = {
 	columns: [
 		{title: 'Lehrveranstaltung'},
 		{title: 'Datum', field: 'datum'},
-		{title: 'Anwesend', field: 'status'},
+		{title: 'Anwesend', field: 'status', anwesenheitFormatter},
 	],
 	groupBy: ['bezeichnung'],
 	groupHeader: customGroupHeader

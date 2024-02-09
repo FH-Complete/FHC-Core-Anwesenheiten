@@ -1,8 +1,10 @@
-import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
-import {CoreNavigationCmpt} from '../../../../js/components/navigation/Navigation.js';
+import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
+import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 
-import verticalsplit from "../../../../js/components/verticalsplit/verticalsplit.js";
-import searchbar from "../../../../js/components/searchbar/searchbar.js";
+import { anwesenheitFormatter } from "../../mixins/formatters";
+
+import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
+import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 
 export default {
 	name: 'LektorComponent',
@@ -26,8 +28,7 @@ export default {
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true},
 					{title: 'Nachname', field: 'nachname', headerFilter: true},
-					{title: 'Aktuelles Datum', field: 'datum', formatter: this.anwesenheitFormatter
-					}, // cell value is anwesenheit not datum
+					{title: 'Aktuelles Datum', field: 'status', formatter: anwesenheitFormatter},
 					{title: 'Summe', field: 'sum'},
 				]
 			},
@@ -62,12 +63,6 @@ export default {
 		// lv_id: null
 	},
 	methods: {
-		anwesenheitFormatter (cell) {
-			const data = cell.getData().datum
-			if (data === "anw") return '<i class="fa fa-check"></i>'
-			else if (data === "abw") return '<i class="fa fa-xmark"></i>'
-			else return '-'
-		},
 		newSideMenuEntryHandler: function(payload) {
 			this.appSideMenuEntries = payload;
 		},
@@ -84,10 +79,10 @@ export default {
 	},
 	created(){
 		const selectedDateFormatted = formatDate(this.selectedDate)
-		this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'datum').title = selectedDateFormatted
+		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
+		found.title = selectedDateFormatted
 	},
 	mounted() {
-
 
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
 			if(!res.data)return
@@ -117,7 +112,7 @@ export default {
 				this.tableStudentData.push({prestudent_id: student.prestudent_id,
 					vorname: student.vorname,
 					nachname: student.nachname,
-					datum: status ?? '-',
+					status: status ?? '-',
 					sum: student.sum});
 			})
 

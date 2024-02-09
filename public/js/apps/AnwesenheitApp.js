@@ -1,14 +1,16 @@
 import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
-import LektorComponent from "../components/LektorComponent.js";
+import LektorComponent from "../components/Lektor/LektorComponent.js";
 import FhcAlert from '../../../../js/plugin/FhcAlert.js';
-import StudentByLvaComponent from "../components/StudentByLvaComponent";
+import StudentByLvaComponent from "../components/Lektor/StudentByLvaComponent";
+import StudentComponent from "../components/Student/StudentComponent";
+import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
 
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
-const change = 'a'
+
 const router = VueRouter.createRouter({
-	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/Lektor`),
+	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
 	routes: [
 		{
 			path: `/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
@@ -17,12 +19,19 @@ const router = VueRouter.createRouter({
 			props: true
 		},
 		{
-			path: `/`,
+			path: `/Lektor`,
 			name: 'Lektor',
 			component: LektorComponent,
-			children: [
-
-			]
+		},
+		{
+			path: `/Student`,
+			name: 'Student',
+			component: StudentComponent
+		},
+		{
+			path: `/Assistenz`,
+			name: 'Assistenz',
+			component: AssistenzComponent
 		},
 		{
 			path: '/:catchAll(.*)',
@@ -31,16 +40,16 @@ const router = VueRouter.createRouter({
 	]
 })
 
-const lektorApp = Vue.createApp({
+const anwesenheitApp = Vue.createApp({
 	
 	components: {
 		LektorComponent,
-		StudentByLvaComponent
+		StudentByLvaComponent,
+		StudentComponent
 	},
 	data() {
 		return {
-			title: "Lektor Anwesenheitskontrolle App",
-
+			title: "AnwesenheitApp",
 		}
 	},
 	props: {
@@ -59,7 +68,7 @@ const lektorApp = Vue.createApp({
 
 	},
 });
-lektorApp
+anwesenheitApp
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(FhcAlert)

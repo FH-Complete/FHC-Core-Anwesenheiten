@@ -85,7 +85,7 @@ class Lektor extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Lektor');
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten');
 	}
 
 	/**

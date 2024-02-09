@@ -44,7 +44,7 @@ class Student extends Auth_Controller
 
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Student/Student');
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten');
 	}
 	
 	public function getAll()
