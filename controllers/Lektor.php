@@ -16,7 +16,8 @@ class Lektor extends Auth_Controller
 				'index' => 'admin:rw',
 				'studentByLva' => 'admin:rw',
 				'getAllAnwesenheitenByLektor' => 'admin:rw',
-				'getAllAnwesenheitenByStudentByLva' => 'admin:rw'
+				'getAllAnwesenheitenByStudentByLva' => 'admin:rw',
+				'updateAnwesenheiten' => 'admin:rw'
 			)
 		);
 
@@ -69,11 +70,15 @@ class Lektor extends Auth_Controller
 		if(!hasData($res)) return null;
 		$this->outputJson($res);
 	}
-	public function studentByLva()
+
+	public function updateAnwesenheiten()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/StudentByLva');
+		$result = $this->getPostJSON();
+		$changedAnwesenheiten = $result->changedAnwesenheiten;
+		return $this->_ci->AnwesenheitenModel->updateAnwesenheiten($changedAnwesenheiten);
 
 	}
+
 	/**
 	 * Index Controller
 	 * @return void
@@ -83,11 +88,6 @@ class Lektor extends Auth_Controller
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Lektor');
 	}
 
-
-	public function anwesenheitByStudent()
-	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Lektor');
-	}
 	/**
 	 * Retrieve the UID of the logged user and checks if it is valid
 	 */

@@ -24,8 +24,8 @@ export default {
 				columns: [
 					{title: 'Anwesenheit ID', field: 'anwesenheit_id', visible: false},
 					{title: 'Datum', field: 'datum', headerFilter: true},
-					{title: 'Status', field: 'status', formatter: this.anwesenheitFormatter
-					},
+					// TODO(johann): define anwesenheitFormatter once and import from somewhere
+					{title: 'Status', field: 'status', formatter: this.anwesenheitFormatter},
 				]
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [{
@@ -33,13 +33,21 @@ export default {
 				handler: (e, cell) => {
 					const row = cell.getRow()
 					const data = cell.getData().status
-					// TODO: (johann) more sophisticated check
+					// TODO: (johann) more sophisticated check with db fetched status_type values
 					if(data === "anw") {
-						const newRow = {datum: cell.getData().datum, status: "abw"}
+						const newRow = {
+							anwesenheit_id: cell.getData().anwesenheit_id,
+							datum: cell.getData().datum,
+							status: "abw"
+						}
 						this.handleChange(newRow)
 						row.update(newRow)
 					} else if (data === "abw") {
-						const newRow = {datum: cell.getData().datum, status: "anw"}
+						const newRow = {
+							anwesenheit_id: cell.getData().anwesenheit_id,
+							datum: cell.getData().datum,
+							status: "anw"
+						}
 						this.handleChange(newRow)
 						row.update(newRow)
 					}
@@ -58,6 +66,7 @@ export default {
 	},
 	methods: {
 		anwesenheitFormatter (cell) {
+			// TODO: (johann) more sophicitcated check against db fetched status_type values
 			const data = cell.getData().status
 			if (data === "anw") return '<i class="fa fa-check"></i>'
 			else if (data === "abw") return '<i class="fa fa-xmark"></i>'
@@ -73,26 +82,34 @@ export default {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
 		handleChange(row){
-			// TODO: write data changed detection
-
-			// const existingEntryIndex = this.changedData.findIndex(element => element.datum === row.datum && element.status === row.status)
-			// if(existingEntry === undefined) this.changedData.push(row)
-			// else this.changedData
+			const existingEntryIndex = this.changedData.findIndex(element => element.datum === row.datum)
+			if(existingEntryIndex >= 0) this.changedData.splice(existingEntryIndex, 1)
+			else this.changedData.push(row)
 		},
-		saveChanges(){
-			Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten()
+		async saveChanges(){
+
+			const result = await Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(this.changedData)
+			this.changedData = []
+
+
+			if(result && result.status === 200) {
+				this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
+			} else {
+				this.$fhcAlert.alertError("Something went terribly wrong.")
+			}
+
+
 		}
 	},
 	created(){
 
 	},
 	mounted() {
-
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
 			.then((res) => {
 
 				if(!res.data) return
-
+				console.log(res.data.retval)
 				this.tableData = res.data.retval
 				this.initialTableData = [...res.data.retval]
 				this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
@@ -132,7 +149,7 @@ export default {
 						noColumnFilter>
 					</core-filter-cmpt>
 					<div class="d-flex justify-content-end align-items-end mt-3">
-						<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" disabled="!dataChanged">
+						<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" :disabled="!dataChanged">
 							Änderungen Speichern
 						</button>
 					</div>

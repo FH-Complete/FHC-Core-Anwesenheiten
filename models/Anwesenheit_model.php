@@ -42,7 +42,9 @@ class Anwesenheit_model extends \DB_Model
 					AND tbl_lehreinheit.lehrveranstaltung_id = {$lv_id}
 				) lehrende
 			ON (students.lehrveranstaltung_id = lehrende.lehrveranstaltung_id)) lektorXstudents
-		JOIN extension.tbl_anwesenheit USING (prestudent_id, lehreinheit_id);";
+		JOIN extension.tbl_anwesenheit USING (prestudent_id, lehreinheit_id)
+		ORDER BY nachname;
+";
 
 		return $this->execQuery($query);
 	}
@@ -54,8 +56,9 @@ class Anwesenheit_model extends \DB_Model
 			FROM extension.tbl_anwesenheit
 			JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 			JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
-			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}';
-		";
+			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}'
+			ORDER BY datum ASC;
+";
 
 		return $this->execQuery($query);
 	}
@@ -147,6 +150,41 @@ class Anwesenheit_model extends \DB_Model
 		';
 
 		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
+	}
+
+	public function updateAnwesenheiten($changedAnwesenheiten) {
+
+		// TODO (johann) maybe there is a better way to update a set of entries?
+
+		$this->db->trans_start(false);
+
+		forEach ($changedAnwesenheiten as $entry) {
+			$result = $this->update($entry->anwesenheit_id, array(
+				'datum' => $entry->datum,
+				'status' => $entry->status,
+				'updateamum' => $this->escape('NOW()'),
+				'updatevon' => getAuthUID()
+			));
+
+			if (!isSuccess($result)) {
+				break;
+			}
+		}
+
+		$this->db->trans_complete();
+
+		// Check if everything went ok during the transaction
+		if ($this->db->trans_status() === false || isError($result))
+		{
+			$this->db->trans_rollback();
+			return error($result->msg, EXIT_ERROR);
+		}
+		else
+		{
+			$this->db->trans_commit();
+			return success('Anwesenheiten successfully updated.');
+		}
+
 	}
 
 }

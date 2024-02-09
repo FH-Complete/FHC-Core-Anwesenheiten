@@ -1,12 +1,12 @@
 import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
 import LektorComponent from "../components/LektorComponent.js";
-// import FhcAlert from '../../../../js/plugin/FhcAlert.js';
+import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 import StudentByLvaComponent from "../components/StudentByLvaComponent";
 
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
-
+const change = 'a'
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/Lektor`),
 	routes: [
@@ -61,7 +61,7 @@ const lektorApp = Vue.createApp({
 });
 lektorApp
 	.use(router)
-	// .use(FhcAlert)
+	.use(primevue.config.default, {zIndex: {overlay: 9999}})
+	.use(FhcAlert)
 	.mount("#main");
-	// .use(primevue.config.default, {zIndex: {overlay: 9999}})
 

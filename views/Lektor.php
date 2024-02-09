@@ -16,6 +16,7 @@ $includesArray = array(
 	'navigationwidget' => true,
 	'dialoglib' => true,
 	'vue3' => true,
+	'primevue3' => true,
 	'phrases' => array(
 		'global',
 		'ui',

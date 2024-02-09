@@ -15,7 +15,10 @@ export default {
 
 		return axios.get(url);
 	},
-	saveChangedAnwesenheiten(){
+	saveChangedAnwesenheiten(changedAnwesenheiten = []){
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/lektor/updateAnwesenheiten`;
 
+		return axios.post(url,{changedAnwesenheiten});
 	}
 };
