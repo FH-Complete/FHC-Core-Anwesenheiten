@@ -52,7 +52,8 @@ export default {
 			studentsData: null,
 			datesData: null,
 			namesAndID: null,
-			tableStudentData: null
+			tableStudentData: null,
+			qr: null
 		}
 	},
 	props: {
@@ -79,15 +80,13 @@ export default {
 			// if there is no stundenplan entry enter some hours of anwesenheit?
 
 
-			Vue.$fhcapi.Anwesenheit.getQRCode({
-				ma_uid: this.ma_uid,
-				sem_kurzbz: this.sem_kurzbz,
-				lv_id: this.lv_id,
-				le_id: this.le_id,
-				selectedDate: this.selectedDate
-			}).then(
-				QR => {
-					console.log('QR', QR)
+			Vue.$fhcapi.Anwesenheit.getQRCode(this.le_id).then(
+				res => {
+					console.log('res qr', res)
+
+					if(res && res.data && res.data.retval) {
+						this.qr = res.data.retval.svg
+					}
 				}
 			)
 		}
@@ -155,6 +154,9 @@ export default {
 
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+		},
+		qr(newVal, oldVal) {
+
 		}
 	},
 
@@ -180,7 +182,7 @@ export default {
 						noColumnFilter>
 					</core-filter-cmpt>
 					<div class="d-flex justify-content-end align-items-end mt-3">
-						<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary align-self-end">
+						<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary align-self-end" :disabled=qr>
 							Neue Anwesenheitskontrolle starten 
 						</button>
 					</div>
@@ -195,6 +197,8 @@ export default {
 						auto-apply="true">
 					</datepicker>		
 				</div>
+				<div v-html="qr"></div>
+				
 			</div>
 		</div>
 	</div>`

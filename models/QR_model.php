@@ -13,9 +13,4 @@ class QR_model extends \DB_Model
 		$this->pk = array();
 		$this->hasSequence = false;
 	}
-
-	public function getQRCode($qrinfo) {
-
-
-	}
 }

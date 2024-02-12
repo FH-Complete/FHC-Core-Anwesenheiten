@@ -27,6 +27,7 @@ class Lektor extends Auth_Controller
 
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 
 		// load libraries
 		$this->_ci->load->library('PermissionLib');
@@ -82,47 +83,15 @@ class Lektor extends Auth_Controller
 		return $this->_ci->AnwesenheitenModel->updateAnwesenheiten($changedAnwesenheiten);
 	}
 
-	public function getQRCode() {
-
-			// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of
-			// Anwesenheiten
+	public function getQRCode()
+	{
+		// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of Anwesenheiten
 
 		$result = $this->getPostJSON();
-		$qrinfo = $result->qrinfo;
 
-
-		// TODO: (johann) welche infos benötigen wir wirklich für einen QR?
-		$ma_uid = $qrinfo->ma_uid;
-		$sem_kurzbz = $qrinfo->sem_kurzbz;
-		$lv_id = $qrinfo->lv_id;
-		$selectedDate = $qrinfo->selectedDate;
-
-		$mitarbeiter = $this->_ci->Emodel->loadWhere(array('student_uid' => $this->_uid));
-
-		if (!hasData($student))
-			$this->terminateWithJsonError('Der Mitarbeiter kann nicht geladen werden.');
-
-		$studiengang = $this->_ci->StudiengangModel->loadWhere(array('studiengang_kz' => getData($student)[0]->studiengang_kz));
-
-		if (!hasData($studiengang))
-			$this->terminateWithJsonError('Die Lehreinehit kann nicht geladen werden.');
-
-		$studiengangTyp = getData($studiengang)[0]->typ;
-
-		if ($studiengangTyp !== 'm' && $studiengangTyp !== 'b' && !in_array($this->_uid, $this->_ci->config->item('USERS_WHITELIST')))
-			$this->terminateWithJsonError('Sie sind nicht berechtigt.');
-
-		$cards = $this->_ci->BetriebsmittelpersonModel->getBetriebsmittelByUid($this->_uid, 'Zutrittskarte');
-
-
-		// this->AnwesenheitenModel
-
-		// generate Zugangscode to be entered or scanned with QR
-
+		$le_id = $result->le_id;
 		// check if QR code already exists for given qrinfo
-
-		$existingQR = $this->_ci->QRModel->getQRCode($qrinfo);
-
+		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
 
 
 		$options = new QROptions([
@@ -131,35 +100,35 @@ class Lektor extends Auth_Controller
 			'quietzoneSize' => 1,
 			'scale' => 10
 		]);
-
 		$qrcode = new QRCode($options);
 
-		if (hasData($existingQR))
-		{
-			$result = getData($existingQR)[0];
+		if(hasData($result)) { // resend existing qr
 
-			$hash = $result->zugangscode;
+			$hash = $result->retval[0]->zugangscode;
 
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($hash)));
-		}
-		else
-		{
+			$url = BASE_LOCATION."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/handleAnwesenheitenscan/.$hash";
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url)));
+
+		} else { // create a newqr
+
 			do {
 				$token = generateToken();
 				$hash = hash('md5', $token);
+				$url = BASE_LOCATION."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/handleAnwesenheitenscan/".$hash;
+
 				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $hash));
 			} while(hasData($check));
 
-
 			$insert = $this->_ci->QRModel->insert(array(
 				'zugangscode' => $hash,
-//				'lehreinheit_id' => $pin,
-				'insertamum' => date('Y-m-d H:i:s')));
+				'lehreinheit_id' => $le_id,
+				'insertamum' => date('Y-m-d H:i:s')
+			));
 
 			if (isError($insert))
 				$this->terminateWithJsonError('Fehler beim Speichern');
 
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($hash), 'pin' => $pin));
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url)));
 		}
 	}
 
