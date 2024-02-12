@@ -47,7 +47,8 @@ export default {
 			ma_uid: 'ma0144',
 			sem_kurzbz: 'WS2023',
 			lv_id: '38733',
-			selectedDate: new Date('2023-10-09'), // formatDate(new Date()),
+			le_id: '138879',
+			selectedDate: new Date('2023-10-09'),
 			studentsData: null,
 			datesData: null,
 			namesAndID: null,
@@ -73,7 +74,22 @@ export default {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
 		startNewAnwesenheitskontrolle(){
-			// TODO: QR code magic
+			// fetch some data from stundenplan what should be happening rn
+
+			// if there is no stundenplan entry enter some hours of anwesenheit?
+
+
+			Vue.$fhcapi.Anwesenheit.getQRCode({
+				ma_uid: this.ma_uid,
+				sem_kurzbz: this.sem_kurzbz,
+				lv_id: this.lv_id,
+				le_id: this.le_id,
+				selectedDate: this.selectedDate
+			}).then(
+				QR => {
+					console.log('QR', QR)
+				}
+			)
 		}
 
 	},
@@ -85,7 +101,8 @@ export default {
 	mounted() {
 
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
-			if(!res.data)return
+			console.log('res', res)
+			if(!res.data || !res.data.retval) return
 
 			this.studentsData = new Map()
 			this.datesData = new Set()

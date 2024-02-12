@@ -1,6 +1,9 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
+use \chillerlan\QRCode\QROptions;
+use \chillerlan\QRCode\QRCode;
+
 class Lektor extends Auth_Controller
 {
 
@@ -17,7 +20,8 @@ class Lektor extends Auth_Controller
 				'studentByLva' => 'admin:rw',
 				'getAllAnwesenheitenByLektor' => 'admin:rw',
 				'getAllAnwesenheitenByStudentByLva' => 'admin:rw',
-				'updateAnwesenheiten' => 'admin:rw'
+				'updateAnwesenheiten' => 'admin:rw',
+				'getQRCode' => 'admin:rw'
 			)
 		);
 
@@ -76,7 +80,87 @@ class Lektor extends Auth_Controller
 		$result = $this->getPostJSON();
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
 		return $this->_ci->AnwesenheitenModel->updateAnwesenheiten($changedAnwesenheiten);
+	}
 
+	public function getQRCode() {
+
+			// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of
+			// Anwesenheiten
+
+		$result = $this->getPostJSON();
+		$qrinfo = $result->qrinfo;
+
+
+		// TODO: (johann) welche infos benötigen wir wirklich für einen QR?
+		$ma_uid = $qrinfo->ma_uid;
+		$sem_kurzbz = $qrinfo->sem_kurzbz;
+		$lv_id = $qrinfo->lv_id;
+		$selectedDate = $qrinfo->selectedDate;
+
+		$mitarbeiter = $this->_ci->Emodel->loadWhere(array('student_uid' => $this->_uid));
+
+		if (!hasData($student))
+			$this->terminateWithJsonError('Der Mitarbeiter kann nicht geladen werden.');
+
+		$studiengang = $this->_ci->StudiengangModel->loadWhere(array('studiengang_kz' => getData($student)[0]->studiengang_kz));
+
+		if (!hasData($studiengang))
+			$this->terminateWithJsonError('Die Lehreinehit kann nicht geladen werden.');
+
+		$studiengangTyp = getData($studiengang)[0]->typ;
+
+		if ($studiengangTyp !== 'm' && $studiengangTyp !== 'b' && !in_array($this->_uid, $this->_ci->config->item('USERS_WHITELIST')))
+			$this->terminateWithJsonError('Sie sind nicht berechtigt.');
+
+		$cards = $this->_ci->BetriebsmittelpersonModel->getBetriebsmittelByUid($this->_uid, 'Zutrittskarte');
+
+
+		// this->AnwesenheitenModel
+
+		// generate Zugangscode to be entered or scanned with QR
+
+		// check if QR code already exists for given qrinfo
+
+		$existingQR = $this->_ci->QRModel->getQRCode($qrinfo);
+
+
+
+		$options = new QROptions([
+			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
+			'addQuietzone' => true,
+			'quietzoneSize' => 1,
+			'scale' => 10
+		]);
+
+		$qrcode = new QRCode($options);
+
+		if (hasData($existingQR))
+		{
+			$result = getData($existingQR)[0];
+
+			$hash = $result->zugangscode;
+
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($hash)));
+		}
+		else
+		{
+			do {
+				$token = generateToken();
+				$hash = hash('md5', $token);
+				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $hash));
+			} while(hasData($check));
+
+
+			$insert = $this->_ci->QRModel->insert(array(
+				'zugangscode' => $hash,
+//				'lehreinheit_id' => $pin,
+				'insertamum' => date('Y-m-d H:i:s')));
+
+			if (isError($insert))
+				$this->terminateWithJsonError('Fehler beim Speichern');
+
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($hash), 'pin' => $pin));
+		}
 	}
 
 	/**

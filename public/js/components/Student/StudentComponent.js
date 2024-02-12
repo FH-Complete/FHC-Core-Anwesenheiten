@@ -38,7 +38,6 @@ export default {
 		},
 		ssChangedHandler: function(studiensemester) {
 			Vue.$fhcapi.Student.getAll(studiensemester).then(response => {
-				console.log(response.retval)
 				this.$refs.uebersichtTable.tabulator.setData(response.retval);
 			});
 		},

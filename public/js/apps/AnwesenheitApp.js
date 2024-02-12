@@ -8,12 +8,12 @@ import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
 Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
-
+const a = "a"
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
 	routes: [
 		{
-			path: `/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
+			path: `/Lektor/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
 			name: 'StudentByLva',
 			component: StudentByLvaComponent,
 			props: true

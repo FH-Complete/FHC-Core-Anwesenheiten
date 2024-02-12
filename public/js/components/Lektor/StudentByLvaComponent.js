@@ -81,18 +81,15 @@ export default {
 			else this.changedData.push(row)
 		},
 		async saveChanges(){
-
-			const result = await Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(this.changedData)
+			const changedData = this.changedData
 			this.changedData = []
-
+			const result = await Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(changedData)
 
 			if(result && result.status === 200) {
 				this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
 			} else {
 				this.$fhcAlert.alertError("Something went terribly wrong.")
 			}
-
-
 		}
 	},
 	created(){
@@ -101,9 +98,9 @@ export default {
 	mounted() {
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
 			.then((res) => {
+				console.log(res)
+				if(!res.data || !res.data.retval) return
 
-				if(!res.data) return
-				console.log(res.data.retval)
 				this.tableData = res.data.retval
 				this.initialTableData = [...res.data.retval]
 				this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);

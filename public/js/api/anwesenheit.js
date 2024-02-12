@@ -20,5 +20,13 @@ export default {
 			`/extensions/FHC-Core-Anwesenheiten/lektor/updateAnwesenheiten`;
 
 		return axios.post(url,{changedAnwesenheiten});
+	},
+	getQRCode(qrinfo = null) {
+
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/lektor/getQRCode`;
+
+		return axios.post(url, qrinfo)
+
 	}
 };
