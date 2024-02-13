@@ -43,7 +43,7 @@ $this->load->view('templates/FHC-Header', $includesArray);
 <body>
 <div id="main">
 	<router-view
-
+		:permissions="<?= htmlspecialchars(json_encode($permissions)); ?>"
 	></router-view>
 </div>
 </body>

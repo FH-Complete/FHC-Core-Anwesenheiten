@@ -98,7 +98,6 @@ export default {
 	mounted() {
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
 			.then((res) => {
-				console.log(res)
 				if(!res.data || !res.data.retval) return
 
 				this.tableData = res.data.retval
@@ -128,7 +127,6 @@ export default {
 		<div id="content">
 			<div class="row">
 				<div class="col-8">
-<!--					<i class="fa fa-chevron-left"></i>-->
 					<core-filter-cmpt
 						title="anwesenheitenByStudentByLva Viewer"
 						ref="anwesenheitenByStudentByLvaTable"

@@ -2,6 +2,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 
 import { anwesenheitFormatter } from "../../mixins/formatters";
+import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
@@ -11,6 +12,7 @@ export default {
 	components: {
 		CoreFilterCmpt,
 		CoreNavigationCmpt,
+		BsModal,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -35,6 +37,8 @@ export default {
 			anwesenheitenTabulatorEventHandlers: [{
 				event: "rowClick",
 				handler: (e, row) => {
+					// TODO (johann): detect if rowclick was on name columns, else dont route or do smth else
+
 					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
 
 					this.$router.push({
@@ -44,6 +48,7 @@ export default {
 				}
 			}],
 			tableData: [],
+			// TODO: get these via get parameter into properties
 			ma_uid: 'ma0144',
 			sem_kurzbz: 'WS2023',
 			lv_id: '38733',
@@ -53,7 +58,9 @@ export default {
 			datesData: null,
 			namesAndID: null,
 			tableStudentData: null,
-			qr: null
+			qr: null,
+			url: null,
+			code: null
 		}
 	},
 	props: {
@@ -74,22 +81,58 @@ export default {
 		searchfunctiondummy: function(searchsettings) {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
-		startNewAnwesenheitskontrolle(){
-			// fetch some data from stundenplan what should be happening rn
-
-			// if there is no stundenplan entry enter some hours of anwesenheit?
-
-
-			Vue.$fhcapi.Anwesenheit.getQRCode(this.le_id).then(
+		getExistingQRCode(){
+			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_id).then(
 				res => {
-					console.log('res qr', res)
-
-					if(res && res.data && res.data.retval) {
+					if(res?.data?.retval?.svg) {
 						this.qr = res.data.retval.svg
+						this.url = res.data.retval.url
+						this.code = res.data.retval.code
+
+						this.$refs.modalContainer.show()
 					}
 				}
 			)
-		}
+		},
+		getNewQRCode () {
+			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_id).then(
+				res => {
+
+					if(res && res.data && res.data.retval) {
+						this.qr = res.data.retval.svg
+						this.url = res.data.retval.url
+						this.code = res.data.retval.code
+
+						this.$refs.modalContainer.show()
+					}
+				}
+			)
+		},
+		startNewAnwesenheitskontrolle(){
+			this.qr = '' // indirectly set start button disabled
+
+			// fetch some data from stundenplan what should be happening rn
+			// if there is no stundenplan entry enter some hours of anwesenheit?
+
+			this.getNewQRCode()
+		},
+		stopAnwesenheitskontrolle () {
+			this.$refs.modalContainer.hide()
+
+			this.qr = null
+			this.url = null
+			this.code = null
+
+			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_id).then(
+				res => {
+					if(res && res.status === 200) {
+						this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich terminiert.")
+					} else {
+						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle.")
+					}
+				}
+			)
+		},
 
 	},
 	created(){
@@ -98,6 +141,8 @@ export default {
 		found.title = selectedDateFormatted
 	},
 	mounted() {
+
+		this.getExistingQRCode()
 
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
 			console.log('res', res)
@@ -120,7 +165,8 @@ export default {
 
 			this.tableStudentData = []
 			const selectedDateFormatted = formatDate(this.selectedDate)
-			this.namesAndID.forEach(student => {
+			this.namesAndID.forEach((student, index) => {
+
 				const studentDataEntry = this.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
 				const status = Reflect.get(anwesenheit, 'status')
@@ -141,22 +187,20 @@ export default {
 	watch: {
 		selectedDate(newVal) {
 
-
 			const selectedDateFormatted = formatDate(newVal)
-			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'datum').title = selectedDateFormatted
+			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFormatted
 
-				this.namesAndID.forEach(student => {
-				const studentDataEntry = this.studentsData.get(student.prestudent_id)
-				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum')=== selectedDateFormatted)
-				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-				this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id).datum = status
+				this.namesAndID.forEach((student, index) => {
+					const studentDataEntry = this.studentsData.get(student.prestudent_id)
+					const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
+					const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
+
+					const foundEntry = this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
+					console.log(foundEntry.stat)
+					foundEntry.status = status
 			})
-
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
-			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
-		},
-		qr(newVal, oldVal) {
-
+			this.$refs.anwesenheitenTable.tabulator.setData([...this.tableStudentData]);
 		}
 	},
 
@@ -169,6 +213,20 @@ export default {
 		
 		<div id="content">
 			<div class="row">
+			
+				<bs-modal ref="modalContainer" class="bootstrap-prompt" backdrop="static" 
+				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
+					<template v-slot:title>Anwesenheiten QR</template>
+					<template v-slot:default>
+						<p>URL: {{url}}</p>
+						<p>Code: {{code}}</p>
+						<div v-html="qr" class="text-center"></div>
+					</template>
+					<template v-slot:footer>
+						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">Anwesenheitskontrolle beenden</button>
+					</template>
+				</bs-modal>
+				
 				<div class="col-8">
 					<core-filter-cmpt
 						title="Anwesenheiten Viewer"
@@ -197,7 +255,6 @@ export default {
 						auto-apply="true">
 					</datepicker>		
 				</div>
-				<div v-html="qr"></div>
 				
 			</div>
 		</div>

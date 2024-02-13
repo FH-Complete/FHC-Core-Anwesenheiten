@@ -46,8 +46,12 @@ class Assistenz extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten');
-	}
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', [
+			'permissions' => [
+				'admin/rw' => $this->permissionlib->isBerechtigt('admin/rw'),
+				'student/alias' => $this->permissionlib->isBerechtigt('student/alias')
+			]
+		]);	}
 
 	/**
 	 * Retrieve the UID of the logged user and checks if it is valid

@@ -21,14 +21,28 @@ export default {
 
 		return axios.post(url,{changedAnwesenheiten});
 	},
-	getQRCode(le_id = null) {
-
-
-		console.log('le_id', le_id);
+	getNewQRCode(le_id = null) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
-			`/extensions/FHC-Core-Anwesenheiten/lektor/getQRCode`;
+			`/extensions/FHC-Core-Anwesenheiten/lektor/getNewQRCode`;
 
 		return axios.post(url, {le_id})
+	},
+	getExistingQRCode(le_id = null) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/lektor/getExistingQRCode`;
 
+		return axios.post(url, {le_id})
+	},
+	deleteQRCode(le_id = null) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/lektor/deleteQRCode`;
+
+		return axios.post(url, {le_id})
+	},
+	checkInAnwesenheit(payload) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/student/checkInAnwesenheit`;
+
+		return axios.post(url, payload)
 	}
 };

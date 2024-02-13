@@ -6,7 +6,6 @@ use \chillerlan\QRCode\QRCode;
 
 class Lektor extends Auth_Controller
 {
-
 	private $_ci;
 	private $_uid;
 
@@ -21,7 +20,9 @@ class Lektor extends Auth_Controller
 				'getAllAnwesenheitenByLektor' => 'admin:rw',
 				'getAllAnwesenheitenByStudentByLva' => 'admin:rw',
 				'updateAnwesenheiten' => 'admin:rw',
-				'getQRCode' => 'admin:rw'
+				'getNewQRCode' => 'admin:rw',
+				'getExistingQRCode' => 'admin:rw',
+				'deleteQRCode' => 'admin:rw'
 			)
 		);
 
@@ -33,7 +34,6 @@ class Lektor extends Auth_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
-
 		$this->_ci->load->library('AuthLib');
 
 		$this->loadPhrases(
@@ -43,11 +43,11 @@ class Lektor extends Auth_Controller
 				'filter'
 			)
 		);
+
 		// Load helpers
 		$this->load->helper('array');
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
-
 	}
 
 	public function getAllAnwesenheitenByLektor()
@@ -83,16 +83,11 @@ class Lektor extends Auth_Controller
 		return $this->_ci->AnwesenheitenModel->updateAnwesenheiten($changedAnwesenheiten);
 	}
 
-	public function getQRCode()
-	{
-		// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of Anwesenheiten
-
+	public function getExistingQRCode(){
 		$result = $this->getPostJSON();
-
 		$le_id = $result->le_id;
-		// check if QR code already exists for given qrinfo
-		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
 
+		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -104,23 +99,57 @@ class Lektor extends Auth_Controller
 
 		if(hasData($result)) { // resend existing qr
 
-			$hash = $result->retval[0]->zugangscode;
+			$shortHash = $result->retval[0]->zugangscode;
 
-			$url = BASE_LOCATION."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/handleAnwesenheitenscan/.$hash";
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url)));
+			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
+			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
+		}
+
+		// TODO: maybe different response?
+		$this->outputJsonError("No existing Anwesenheitskontrolle found");
+	}
+
+	public function getNewQRCode()
+	{
+		// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of Anwesenheiten
+
+		$result = $this->getPostJSON();
+		$le_id = $result->le_id;
+
+		// check if QR code already exists for given qrinfo
+		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
+
+		$options = new QROptions([
+			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
+			'addQuietzone' => true,
+			'quietzoneSize' => 1,
+			'scale' => 10
+		]);
+		$qrcode = new QRCode($options);
+
+		if(hasData($result)) { // resend existing qr
+
+			$shortHash = $result->retval[0]->zugangscode;
+
+			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
+			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
 
 		} else { // create a newqr
 
 			do {
 				$token = generateToken();
-				$hash = hash('md5', $token);
-				$url = BASE_LOCATION."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/handleAnwesenheitenscan/".$hash;
+				$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
+				$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
 
-				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $hash));
+				$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
+
+				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
 			} while(hasData($check));
 
 			$insert = $this->_ci->QRModel->insert(array(
-				'zugangscode' => $hash,
+				'zugangscode' => $shortHash,
 				'lehreinheit_id' => $le_id,
 				'insertamum' => date('Y-m-d H:i:s')
 			));
@@ -128,7 +157,29 @@ class Lektor extends Auth_Controller
 			if (isError($insert))
 				$this->terminateWithJsonError('Fehler beim Speichern');
 
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url)));
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
+		}
+	}
+
+	public function deleteQRCode()
+	{
+
+		// TODO: maybe wait with ACTUALLY deleting because stupid user will 99% prematurely cancel a check?
+
+		$result = $this->getPostJSON();
+		$le_id = $result->le_id;
+
+		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
+
+		if (hasData($result)) {
+			$deleteresp = $this->_ci->QRModel->delete(array(
+				'zugangscode' => $result->retval[0]->zugangscode,
+				'lehreinheit_id' => $le_id
+			));
+
+			return $deleteresp;
+		} else {
+			$this->terminateWithJsonError('Fehler beim Löschen der Anwesenheitskontrolle');
 		}
 	}
 
@@ -138,8 +189,14 @@ class Lektor extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten');
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', [
+			'permissions' => [
+				'admin/rw' => $this->permissionlib->isBerechtigt('admin/rw'),
+				'student/alias' => $this->permissionlib->isBerechtigt('student/alias')
+			]
+		]);
 	}
+
 
 	/**
 	 * Retrieve the UID of the logged user and checks if it is valid

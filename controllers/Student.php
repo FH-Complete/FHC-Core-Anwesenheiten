@@ -44,7 +44,14 @@ class Student extends Auth_Controller
 
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten');
+
+
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', [
+			'permissions' => [
+				'admin/rw' => $this->permissionlib->isBerechtigt('admin/rw'),
+				'student/alias' => $this->permissionlib->isBerechtigt('student/alias')
+			]
+		]);
 	}
 	
 	public function getAll()
@@ -68,6 +75,32 @@ class Student extends Auth_Controller
 
 		
 		$this->outputJsonSuccess($result);
+	}
+
+	public function checkInAnwesenheit() {
+
+		$result = $this->getPostJSON();
+		$zugangscode = $result->zugangscode;
+
+		// TODO: all of the below things
+
+		// how can i know which user sent this request?
+
+		// find relevant entry from tbl_anwesenheit_check via zugangscode
+		// if not return smth like "wrong code eingegeben sry"
+
+		// find relevant lehreinheit from relevant entry
+		// check if the student/person sending the request is actually supposed to be in that lehreinheit
+		// if not return smth like "scanned wrong code or backend schmafu in queries?"
+
+		// to avoid random people being anwesend in random lectures
+
+		// check if there is already an anwesenheit written to lehreinheit on current date
+
+		// if there is no existing anwesenheitsentry, insert a new one
+		// else return smth like "we already have your anwesenheit registred or so"
+
+		// if inserted successfully return some happy msg with what just happened
 	}
 	
 	public function addEntschuldigung()
