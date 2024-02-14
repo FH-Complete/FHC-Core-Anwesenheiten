@@ -14,7 +14,8 @@ export default {
 			internalZugangscode: this.zugangscode,
 			anwesenheitProcessing: true,
 			zugangscodeProcessed: false,
-			codeMaxlength: 8
+			codeMaxlength: 8,
+			lehreinheit: null
 		};
 	},
 	props: {
@@ -28,7 +29,25 @@ export default {
 			// TODO: send request to backend with code and enter anwesenheit for students LE
 			// in backend do a bunch of checks to ensure validity of data
 
-			Vue.$fhcapi.Anwesenheit.checkInAnwesenheit({zugangscode: this.internalZugangscode})
+			Vue.$fhcapi.Anwesenheit.checkInAnwesenheit({zugangscode: this.internalZugangscode}).then(
+				res => {
+					this.anwesenheitProcessing = false
+					console.log(res)
+
+					if(res?.status === 200 && !res.data.error) {
+
+						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
+						this.lehreinheit = JSON.parse(res.data.retval.lehreinheit)
+						// TODO: show date/time/stunden && person data from return!
+
+						this.zugangscodeProcessed = true
+					} else {
+						this.$fhcAlert.alertError(res.data.retval)
+					}
+				}
+			).catch(err => {
+				this.$fhcAlert.alertError("Something went terribly wrong.")
+			})
 
 		},
 		checkValue(event) {
@@ -57,20 +76,24 @@ export default {
 	</core-navigation-cmpt>
 
 	<div id="content">
-
-		<p>Hier könnte Zugangscode einlösen stehen {{ zugangscode }}</p>
 		
 		<template v-if=internalZugangscode>
 			<template v-if="anwesenheitProcessing"> 
-					<p> plz wait while processing the anwesenheit</p>
+					<p> Anfrage wird bearbeitet. </p>
 				</template>
 				<template v-else-if="zugangscodeProcessed"> 
-					<p> gz you are anwesend</p>
+					<p> Glückwunsch, sie sind anwesend </p>
+					<div v-if="lehreinheit">
+						In Lehreinheit {{lehreinheit.lehreinheit_id}}
+						In Lehrveranstaltung {{lehreinheit.lehrveranstaltung_id}}
+						In Studiensemester {{lehreinheit.studiensemester_kurzbz}}
+						etc.
+					</div>
 				</template>
 		</template>
 			
 		<template v-else>
-			<p>please enter Zugangscode</p>
+			<p>Bitte Zugangscode eingeben</p>
 			<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="Zugangscode">
 
 		</template>

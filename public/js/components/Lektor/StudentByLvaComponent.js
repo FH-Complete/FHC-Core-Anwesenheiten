@@ -98,7 +98,10 @@ export default {
 	mounted() {
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
 			.then((res) => {
+				console.log('getAllAnwesenheitenByStudentByLva', res)
 				if(!res.data || !res.data.retval) return
+
+
 
 				this.tableData = res.data.retval
 				this.initialTableData = [...res.data.retval]

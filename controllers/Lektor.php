@@ -104,16 +104,15 @@ class Lektor extends Auth_Controller
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
 			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
+		} else {
+			$this->outputJsonError("No existing Anwesenheitskontrolle found");
 		}
 
-		// TODO: maybe different response?
-		$this->outputJsonError("No existing Anwesenheitskontrolle found");
 	}
 
 	public function getNewQRCode()
 	{
 		// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of Anwesenheiten
-
 		$result = $this->getPostJSON();
 		$le_id = $result->le_id;
 
@@ -156,6 +155,10 @@ class Lektor extends Auth_Controller
 
 			if (isError($insert))
 				$this->terminateWithJsonError('Fehler beim Speichern');
+
+
+			// insert Anwesenheiten entries of every Student as Abwesend sitting
+			$this->_ci->AnwesenheitenModel->createNewAnwesenheitenEntries($le_id);
 
 			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
 		}

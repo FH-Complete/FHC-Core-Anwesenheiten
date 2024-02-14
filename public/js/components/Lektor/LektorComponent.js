@@ -53,7 +53,7 @@ export default {
 			sem_kurzbz: 'WS2023',
 			lv_id: '38733',
 			le_id: '138879',
-			selectedDate: new Date('2023-10-09'),
+			selectedDate: new Date('2024-02-14'),
 			studentsData: null,
 			datesData: null,
 			namesAndID: null,
@@ -125,6 +125,7 @@ export default {
 
 			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_id).then(
 				res => {
+
 					if(res && res.status === 200) {
 						this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich terminiert.")
 					} else {
@@ -169,7 +170,7 @@ export default {
 
 				const studentDataEntry = this.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
-				const status = Reflect.get(anwesenheit, 'status')
+				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
 				this.tableStudentData.push({prestudent_id: student.prestudent_id,
 					vorname: student.vorname,
@@ -177,6 +178,8 @@ export default {
 					status: status ?? '-',
 					sum: student.sum});
 			})
+
+			console.log([...this.namesAndID])
 
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
