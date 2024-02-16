@@ -1,10 +1,12 @@
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
+import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
 export default {
 	name: 'ScanComponent',
 	components: {
 		CoreNavigationCmpt,
+		CoreBaseLayout,
 		CoreRESTClient
 	},
 	data: function() {
@@ -12,10 +14,10 @@ export default {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			internalZugangscode: this.zugangscode,
-			anwesenheitProcessing: true,
 			zugangscodeProcessed: false,
 			codeMaxlength: 8,
-			lehreinheit: null
+			viewData: null,
+			entry: null
 		};
 	},
 	props: {
@@ -25,24 +27,29 @@ export default {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
 		},
+		sendCode() {
+			// only exists so user switches focus from input field and changed event gets triggered when user copy pastes
+			this.processAnwesenheit()
+		},
 		processAnwesenheit() {
-			// TODO: send request to backend with code and enter anwesenheit for students LE
-			// in backend do a bunch of checks to ensure validity of data
 
 			Vue.$fhcapi.Anwesenheit.checkInAnwesenheit({zugangscode: this.internalZugangscode}).then(
 				res => {
-					this.anwesenheitProcessing = false
-					console.log(res)
 
-					if(res?.status === 200 && !res.data.error) {
+					// todo: formalize this better somehow
+					if(res?.status === 200 && !res.data.error && res.data.retval) {
 
 						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
-						this.lehreinheit = JSON.parse(res.data.retval.lehreinheit)
-						// TODO: show date/time/stunden && person data from return!
+
+						this.entry = JSON.parse(res.data.retval.entry)
+						this.entry.datum = new Date(this.entry.datum)
+
+						this.viewData = JSON.parse(res.data.retval.viewData).retval[0]
 
 						this.zugangscodeProcessed = true
 					} else {
 						this.$fhcAlert.alertError(res.data.retval)
+						this.internalZugangscode = ''
 					}
 				}
 			).catch(err => {
@@ -67,6 +74,14 @@ export default {
 	computed: {
 		calculatedMaxLength() {
 			return '' + this.codeMaxlength
+		},
+		getBaseLayoutTitle() {
+			if (this.internalZugangscode && this.zugangscodeProcessed) {
+				return "Anfrage erfolgreich!"
+			} else return "Bitte Zugangscode eingeben."
+		},
+		getSendCodeButtonCondition() {
+			return (this.internalZugangscode && this.internalZugangscode.length === this.codeMaxlength)
 		}
 	},
 	template: `
@@ -75,30 +90,39 @@ export default {
 		v-bind:add-header-menu-entries="headerMenuEntries">
 	</core-navigation-cmpt>
 
-	<div id="content">
-		
-		<template v-if=internalZugangscode>
-			<template v-if="anwesenheitProcessing"> 
-					<p> Anfrage wird bearbeitet. </p>
-				</template>
-				<template v-else-if="zugangscodeProcessed"> 
-					<p> Glückwunsch, sie sind anwesend </p>
-					<div v-if="lehreinheit">
-						In Lehreinheit {{lehreinheit.lehreinheit_id}}
-						In Lehrveranstaltung {{lehreinheit.lehrveranstaltung_id}}
-						In Studiensemester {{lehreinheit.studiensemester_kurzbz}}
-						etc.
-					</div>
-				</template>
-		</template>
-			
-		<template v-else>
-			<p>Bitte Zugangscode eingeben</p>
-			<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="Zugangscode">
+	<h1>Anwesenheitskontrolle</h1>
+	<div class="row-cols col-md-8">
+		<div class="row-col card card-body p-4 mt-3 text-center">
+			<core-base-layout
+				:title=getBaseLayoutTitle>
+				<template #main>
+					<template v-if="!zugangscodeProcessed">
+						<div class="row">
+							<div class="col-md-12">
+								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @change="checkValue($event)" :placeholder="Zugangscode">
+							</div>
+							
+<!--							TODO: maybe button for UX feel but input events should handle that all-->
 
-		</template>
-		
+						</div>
+					</template>
+					<template v-else> 
+						<div v-if="viewData">
+							<div>
+								<p>{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
+								<p>{{entry.datum.toLocaleString()}}</p>
+								<p>{{viewData.vorname}} {{viewData.nachname}} wurde registriert.</p>
+							</div>
+						</div>
+					</template>
+				</template>
+			</core-base-layout>
+		</div>
 	</div>
+
+
+
+	
 		
 `
 };

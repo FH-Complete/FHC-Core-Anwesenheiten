@@ -30,6 +30,7 @@ $includesArray = array(
 	'customJSs' => array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
+		'vendor/moment/momentjs/locale/de-at.js'
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',

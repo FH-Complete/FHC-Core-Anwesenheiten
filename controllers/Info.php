@@ -11,13 +11,15 @@ class Info extends Auth_Controller
 	{
 		parent::__construct(array(
 				'getStudiensemester' => 'admin:rw',
-				'getAktStudiensemester' => 'admin:rw'
+				'getAktStudiensemester' => 'admin:rw',
+				'getLehreinheitAndLektorData' => 'admin:rw'
 			)
 		);
 
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
+
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
@@ -35,6 +37,19 @@ class Info extends Auth_Controller
 	public function getAktStudiensemester()
 	{
 		$this->outputJsonSuccess(getData($this->_ci->StudiensemesterModel->getAkt()));
+	}
+
+	public function getLehreinheitAndLektorData()
+	{
+		// TODO: remove date parameter after testing
+		$le_id = $this->input->get('le_id');
+		$ma_uid = $this->input->get('ma_uid');
+		$currentDate = $this->input->get('date');
+//		$currentDate = date('Y-m-d');
+
+		$lektorLehreinheitData = $this->AnwesenheitenModel->getLehreinheitAndLektorData($le_id, $ma_uid, $currentDate);
+
+		$this->outputJsonSuccess(getData($lektorLehreinheitData));
 	}
 	
 	private function _setAuthUID()

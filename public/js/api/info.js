@@ -17,4 +17,16 @@ export default {
 			throw error;
 		}
 	},
+	async getLehreinheitAndLektorData(le_id, ma_uid, date) {
+		try {
+			const result = await CoreRESTClient.get(`
+				/extensions/FHC-Core-Anwesenheiten/Info/
+				getLehreinheitAndLektorData?le_id=${le_id}&ma_uid=${ma_uid}&date=${date}
+			`);
+
+			return result;
+		} catch (error) {
+			throw error;
+		}
+	}
 };

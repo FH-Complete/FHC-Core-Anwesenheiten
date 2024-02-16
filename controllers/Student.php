@@ -93,7 +93,6 @@ class Student extends Auth_Controller
 		// if not return smth like "wrong code eingegeben sry"
 		if(!hasData($result)) $this->terminateWithJsonError("Ungültiger Zugangscode eingegeben.");
 
-
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
 
 		// find relevant lehreinheit from relevant entry
@@ -155,13 +154,14 @@ class Student extends Auth_Controller
 			if (isError($result)) {
 				return terminateWithJsonError('Anwesenheitskontrolle fehlgeschlagen.');
 			} else {
-				// TODO: anwesenheit timestamp & person
+				$viewData = $this->_ci->AnwesenheitenModel->getAnwesenheitenCheckViewData($entryToUpdate);
+
 				// if inserted successfully return some information to display who has entered
 				// his anwesenheitscheck for which date and lehreinheit
 				$this->outputJsonSuccess(array(
-					'message' => 'happy response',
-					'entry' => json_encode($entryToUpdate),
-					'lehreinheit' => json_encode($lehreinheit),
+					'message' => 'Anwesenheitskontrolle erfolgreich.',
+					'entry' => json_encode($entry),
+					'viewData' => json_encode($viewData)
 				));
 			}
 

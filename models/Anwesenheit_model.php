@@ -75,6 +75,21 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
+	public function getAnwesenheitenCheckViewData($anwRow) {
+		$query="
+			SELECT vorname, nachname, bezeichnung, kurzbz, verband, foto
+			FROM campus.vw_student_lehrveranstaltung
+					 JOIN public.tbl_student ON (uid = student_uid)
+					 JOIN public.tbl_benutzer USING (uid)
+					 JOIN tbl_person USING (person_id)
+			WHERE
+			  lehreinheit_id = {$anwRow->lehreinheit_id}
+			  AND prestudent_id = {$anwRow->prestudent_id};
+		";
+
+		return $this->execQuery($query);
+	}
+
 	public function getAllAnwesenheitenByLehreinheitByDate($le_id, $date){
 		$query="
 			SELECT *
@@ -85,6 +100,38 @@ class Anwesenheit_model extends \DB_Model
 
 		return $this->execQuery($query);
 	}
+
+	public function getHoursForLE($le_id, $date)
+	{
+		// TODO: test how reliable this is in edge cases
+
+		$query="
+			SELECT * FROM (SELECT DISTINCT(stunde)
+			FROM lehre.tbl_stundenplan JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
+			WHERE lehreinheit_id = {$le_id} AND DATE(lehre.tbl_stundenplan.datum) = '{$date}')
+				stunden JOIN lehre.tbl_stunde USING(stunde);
+		";
+
+		return $this->execQuery($query);
+	}
+	public function getLehreinheitAndLektorData($le_id, $ma_uid, $date)
+	{
+		$query="
+			SELECT DISTINCT tbl_stundenplan.mitarbeiter_uid, bezeichnung, kurzbz, tbl_stundenplan.ort_kurzbz, beginn, ende
+			FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
+			JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+			WHERE
+			lehreinheit_id = '{$le_id}'
+			AND
+			mitarbeiter_uid = '{$ma_uid}'
+			AND datum = '{$date}'
+		";
+
+		return $this->execQuery($query);
+
+	}
+
 
 	public function getAllByStudent($student, $studiensemester)
 	{
@@ -144,7 +191,7 @@ class Anwesenheit_model extends \DB_Model
 	}
 
 
-	public function createNewAnwesenheitenEntries($le_id) {
+	public function createNewAnwesenheitenEntries($le_id, $von, $bis) {
 		$this->db->trans_start(false);
 
 		// get all students for LE not already having an anwesenheiten entry for that LE
@@ -178,7 +225,9 @@ class Anwesenheit_model extends \DB_Model
 					'datum' => $this->escape('NOW()'),
 					'status' => 'abw',
 					'updateamum' => $this->escape('NOW()'),
-					'updatevon' => getAuthUID()
+					'updatevon' => getAuthUID(),
+					'von' => $von,
+					'bis' => $bis
 				));
 
 				if (!isSuccess($result)) {

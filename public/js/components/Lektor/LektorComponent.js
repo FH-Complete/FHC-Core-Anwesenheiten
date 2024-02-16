@@ -53,7 +53,11 @@ export default {
 			sem_kurzbz: 'WS2023',
 			lv_id: '38733',
 			le_id: '138879',
-			selectedDate: new Date('2024-02-14'),
+			filterTitle: "Anwesenheiten",
+			beginn: null,
+			ende: null,
+			// selectedDate: new Date(Date.now()),
+			selectedDate: new Date('2023-10-02'),
 			studentsData: null,
 			datesData: null,
 			namesAndID: null,
@@ -95,7 +99,8 @@ export default {
 			)
 		},
 		getNewQRCode () {
-			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_id).then(
+
+			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_id, this.beginn, this.ende).then(
 				res => {
 
 					if(res && res.data && res.data.retval) {
@@ -108,7 +113,36 @@ export default {
 				}
 			)
 		},
+		setupLehreinheitAndLektorData(res) {
+			console.log(res)
+			// TODO: do smth with raum or lektorinfo?
+
+			if(res && res.data && res.data.retval) {
+				// find out von & bis times for lehreinheit
+
+				// TODO: maybe handle this more elegantly
+				this.filterTitle = res.data.retval[0].bezeichnung + " (" +res.data.retval[0].kurzbz+ ")"
+
+				let beginn = new Date('1995-10-16 ' + res.data.retval[0].beginn)
+				let ende = new Date('1995-10-16 ' + res.data.retval[0].ende)
+
+				res.data.retval.forEach(entry => {
+					const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
+					const entryEnde = new Date('1995-10-16 ' + entry.ende)
+
+					if(entryBeginn <= beginn) beginn = entryBeginn
+					if(entryEnde >= ende) ende = entryEnde
+
+				})
+
+				this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
+				this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
+
+			}
+		},
 		startNewAnwesenheitskontrolle(){
+			// TODO: VALIDATE IF BEGINN AND ENDE ARE SET
+
 			this.qr = '' // indirectly set start button disabled
 
 			// fetch some data from stundenplan what should be happening rn
@@ -143,8 +177,14 @@ export default {
 	},
 	mounted() {
 
+		// see if test is still running
 		this.getExistingQRCode()
 
+		// fetch LE data
+		Vue.$fhcapi.Info.getLehreinheitAndLektorData(this.le_id, this.ma_uid, formatDate(this.selectedDate))
+			.then(res => this.setupLehreinheitAndLektorData(res));
+
+		// fetch table data
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
 			console.log('res', res)
 			if(!res.data || !res.data.retval) return
@@ -206,7 +246,6 @@ export default {
 			this.$refs.anwesenheitenTable.tabulator.setData([...this.tableStudentData]);
 		}
 	},
-
 	template:`
 	
 		<core-navigation-cmpt 
@@ -232,7 +271,7 @@ export default {
 				
 				<div class="col-8">
 					<core-filter-cmpt
-						title="Anwesenheiten Viewer"
+						:title="filterTitle"
 						ref="anwesenheitenTable"
 						:tabulator-options="anwesenheitenTabulatorOptions"
 						:tabulator-events="anwesenheitenTabulatorEventHandlers"
@@ -243,6 +282,18 @@ export default {
 						noColumnFilter>
 					</core-filter-cmpt>
 					<div class="d-flex justify-content-end align-items-end mt-3">
+						<datepicker
+							v-model="beginn"
+							time-picker="true"
+							text-input="true"
+							auto-apply="true">
+						</datepicker>
+						<datepicker
+							v-model="ende"
+							time-picker="true"
+							text-input="true"
+							auto-apply="true">
+						</datepicker>	
 						<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary align-self-end" :disabled=qr>
 							Neue Anwesenheitskontrolle starten 
 						</button>

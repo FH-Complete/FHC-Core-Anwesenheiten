@@ -72,6 +72,11 @@ export default {
 				files: []
 			};
 		},
+		routeToCodeScan() {
+			this.$router.push({
+				name: 'Scan'
+			})
+		}
 	},
 	mounted() {
 		Vue.$fhcapi.Student.getEntschuldigungen().then(response => {
@@ -119,7 +124,10 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div class="col-md-6"></div>
+			<div class="col-md-6">
+				<button type="button" class="btn btn-primary" @click="routeToCodeScan">Code eingeben</button>
+
+			</div>
 			<div class="col-sm-6 col-md-6">
 					<div class="row">
 					  <div class="col-sm-6 col-md-6">

@@ -110,11 +110,35 @@ class Lektor extends Auth_Controller
 
 	}
 
+
+
 	public function getNewQRCode()
 	{
-		// TODO: (johann) probably the right spot to insert/prepare stundenplan fetching logic for incoming batch of Anwesenheiten
 		$result = $this->getPostJSON();
 		$le_id = $result->le_id;
+
+		$beginn = $result->beginn;
+		$beginnDate = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds));
+		$ende = $result->ende;
+		$endeDate = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds));
+
+		// maybe double check with stundenplan but api caller provides beginn/ende anyways
+		// design choice
+
+		// CHECKING FOR CURRENT STUNDENPLAN HOURS
+//		$currentDate = date('Y-m-d');
+//		$currentDate = '2023-10-02';
+//
+//		$result = $this->_ci->AnwesenheitenModel->getHoursForLE($le_id, $currentDate);
+//
+//		if(hasData($result)){ // set anwesenheit von/bis to fetched stundenplan data
+//			$data = getData($result);
+//		} else {
+//			// request current von/bis Daten from Lektor
+//
+//		}
+
+		// CORE OF QR GENERATOION
 
 		// check if QR code already exists for given qrinfo
 		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
@@ -157,8 +181,8 @@ class Lektor extends Auth_Controller
 				$this->terminateWithJsonError('Fehler beim Speichern');
 
 
-			// insert Anwesenheiten entries of every Student as Abwesend sitting
-			$this->_ci->AnwesenheitenModel->createNewAnwesenheitenEntries($le_id);
+			// insert Anwesenheiten entries of every Student as Abwesend
+			$this->_ci->AnwesenheitenModel->createNewAnwesenheitenEntries($le_id, $beginnDate, $endeDate);
 
 			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
 		}
