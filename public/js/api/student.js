@@ -4,8 +4,8 @@ export default {
 	async getAll(studiensemester)
 	{
 		try {
-			const result = await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/studentGetAll', { studiensemester: studiensemester });
-			return CoreRESTClient.getData(result.data);
+
+			return await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/StudentGetAll', { studiensemester: studiensemester });
 		} catch (error) {
 			throw error;
 		}
@@ -25,6 +25,16 @@ export default {
 	{
 		try {
 			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungen');
+		} catch (error) {
+			throw error;
+		}
+	},
+	deleteEntschuldigung(entschuldigung_id)
+	{
+		try {
+			return CoreRESTClient.post('/extensions/FHC-Core-Anwesenheiten/Api/studentDeleteEntschuldigung',
+				{'entschuldigung_id': entschuldigung_id}
+			);
 		} catch (error) {
 			throw error;
 		}
