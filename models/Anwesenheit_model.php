@@ -137,18 +137,43 @@ class Anwesenheit_model extends \DB_Model
 	{
 		$query = '
 			SELECT tbl_lehrveranstaltung.bezeichnung,
-					tbl_anwesenheit_status.bezeichnung as status,
-					DATE(tbl_anwesenheit.datum) as datum,
-					CONCAT(get_anwesenheiten(tbl_anwesenheit.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz), \'%\') as anwesenheit
+				tbl_anwesenheit_status.status_kurzbz as status,
+				(tbl_anwesenheit.von) as von,
+				(tbl_anwesenheit.bis) as bis,
+				CONCAT(get_anwesenheiten(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz), \'%\') as anwesenheit,
+				(
+					SELECT entschuldigung.akzeptiert
+					FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+					WHERE entschuldigung.person_id = (
+						SELECT tbl_prestudent.person_id
+						FROM tbl_prestudent
+						WHERE tbl_prestudent.prestudent_id = extension.tbl_anwesenheit_user.prestudent_id
+							AND tbl_anwesenheit.von >= entschuldigung.von AND tbl_anwesenheit.bis <= entschuldigung.bis
+					)
+					ORDER BY akzeptiert DESC NULLS LAST
+					LIMIT 1
+				) as status_entschuldigung,
+				(
+					SELECT 1
+					FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+					WHERE entschuldigung.person_id = (
+						SELECT tbl_prestudent.person_id
+						FROM tbl_prestudent
+						WHERE tbl_prestudent.prestudent_id = extension.tbl_anwesenheit_user.prestudent_id
+							AND tbl_anwesenheit.von >= entschuldigung.von AND tbl_anwesenheit.bis <= entschuldigung.bis
+						)
+					LIMIT 1
+				) as exists_entschuldigung
 			FROM extension.tbl_anwesenheit
+				JOIN extension.tbl_anwesenheit_user ON tbl_anwesenheit.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
 				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
-				JOIN public.tbl_prestudent ON tbl_anwesenheit.prestudent_id = tbl_prestudent.prestudent_id
+				JOIN public.tbl_prestudent ON tbl_anwesenheit_user.prestudent_id = tbl_prestudent.prestudent_id
 				JOIN public.tbl_person ON tbl_prestudent.person_id = tbl_person.person_id
 				JOIN public.tbl_benutzer ON tbl_person.person_id = tbl_benutzer.person_id
-				JOIN extension.tbl_anwesenheit_status ON tbl_anwesenheit.status = tbl_anwesenheit_status.status_kurzbz
+				JOIN extension.tbl_anwesenheit_status ON tbl_anwesenheit_user.status = tbl_anwesenheit_status.status_kurzbz
 			WHERE tbl_benutzer.uid = ? AND tbl_lehreinheit.studiensemester_kurzbz = ?
-			ORDER BY tbl_lehrveranstaltung.bezeichnung, datum;
+			ORDER BY tbl_lehrveranstaltung.bezeichnung, von, bis;
 		';
 
 		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
@@ -189,7 +214,26 @@ class Anwesenheit_model extends \DB_Model
 		}
 
 	}
-
+	
+	public function updateAnwesenheitenByDatesStudent($von, $bis, $person_id, $status)
+	{
+		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?
+					WHERE anwesenheit_id IN (
+						SELECT extension.tbl_anwesenheit_user.anwesenheit_id
+						FROM extension.tbl_anwesenheit_user
+						JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id
+						WHERE von >= ?
+							AND bis <= ?
+							AND prestudent_id IN (
+								SELECT prestudent_id
+								FROM tbl_prestudent
+								WHERE person_id = ?
+							)
+					)
+					AND status != ?';
+		
+		return $this->execQuery($query, [$status, $von, $bis, $person_id, 'anwesend']);
+	}
 
 	public function createNewAnwesenheitenEntries($le_id, $von, $bis) {
 		$this->db->trans_start(false);

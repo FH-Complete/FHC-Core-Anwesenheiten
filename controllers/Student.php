@@ -13,7 +13,8 @@ class Student extends Auth_Controller
 				'index' => 'admin:rw',
 				'getAll' => 'admin:rw',
 				'addEntschuldigung' => 'admin:rw',
-				'getEntschuldigungen' => 'admin:rw',
+				'deleteEntschuldigung' => 'admin:rw',
+				'getEntschuldigungenByPerson' => 'admin:rw',
 				'download' => 'admin:rw',
 				'checkInAnwesenheit' => 'admin:rw' // TODO: change this one certainly
 			)
@@ -25,7 +26,7 @@ class Student extends Auth_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
-
+		$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('WidgetLib');
@@ -72,10 +73,7 @@ class Student extends Auth_Controller
 		}
 		
 		
-		
-		$result = $this->_ci->AnwesenheitenModel->getAllByStudent('el23b115', $studiensemester);
-		
-
+		$result = $this->_ci->AnwesenheitenModel->getAllByStudent(getAuthUID(), $studiensemester);
 		
 		$this->outputJsonSuccess($result);
 	}
@@ -114,12 +112,6 @@ class Student extends Auth_Controller
 				$prestudent_id = $entry->prestudent_id;
 				break;
 			}
-		}
-
-		// if johann is testing
-		if($person_id === 110810) {
-			$prestudent_id = 157641; // roman eisner
-			$isLegit = true;
 		}
 
 		// to avoid random people being anwesend in random lectures
@@ -170,16 +162,15 @@ class Student extends Auth_Controller
 
 		}
 	}
-	
+
 	public function addEntschuldigung()
 	{
-		
-		/*if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']))
-			$this->terminateWithJsonError('Falsche Parameterübergabe');*/
-	
-		/*$vonTimestamp = strtotime($_POST['von']);
+		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']))
+			$this->terminateWithJsonError('Falsche Parameterübergabe');
+
+		$vonTimestamp = strtotime($_POST['von']);
 		$bisTimestamp = strtotime($_POST['bis']);
-		
+
 		if ($vonTimestamp === false || $bisTimestamp === false)
 			$this->terminateWithJsonError('Falsche Parameterübergabe');
 
@@ -195,53 +186,79 @@ class Student extends Auth_Controller
 		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf'));
 		$dmsFile = getData($dmsFile);
 
-		$dmsId = $dmsFile['dms_id'];*/
+		$dmsId = $dmsFile['dms_id'];
 
+		$von = date('Y-m-d H:i:s', $vonTimestamp);
+		$bis = date('Y-m-d H:i:s', $bisTimestamp);
 		$result = $this->_ci->EntschuldigungModel->insert(
 			array(
 				'person_id' => getAuthPersonId(),
-				/*'von' =>  date('Y-m-d H:i:s', $vonTimestamp),
-				'bis' => date('Y-m-d H:i:s', $bisTimestamp),*/
-				'status' => 'e_hochgeladen', //TODO status überlegen
-				'dms_id' => /*$dmsId*/ 287654,
+				'von' => $von,
+				'bis' => $bis,
+				'dms_id' => $dmsId,
 				'insertvon' => $this->_uid
 			)
 		);
-		
+
 		if (isError($result))
 			$this->terminateWithJsonError(getError($result));
-		
-		$this->outputJsonSuccess('Entschuldigung erfolgreich hochgeladen');
-		
+
+		$this->outputJsonSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
+
 	public function download()
 	{
 		$dms_id = $this->_ci->input->get('entschuldigung');
-		
+
 		if (isEmptyString($dms_id))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 
 		$person_id = getAuthPersonId();
-		if ($person_id === 'Assistenz') //TODO prüfen
-		{
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($dms_id);
-		}
+		
+		//TODO (david) noch prüfen ob der Mitarbeiter Zugriff haben sollte
+		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid))
+			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
 		else
-		{
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($dms_id, getAuthPersonId());
-		}
+			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);
 
 		if (hasData($zuordnung))
 		{
 			$file = $this->_ci->dmslib->download($dms_id, 'Entschuldigung.pdf', 'attachment');
 			$this->outputFile(getData($file));
 		}
+	}
+
+	public function deleteEntschuldigung()
+	{
+		$data = json_decode($this->input->raw_input_stream, true);
+		$entschuldigung_id = $data['entschuldigung_id'];
 		
+		if (isEmptyString($entschuldigung_id))
+			$this->terminateWithJsonError('Error');
+
+		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, /*getAuthPersonId()*/ 106538);
+		
+		if (hasData($zuordnung))
+		{
+			$entschuldigung = getData($zuordnung)[0];
+			
+			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
+			
+			if (isError($deletedEntschuldigung))
+				$this->terminateWithJsonError(getError($deletedEntschuldigung));
+
+			$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
+			if (isError($deletedFile))
+				$this->terminateWithJsonError(getError($deletedFile));
+
+			$this->outputJsonSuccess('Success');
+		}
+	
 	}
 	
-	public function getEntschuldigungen()
+	public function getEntschuldigungenByPerson()
 	{
-		$this->outputJsonSuccess($this->_ci->EntschuldigungModel->getEntschuldigungen(getAuthPersonId()));
+		$this->outputJsonSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson(getAuthPersonId()));
 	}
 	/**
 	 * Retrieve the UID of the logged user and checks if it is valid

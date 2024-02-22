@@ -12,18 +12,36 @@ class Entschuldigung_model extends \DB_Model
         $this->dbTable = 'extension.tbl_anwesenheit_entschuldigung';
         $this->pk = 'entschuldigung_id';
     }
-	
-	public function getEntschuldigungen($person_id)
+
+	public function getEntschuldigungenByPerson($person_id)
 	{
-		$query = 'SELECT dms_id, bezeichnung, von, bis
+		$query = 'SELECT dms_id, von, bis, akzeptiert, entschuldigung_id
 					FROM extension.tbl_anwesenheit_entschuldigung
-					JOIN extension.tbl_anwesenheit_status ON tbl_anwesenheit_entschuldigung.status = tbl_anwesenheit_status.status_kurzbz
-					WHERE person_id = ?';
+					WHERE person_id = ?
+					ORDER by von DESC, akzeptiert DESC NULLS LAST';
 
 		return $this->execReadOnlyQuery($query, array($person_id));
 	}
+	//TODO (david) STG mitschicken
+	public function getEntschuldigungen()
+	{
+		$query = 'SELECT dms_id,
+						von,
+						bis,
+						public.tbl_person.person_id,
+						tbl_anwesenheit_entschuldigung.entschuldigung_id,
+						vorname,
+						nachname,
+						akzeptiert
+					FROM extension.tbl_anwesenheit_entschuldigung
+						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
+					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
+					';
+
+		return $this->execReadOnlyQuery($query);
+	}
 	
-	public function checkZuordnung($dms_id, $person_id = null)
+	public function checkZuordnungByDms($dms_id, $person_id = null)
 	{
 		$query = 'SELECT 1
 					FROM extension.tbl_anwesenheit_entschuldigung
@@ -38,5 +56,16 @@ class Entschuldigung_model extends \DB_Model
 		}
 
 		return $this->execReadOnlyQuery($query, $params);
+	}
+	
+	public function checkZuordnung($entschuldigung_id, $person_id)
+	{
+		$query = 'SELECT dms_id, person_id, entschuldigung_id
+					FROM extension.tbl_anwesenheit_entschuldigung
+					WHERE entschuldigung_id = ?
+						AND person_id = ?
+						AND akzeptiert IS NULL';
+
+		return $this->execReadOnlyQuery($query, array($entschuldigung_id, $person_id));
 	}
 }

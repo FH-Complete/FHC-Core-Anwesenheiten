@@ -14,6 +14,7 @@ $includesArray = array(
 	'filtercomponent' => true,
 	'navigationcomponent' => true,
 	'navigationwidget' => true,
+	'momentjs2' => true,
 	'dialoglib' => true,
 	'vue3' => true,
 	'primevue3' => true,
@@ -30,7 +31,6 @@ $includesArray = array(
 	'customJSs' => array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
-		'vendor/moment/momentjs/locale/de-at.js'
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
@@ -43,9 +43,9 @@ $this->load->view('templates/FHC-Header', $includesArray);
 
 <body>
 <div id="main">
-	<router-view
-		:permissions="<?= htmlspecialchars(json_encode($permissions)); ?>"
-	></router-view>
+	<router-view>
+	
+	</router-view>
 </div>
 </body>
 
