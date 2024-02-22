@@ -114,7 +114,7 @@ export default {
 			)
 		},
 		setupLehreinheitAndLektorData(res) {
-			console.log(res)
+			console.log('setupLehreinheitAndLektorData', res)
 			// TODO: do smth with raum or lektorinfo?
 
 			if(res && res.data && res.data.retval) {
@@ -186,7 +186,7 @@ export default {
 
 		// fetch table data
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
-			console.log('res', res)
+			console.log('getAllAnwesenheitenByLektor', res)
 			if(!res.data || !res.data.retval) return
 
 			this.studentsData = new Map()
@@ -194,13 +194,13 @@ export default {
 			this.namesAndID = []
 			res.data.retval.forEach(entry => {
 
-				if(!this.datesData.has(entry.date)) this.datesData.add(entry.date)
+				if(!this.datesData.has(entry.von)) this.datesData.add(entry.von)
 
 				if(!this.studentsData.has(entry.prestudent_id)) {
-					this.studentsData.set(entry.prestudent_id, [{datum: entry.date, status: entry.status}])
+					this.studentsData.set(entry.prestudent_id, [{datum: entry.von, status: entry.status}])
 					this.namesAndID.push({prestudent_id: entry.prestudent_id, vorname: entry.vorname, nachname: entry.nachname, sum: entry.sum})
 				} else {
-					this.studentsData.get(entry.prestudent_id).push({datum: entry.date, status: entry.status})
+					this.studentsData.get(entry.prestudent_id).push({datum: entry.von, status: entry.status})
 				}
 			})
 

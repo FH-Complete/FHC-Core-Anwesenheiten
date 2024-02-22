@@ -4,7 +4,7 @@ export default {
 	async getAll(studiensemester)
 	{
 		try {
-			const result = await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Student/getAll', { studiensemester: studiensemester });
+			const result = await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/studentGetAll', { studiensemester: studiensemester });
 			return CoreRESTClient.getData(result.data);
 		} catch (error) {
 			throw error;
@@ -13,7 +13,7 @@ export default {
 	addEntschuldigung(formData)
 	{
 		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-Anwesenheiten/Student/addEntschuldigung',
+			return CoreRESTClient.post('/extensions/FHC-Core-Anwesenheiten/Api/studentAddEntschuldigung',
 				formData,
 				{Headers: { "Content-Type": "multipart/form-data" }}
 			);
@@ -24,7 +24,7 @@ export default {
 	getEntschuldigungen(person_id)
 	{
 		try {
-			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Student/getEntschuldigungen');
+			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungen');
 		} catch (error) {
 			throw error;
 		}

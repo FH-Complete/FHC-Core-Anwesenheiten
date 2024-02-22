@@ -16,34 +16,40 @@ class Anwesenheit_model extends \DB_Model
 	public function getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz)
 	{
 		$query = "
-		SELECT prestudent_id, vorname, nachname, lehreinheit_id, extension.tbl_anwesenheit.status, DATE(extension.tbl_anwesenheit.datum), sum FROM
-			(SELECT DISTINCT vorname, nachname, prestudent_id,
-			  students.lehrveranstaltung_id, students.lehreinheit_id,
-			  students.semester, students.verband, extension.calculate_anwesenheiten_sum(students.lehrveranstaltung_id, prestudent_id, '{$sem_kurzbz}') AS sum
-			FROM (
-				SELECT person_id, student_uid, prestudent_id, matrikelnr, uid,
-						lehrveranstaltung_id, lehreinheit_id, studiensemester_kurzbz,
-				   		campus.vw_student_lehrveranstaltung.studiengang_kz, campus.vw_student_lehrveranstaltung.semester,
-				   		verband, gruppe, vorname, nachname
-					FROM campus.vw_student_lehrveranstaltung
-						JOIN public.tbl_student ON (uid = student_uid)
-						JOIN public.tbl_benutzer USING (uid)
-						JOIN tbl_person USING (person_id)
-					WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND lehrveranstaltung_id = {$lv_id} AND verband != 'I'
-				) students JOIN (
-				SELECT tbl_lehreinheit.lehrveranstaltung_id as lehrveranstaltung_id, lehreinheit_id,
-					mitarbeiter_uid, lehreinheitgruppe_id, studiengang_kz,
-					tbl_lehreinheit.studiensemester_kurzbz as studiensemester_kurzbz, gruppe, gruppe_kurzbz
-				FROM lehre.tbl_lehreinheitmitarbeiter
-					JOIN lehre.tbl_lehreinheitgruppe USING (lehreinheit_id)
-					JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
-				WHERE mitarbeiter_uid = '{$ma_uid}' 
-					AND studiensemester_kurzbz = '{$sem_kurzbz}'
-					AND tbl_lehreinheit.lehrveranstaltung_id = {$lv_id}
+			SELECT *
+			-- 	prestudent_id, vorname, nachname, lehreinheit_id, extension.tbl_anwesenheit_user.status,
+			--        DATE(extension.tbl_anwesenheit.von)
+			--        , sum
+			FROM
+				(SELECT DISTINCT vorname, nachname, prestudent_id,
+								 students.lehrveranstaltung_id, students.lehreinheit_id,
+								 students.semester,
+								 students.verband
+				FROM (
+						  SELECT person_id, student_uid, prestudent_id, matrikelnr, uid,
+								 lehrveranstaltung_id, lehreinheit_id, studiensemester_kurzbz,
+								 campus.vw_student_lehrveranstaltung.studiengang_kz, campus.vw_student_lehrveranstaltung.semester,
+								 verband, gruppe, vorname, nachname
+						  FROM campus.vw_student_lehrveranstaltung
+								   JOIN public.tbl_student ON (uid = student_uid)
+								   JOIN public.tbl_benutzer USING (uid)
+								   JOIN tbl_person USING (person_id)
+						  WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND lehrveranstaltung_id = {$lv_id} AND verband != 'I'
+					  ) students JOIN (
+					 SELECT tbl_lehreinheit.lehrveranstaltung_id as lehrveranstaltung_id, lehreinheit_id,
+							mitarbeiter_uid, lehreinheitgruppe_id, studiengang_kz,
+							tbl_lehreinheit.studiensemester_kurzbz as studiensemester_kurzbz, gruppe, gruppe_kurzbz
+					 FROM lehre.tbl_lehreinheitmitarbeiter
+							  JOIN lehre.tbl_lehreinheitgruppe USING (lehreinheit_id)
+							  JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
+					 WHERE mitarbeiter_uid = '{$ma_uid}'
+					   AND studiensemester_kurzbz = '{$sem_kurzbz}'
+					   AND tbl_lehreinheit.lehrveranstaltung_id = {$lv_id}
 				) lehrende
-			ON (students.lehrveranstaltung_id = lehrende.lehrveranstaltung_id)) lektorXstudents
-		LEFT JOIN extension.tbl_anwesenheit USING (prestudent_id, lehreinheit_id)
-		ORDER BY nachname ASC;
+									  ON (students.lehrveranstaltung_id = lehrende.lehrveranstaltung_id)) lektorXstudents
+					LEFT JOIN extension.tbl_anwesenheit USING (lehreinheit_id)
+					LEFT JOIN extension.tbl_anwesenheit_user USING (prestudent_id)
+			ORDER BY nachname ASC;
 		";
 
 		return $this->execQuery($query);
@@ -64,8 +70,9 @@ class Anwesenheit_model extends \DB_Model
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
 		$query="
-			SELECT extension.tbl_anwesenheit.anwesenheit_id, Date(extension.tbl_anwesenheit.datum) as datum, extension.tbl_anwesenheit.status
+			SELECT extension.tbl_anwesenheit.anwesenheit_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status
 			FROM extension.tbl_anwesenheit
+				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
 			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}'
@@ -93,9 +100,9 @@ class Anwesenheit_model extends \DB_Model
 	public function getAllAnwesenheitenByLehreinheitByDate($le_id, $date){
 		$query="
 			SELECT *
-			FROM extension.tbl_anwesenheit
-			WHERE lehreinheit_id = '{$le_id}' AND DATE(extension.tbl_anwesenheit.datum) = '{$date}'
-			ORDER BY datum ASC;
+			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
+			WHERE lehreinheit_id = '{$le_id}' AND DATE(extension.tbl_anwesenheit.von) = '{$date}'
+			ORDER BY von ASC;
 		";
 
 		return $this->execQuery($query);
