@@ -1,7 +1,7 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 
-import { anwesenheitFormatter } from "../../mixins/formatters";
+import { lektorFormatters } from "../../mixins/formatters";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
@@ -30,8 +30,8 @@ export default {
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true},
 					{title: 'Nachname', field: 'nachname', headerFilter: true},
-					{title: 'Aktuelles Datum', field: 'status', formatter: anwesenheitFormatter},
-					{title: 'Summe', field: 'sum'},
+					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter},
+					{title: 'Summe', field: 'sum', formatter: lektorFormatters.percentFormatter},
 				]
 			},
 			anwesenheitenTabulatorEventHandlers: [{
@@ -53,13 +53,13 @@ export default {
 			sem_kurzbz: 'WS2023',
 			lv_id: '38733',
 			le_id: '138879',
-			filterTitle: "Anwesenheiten",
+			le_ids: ['138879'], // TODO: maybe as computed?
+			filterTitle: "",
 			beginn: null,
 			ende: null,
 			// selectedDate: new Date(Date.now()),
 			selectedDate: new Date('2023-10-02'),
 			studentsData: null,
-			datesData: null,
 			namesAndID: null,
 			tableStudentData: null,
 			qr: null,
@@ -86,29 +86,28 @@ export default {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
 		getExistingQRCode(){
-			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_id).then(
+			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_ids, this.ma_uid, formatDate(this.selectedDate)).then(
 				res => {
 					if(res?.data?.retval?.svg) {
-						this.qr = res.data.retval.svg
-						this.url = res.data.retval.url
-						this.code = res.data.retval.code
-
-						this.$refs.modalContainer.show()
+						this.showQR(res.data.retval)
 					}
 				}
 			)
 		},
+		showQR (retval) {
+			this.qr = retval.svg
+			this.url = retval.url
+			this.code = retval.code
+			this.anwesenheit_id = retval.anwesenheit_id
+			this.$refs.modalContainer.show()
+		},
 		getNewQRCode () {
 
-			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_id, this.beginn, this.ende).then(
+			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_ids, this.beginn, this.ende).then(
 				res => {
 
 					if(res && res.data && res.data.retval) {
-						this.qr = res.data.retval.svg
-						this.url = res.data.retval.url
-						this.code = res.data.retval.code
-
-						this.$refs.modalContainer.show()
+						this.showQR(res.data.retval)
 					}
 				}
 			)
@@ -157,7 +156,7 @@ export default {
 			this.url = null
 			this.code = null
 
-			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_id).then(
+			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_ids, this.anwesenheit_id).then(
 				res => {
 
 					if(res && res.status === 200) {
@@ -181,31 +180,33 @@ export default {
 		this.getExistingQRCode()
 
 		// fetch LE data
-		Vue.$fhcapi.Info.getLehreinheitAndLektorData(this.le_id, this.ma_uid, formatDate(this.selectedDate))
+		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDate(this.selectedDate))
 			.then(res => this.setupLehreinheitAndLektorData(res));
 
 		// fetch table data
-		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLektor(this.ma_uid, this.lv_id, this.sem_kurzbz, this.selectedDate).then((res)=>{
-			console.log('getAllAnwesenheitenByLektor', res)
+		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+			console.log('getAllAnwesenheitenByLva', res)
 			if(!res.data || !res.data.retval) return
 
 			this.studentsData = new Map()
-			this.datesData = new Set()
 			this.namesAndID = []
 			res.data.retval.forEach(entry => {
 
-				if(!this.datesData.has(entry.von)) this.datesData.add(entry.von)
 
 				if(!this.studentsData.has(entry.prestudent_id)) {
-					this.studentsData.set(entry.prestudent_id, [{datum: entry.von, status: entry.status}])
+					this.studentsData.set(entry.prestudent_id, [])
+					if(entry.status && entry.datum) this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
 					this.namesAndID.push({prestudent_id: entry.prestudent_id, vorname: entry.vorname, nachname: entry.nachname, sum: entry.sum})
 				} else {
-					this.studentsData.get(entry.prestudent_id).push({datum: entry.von, status: entry.status})
+					this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
 				}
 			})
 
 			this.tableStudentData = []
 			const selectedDateFormatted = formatDate(this.selectedDate)
+			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFormatted
+
+
 			this.namesAndID.forEach((student, index) => {
 
 				const studentDataEntry = this.studentsData.get(student.prestudent_id)
@@ -219,7 +220,8 @@ export default {
 					sum: student.sum});
 			})
 
-			console.log([...this.namesAndID])
+			console.log('namesAndID', [...this.namesAndID])
+			console.log('tableStudentData', [...this.tableStudentData])
 
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
@@ -281,33 +283,53 @@ export default {
 						:sideMenu="false" 
 						noColumnFilter>
 					</core-filter-cmpt>
-					<div class="d-flex justify-content-end align-items-end mt-3">
-						<datepicker
-							v-model="beginn"
-							time-picker="true"
-							text-input="true"
-							auto-apply="true">
-						</datepicker>
-						<datepicker
-							v-model="ende"
-							time-picker="true"
-							text-input="true"
-							auto-apply="true">
-						</datepicker>	
-						<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary align-self-end" :disabled=qr>
-							Neue Anwesenheitskontrolle starten 
-						</button>
+					<div class="row justify-content-end">
+						<div class="col-4">
+							<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary" :disabled=qr>
+								Neue Anwesenheitskontrolle starten 
+							</button>
+						</div>
+					</div>
+				</div>
+				
+				<div class="col-4">
+					<div class="row">
+						<div class="col-2"><h6 class="text-center">Datum</h6></div>
+							<div class="col-10">
+								<datepicker
+									v-model="selectedDate"
+									locale="de"
+									format="dd-MM-yyyy"
+									text-input="true"
+									auto-apply="true">
+								</datepicker>
+							</div>
+						</div>
+					<div class="row mt-4">
+						<div class="col-2"><h6 class="text-center">Von</h6></div>
+						<div class="col-10">
+							<datepicker
+								v-model="beginn"
+								time-picker="true"
+								text-input="true"
+								auto-apply="true">
+							</datepicker>
+						</div>
+					</div>
+					<div class="row mt-4">
+						<div class="col-2"><h6 class="text-center">Bis</h6></div>
+						<div class="col-10">
+							<datepicker
+								v-model="ende"
+								time-picker="true"
+								text-input="true"
+								auto-apply="true">
+							</datepicker>
+						</div>
 					</div>
 					
-				</div>
-				<div class="col-2">
-					<datepicker
-						v-model="selectedDate"
-						locale="de"
-						format="dd-MM-yyyy"
-						text-input="true"
-						auto-apply="true">
-					</datepicker>		
+					
+					
 				</div>
 				
 			</div>

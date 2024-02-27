@@ -1,9 +1,15 @@
-export function anwesenheitFormatter (cell) {
-				const data = cell.getData().status
-				if (data === "anwesend") return '<i class="fa fa-check"></i>'
-				else if (data === "abwesend") return '<i class="fa fa-xmark"></i>'
-				else return '-'
-			}
+export const lektorFormatters = {
+	anwesenheitFormatter: function (cell) {
+		const data = cell.getData().status
+		if (data === "anwesend") return '<i class="fa fa-check"></i>'
+		else if (data === "abwesend") return '<i class="fa fa-xmark"></i>'
+		else if (data === "entschuldigt") return '<i class="fa fa-check"></i>' + '(Entschuldigung akzeptiert)'
+		else return '-'
+	},
+	percentFormatter: function (cell) {
+		return cell.getData().sum ? cell.getData().sum + ' %' : '';
+	}
+}
 
 export const studentFormatters = {
 	formDate: function(cell)
@@ -29,7 +35,7 @@ export const studentFormatters = {
 	{
 		return '<div style="display:flex; justify-content: space-between;">' +
 			'<div>' + value + '</div>' +
-			'<div style="flex-grow: 1; text-align: right;">Anwesenheit ' + data[0].anwesenheit + '</div>' +
+			'<div style="flex-grow: 1; text-align: right;">Anwesenheit ' + data[0].anwesenheit + " %" + '</div>' +
 			'</div>';
 	},
 	formAnwesenheit: function(cell)
@@ -39,7 +45,7 @@ export const studentFormatters = {
 		{
 			let returnValue = '';
 			if (data === 'entschuldigt')
-				returnValue = ' (Entschuldigung akzeptiert)';
+				returnValue = '   (Entschuldigung akzeptiert)';
 			return '<i class="fa fa-check"></i>' + returnValue;
 		}
 		else if (data === "abwesend")

@@ -1,6 +1,9 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
+use \chillerlan\QRCode\QROptions;
+use \chillerlan\QRCode\QRCode;
+
 class Api extends Auth_Controller
 {
 
@@ -12,10 +15,11 @@ class Api extends Auth_Controller
 		parent::__construct(array(
 				'infoGetStudiensemester' => 'admin:rw',
 				'infoGetAktStudiensemester' => 'admin:rw',
-				'infoGetLehreinheitAndLektorData' => 'admin:rw',
+				'infoGetLehreinheitAndLektorInfo' => 'admin:rw',
+				'infoGetStudentInfo' => 'admin:rw',
 
 				'lektorStudentByLva' => 'admin:rw',
-				'lektorGetAllAnwesenheitenByLektor' => 'admin:rw',
+				'lektorGetAllAnwesenheitenByLva' => 'admin:rw',
 				'lektorGetAllAnwesenheitenByStudentByLva' => 'admin:rw',
 				'lektorUpdateAnwesenheiten' => 'admin:rw',
 				'lektorGetNewQRCode' => 'admin:rw',
@@ -24,14 +28,19 @@ class Api extends Auth_Controller
 
 				'studentGetAll' => 'admin:rw',
 				'studentAddEntschuldigung' => 'admin:rw',
-				'studentGetEntschuldigungen' => 'admin:rw',
+				'studentDeleteEntschuldigung' => 'admin:rw',
+				'studentGetEntschuldigungenByPerson' => 'admin:rw',
 				'studentDownload' => 'admin:rw',
-				'studentCheckInAnwesenheit' => 'admin:rw' // TODO: change this one certainly
+				'studentCheckInAnwesenheit' => 'admin:rw',
+
+				'assistenzGetEntschuldigungen' => 'admin:rw',
+				'assistenzUpdateEntschuldigung' => 'admin:rw'
 			)
 		);
 
 		$this->_ci =& get_instance();
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
@@ -42,6 +51,7 @@ class Api extends Auth_Controller
 		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
+		$this->_ci->load->library('AuthLib');
 
 		$this->_setAuthUID(); // sets property uid
 	}
@@ -60,31 +70,94 @@ class Api extends Auth_Controller
 		$this->outputJsonSuccess(getData($this->_ci->StudiensemesterModel->getAkt()));
 	}
 
-	public function infoGetLehreinheitAndLektorData()
+	public function infoGetLehreinheitAndLektorInfo()
 	{
 		// TODO: remove date parameter after testing
-		$le_id = $this->input->get('le_id');
-		$ma_uid = $this->input->get('ma_uid');
-		$currentDate = $this->input->get('date');
-//		$currentDate = date('Y-m-d');
+		$result = $this->getPostJSON();
+		$le_ids = $result->le_ids;
+		$ma_uid = $result->ma_uid;
+		$currentDate = $result->date ;
 
-		$lektorLehreinheitData = $this->AnwesenheitenModel->getLehreinheitAndLektorData($le_id, $ma_uid, $currentDate);
+		// workaround for merged le's
+		$le_id = $le_ids[0];
+
+		$lektorLehreinheitData = $this->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $currentDate);
 
 		$this->outputJsonSuccess(getData($lektorLehreinheitData));
 	}
 
+	public function infoGetStudentInfo()
+	{
+		$prestudent_id = $this->input->get('prestudent_id');
+		$lva_id = $this->input->get('lva_id');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		$studentLvaData = $this->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz);
+
+		$this->outputJsonSuccess(getData($studentLvaData));
+	}
+
 	// ASSISTENZ API
 
+	public function assistenzGetEntschuldigungen()
+	{
+		$this->outputJsonSuccess($this->_ci->EntschuldigungModel->getEntschuldigungen());
+	}
+
+	public function assistenzUpdateEntschuldigung()
+	{
+		$data = json_decode($this->input->raw_input_stream, true);
+
+		$entschuldigung_id = $data['entschuldigung_id'];
+		$status = $data['status'];
+
+		if (isEmptyString($entschuldigung_id) || !in_array($status, [true, false]))
+			$this->terminateWithJsonError('Error');
+
+		$entschuldigung = $this->_ci->EntschuldigungModel->load($entschuldigung_id);
+
+		if (isError($entschuldigung))
+			$this->terminateWithJsonError('Error');
+		if (!hasData($entschuldigung))
+			$this->terminateWithJsonError('Error');
+
+		$entschuldigung = getData($entschuldigung)[0];
+		if ($entschuldigung->akzeptiert !== $status)
+		{
+			$updateStatus = $status ? 'entschuldigt' : 'abwesend';
+
+			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheitenByDatesStudent($entschuldigung->von, $entschuldigung->bis, $entschuldigung->person_id, $updateStatus);
+			if (isError($updateAnwesenheit))
+				$this->terminateWithJsonError($updateAnwesenheit);
+
+			$update = $this->_ci->EntschuldigungModel->update(
+				$entschuldigung->entschuldigung_id,
+				array(
+					'updatevon' => $this->_uid,
+					'updateamum' => date('Y-m-d H:i:s'),
+					'statussetvon' => $this->_uid,
+					'statussetamum' => date('Y-m-d H:i:s'),
+					'akzeptiert' => $status
+				)
+			);
+
+			if (isError($update))
+				$this->terminateWithJsonError('Error');
+		}
+
+		$this->outputJsonSuccess('Erfolgreich gespeichert');
+	}
 
 	// LEKTOR API
 
-	public function lektorGetAllAnwesenheitenByLektor()
+	public function lektorGetAllAnwesenheitenByLva()
 	{
-		$ma_uid = $this->input->get('ma_uid');
-		$lv_id = $this->input->get('lv_id');
-		$sem_kurzbz = $this->input->get('sem_kurzbz');
+		$result = $this->getPostJSON();
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+		$le_ids = $result->le_ids ;
 
-		$res = $this->_ci->AnwesenheitenModel->getAllAnwesenheitenByLektor($ma_uid, $lv_id, $sem_kurzbz);
+		$res = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLektor($lv_id, $le_ids, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
 		$this->outputJson($res);
@@ -98,7 +171,7 @@ class Api extends Auth_Controller
 		$lv_id = $this->input->get('lv_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
-		$res = $this->_ci->AnwesenheitenModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
+		$res = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
 		$this->outputJson($res);
@@ -108,14 +181,45 @@ class Api extends Auth_Controller
 	{
 		$result = $this->getPostJSON();
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
-		return $this->_ci->AnwesenheitenModel->updateAnwesenheiten($changedAnwesenheiten);
+		return $this->_ci->AnwesenheitModel->updateAnwesenheiten($changedAnwesenheiten);
 	}
 
 	public function lektorGetExistingQRCode(){
-		$result = $this->getPostJSON();
-		$le_id = $result->le_id;
+		$resultPost= $this->getPostJSON();
+		$le_ids = $resultPost->le_ids;
+		$ma_uid = $resultPost->ma_uid;
+		$date = $resultPost->date;
 
-		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
+		// we assume that every LE provided when starting a new check was supposed to point to the same qr code
+		// anyways, just per different anwesenheit_ids
+		$le_id = $le_ids[0];
+
+		// look for stundenplan entries of lektor on given date
+		$resultSTPL = $this->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $date);
+		if(!hasData($resultSTPL))  $this->terminateWithJsonError("No existing Lehreinheit in Stundenplan found");
+
+		// get lowest von and highest bis timestamp from results
+		$data = getData($resultSTPL);
+
+		// we assume output is sorted appropriately...
+		$beginn = strtotime($data[0]->beginn);
+		$ende = strtotime($data[count($data)-1]->ende);
+
+
+		$von = date('Y-m-d H:i:s', $beginn);
+		$bis = date('Y-m-d H:i:s', $ende);
+
+
+		// TODO: look for exact von bis or look if it just in range? assuming exact for now
+
+		// look if a check entry exists for given LE and von bis timespan
+		$resultKontrolle = $this->_ci->AnwesenheitModel->loadWhere(array(
+			'lehreinheit_id' => $le_id,
+			'von' => $von,
+			'bis' => $bis
+		));
+
+		if(!hasData($resultKontrolle)) $this->terminateWithJsonError("No existing Anwesenheitskontrolle found");
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -125,15 +229,17 @@ class Api extends Auth_Controller
 		]);
 		$qrcode = new QRCode($options);
 
-		if(hasData($result)) { // resend existing qr
+		$anwesenheit_id = $resultKontrolle->retval[0]->anwesenheit_id;
+		$resultQR = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 
-			$shortHash = $result->retval[0]->zugangscode;
+		if(hasData($resultQR)) { // resend existing qr
+
+			$shortHash = $resultQR->retval[0]->zugangscode;
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
-		} else {
-			$this->outputJsonError("No existing Anwesenheitskontrolle found");
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+
 		}
 
 	}
@@ -142,34 +248,28 @@ class Api extends Auth_Controller
 
 	public function lektorGetNewQRCode()
 	{
+
 		$result = $this->getPostJSON();
-		$le_id = $result->le_id;
+		$le_ids = $result->le_ids;
 
+		// TODO: find solution for multiple LE
+		$le_id = $le_ids[0];
+
+		// TODO: send selected date in post message so von/bis dont always have current date
 		$beginn = $result->beginn;
-		$beginnDate = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds));
+		$von = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds));
 		$ende = $result->ende;
-		$endeDate = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds));
+		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds));
 
-		// maybe double check with stundenplan but api caller provides beginn/ende anyways
-		// design choice
+		// CORE OF QR GENERATION
 
-		// CHECKING FOR CURRENT STUNDENPLAN HOURS
-//		$currentDate = date('Y-m-d');
-//		$currentDate = '2023-10-02';
-//
-//		$result = $this->_ci->AnwesenheitenModel->getHoursForLE($le_id, $currentDate);
-//
-//		if(hasData($result)){ // set anwesenheit von/bis to fetched stundenplan data
-//			$data = getData($result);
-//		} else {
-//			// request current von/bis Daten from Lektor
-//
-//		}
-
-		// CORE OF QR GENERATOION
-
-		// check if QR code already exists for given qrinfo
-		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
+		// TODO: look for exact von bis or look if it just in range? assuming exact for now
+		// look if a check entry exists for given LE and von bis timespan
+		$resultKontrolle = $this->_ci->AnwesenheitModel->loadWhere(array(
+			'lehreinheit_id' => $le_id,
+			'von' => $von,
+			'bis' => $bis
+		));
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -179,13 +279,40 @@ class Api extends Auth_Controller
 		]);
 		$qrcode = new QRCode($options);
 
-		if(hasData($result)) { // resend existing qr
+		// create new Kontrolle
+		if(!hasData($resultKontrolle)) {
 
-			$shortHash = $result->retval[0]->zugangscode;
+			$insert = $this->_ci->AnwesenheitModel->insert(array(
+				'lehreinheit_id' => $le_id,
+				'insertamum' => date('Y-m-d H:i:s'),
+				'von' => $von,
+				'bis' => $bis
+			));
+
+			$anwesenheit_id = $insert->retval;
+			$resultQR = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
+
+			$this->_handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id);
+
+
+		} else { // reuse existing one
+			$anwesenheit_id = $resultKontrolle->retval[0]->anwesenheit_id;
+			$resultQR = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
+
+			$this->_handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id);
+
+		}
+	}
+
+	private function _handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id){
+
+		if(hasData($resultQR)) { // resend existing qr
+
+			$shortHash = $resultQR->retval[0]->zugangscode;
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 
 		} else { // create a newqr
 
@@ -201,18 +328,17 @@ class Api extends Auth_Controller
 
 			$insert = $this->_ci->QRModel->insert(array(
 				'zugangscode' => $shortHash,
-				'lehreinheit_id' => $le_id,
+				'anwesenheit_id' => $anwesenheit_id,
 				'insertamum' => date('Y-m-d H:i:s')
 			));
 
 			if (isError($insert))
 				$this->terminateWithJsonError('Fehler beim Speichern');
 
-
 			// insert Anwesenheiten entries of every Student as Abwesend
-			$this->_ci->AnwesenheitenModel->createNewAnwesenheitenEntries($le_id, $beginnDate, $endeDate);
+			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id);
 
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash));
+			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 		}
 	}
 
@@ -222,14 +348,14 @@ class Api extends Auth_Controller
 		// TODO: maybe wait with ACTUALLY deleting because stupid user will 99% prematurely cancel a check?
 
 		$result = $this->getPostJSON();
-		$le_id = $result->le_id;
 
-		$result = $this->_ci->QRModel->loadWhere(array('lehreinheit_id' => $le_id));
+		$anwesenheit_id = $result->anwesenheit_id;
+
+		$result = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 
 		if (hasData($result)) {
 			$deleteresp = $this->_ci->QRModel->delete(array(
-				'zugangscode' => $result->retval[0]->zugangscode,
-				'lehreinheit_id' => $le_id
+				'zugangscode' => $result->retval[0]->zugangscode
 			));
 
 			return $deleteresp;
@@ -256,7 +382,7 @@ class Api extends Auth_Controller
 
 
 
-		$result = $this->_ci->AnwesenheitenModel->getAllByStudent('el23b115', $studiensemester);
+		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
 
 
 
@@ -272,11 +398,15 @@ class Api extends Auth_Controller
 
 		// find relevant entry from tbl_anwesenheit_check via zugangscode
 		$result = $this->_ci->QRModel->loadWhere(array('zugangscode' => $zugangscode));
-		// if not return
 		if(!hasData($result)) $this->terminateWithJsonError("Ungültiger Zugangscode eingegeben.");
 
-		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
+		// find relevant entry from tbl_anwesenheit via anwesenheit_id
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
+		$result = $this->_ci->AnwesenheitModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
+		if(!hasData($result)) $this->terminateWithJsonError("Zugangscode hat fehlerhafte Anwesenheitskontrolle hinterlegt.");
+
+
+		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
 
 		// find relevant lehreinheit from relevant entry
 		$result = $this->_ci->LehreinheitModel->loadWhere(array('lehreinheit_id' => $lehreinheit_id));
@@ -284,13 +414,13 @@ class Api extends Auth_Controller
 
 		if(!hasData($result)) $this->terminateWithJsonError("Zugangscode hat fehlerhafte Lehreinheit hinterlegt.");
 
-		$result = $this->_ci->AnwesenheitenModel->getAllPersonIdsForLE($lehreinheit_id);
+		$resultAnwKontrolle = $this->_ci->AnwesenheitModel->getAllPersonIdsForLE($lehreinheit_id);
 		if(!hasData($result)) $this->terminateWithJsonError("Lehreinheit hat keine Teilnehmer hinterlegt.");
 
 		// check if the student/person sending the request is actually supposed to be in that lehreinheit
 		$isLegit = false;
 		$prestudent_id = null;
-		forEach ($result->retval as $entry) {
+		forEach ($resultAnwKontrolle->retval as $entry) {
 			$isLegitLoopVar = $entry->person_id == $person_id;
 			if($isLegitLoopVar) {
 				$isLegit = true;
@@ -304,9 +434,7 @@ class Api extends Auth_Controller
 
 		// check if there is already an anwesenheit written to lehreinheit on date of check
 		$date = date('Y-m-d');
-//		$result = $this->_ci->AnwesenheitenModel->getAllAnwesenheitenByLehreinheitByDate($lehreinheit_id, $date);
-
-		// TODO: check if counts and/or id's actually match
+		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLehreinheitByDate($lehreinheit_id, $date);
 
 		// all entries need to be inserted on start
 		if(!hasData($result)) $this->terminateWithJsonError("Keine Anwesenheitseinträge gefunden für die Lehreinheit an diesem Datum");
@@ -322,22 +450,20 @@ class Api extends Auth_Controller
 		// finally update the entry to anwesend
 		if($entryToUpdate) {
 
-			$result = $this->_ci->AnwesenheitenModel->update($entryToUpdate->anwesenheit_id, array(
-				'status' => 'anw', // TODO: lets not hardcode this here, or?
-				'updateamum' => 'NOW()',
-				'updatevon' => getAuthUID()
+			$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, array(
+				'status' => 'anwesend',
 			));
 
 			if (isError($result)) {
 				return terminateWithJsonError('Anwesenheitskontrolle fehlgeschlagen.');
 			} else {
-				$viewData = $this->_ci->AnwesenheitenModel->getAnwesenheitenCheckViewData($entryToUpdate);
+				$viewData = $this->_ci->AnwesenheitUserModel->getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id);
 
 				// if inserted successfully return some information to display who has entered
 				// his anwesenheitscheck for which date and lehreinheit
 				$this->outputJsonSuccess(array(
 					'message' => 'Anwesenheitskontrolle erfolgreich.',
-					'entry' => json_encode($entry),
+					'anwesenheitEntry' => json_encode($entry),
 					'viewData' => json_encode($viewData)
 				));
 			}
@@ -350,11 +476,10 @@ class Api extends Auth_Controller
 
 	public function studentAddEntschuldigung()
 	{
+		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']))
+			$this->terminateWithJsonError('Falsche Parameterübergabe');
 
-		/*if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']))
-			$this->terminateWithJsonError('Falsche Parameterübergabe');*/
-
-		/*$vonTimestamp = strtotime($_POST['von']);
+		$vonTimestamp = strtotime($_POST['von']);
 		$bisTimestamp = strtotime($_POST['bis']);
 
 		if ($vonTimestamp === false || $bisTimestamp === false)
@@ -372,15 +497,16 @@ class Api extends Auth_Controller
 		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf'));
 		$dmsFile = getData($dmsFile);
 
-		$dmsId = $dmsFile['dms_id'];*/
+		$dmsId = $dmsFile['dms_id'];
 
+		$von = date('Y-m-d H:i:s', $vonTimestamp);
+		$bis = date('Y-m-d H:i:s', $bisTimestamp);
 		$result = $this->_ci->EntschuldigungModel->insert(
 			array(
 				'person_id' => getAuthPersonId(),
-				/*'von' =>  date('Y-m-d H:i:s', $vonTimestamp),
-				'bis' => date('Y-m-d H:i:s', $bisTimestamp),*/
-				'status' => 'e_hochgeladen', //TODO status überlegen
-				'dms_id' => /*$dmsId*/ 287654,
+				'von' => $von,
+				'bis' => $bis,
+				'dms_id' => $dmsId,
 				'insertvon' => $this->_uid
 			)
 		);
@@ -388,9 +514,9 @@ class Api extends Auth_Controller
 		if (isError($result))
 			$this->terminateWithJsonError(getError($result));
 
-		$this->outputJsonSuccess('Entschuldigung erfolgreich hochgeladen');
-
+		$this->outputJsonSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
+
 	public function studentDownload()
 	{
 		$dms_id = $this->_ci->input->get('entschuldigung');
@@ -399,19 +525,45 @@ class Api extends Auth_Controller
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 
 		$person_id = getAuthPersonId();
-		if ($person_id === 'Assistenz') //TODO prüfen
-		{
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($dms_id);
-		}
+
+		//TODO (david) noch prüfen ob der Mitarbeiter Zugriff haben sollte
+		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid))
+			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
 		else
-		{
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($dms_id, getAuthPersonId());
-		}
+			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);
 
 		if (hasData($zuordnung))
 		{
 			$file = $this->_ci->dmslib->download($dms_id, 'Entschuldigung.pdf', 'attachment');
 			$this->outputFile(getData($file));
+		}
+
+	}
+
+	public function studentDeleteEntschuldigung()
+	{
+		$data = json_decode($this->input->raw_input_stream, true);
+		$entschuldigung_id = $data['entschuldigung_id'];
+
+		if (isEmptyString($entschuldigung_id))
+			$this->terminateWithJsonError('Error');
+
+		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, /*getAuthPersonId()*/ 106538);
+
+		if (hasData($zuordnung))
+		{
+			$entschuldigung = getData($zuordnung)[0];
+
+			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
+
+			if (isError($deletedEntschuldigung))
+				$this->terminateWithJsonError(getError($deletedEntschuldigung));
+
+			$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
+			if (isError($deletedFile))
+				$this->terminateWithJsonError(getError($deletedFile));
+
+			$this->outputJsonSuccess('Success');
 		}
 
 	}

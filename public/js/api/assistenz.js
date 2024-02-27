@@ -4,7 +4,7 @@ export default {
 	getEntschuldigungen()
 	{
 		try {
-			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/assistenz/getEntschuldigungen');
+			return CoreRESTClient.get('extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen');
 		} catch (error) {
 			throw error;
 		}
@@ -12,7 +12,7 @@ export default {
 	updateEntschuldigung(entschuldigung_id, status)
 	{
 		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-Anwesenheiten/assistenz/updateEntschuldigung',
+			return CoreRESTClient.post('extensions/FHC-Core-Anwesenheiten/Api/assistenzUpdateEntschuldigung',
 				{
 					'entschuldigung_id': entschuldigung_id,
 					'status': status

@@ -5,7 +5,7 @@ export default {
 	{
 		try {
 
-			return await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/StudentGetAll', { studiensemester: studiensemester });
+			return await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/studentGetAll', { studiensemester: studiensemester });
 		} catch (error) {
 			throw error;
 		}

@@ -1,9 +1,6 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-use \chillerlan\QRCode\QROptions;
-use \chillerlan\QRCode\QRCode;
-
 class Lektor extends Auth_Controller
 {
 	private $_ci;

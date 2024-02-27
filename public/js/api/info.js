@@ -17,11 +17,22 @@ export default {
 			throw error;
 		}
 	},
-	async getLehreinheitAndLektorData(le_id, ma_uid, date) {
+	async getLehreinheitAndLektorInfo(le_ids, ma_uid, date) {
+		try {
+			return await CoreRESTClient.post(`
+				/extensions/FHC-Core-Anwesenheiten/Api/
+				infoGetLehreinheitAndLektorInfo
+			`, {le_ids, ma_uid, date});
+
+		} catch (error) {
+			throw error;
+		}
+	},
+	async getStudentInfo(prestudent_id, lva_id, sem_kurzbz) {
 		try {
 			const result = await CoreRESTClient.get(`
 				/extensions/FHC-Core-Anwesenheiten/Api/
-				infoGetLehreinheitAndLektorData?le_id=${le_id}&ma_uid=${ma_uid}&date=${date}
+				infoGetStudentInfo?prestudent_id=${prestudent_id}&lva_id=${lva_id}&sem_kurzbz=${sem_kurzbz}
 			`);
 
 			return result;

@@ -1,13 +1,13 @@
 export default {
 
-	//! API Calls for Anwesenheit Views
+	// API Calls for Anwesenheit Views
 
-	async getAllAnwesenheitenByLektor(ma_uid=null,lv_id=null, sem_kurzbz = null) {
+	async getAllAnwesenheitenByLva(lv_id=null, le_ids = [], sem_kurzbz = null) {
+		const payload = {lv_id, le_ids, sem_kurzbz}
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
-		`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLektor?ma_uid=${ma_uid}&lv_id=${lv_id}&sem_kurzbz=${sem_kurzbz}`;
+		`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva`;
 
-		// TODO: parameters not in url but somewhere in request body with a post request
-		return axios.get(url);
+		return axios.post(url, payload);
 	},
 	async getAllAnwesenheitenByStudentByLva(prestudent_id= null, lva_id = null, sem_kurzbz = null) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
@@ -21,23 +21,23 @@ export default {
 
 		return axios.post(url,{changedAnwesenheiten});
 	},
-	async getNewQRCode(le_id = null,beginn = null, ende = null) {
+	async getNewQRCode(le_ids = [],beginn = null, ende = null) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
 			`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetNewQRCode`;
 
-		return axios.post(url, {le_id, beginn, ende})
+		return axios.post(url, {le_ids, beginn, ende})
 	},
-	async getExistingQRCode(le_id = null) {
+	async getExistingQRCode(le_ids = [], ma_uid, date) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
 			`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode`;
 
-		return axios.post(url, {le_id})
+		return axios.post(url, {le_ids, ma_uid, date})
 	},
-	async deleteQRCode(le_id = null) {
+	async deleteQRCode(le_ids = [], anwesenheit_id) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
 			`/extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteQRCode`;
 
-		return axios.post(url, {le_id})
+		return axios.post(url, {le_ids, anwesenheit_id})
 	},
 	async checkInAnwesenheit(payload) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+

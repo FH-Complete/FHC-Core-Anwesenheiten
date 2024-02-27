@@ -41,8 +41,9 @@ export default {
 
 						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
 
-						this.entry = JSON.parse(res.data.retval.entry)
-						this.entry.datum = new Date(this.entry.datum)
+						this.entry = JSON.parse(res.data.retval.anwesenheitEntry)
+						this.entry.von = new Date(this.entry.von)
+						this.entry.bis = new Date(this.entry.bis)
 
 						this.viewData = JSON.parse(res.data.retval.viewData).retval[0]
 
@@ -110,7 +111,7 @@ export default {
 						<div v-if="viewData">
 							<div>
 								<p>{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
-								<p>{{entry.datum.toLocaleString()}}</p>
+								<p>{{entry.von.toLocaleDateString()}}:  {{entry.von.toLocaleTimeString()}} - {{entry.bis.toLocaleTimeString()}}</p>
 								<p>{{viewData.vorname}} {{viewData.nachname}} wurde registriert.</p>
 							</div>
 						</div>
