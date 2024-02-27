@@ -171,7 +171,7 @@ class Api extends Auth_Controller
 		$lv_id = $this->input->get('lv_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
-		$res = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
+		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
 		$this->outputJson($res);
@@ -181,7 +181,7 @@ class Api extends Auth_Controller
 	{
 		$result = $this->getPostJSON();
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
-		return $this->_ci->AnwesenheitModel->updateAnwesenheiten($changedAnwesenheiten);
+		return $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten);
 	}
 
 	public function lektorGetExistingQRCode(){

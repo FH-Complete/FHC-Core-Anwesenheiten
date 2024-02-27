@@ -23,7 +23,7 @@ export default {
 				index: 'datum',
 				layout: 'fitColumns',
 				columns: [
-					{title: 'Anwesenheit ID', field: 'anwesenheit_id', visible: false},
+					{title: 'Anwesenheit User ID', field: 'anwesenheit_user_id', visible: false},
 					{title: 'Datum', field: 'datum', headerFilter: true},
 					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter},
 				]
@@ -36,7 +36,7 @@ export default {
 					// TODO: (johann) more sophisticated check with db fetched status_type values
 					if(data === "anwesend") {
 						const newRow = {
-							anwesenheit_id: cell.getData().anwesenheit_id,
+							anwesenheit_user_id: cell.getData().anwesenheit_user_id,
 							datum: cell.getData().datum,
 							status: "abwesend"
 						}
@@ -44,7 +44,7 @@ export default {
 						row.update(newRow)
 					} else if (data === "abwesend") {
 						const newRow = {
-							anwesenheit_id: cell.getData().anwesenheit_id,
+							anwesenheit_user_id: cell.getData().anwesenheit_user_id,
 							datum: cell.getData().datum,
 							status: "anwesend"
 						}

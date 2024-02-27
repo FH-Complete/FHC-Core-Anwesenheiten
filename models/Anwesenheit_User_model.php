@@ -13,6 +13,37 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->pk = 'anwesenheit_user_id';
 	}
 
+	public function updateAnwesenheiten($changedAnwesenheiten)
+	{
+
+		// TODO (johann) maybe there is a better way to update a set of entries?
+
+		$this->db->trans_start(false);
+
+		foreach ($changedAnwesenheiten as $entry) {
+			$result = $this->update($entry->anwesenheit_user_id, array(
+				'status' => $entry->status
+			));
+
+			if (isError($result)) {
+				$this->db->trans_rollback();
+				return error($result->msg, EXIT_ERROR);
+			}
+		}
+
+		$this->db->trans_complete();
+
+		// Check if everything went ok during the transaction
+		if ($this->db->trans_status() === false || isError($result)) {
+			$this->db->trans_rollback();
+			return error($result->msg, EXIT_ERROR);
+		} else {
+			$this->db->trans_commit();
+			return success('Anwesenheiten successfully updated.');
+		}
+
+	}
+
 	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id) {
 		$this->db->trans_start(false);
 
@@ -71,6 +102,21 @@ class Anwesenheit_User_model extends \DB_Model
 			$this->db->trans_commit();
 			return success('Anwesenheiten successfully inserted.');
 		}
+	}
+
+	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
+	{
+		$query = "
+			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status
+			FROM extension.tbl_anwesenheit
+				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
+				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}'
+			ORDER BY datum ASC;
+		";
+
+		return $this->execQuery($query);
 	}
 
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
