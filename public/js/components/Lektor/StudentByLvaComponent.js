@@ -1,5 +1,6 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
+import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
 import { lektorFormatters } from "../../mixins/formatters";
 
@@ -10,6 +11,7 @@ import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 export default {
 	name: 'StudentByLvaComponent',
 	components: {
+		CoreBaseLayout,
 		CoreFilterCmpt,
 		CoreNavigationCmpt,
 		verticalsplit: verticalsplit,
@@ -90,13 +92,18 @@ export default {
 		async saveChanges(){
 			const changedData = this.changedData
 			this.changedData = []
-			const result = await Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(changedData)
+			Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(changedData).then(result => {
+				if(result && result.status === 200) {
+					this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
+				} else {
+					this.$fhcAlert.alertError("Something went terribly wrong.")
+				}
 
-			if(result && result.status === 200) {
-				this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
-			} else {
-				this.$fhcAlert.alertError("Something went terribly wrong.")
-			}
+				Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
+					console.log('getAnwesenheitSumByLva', result)
+					this.sum = result.data.retval.retval[0].sum
+				})
+			})
 		}
 	},
 	created(){
@@ -149,29 +156,31 @@ export default {
 			v-bind:add-header-menu-entries="headerMenuEntries">	
 		</core-navigation-cmpt>
 
-		<div id="content">
-			<div class="row">
-				<div class="col-8">
-					<core-filter-cmpt
-						:title="filterTitle"
-						ref="anwesenheitenByStudentByLvaTable"
-						:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
-						:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
-						@nw-new-entry="newSideMenuEntryHandler"
-						:tableOnly
-						:sideMenu="false" 
-						noColumnFilter>
-					</core-filter-cmpt>
-					<div class="d-flex justify-content-end align-items-end mt-3">
-						<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" :disabled="!dataChanged">
-							Änderungen Speichern
-						</button>
-					</div>
+		<core-base-layout
+			:title="filterTitle"
+			mainCols="8"
+			asideCols="4">
+			<template #main>
+				<core-filter-cmpt
+					title=""
+					ref="anwesenheitenByStudentByLvaTable"
+					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
+					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
+					@nw-new-entry="newSideMenuEntryHandler"
+					:tableOnly
+					:sideMenu="false" 
+					noColumnFilter>
+				</core-filter-cmpt>
+				<div class="d-flex justify-content-end align-items-end mt-3">
+					<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" :disabled="!dataChanged">
+						Änderungen Speichern
+					</button>
 				</div>
-				<div class="col-4">
-<!--					<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" />-->
-					<h4> Summe: {{sum}} %</h4>
-				</div>
-		</div>
+			</template>
+			<template #aside>
+<!--				<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" />-->
+				<h4> Summe: {{sum}} %</h4>
+			</template>
+		</core-base-layout>
 	</div>`
 };

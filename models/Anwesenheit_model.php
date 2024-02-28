@@ -101,15 +101,18 @@ class Anwesenheit_model extends \DB_Model
 	public function getLehreinheitAndLektorInfo($le_id, $ma_uid, $date)
 	{
 		$query = "
-			SELECT DISTINCT tbl_stundenplan.mitarbeiter_uid, bezeichnung, kurzbz, tbl_stundenplan.ort_kurzbz, beginn, ende
-			FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
-			JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
-			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
-			WHERE
-			lehreinheit_id = '{$le_id}'
-			AND
-			mitarbeiter_uid = '{$ma_uid}'
-			AND datum = '{$date}'
+			SELECT * FROM 
+				(
+					SELECT tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehreinheit_id, bezeichnung, kurzbz
+					FROM lehre.tbl_lehrveranstaltung JOIN lehre.tbl_lehreinheit USING (lehrveranstaltung_id)
+					WHERE lehreinheit_id = '{$le_id}'
+				) le LEFT JOIN
+				(
+					SELECT mitarbeiter_uid, beginn, ende, lehreinheit_id
+					FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
+					WHERE mitarbeiter_uid = '{$ma_uid}'
+						AND datum = '{$date}'
+				)	sp USING (lehreinheit_id);
 		";
 
 		return $this->execQuery($query);
@@ -180,8 +183,8 @@ class Anwesenheit_model extends \DB_Model
 	public function updateAnwesenheitenByDatesStudent($von, $bis, $person_id, $status)
 	{
 		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?
-					WHERE anwesenheit_id IN (
-						SELECT extension.tbl_anwesenheit_user.anwesenheit_id
+					WHERE anwesenheit_user_id IN (
+						SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id
 						FROM extension.tbl_anwesenheit_user
 						JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id
 						WHERE von >= ?

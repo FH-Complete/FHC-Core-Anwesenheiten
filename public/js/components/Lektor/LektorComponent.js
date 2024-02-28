@@ -1,5 +1,6 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
+import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
 import { lektorFormatters } from "../../mixins/formatters";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
@@ -10,6 +11,7 @@ import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 export default {
 	name: 'LektorComponent',
 	components: {
+		CoreBaseLayout,
 		CoreFilterCmpt,
 		CoreNavigationCmpt,
 		BsModal,
@@ -57,8 +59,8 @@ export default {
 			filterTitle: "",
 			beginn: null,
 			ende: null,
-			// selectedDate: new Date(Date.now()),
-			selectedDate: new Date('2023-10-02'),
+			selectedDate: new Date(Date.now()),
+			// selectedDate: new Date('2023-10-02'),
 			studentsData: null,
 			namesAndID: null,
 			tableStudentData: null,
@@ -102,8 +104,9 @@ export default {
 			this.$refs.modalContainer.show()
 		},
 		getNewQRCode () {
-
-			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_ids, this.beginn, this.ende).then(
+			// js months 0-11, php months 1-12
+			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
+			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_ids, this.beginn, this.ende, date).then(
 				res => {
 
 					if(res && res.data && res.data.retval) {
@@ -118,29 +121,32 @@ export default {
 
 			if(res && res.data && res.data.retval) {
 				// find out von & bis times for lehreinheit
+				if(res.data.retval[0].bezeichnung && res.data.retval[0].kurzbz) this.filterTitle = res.data.retval[0].bezeichnung + " (" +res.data.retval[0].kurzbz+ ")"
 
-				// TODO: maybe handle this more elegantly
-				this.filterTitle = res.data.retval[0].bezeichnung + " (" +res.data.retval[0].kurzbz+ ")"
+				if(res.data.retval[0].beginn && res.data.retval[0].ende) {
+					let beginn = new Date('1995-10-16 ' + res.data.retval[0].beginn)
+					let ende = new Date('1995-10-16 ' + res.data.retval[0].ende)
 
-				let beginn = new Date('1995-10-16 ' + res.data.retval[0].beginn)
-				let ende = new Date('1995-10-16 ' + res.data.retval[0].ende)
+					res.data.retval.forEach(entry => {
+						const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
+						const entryEnde = new Date('1995-10-16 ' + entry.ende)
 
-				res.data.retval.forEach(entry => {
-					const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
-					const entryEnde = new Date('1995-10-16 ' + entry.ende)
+						if(entryBeginn <= beginn) beginn = entryBeginn
+						if(entryEnde >= ende) ende = entryEnde
 
-					if(entryBeginn <= beginn) beginn = entryBeginn
-					if(entryEnde >= ende) ende = entryEnde
+					})
 
-				})
-
-				this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
-				this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
-
+					this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
+					this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
+				}
 			}
 		},
 		startNewAnwesenheitskontrolle(){
-			// TODO: VALIDATE IF BEGINN AND ENDE ARE SET
+			if(!this.beginn || !this.ende) {
+				this.$fhcAlert.alertError("Beginn und Ende der Anwesenheitskontrolle müssen gesetzt sein!")
+				return
+			}
+
 
 			this.qr = '' // indirectly set start button disabled
 
@@ -156,6 +162,12 @@ export default {
 			this.url = null
 			this.code = null
 
+			// TODO: maybe only fetch new entries and merge
+			// fetch table data
+			Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+				this.setupdData(res)
+			})
+
 			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_ids, this.anwesenheit_id).then(
 				res => {
 
@@ -166,25 +178,10 @@ export default {
 					}
 				}
 			)
+
+
 		},
-
-	},
-	created(){
-		const selectedDateFormatted = formatDate(this.selectedDate)
-		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
-		found.title = selectedDateFormatted
-	},
-	mounted() {
-
-		// see if test is still running
-		this.getExistingQRCode()
-
-		// fetch LE data
-		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDate(this.selectedDate))
-			.then(res => this.setupLehreinheitAndLektorData(res));
-
-		// fetch table data
-		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+		setupdData(res){
 			console.log('getAllAnwesenheitenByLva', res)
 			if(!res.data || !res.data.retval) return
 
@@ -225,6 +222,26 @@ export default {
 
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+		}
+
+	},
+	created(){
+		const selectedDateFormatted = formatDate(this.selectedDate)
+		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
+		found.title = selectedDateFormatted
+	},
+	mounted() {
+
+		// see if test is still running
+		this.getExistingQRCode()
+
+		// fetch LE data
+		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDate(this.selectedDate))
+			.then(res => this.setupLehreinheitAndLektorData(res));
+
+		// fetch table data
+		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+			this.setupdData(res)
 		})
 	},
 	updated(){
@@ -241,7 +258,6 @@ export default {
 					const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
 					const foundEntry = this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
-					console.log(foundEntry.stat)
 					foundEntry.status = status
 			})
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
@@ -255,9 +271,15 @@ export default {
 			v-bind:add-header-menu-entries="headerMenuEntries">	
 		</core-navigation-cmpt>
 		
-		<div id="content">
-			<div class="row">
+		
+				
+		<core-base-layout
+			:title="filterTitle"
+			mainCols="8"
+			asideCols="4"
+			>
 			
+			<template #main>
 				<bs-modal ref="modalContainer" class="bootstrap-prompt" backdrop="static" 
 				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
 					<template v-slot:title>Anwesenheiten QR</template>
@@ -270,69 +292,61 @@ export default {
 						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">Anwesenheitskontrolle beenden</button>
 					</template>
 				</bs-modal>
-				
-				<div class="col-8">
-					<core-filter-cmpt
-						:title="filterTitle"
-						ref="anwesenheitenTable"
-						:tabulator-options="anwesenheitenTabulatorOptions"
-						:tabulator-events="anwesenheitenTabulatorEventHandlers"
-						:id-field="'anwesenheiten_id'"
-						@nw-new-entry="newSideMenuEntryHandler"
-						:tableOnly
-						:sideMenu="false" 
-						noColumnFilter>
-					</core-filter-cmpt>
-					<div class="row justify-content-end">
-						<div class="col-4">
-							<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary" :disabled=qr>
-								Neue Anwesenheitskontrolle starten 
-							</button>
-						</div>
+				<core-filter-cmpt
+					title=""
+					ref="anwesenheitenTable"
+					:tabulator-options="anwesenheitenTabulatorOptions"
+					:tabulator-events="anwesenheitenTabulatorEventHandlers"
+					:id-field="'anwesenheiten_id'"
+					@nw-new-entry="newSideMenuEntryHandler"
+					:tableOnly
+					:sideMenu="false" 
+					noColumnFilter>
+				</core-filter-cmpt>
+				<div class="row justify-content-end">
+					<div class="col-4">
+						<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary" :disabled=qr>
+							Neue Anwesenheitskontrolle starten 
+						</button>
 					</div>
 				</div>
-				
-				<div class="col-4">
-					<div class="row">
-						<div class="col-2"><h6 class="text-center">Datum</h6></div>
-							<div class="col-10">
-								<datepicker
-									v-model="selectedDate"
-									locale="de"
-									format="dd-MM-yyyy"
-									text-input="true"
-									auto-apply="true">
-								</datepicker>
-							</div>
-						</div>
-					<div class="row mt-4">
-						<div class="col-2"><h6 class="text-center">Von</h6></div>
-						<div class="col-10">
-							<datepicker
-								v-model="beginn"
-								time-picker="true"
-								text-input="true"
-								auto-apply="true">
-							</datepicker>
-						</div>
+			</template>
+			<template #aside>
+				<div class="row align-items-center">
+					<div class="col-2"><label for="datum" class="form-label col-sm-1">Datum</label></div>
+					<div class="col-10">
+						<datepicker
+							v-model="selectedDate"
+							locale="de"
+							format="dd-MM-yyyy"
+							text-input="true"
+							auto-apply="true">
+						</datepicker>
 					</div>
-					<div class="row mt-4">
-						<div class="col-2"><h6 class="text-center">Bis</h6></div>
-						<div class="col-10">
-							<datepicker
-								v-model="ende"
-								time-picker="true"
-								text-input="true"
-								auto-apply="true">
-							</datepicker>
-						</div>
-					</div>
-					
-					
-					
 				</div>
-				
-			</div>
-		</div>
+				<div class="row mt-4 align-items-center">
+					<div class="col-2"><label for="beginn" class="form-label col-sm-1">Von</label></div>
+					<div class="col-10">
+						<datepicker
+							v-model="beginn"
+							time-picker="true"
+							text-input="true"
+							auto-apply="true">
+						</datepicker>
+					</div>
+				</div>
+				<div class="row mt-4 align-items-center">
+					<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
+					<div class="col-10">
+						<datepicker
+							v-model="ende"
+							time-picker="true"
+							text-input="true"
+							auto-apply="true">
+						</datepicker>
+					</div>
+				</div>
+			</template>
+		</core-base-layout>
 	</div>`
 };

@@ -13,4 +13,14 @@ class QR_model extends \DB_Model
 		$this->pk = array();
 		$this->hasSequence = false;
 	}
+
+	public function getActiveCodeForLE($le_id) {
+		$query = "
+			SELECT anwesenheit_id, zugangscode
+			FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_check USING(anwesenheit_id)
+			WHERE lehreinheit_id = '{$le_id}'
+		";
+
+		return $this->execQuery($query);
+	}
 }

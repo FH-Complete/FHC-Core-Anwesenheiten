@@ -1,12 +1,14 @@
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
+import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {universalFormatter} from "../../mixins/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 
 export default {
 	name: 'AssistenzComponent',
 	components: {
+		CoreBaseLayout,
 		CoreNavigationCmpt,
 		CoreFilterCmpt,
 		CoreRESTClient,
@@ -117,48 +119,55 @@ export default {
 		v-bind:add-header-menu-entries="headerMenuEntries">
 	</core-navigation-cmpt>
 
-	<div id="content">
-		<div class="row">
-			<div class="col-md-7">
-				<div class="row mb-3 align-items-center">
-					<label for="von" class="form-label col-sm-1">Von</label>
-					<div class="col-sm-3">
-						<datepicker
-							v-model="zeitraum.von"
-							clearable="false"
-							auto-apply
-							:enable-time-picker="false"
-							format="dd.MM.yyyy"
-							model-type="yyyy-MM-dd"
-						></datepicker>
-						<!--viewMode="months"
-						month-picker-->
-					</div>
-					<label for="von" class="form-label col-sm-1">Bis</label>
-					<div class="col-sm-3">
-						<datepicker
-							v-model="zeitraum.bis"
-							clearable="false"
-							auto-apply
-							:enable-time-picker="false"
-							format="dd.MM.yyyy"
-							model-type="yyyy-MM-dd"
-						></datepicker>
-					</div>
-					<div class="col-sm-1">
-					<button class="btn btn-secondary" @click="filtern">Filtern</button>
+	<core-base-layout
+		title="Entschuldigungen"
+		mainCols="8"
+		asideCols="4">
+		<template #main>
+			<core-filter-cmpt
+				ref="assistenzTable"
+				:tabulator-options="assistenzViewTabulatorOptions"
+				@nw-new-entry="newSideMenuEntryHandler"
+				:table-only=true
+				:hideTopMenu=false
+			></core-filter-cmpt>
+		</template>
+		<template #aside>
+			<div class="row mb-3 align-items-center">
+				<div class="col-2"><label for="von" class="form-label col-sm-1">Von</label></div>
+				<div class="col-10">
+					<datepicker
+						v-model="zeitraum.von"
+						clearable="false"
+						auto-apply
+						:enable-time-picker="false"
+						format="dd.MM.yyyy"
+						model-type="yyyy-MM-dd"
+					></datepicker>
+					<!--viewMode="months"
+					month-picker-->
 				</div>
 			</div>
-		</div>
-		<core-filter-cmpt
-			ref="assistenzTable"
-			:tabulator-options="assistenzViewTabulatorOptions"
-			@nw-new-entry="newSideMenuEntryHandler"
-			:table-only=true
-			:hideTopMenu=false
-		></core-filter-cmpt>
-
-	</div>
+			<div class="row mb-3 align-items-center">
+				<div class="col-2"><label for="von" class="form-label col-sm-1">Bis</label></div>
+				<div class="col-10">
+					<datepicker
+						v-model="zeitraum.bis"
+						clearable="false"
+						auto-apply
+						:enable-time-picker="false"
+						format="dd.MM.yyyy"
+						model-type="yyyy-MM-dd"
+					></datepicker>
+				</div>
+			</div>
+			<div class="row mb-3 align-content-center justify-content-end">
+				<div class="col-4 d-flex justify-content-end">
+					<button class="btn btn-secondary" @click="filtern">Filtern</button>
+				</div>
+			</div>			
+		</template>
+	</core-base-layout>
 `
 };
 

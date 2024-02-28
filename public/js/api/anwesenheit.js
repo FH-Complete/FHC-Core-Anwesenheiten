@@ -21,11 +21,11 @@ export default {
 
 		return axios.post(url,{changedAnwesenheiten});
 	},
-	async getNewQRCode(le_ids = [],beginn = null, ende = null) {
+	async getNewQRCode(le_ids = [],beginn = null, ende = null, datum) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
 			`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetNewQRCode`;
 
-		return axios.post(url, {le_ids, beginn, ende})
+		return axios.post(url, {le_ids, beginn, ende, datum})
 	},
 	async getExistingQRCode(le_ids = [], ma_uid, date) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+

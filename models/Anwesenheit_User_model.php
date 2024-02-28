@@ -44,12 +44,35 @@ class Anwesenheit_User_model extends \DB_Model
 
 	}
 
-	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id) {
+	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis) {
 		$this->db->trans_start(false);
 
 		// find every student not already having an anwesenheit for the check with given anwesenheit_id
+		// and find if they have any accepted entschuldigungen in this timespan
 		$query = "
-			SELECT prestudent_id
+			SELECT prestudent_id, (
+				SELECT entschuldigung.akzeptiert
+					FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+					WHERE entschuldigung.person_id = (
+						SELECT tbl_prestudent.person_id
+						FROM tbl_prestudent
+						WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
+							AND '{$von}' >= entschuldigung.von AND '{$bis}' <= entschuldigung.bis
+					)
+					ORDER BY akzeptiert DESC NULLS LAST
+					LIMIT 1
+				) as statusAkzeptiert,
+				(
+				   SELECT 1
+				   FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+				   WHERE entschuldigung.person_id = (
+					   SELECT tbl_prestudent.person_id
+					   FROM tbl_prestudent
+					   WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
+						 AND '{$von}' >= entschuldigung.von AND '{$bis}' <= entschuldigung.bis
+				   )
+				   LIMIT 1
+				) as exists_entschuldigung
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
 			WHERE lehreinheit_id = $le_id AND verband != 'I'
@@ -69,15 +92,15 @@ class Anwesenheit_User_model extends \DB_Model
 
 		$result = $this->execQuery($query);
 
-		// and insert them as abwesend
+		// and insert them with their respecting status
 		if(hasData($result)) {
 
 			forEach ($result->retval as $entry) {
-
+				$status = $entry->exists_entschuldigung && $entry->statusakzeptiert ? 'entschuldigt' : 'abwesend';
 				$result = $this->insert(array(
 					'anwesenheit_id' => $anwesenheit_id,
 					'prestudent_id' => $entry->prestudent_id,
-					'status' => 'abwesend',
+					'status' => $status,
 					'insertamum' => $this->escape('NOW()'),
 					'insertvon' => getAuthUID()
 				));
@@ -131,6 +154,12 @@ class Anwesenheit_User_model extends \DB_Model
 			  lehreinheit_id = {$lehreinheit_id}
 			  AND prestudent_id = {$prestudent_id};
 		";
+
+		return $this->execQuery($query);
+	}
+
+	public function getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz) {
+		$query = "SELECT get_anwesenheiten({$prestudent_id}, {$lv_id}, '{$sem_kurzbz}') as sum";
 
 		return $this->execQuery($query);
 	}

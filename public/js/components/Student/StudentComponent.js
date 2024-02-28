@@ -140,7 +140,7 @@ export default {
 		},
 		downloadEntschuldigung: function(dms_id)
 		{
-			window.location = CoreRESTClient._generateRouterURI('/extensions/FHC-Core-Anwesenheiten/student/download?entschuldigung=' + dms_id);
+			window.location = CoreRESTClient._generateRouterURI('/extensions/FHC-Core-Anwesenheiten/Api/studentDownload?entschuldigung=' + dms_id);
 		},
 		deleteEntschuldigung: function(cell) {
 			let entschuldigung_id = cell.getData().entschuldigung_id;
