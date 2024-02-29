@@ -39,6 +39,18 @@ export default {
 
 		return axios.post(url, {le_ids, anwesenheit_id})
 	},
+	async regenerateQR(anwesenheit_id = null) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/Api/lektorRegenerateQRCode`;
+
+		return axios.post(url, {anwesenheit_id})
+	},
+	async degenerateQR(anwesenheit_id = null, zugangscode = null) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/Api/lektorDegenerateQRCode`;
+
+		return axios.post(url, {anwesenheit_id, zugangscode})
+	},
 	async checkInAnwesenheit(payload) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
 			`/extensions/FHC-Core-Anwesenheiten/Api/studentCheckInAnwesenheit`;

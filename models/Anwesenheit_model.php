@@ -13,6 +13,16 @@ class Anwesenheit_model extends \DB_Model
 		$this->pk = 'anwesenheit_id';
 	}
 
+	public function getKontrolleForLEOnDate($le_id, $date) {
+		$query = "
+			SELECT * FROM extension.tbl_anwesenheit
+			WHERE DATE(von) = '{$date->year}-{$date->month}-{$date->day}'
+			AND lehreinheit_id = {$le_id}
+		";
+
+		return $this->execQuery($query);
+	}
+
 	public function getAllAnwesenheitenByLektor($lv_id, $le_ids, $sem_kurzbz)
 	{
 		$query = "

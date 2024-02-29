@@ -22,6 +22,8 @@ class Api extends Auth_Controller
 				'lektorGetAllAnwesenheitenByLva' => 'admin:rw',
 				'lektorGetAllAnwesenheitenByStudentByLva' => 'admin:rw',
 				'lektorUpdateAnwesenheiten' => 'admin:rw',
+				'lektorRegenerateQRCode' => 'admin:rw',
+				'lektorDegenerateQRCode' => 'admin:rw',
 				'lektorGetNewQRCode' => 'admin:rw',
 				'lektorGetExistingQRCode' => 'admin:rw',
 				'lektorDeleteQRCode' => 'admin:rw',
@@ -149,8 +151,8 @@ class Api extends Auth_Controller
 		// anyways, just per different anwesenheit_ids
 		$le_id = $le_ids[0];
 
-		$resultKontrolle = $this->_ci->QRModel->getActiveCodeForLE($le_id);
-		if(!hasData($resultKontrolle)) $this->terminateWithJsonError("No existing Anwesenheitskontrolle found");
+		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id);
+		if(!hasData($resultQR)) $this->terminateWithJsonError("No existing Anwesenheitskontrolle found");
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -160,8 +162,8 @@ class Api extends Auth_Controller
 		]);
 		$qrcode = new QRCode($options);
 
-		$anwesenheit_id = $resultKontrolle->retval[0]->anwesenheit_id;
-		$shortHash = $resultKontrolle->retval[0]->zugangscode;
+		$anwesenheit_id = $resultQR->retval[0]->anwesenheit_id;
+		$shortHash = $resultQR->retval[0]->zugangscode;
 		if($shortHash) { // resend existing qr
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
@@ -172,9 +174,61 @@ class Api extends Auth_Controller
 
 	}
 
+	public function lektorRegenerateQRCode()
+	{
+		$result = $this->getPostJSON();
+		$anwesenheit_id = $result->anwesenheit_id;
+
+		// create new qr, insert for anwesenheit and send back. Delete old one after regeneration in seperate call
+		$options = new QROptions([
+			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
+			'addQuietzone' => true,
+			'quietzoneSize' => 1,
+			'scale' => 10
+		]);
+		$qrcode = new QRCode($options);
+
+		do {
+			$token = generateToken();
+			$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
+			$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
+
+			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
+
+			$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
+		} while(hasData($check));
+
+		$insert = $this->_ci->QRModel->insert(array(
+			'zugangscode' => $shortHash,
+			'anwesenheit_id' => $anwesenheit_id,
+			'insertamum' => date('Y-m-d H:i:s'),
+			'insertvon' => getAuthUID()
+		));
+
+		if (isError($insert))
+			$this->terminateWithJsonError('Fehler beim Speichern');
+
+		$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+	}
+
+	public function lektorDegenerateQRCode()
+	{
+		$result = $this->getPostJSON();
+		$anwesenheit_id = $result->anwesenheit_id;
+		$zugangscode = $result->zugangscode;
+
+		$deleteresp = $this->_ci->QRModel->delete(array(
+			'zugangscode' => $zugangscode,
+			'anwesenheit_id' => $anwesenheit_id
+		));
+
+		if(!$deleteresp) $this->terminateWithJsonError('Fehler beim degenerieren des QRCode');
+
+		return $deleteresp;
+	}
+
 	public function lektorGetNewQRCode()
 	{
-
 		$result = $this->getPostJSON();
 		$le_ids = $result->le_ids;
 
@@ -188,8 +242,7 @@ class Api extends Auth_Controller
 		$ende = $result->ende;
 		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
 
-
-		$resultKontrolle = $this->_ci->QRModel->getActiveCodeForLE($le_id);
+		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $date);
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -214,14 +267,12 @@ class Api extends Auth_Controller
 
 			$this->_handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id, $von, $bis);
 
-
 		} else { // reuse existing one
 			$anwesenheit_id = $resultKontrolle->retval[0]->anwesenheit_id;
 
 			$resultQR = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 
 			$this->_handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id, $von, $bis);
-
 		}
 	}
 
@@ -250,7 +301,8 @@ class Api extends Auth_Controller
 			$insert = $this->_ci->QRModel->insert(array(
 				'zugangscode' => $shortHash,
 				'anwesenheit_id' => $anwesenheit_id,
-				'insertamum' => date('Y-m-d H:i:s')
+				'insertamum' => date('Y-m-d H:i:s'),
+				'insertvon' => getAuthUID()
 			));
 
 			if (isError($insert))
@@ -265,20 +317,14 @@ class Api extends Auth_Controller
 
 	public function lektorDeleteQRCode()
 	{
-
-		// TODO: maybe wait with ACTUALLY deleting because stupid user will 99% prematurely cancel a check?
-
 		$result = $this->getPostJSON();
-
 		$anwesenheit_id = $result->anwesenheit_id;
 
-		$result = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 
-		if (hasData($result)) {
-			$deleteresp = $this->_ci->QRModel->delete(array(
-				'zugangscode' => $result->retval[0]->zugangscode
-			));
-
+		$deleteresp = $this->_ci->QRModel->delete(array(
+			'anwesenheit_id' => $anwesenheit_id
+		));
+		if($deleteresp) {
 			return $deleteresp;
 		} else {
 			$this->terminateWithJsonError('Fehler beim Löschen der Anwesenheitskontrolle');

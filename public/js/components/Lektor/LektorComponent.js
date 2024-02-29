@@ -49,6 +49,7 @@ export default {
 					})
 				}
 			}],
+			boundRegenerateQR: null,
 			tableData: [],
 			// TODO: get these via get parameter into properties
 			ma_uid: 'ma0144',
@@ -66,7 +67,8 @@ export default {
 			tableStudentData: null,
 			qr: null,
 			url: null,
-			code: null
+			code: null,
+			timerID: null
 		}
 	},
 	props: {
@@ -102,10 +104,13 @@ export default {
 			this.code = retval.code
 			this.anwesenheit_id = retval.anwesenheit_id
 			this.$refs.modalContainer.show()
+			this.startRegenerateQR()
 		},
 		getNewQRCode () {
 			// js months 0-11, php months 1-12
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
+
+
 			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_ids, this.beginn, this.ende, date).then(
 				res => {
 
@@ -114,6 +119,42 @@ export default {
 					}
 				}
 			)
+		},
+		regenerateQR() {
+			console.log('regenerateQR', this)
+
+			Vue.$fhcapi.Anwesenheit.regenerateQR(this.anwesenheit_id).then(res => {
+				console.log('regenerateQR', res)
+
+				this.qr = res.data.retval.svg
+				this.url = res.data.retval.url
+				this.code = res.data.retval.code
+
+				Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, this.code).then(res => {
+					console.log('degenerateQR', res)
+
+
+				})
+			})
+
+		},
+		startRegenerateQR() {
+			// this.timerID = setTimeout(this.boundRegenerateQR, 30000) // 30s
+			this.timerID = setInterval(this.boundRegenerateQR, 3000) // 3s
+
+		},
+		stopRegenerateQR() {
+			clearInterval(this.timerID)
+			this.timerID = null
+			this.qr = null
+			this.url = null
+			this.code = null
+
+			// attempt to degenerate one last time to not leave any codes in db
+			Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, this.code).then(res => {
+				console.log('degenerateQR', res)
+
+			})
 		},
 		setupLehreinheitAndLektorData(res) {
 			console.log('setupLehreinheitAndLektorData', res)
@@ -165,7 +206,7 @@ export default {
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
 			Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
-				this.setupdData(res)
+				this.setupData(res)
 			})
 
 			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_ids, this.anwesenheit_id).then(
@@ -176,12 +217,14 @@ export default {
 					} else {
 						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle.")
 					}
+
+					this.stopRegenerateQR()
 				}
 			)
 
 
 		},
-		setupdData(res){
+		setupData(res){
 			console.log('getAllAnwesenheitenByLva', res)
 			if(!res.data || !res.data.retval) return
 
@@ -232,6 +275,8 @@ export default {
 	},
 	mounted() {
 
+		this.boundRegenerateQR = this.regenerateQR.bind(this)
+
 		// see if test is still running
 		this.getExistingQRCode()
 
@@ -241,7 +286,7 @@ export default {
 
 		// fetch table data
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
-			this.setupdData(res)
+			this.setupData(res)
 		})
 	},
 	updated(){
