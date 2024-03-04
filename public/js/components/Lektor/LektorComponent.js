@@ -50,7 +50,6 @@ export default {
 				}
 			}],
 			boundRegenerateQR: null,
-			tableData: [],
 			// TODO: get these via get parameter into properties
 			ma_uid: 'ma0144',
 			sem_kurzbz: 'WS2023',
@@ -68,7 +67,8 @@ export default {
 			qr: null,
 			url: null,
 			code: null,
-			timerID: null
+			timerID: null,
+			internalPermissions: JSON.parse(this.permissions)
 		}
 	},
 	props: {
@@ -77,7 +77,8 @@ export default {
 		parameters: [],
 		// ma_uid: null,
 		// sem_kurzbz: null,
-		// lv_id: null
+		// lv_id: null,
+		permissions: null
 	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
@@ -139,7 +140,6 @@ export default {
 
 		},
 		startRegenerateQR() {
-			// this.timerID = setTimeout(this.boundRegenerateQR, 30000) // 30s
 			this.timerID = setInterval(this.boundRegenerateQR, 3000) // 3s
 
 		},
@@ -215,14 +215,29 @@ export default {
 					if(res && res.status === 200) {
 						this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich terminiert.")
 					} else {
-						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle.")
+						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle QR Code.")
 					}
 
 					this.stopRegenerateQR()
 				}
 			)
+		},
+		deleteAnwesenheitskontrolle () {
+			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
+			Vue.$fhcapi.Anwesenheit.deleteAnwesenheitskontrolle(this.le_ids, date).then(res => {
 
+				if(res && res.status === 200) {
+					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
+					Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+						this.setupData(res)
+					})
+				} else {
+					this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle.")
+
+				}
+
+			})
 		},
 		setupData(res){
 			console.log('getAllAnwesenheitenByLva', res)
@@ -274,6 +289,8 @@ export default {
 		found.title = selectedDateFormatted
 	},
 	mounted() {
+
+		console.log('mounted')
 
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 
@@ -389,6 +406,13 @@ export default {
 							text-input="true"
 							auto-apply="true">
 						</datepicker>
+					</div>
+				</div>
+				<div class="row mt-4 align-items-center justify-content-end">
+					<div class="col-6">
+						<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-primary">
+							Anwesenheitskontrolle löschen 
+						</button>
 					</div>
 				</div>
 			</template>

@@ -10,9 +10,6 @@ class Info extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getStudiensemester' => 'admin:rw',
-				'getAktStudiensemester' => 'admin:rw',
-				'getLehreinheitAndLektorData' => 'admin:rw'
 			)
 		);
 

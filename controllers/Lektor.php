@@ -44,7 +44,16 @@ class Lektor extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten');
+		$viewData = array(
+			'permissions' => [
+				'admin/rw' => $this->permissionlib->isBerechtigt('admin'),
+				'extension/anwesenheit_assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
+				'extension/anwesenheit_lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
+				'extension/anwesenheit_student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student')
+			]
+		);
+
+		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', $viewData);
 	}
 
 

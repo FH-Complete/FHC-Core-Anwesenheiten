@@ -58,7 +58,6 @@ const router = VueRouter.createRouter({
 })
 
 const anwesenheitApp = Vue.createApp({
-	
 	components: {
 		LektorComponent,
 		StudentByLvaComponent,

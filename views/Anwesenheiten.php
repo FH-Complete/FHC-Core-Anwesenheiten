@@ -38,12 +38,17 @@ $includesArray = array(
 	)
 );
 
+
+
 $this->load->view('templates/FHC-Header', $includesArray);
+
 ?>
 
 <body>
 <div id="main">
-	<router-view>
+	<router-view
+		permissions='<?php echo json_encode($permissions) ?>'
+	>
 	
 	</router-view>
 </div>

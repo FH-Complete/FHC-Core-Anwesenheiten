@@ -164,4 +164,17 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
+	public function deleteUserAnwesenheitById($anwesenheit_user_id)
+	{
+		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = {$anwesenheit_user_id}";
+
+		return $this->execQuery($query);
+	}
+
+	public function deleteAllByAnwesenheitId($anwesenheit_id) {
+		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = {$anwesenheit_id}";
+
+		return $this->execQuery($query);
+	}
+
 }

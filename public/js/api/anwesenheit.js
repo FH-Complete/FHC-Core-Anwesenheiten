@@ -56,5 +56,17 @@ export default {
 			`/extensions/FHC-Core-Anwesenheiten/Api/studentCheckInAnwesenheit`;
 
 		return axios.post(url, payload)
+	},
+	async deleteUserAnwesenheitById(anwesenheit_user_id) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/Api/studentDeleteUserAnwesenheitById`;
+
+		return axios.post(url, {anwesenheit_user_id})
+	},
+	async deleteAnwesenheitskontrolle(le_ids, date) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteAnwesenheitskontrolle`;
+
+		return axios.post(url, {le_ids, date})
 	}
 };

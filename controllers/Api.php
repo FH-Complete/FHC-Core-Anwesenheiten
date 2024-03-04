@@ -13,31 +13,33 @@ class Api extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'infoGetStudiensemester' => 'admin:rw',
-				'infoGetAktStudiensemester' => 'admin:rw',
-				'infoGetLehreinheitAndLektorInfo' => 'admin:rw',
-				'infoGetStudentInfo' => 'admin:rw',
+				'infoGetStudiensemester' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
+				'infoGetAktStudiensemester' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
+				'infoGetLehreinheitAndLektorInfo' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
+				'infoGetStudentInfo' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
 
-				'lektorStudentByLva' => 'admin:rw',
-				'lektorGetAllAnwesenheitenByLva' => 'admin:rw',
-				'lektorGetAllAnwesenheitenByStudentByLva' => 'admin:rw',
-				'lektorUpdateAnwesenheiten' => 'admin:rw',
-				'lektorRegenerateQRCode' => 'admin:rw',
-				'lektorDegenerateQRCode' => 'admin:rw',
-				'lektorGetNewQRCode' => 'admin:rw',
-				'lektorGetExistingQRCode' => 'admin:rw',
-				'lektorDeleteQRCode' => 'admin:rw',
+				'lektorStudentByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorGetAllAnwesenheitenByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorGetAllAnwesenheitenByStudentByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorUpdateAnwesenheiten' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorRegenerateQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorDegenerateQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorGetNewQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorGetExistingQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorDeleteQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorDeleteAnwesenheitskontrolle' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
 
-				'studentGetAll' => 'admin:rw',
-				'studentAddEntschuldigung' => 'admin:rw',
-				'studentDeleteEntschuldigung' => 'admin:rw',
-				'studentGetEntschuldigungenByPerson' => 'admin:rw',
-				'studentDownload' => 'admin:rw',
-				'studentCheckInAnwesenheit' => 'admin:rw',
-				'studentGetAnwesenheitSumByLva' => 'admin:rw',
+				'studentGetAll' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
+				'studentAddEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_student'),
+				'studentDeleteEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
+				'studentGetEntschuldigungenByPerson' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
+				'studentDownload' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
+				'studentCheckInAnwesenheit' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
+				'studentGetAnwesenheitSumByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
+				'studentDeleteUserAnwesenheitById' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
 
-				'assistenzGetEntschuldigungen' => 'admin:rw',
-				'assistenzUpdateEntschuldigung' => 'admin:rw'
+				'assistenzGetEntschuldigungen' => array('admin:rw', 'extension/anwesenheiten_assistenz'),
+				'assistenzUpdateEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz')
 			)
 		);
 
@@ -331,6 +333,27 @@ class Api extends Auth_Controller
 		}
 	}
 
+	public function lektorDeleteAnwesenheitskontrolle() {
+		$result = $this->getPostJSON();
+		$le_ids = $result->le_ids;
+		$le_id = $le_ids[0];
+		$date = $result->date;
+
+		// find anwesenheitkontrolle by le_id and date
+		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $date);
+
+		if(!hasData($resultKontrolle)) $this->terminateWithJsonError('Keine Anwesenheitskontrolle gefunden für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
+		$anwesenheit_id = getData($resultKontrolle)[0]->anwesenheit_id;
+
+		// delete user anwesenheiten by anwesenheit_id of kontrolle
+		$resultDelete = $this->_ci->AnwesenheitUserModel->deleteAllByAnwesenheitId($anwesenheit_id);
+
+		// delete kontrolle
+		if(!hasData($resultDelete)) $this->terminateWithJsonError('Fehler beim Löschen der User Anwesenheiten für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
+
+		$this->outputJsonSuccess('Löschen der Anwesenheitskontrolle für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.' erfolgreich.');
+	}
+
 	// STUDENT API
 
 	public function studentGetAll()
@@ -549,7 +572,18 @@ class Api extends Auth_Controller
 		$this->outputJsonSuccess($this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz));
 	}
 
+	public function studentDeleteUserAnwesenheitById() {
+		$result = $this->getPostJSON();
+		$anwesenheit_user_id = $result->anwesenheit_user_id;
 
+		$deleteresp = $this->_ci->AnwesenheitUserModel->delete(array(
+			'anwesenheit_user_id' => $anwesenheit_user_id
+		));
+
+		if(!$deleteresp) $this->terminateWithJsonError('Fehler beim löschen des Anwesenheitseintrags.');
+
+		$this->outputJsonSuccess($deleteresp);
+	}
 
 	// ASSISTENZ API
 
