@@ -24,6 +24,22 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenTabulatorOptions: {
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva`,
+				ajaxResponse: (url, params, response) => {
+					console.log('getAllAnwesenheitenByLva', response)
+					return this.setupData(response.data.retval, true)
+				},
+				ajaxConfig: "POST",
+				ajaxContentType:{
+					headers:{
+						'Content-Type': 'application/json'
+					},
+					body:(url,config,params)=>{
+						return JSON.stringify({
+							lv_id: this.lv_id, le_ids: this.le_ids, sem_kurzbz: this.sem_kurzbz
+						})
+					}
+				},
 				height: func_height(),
 				index: 'prestudent_id',
 				layout: 'fitColumns',
@@ -200,7 +216,9 @@ export default {
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
 			Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
-				this.setupData(res)
+				console.log('getAllAnwesenheitenByLva', res)
+				if(res.data.meta.status !== "success") return
+				this.setupData(res.data.data.retval)
 			})
 
 			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_ids, this.anwesenheit_id).then(
@@ -224,7 +242,9 @@ export default {
 				if(res && res.status === 200 && res.data.data) {
 					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
 					Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
-						this.setupData(res)
+						console.log('getAllAnwesenheitenByLva', res)
+						if(res.data.meta.status !== "success") return
+						this.setupData(res.data.data.retval)
 					})
 				} else {
 					this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle.")
@@ -233,10 +253,7 @@ export default {
 
 			})
 		},
-		setupData(res){
-			console.log('getAllAnwesenheitenByLva', res)
-			if(res.status !== 200) return
-			const data = res.data.data.retval
+		setupData(data, returnData = false){
 
 			this.studentsData = new Map()
 			this.namesAndID = []
@@ -270,8 +287,13 @@ export default {
 					sum: student.sum});
 			})
 
-			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
-			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+			if(returnData) {
+				return this.tableStudentData
+			} else {
+				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
+				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+			}
+
 		}
 
 	},
@@ -291,10 +313,12 @@ export default {
 		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDate(this.selectedDate))
 			.then(res => this.setupLehreinheitAndLektorData(res));
 
-		// fetch table data
-		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
-			this.setupData(res)
-		})
+		//fetch table data
+		// Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+		// 	console.log('getAllAnwesenheitenByLva', res)
+		// 	if(res.data.meta.status !== "success") return
+		// 	this.setupData(res.data.data.retval)
+		// })
 	},
 	updated(){
 	},

@@ -23,6 +23,12 @@ export default {
 				files: []
 			},
 			entschuldigungsViewTabulatorOptions: {
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPerson',
+				ajaxResponse: (url, params, response) => {
+					console.log('getEntschuldigungenByPerson', response)
+					// TODO(johann): rework status check once fhcapi plugin is installed
+					return response.data.retval
+				},
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
 				maxHeight: "400px",
@@ -154,7 +160,7 @@ export default {
 		},
 	},
 	mounted() {
-		this.loadEntschuldigungen();
+		// this.loadEntschuldigungen();
 	},
 	watch: {
 		'entschuldigung.von'(newValue) {

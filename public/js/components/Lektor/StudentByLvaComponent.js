@@ -22,6 +22,15 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenByStudentByLvaTabulatorOptions: {
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
+				ajaxResponse: (url, params, response) => {
+					console.log('getAllAnwesenheitenByStudentByLva', response)
+					if(response.meta.status !== "success") return []
+
+					this.tableData = response.data.retval
+					this.initialTableData = [...response.data.retval]
+					return response.data.retval
+				},
 				height: false,
 				index: 'datum',
 				layout: 'fitDataFill',
@@ -180,15 +189,15 @@ export default {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester + this.verband + this.gruppe
 		})
 
-		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
-			.then((res) => {
-				console.log('getAllAnwesenheitenByStudentByLva', res)
-				if(res.status !== 200 || !res.data.data) return
-
-				this.tableData = res.data.data.retval
-				this.initialTableData = [...res.data.data.retval]
-				this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
-			})
+		// Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
+		// 	.then((res) => {
+		// 		console.log('getAllAnwesenheitenByStudentByLva', res)
+		// 		if(res.status !== 200 || !res.data.data) return
+		//
+		// 		this.tableData = res.data.data.retval
+		// 		this.initialTableData = [...res.data.data.retval]
+		// 		this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
+		// 	})
 	},
 
 	updated(){

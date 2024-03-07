@@ -21,7 +21,7 @@ export default {
 			throw error;
 		}
 	},
-	getEntschuldigungenByPerson(person_id)
+	getEntschuldigungenByPerson()
 	{
 		try {
 			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPerson');

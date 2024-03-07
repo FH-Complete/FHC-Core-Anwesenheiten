@@ -23,6 +23,11 @@ export default {
 				bis: null
 			},
 			assistenzViewTabulatorOptions: {
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen',
+				ajaxResponse: (url, params, response) => {
+					console.log('getEntschuldigungen', response)
+					return response.data.retval
+				},
 				layout: 'fitColumns',
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
@@ -52,7 +57,7 @@ export default {
 				if (response.status === 200)
 				{
 					cell.getRow().update({'akzeptiert': status});
-					//  TODO(johann): differentiate between accept and denie!
+					//  TODO(johann): differentiate between accept and deny!
 					this.$fhcAlert.alertSuccess('Erfolgreich gespeichert');
 				}
 			});
@@ -110,17 +115,17 @@ export default {
 		}
 	},
 	mounted() {
-		Vue.$fhcapi.Assistenz.getEntschuldigungen().then(response => {
-
-			// TODO(johann): check status/error and/or refactor for fhcapi plugin
-			if(this.$refs.assistenzTable) {
-				this.$refs.assistenzTable.tabulator.setData(response.data.data.retval);
-			} else {
-				console.log('no tabulator instanz =(((((')
-			}
-
-
-		});
+		// Vue.$fhcapi.Assistenz.getEntschuldigungen().then(response => {
+		//
+		// 	// TODO(johann): check status/error and/or refactor for fhcapi plugin
+		// 	if(this.$refs.assistenzTable) {
+		// 		this.$refs.assistenzTable.tabulator.setData(response.data.data.retval);
+		// 	} else {
+		// 		console.log('no tabulator instanz =(((((')
+		// 	}
+		//
+		//
+		// });
 	},
 	template: `
 	<core-navigation-cmpt 
