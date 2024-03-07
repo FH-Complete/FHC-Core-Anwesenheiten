@@ -32,7 +32,7 @@ export default {
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true},
 					{title: 'Nachname', field: 'nachname', headerFilter: true},
-					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter},
+					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center"},
 					{title: 'Summe', field: 'sum', formatter: lektorFormatters.percentFormatter},
 				]
 			},
@@ -93,17 +93,18 @@ export default {
 		getExistingQRCode(){
 			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_ids, this.ma_uid, formatDate(this.selectedDate)).then(
 				res => {
-					if(res?.data?.retval?.svg) {
-						this.showQR(res.data.retval)
+					console.log('getExistingQr', res)
+					if(res.status === 200 && res.data.data) {
+						this.showQR(res.data.data)
 					}
 				}
 			)
 		},
-		showQR (retval) {
-			this.qr = retval.svg
-			this.url = retval.url
-			this.code = retval.code
-			this.anwesenheit_id = retval.anwesenheit_id
+		showQR (data) {
+			this.qr = data.svg
+			this.url = data.url
+			this.code = data.code
+			this.anwesenheit_id = data.anwesenheit_id
 			this.$refs.modalContainer.show()
 			this.startRegenerateQR()
 		},
@@ -115,35 +116,30 @@ export default {
 			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_ids, this.beginn, this.ende, date).then(
 				res => {
 
-					if(res && res.data && res.data.retval) {
-						this.showQR(res.data.retval)
+					if(res.status === 200 && res.data.data) {
+						this.showQR(res.data.data)
 					}
 				}
 			)
 		},
 		regenerateQR() {
-			console.log('regenerateQR', this)
 
 			Vue.$fhcapi.Anwesenheit.regenerateQR(this.anwesenheit_id).then(res => {
-				console.log('regenerateQR', res)
+				const oldCode = this.code
+				this.qr = res.data.data.svg
+				this.url = res.data.data.url
+				this.code = res.data.data.code
 
-				this.qr = res.data.retval.svg
-				this.url = res.data.retval.url
-				this.code = res.data.retval.code
-
-				Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, this.code).then(res => {
-					console.log('degenerateQR', res)
-
-
-				})
+				Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, oldCode)
 			})
 
 		},
 		startRegenerateQR() {
-			this.timerID = setInterval(this.boundRegenerateQR, 3000) // 3s
+			this.timerID = setInterval(this.boundRegenerateQR, 30000) // 30s
 
 		},
 		stopRegenerateQR() {
+			const oldCode = this.code
 			clearInterval(this.timerID)
 			this.timerID = null
 			this.qr = null
@@ -151,22 +147,20 @@ export default {
 			this.code = null
 
 			// attempt to degenerate one last time to not leave any codes in db
-			Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, this.code).then(res => {
-				console.log('degenerateQR', res)
-
-			})
+			Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, oldCode)
 		},
 		setupLehreinheitAndLektorData(res) {
 			console.log('setupLehreinheitAndLektorData', res)
 			// TODO: do smth with raum or lektorinfo?
 
-			if(res && res.data && res.data.retval) {
+			if(res.status === 200 && res.data.data) {
+				const data = res.data.data
 				// find out von & bis times for lehreinheit
-				if(res.data.retval[0].bezeichnung && res.data.retval[0].kurzbz) this.filterTitle = res.data.retval[0].bezeichnung + " (" +res.data.retval[0].kurzbz+ ")"
+				if(data[0].bezeichnung && data[0].kurzbz) this.filterTitle = data[0].bezeichnung + " (" + data[0].kurzbz + ")"
 
-				if(res.data.retval[0].beginn && res.data.retval[0].ende) {
-					let beginn = new Date('1995-10-16 ' + res.data.retval[0].beginn)
-					let ende = new Date('1995-10-16 ' + res.data.retval[0].ende)
+				if(data[0].beginn && data[0].ende) {
+					let beginn = new Date('1995-10-16 ' + data[0].beginn)
+					let ende = new Date('1995-10-16 ' + data[0].ende)
 
 					res.data.retval.forEach(entry => {
 						const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
@@ -212,7 +206,7 @@ export default {
 			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_ids, this.anwesenheit_id).then(
 				res => {
 
-					if(res && res.status === 200) {
+					if(res && res.status === 200 && res.data.data) {
 						this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich terminiert.")
 					} else {
 						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle QR Code.")
@@ -227,7 +221,7 @@ export default {
 
 			Vue.$fhcapi.Anwesenheit.deleteAnwesenheitskontrolle(this.le_ids, date).then(res => {
 
-				if(res && res.status === 200) {
+				if(res && res.status === 200 && res.data.data) {
 					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
 					Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
 						this.setupData(res)
@@ -241,11 +235,12 @@ export default {
 		},
 		setupData(res){
 			console.log('getAllAnwesenheitenByLva', res)
-			if(!res.data || !res.data.retval) return
+			if(res.status !== 200) return
+			const data = res.data.data.retval
 
 			this.studentsData = new Map()
 			this.namesAndID = []
-			res.data.retval.forEach(entry => {
+			data.forEach(entry => {
 
 
 				if(!this.studentsData.has(entry.prestudent_id)) {
@@ -275,9 +270,6 @@ export default {
 					sum: student.sum});
 			})
 
-			console.log('namesAndID', [...this.namesAndID])
-			console.log('tableStudentData', [...this.tableStudentData])
-
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 		}
@@ -289,9 +281,7 @@ export default {
 		found.title = selectedDateFormatted
 	},
 	mounted() {
-
-		console.log('mounted')
-
+		console.log(this.internalPermissions.authID)
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 
 		// see if test is still running
@@ -327,20 +317,16 @@ export default {
 		}
 	},
 	template:`
-	
 		<core-navigation-cmpt 
 			v-bind:add-side-menu-entries="appSideMenuEntries"
 			v-bind:add-header-menu-entries="headerMenuEntries">	
 		</core-navigation-cmpt>
-		
-		
-				
+					
 		<core-base-layout
 			:title="filterTitle"
 			mainCols="8"
 			asideCols="4"
-			>
-			
+			>			
 			<template #main>
 				<bs-modal ref="modalContainer" class="bootstrap-prompt" backdrop="static" 
 				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
@@ -362,16 +348,13 @@ export default {
 					:id-field="'anwesenheiten_id'"
 					@nw-new-entry="newSideMenuEntryHandler"
 					:tableOnly
-					:sideMenu="false" 
+					newBtnShow=true
+					newBtnLabel="Neue Anwesenheitskontrolle starten"
+					:newBtnDisabled=qr
+					@click:new=startNewAnwesenheitskontrolle
+					:sideMenu="false"
 					noColumnFilter>
 				</core-filter-cmpt>
-				<div class="row justify-content-end">
-					<div class="col-4">
-						<button @click="startNewAnwesenheitskontrolle" role="button" class="btn btn-primary" :disabled=qr>
-							Neue Anwesenheitskontrolle starten 
-						</button>
-					</div>
-				</div>
 			</template>
 			<template #aside>
 				<div class="row align-items-center">
@@ -409,7 +392,7 @@ export default {
 					</div>
 				</div>
 				<div class="row mt-4 align-items-center justify-content-end">
-					<div class="col-6">
+					<div>
 						<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-primary">
 							Anwesenheitskontrolle löschen 
 						</button>

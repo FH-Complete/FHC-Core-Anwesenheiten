@@ -1,17 +1,20 @@
 import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
 import LektorComponent from "../components/Lektor/LektorComponent.js";
 import FhcAlert from '../../../../js/plugin/FhcAlert.js';
+// import FhcApi from '../../../../js/plugin/FhcApi.js';
+import Phrasen from "../../../../js/plugin/Phrasen.js";
 import StudentByLvaComponent from "../components/Lektor/StudentByLvaComponent";
 import StudentComponent from "../components/Student/StudentComponent";
+import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent";
+import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent";
 import ScanComponent from "../components/Student/ScanComponent";
 import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
-
-Vue.$fhcapi = fhc_anwesenheitenapifactory;
+import LandingPageComponent from "../components/LandingPage/LandingPageComponent";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
+Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
-// TODO default routing for landing page! currently defaults only working after /Lektor/ or /Student/
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
 	routes: [
@@ -43,6 +46,11 @@ const router = VueRouter.createRouter({
 			props: true
 		},
 		{
+			path: `/`,
+			name: 'LandingPage',
+			component: LandingPageComponent
+		},
+		{
 			path: '/Student/:catchAll(.*)',
 			redirect: { name: 'Student'}
 		},
@@ -52,7 +60,7 @@ const router = VueRouter.createRouter({
 		},
 		{
 			path: '/:catchAll(.*)',
-			redirect: { name: 'Lektor'}
+			redirect: { name: 'LandingPage'}
 		}
 	]
 })
@@ -61,7 +69,9 @@ const anwesenheitApp = Vue.createApp({
 	components: {
 		LektorComponent,
 		StudentByLvaComponent,
-		StudentComponent
+		StudentComponent,
+		StudentAnwesenheitComponent,
+		StudentEntschuldigungComponent
 	},
 	data() {
 		return {
@@ -86,7 +96,8 @@ const anwesenheitApp = Vue.createApp({
 });
 anwesenheitApp
 	.use(router)
-	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(FhcAlert)
+	.use(primevue.config.default, {zIndex: {overlay: 9999}})
+	.use(Phrasen)
 	.mount("#main");
 

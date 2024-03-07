@@ -22,13 +22,14 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenByStudentByLvaTabulatorOptions: {
+				height: false,
 				index: 'datum',
-				layout: 'fitColumns',
+				layout: 'fitDataFill',
 				columns: [
 
 					{title: 'Datum', field: 'datum', headerFilter: true},
 					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter},
-					{title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction},
+					{title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction, width: 130, minWidth:130, maxWidth:130},
 				]
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [{
@@ -81,11 +82,17 @@ export default {
 
 			Vue.$fhcapi.Anwesenheit.deleteUserAnwesenheitById(anwesenheit_user_id).then(
 				res => {
-					console.log(res)
+					console.log('deleteUserAnwesenheitById', res)
 
-					if(res && res.data && res.data.retval && res.data.retval.error === 0) {
+					if(res.status === 200 && res.data.data.anwesenheit_user_id) {
 						this.$fhcAlert.alertSuccess("Anwesenheiten deleted successfully.")
 						cell.getRow().delete()
+
+						Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
+							console.log('getAnwesenheitSumByLva', result)
+							if(result.status === 200 && result.data.data)
+								this.sum = result.data.data[0].sum
+						})
 
 					} else {
 						this.$fhcAlert.alertSuccess("Error deleting User Anwesenheit.")
@@ -139,7 +146,8 @@ export default {
 			const changedData = this.changedData
 			this.changedData = []
 			Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(changedData).then(result => {
-				if(result && result.status === 200) {
+				console.log('saveChangedAnwesenheiten', result)
+				if(result.status === 200) {
 					this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
 				} else {
 					this.$fhcAlert.alertError("Something went terribly wrong.")
@@ -147,7 +155,8 @@ export default {
 
 				Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
 					console.log('getAnwesenheitSumByLva', result)
-					this.sum = result.data.retval.retval[0].sum
+					if(result.status === 200 && result.data.data)
+					this.sum = result.data.data[0].sum
 				})
 			})
 		}
@@ -158,15 +167,15 @@ export default {
 	mounted() {
 		Vue.$fhcapi.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then((res) => {
 			console.log('getStudentInfo', res);
-			if(!res.data || !res.data.retval) return
+			if(res.status !== 200 || !res.data.data) return
 
-			this.vorname = res.data.retval[0].vorname
-			this.nachname = res.data.retval[0].nachname
-			this.semester = res.data.retval[0].semester
-			this.verband = res.data.retval[0].verband
-			this.gruppe = res.data.retval[0].gruppe
-			this.sum = res.data.retval[0].sum
-			this.foto = res.data.retval[0].foto
+			this.vorname = res.data.data[0].vorname
+			this.nachname = res.data.data[0].nachname
+			this.semester = res.data.data[0].semester
+			this.verband = res.data.data[0].verband
+			this.gruppe = res.data.data[0].gruppe
+			this.sum = res.data.data[0].sum
+			this.foto = res.data.data[0].foto
 
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester + this.verband + this.gruppe
 		})
@@ -174,10 +183,10 @@ export default {
 		Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
 			.then((res) => {
 				console.log('getAllAnwesenheitenByStudentByLva', res)
-				if(!res.data || !res.data.retval) return
+				if(res.status !== 200 || !res.data.data) return
 
-				this.tableData = res.data.retval
-				this.initialTableData = [...res.data.retval]
+				this.tableData = res.data.data.retval
+				this.initialTableData = [...res.data.data.retval]
 				this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
 			})
 	},

@@ -36,20 +36,19 @@ export default {
 			Vue.$fhcapi.Anwesenheit.checkInAnwesenheit({zugangscode: this.internalZugangscode}).then(
 				res => {
 
-					// todo: formalize this better somehow
-					if(res?.status === 200 && !res.data.error && res.data.retval) {
+					if(res.status === 200 && !res.data.error && res.data.data) {
 
 						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
 
-						this.entry = JSON.parse(res.data.retval.anwesenheitEntry)
+						this.entry = JSON.parse(res.data.data.anwesenheitEntry)
 						this.entry.von = new Date(this.entry.von)
 						this.entry.bis = new Date(this.entry.bis)
 
-						this.viewData = JSON.parse(res.data.retval.viewData).retval[0]
+						this.viewData = JSON.parse(res.data.data.viewData).retval[0]
 
 						this.zugangscodeProcessed = true
 					} else {
-						this.$fhcAlert.alertError(res.data.retval)
+						this.$fhcAlert.alertError(res.data.data)
 						this.internalZugangscode = ''
 					}
 				}
@@ -91,8 +90,7 @@ export default {
 		v-bind:add-header-menu-entries="headerMenuEntries">
 	</core-navigation-cmpt>
 
-	<h1>Anwesenheitskontrolle</h1>
-	<div class="row-cols col-md-8">
+	<div class="row-cols">
 		<div class="row-col card card-body p-4 mt-3 text-center">
 			<core-base-layout
 				:title=getBaseLayoutTitle>

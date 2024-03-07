@@ -46,10 +46,14 @@ export default {
 		{
 			let entschuldigung_id = cell.getData().entschuldigung_id;
 			Vue.$fhcapi.Assistenz.updateEntschuldigung(entschuldigung_id, status).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
+				console.log('updateEntschuldigung', response)
+
+				// TODO(johann): check status/error and/or refactor for fhcapi plugin
+				if (response.status === 200)
 				{
 					cell.getRow().update({'akzeptiert': status});
-					this.$fhcAlert.success('Erfolgreich akzeptiert');
+					//  TODO(johann): differentiate between accept and denie!
+					this.$fhcAlert.alertSuccess('Erfolgreich gespeichert');
 				}
 			});
 		},
@@ -107,10 +111,15 @@ export default {
 	},
 	mounted() {
 		Vue.$fhcapi.Assistenz.getEntschuldigungen().then(response => {
-			if (CoreRESTClient.isSuccess(response.data))
-			{
-				this.$refs.assistenzTable.tabulator.setData(CoreRESTClient.getData(response.data).retval);
+
+			// TODO(johann): check status/error and/or refactor for fhcapi plugin
+			if(this.$refs.assistenzTable) {
+				this.$refs.assistenzTable.tabulator.setData(response.data.data.retval);
+			} else {
+				console.log('no tabulator instanz =(((((')
 			}
+
+
 		});
 	},
 	template: `

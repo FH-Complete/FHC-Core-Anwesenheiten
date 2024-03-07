@@ -1,18 +1,17 @@
 import {CoreRESTClient} from "../../../../../public/js/RESTClient";
 
 export default {
-	async getStudiensemester() {
+	getStudiensemester() {
 		try {
-			const result = await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/infoGetStudiensemester');
-			return CoreRESTClient.getData(result.data);
+			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/infoGetStudiensemester');
 		} catch (error) {
 			throw error;
 		}
 	},
-	async getAktStudiensemester() {
+	getAktStudiensemester() {
 		try {
-			const result = await CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/infoGetAktStudiensemester');
-			return CoreRESTClient.getData(result.data);
+			return CoreRESTClient.get('/extensions/FHC-Core-Anwesenheiten/Api/infoGetAktStudiensemester');
+
 		} catch (error) {
 			throw error;
 		}

@@ -1,4 +1,5 @@
 export const StudiensemesterDropdown = {
+	name: "StudiensemesterDropdown",
 	emits: [
 		'ssChanged'
 	],
@@ -16,10 +17,17 @@ export const StudiensemesterDropdown = {
 		loadDropdown() {
 			//TODO (david) bessere lösung finden
 			Vue.$fhcapi.Info.getStudiensemester().then(response => {
-				this.options = response;
+				console.log('getStudiensemester', response)
+
+				// TODO(johann): rework status check once fhcapi plugin is installed
+
+				this.options = response.data.data ?? [];
 				if (this.options.length > 0) {
 					Vue.$fhcapi.Info.getAktStudiensemester().then(response => {
-						this.selectedOption = response[0].studiensemester_kurzbz;
+
+						// TODO(johann): rework status check once fhcapi plugin is installed
+						console.log('getAktStudiensemester', response)
+						this.selectedOption = response.data.data[0].studiensemester_kurzbz;
 						this.$emit("ssChanged", this.selectedOption);
 					})
 				}
@@ -31,9 +39,9 @@ export const StudiensemesterDropdown = {
 	},
 
 	template: `
-		<div class="col-md-2">
+		<div>
 			<select v-model="selectedOption" @change="ssChanged" class="form-control">
-				<option>Studiensemester</option>
+				<label>Studiensemester</label>
 				<option v-for="option in options" :value="option.studiensemester_kurzbz" >
 					{{ option.studiensemester_kurzbz }}
 				</option>

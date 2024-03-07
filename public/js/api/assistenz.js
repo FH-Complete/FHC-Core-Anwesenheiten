@@ -4,7 +4,7 @@ export default {
 	getEntschuldigungen()
 	{
 		try {
-			return CoreRESTClient.get('extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen');
+			return CoreRESTClient.get('extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen')
 		} catch (error) {
 			throw error;
 		}

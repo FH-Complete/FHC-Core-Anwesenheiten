@@ -49,7 +49,8 @@ class Lektor extends Auth_Controller
 				'admin/rw' => $this->permissionlib->isBerechtigt('admin'),
 				'extension/anwesenheit_assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
 				'extension/anwesenheit_lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
-				'extension/anwesenheit_student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student')
+				'extension/anwesenheit_student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
+				'authID' => getAuthUID()
 			]
 		);
 

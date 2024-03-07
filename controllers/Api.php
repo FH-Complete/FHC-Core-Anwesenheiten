@@ -4,7 +4,7 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 use \chillerlan\QRCode\QROptions;
 use \chillerlan\QRCode\QRCode;
 
-class Api extends Auth_Controller
+class Api extends FHCAPI_Controller
 {
 
 	private $_ci;
@@ -53,11 +53,9 @@ class Api extends Auth_Controller
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 
 
-		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
-		$this->_ci->load->library('AuthLib');
 
 		$this->_setAuthUID(); // sets property uid
 	}
@@ -76,12 +74,12 @@ class Api extends Auth_Controller
 	{
 		$this->_ci->StudiensemesterModel->addOrder("start", "DESC");
 		$studiensemester = $this->_ci->StudiensemesterModel->load();
-		$this->outputJsonSuccess(getData($studiensemester));
+		$this->terminateWithSuccess(getData($studiensemester));
 	}
 
 	public function infoGetAktStudiensemester()
 	{
-		$this->outputJsonSuccess(getData($this->_ci->StudiensemesterModel->getAkt()));
+		$this->terminateWithSuccess(getData($this->_ci->StudiensemesterModel->getAkt()));
 	}
 
 	public function infoGetLehreinheitAndLektorInfo()
@@ -97,7 +95,7 @@ class Api extends Auth_Controller
 
 		$lektorLehreinheitData = $this->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $currentDate);
 
-		$this->outputJsonSuccess(getData($lektorLehreinheitData));
+		$this->terminateWithSuccess(getData($lektorLehreinheitData));
 	}
 
 	public function infoGetStudentInfo()
@@ -108,7 +106,7 @@ class Api extends Auth_Controller
 
 		$studentLvaData = $this->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz);
 
-		$this->outputJsonSuccess(getData($studentLvaData));
+		$this->terminateWithSuccess(getData($studentLvaData));
 	}
 
 	// LEKTOR API
@@ -123,7 +121,7 @@ class Api extends Auth_Controller
 		$res = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLektor($lv_id, $le_ids, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
-		$this->outputJson($res);
+		$this->terminateWithSuccess($res);
 	}
 
 	public function lektorGetAllAnwesenheitenByStudentByLva()
@@ -135,14 +133,17 @@ class Api extends Auth_Controller
 		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
 		if(!hasData($res)) return null;
-		$this->outputJson($res);
+		$this->terminateWithSuccess($res);
 	}
 
 	public function lektorUpdateAnwesenheiten()
 	{
 		$result = $this->getPostJSON();
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
-		return $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten);
+		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten);
+
+		if(!hasData($result)) $this->terminateWithJsonError("Error updating Anwesenheiten");
+		$this->terminateWithSuccess(getData($result));
 	}
 
 	public function lektorGetExistingQRCode(){
@@ -170,7 +171,7 @@ class Api extends Auth_Controller
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 
 		}
 
@@ -210,7 +211,7 @@ class Api extends Auth_Controller
 		if (isError($insert))
 			$this->terminateWithJsonError('Fehler beim Speichern');
 
-		$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 	}
 
 	public function lektorDegenerateQRCode()
@@ -286,7 +287,7 @@ class Api extends Auth_Controller
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 
 		} else { // create a newqr
 
@@ -313,7 +314,7 @@ class Api extends Auth_Controller
 			// insert Anwesenheiten entries of every Student as Abwesend
 			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis);
 
-			$this->outputJsonSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 		}
 	}
 
@@ -327,7 +328,7 @@ class Api extends Auth_Controller
 			'anwesenheit_id' => $anwesenheit_id
 		));
 		if($deleteresp) {
-			return $deleteresp;
+			$this->terminateWithSuccess($deleteresp);
 		} else {
 			$this->terminateWithJsonError('Fehler beim Löschen der Anwesenheitskontrolle');
 		}
@@ -351,7 +352,7 @@ class Api extends Auth_Controller
 		// delete kontrolle
 		if(!hasData($resultDelete)) $this->terminateWithJsonError('Fehler beim Löschen der User Anwesenheiten für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
 
-		$this->outputJsonSuccess('Löschen der Anwesenheitskontrolle für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.' erfolgreich.');
+		$this->terminateWithSuccess('Löschen der Anwesenheitskontrolle für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.' erfolgreich.');
 	}
 
 	// STUDENT API
@@ -376,7 +377,7 @@ class Api extends Auth_Controller
 
 
 
-		$this->outputJsonSuccess($result);
+		$this->terminateWithSuccess($result);
 	}
 
 	public function studentCheckInAnwesenheit() {
@@ -451,7 +452,7 @@ class Api extends Auth_Controller
 
 				// if inserted successfully return some information to display who has entered
 				// his anwesenheitscheck for which date and lehreinheit
-				$this->outputJsonSuccess(array(
+				$this->terminateWithSuccess(array(
 					'message' => 'Anwesenheitskontrolle erfolgreich.',
 					'anwesenheitEntry' => json_encode($entry),
 					'viewData' => json_encode($viewData)
@@ -504,7 +505,7 @@ class Api extends Auth_Controller
 		if (isError($result))
 			$this->terminateWithJsonError(getError($result));
 
-		$this->outputJsonSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
+		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
 
 	public function studentDownload()
@@ -553,14 +554,14 @@ class Api extends Auth_Controller
 			if (isError($deletedFile))
 				$this->terminateWithJsonError(getError($deletedFile));
 
-			$this->outputJsonSuccess('Success');
+			$this->terminateWithSuccess('Success');
 		}
 
 	}
 
 	public function studentGetEntschuldigungenByPerson()
 	{
-		$this->outputJsonSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson(getAuthPersonId()));
+		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson(getAuthPersonId()));
 	}
 
 	public function studentGetAnwesenheitSumByLva() {
@@ -569,7 +570,10 @@ class Api extends Auth_Controller
 		$sem_kurzbz = $result->sem_kz;
 		$prestudent_id = $result->id;
 
-		$this->outputJsonSuccess($this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz));
+		$result = $this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz);
+
+		if(!hasData($result)) $this->terminateWithJsonError('Fehler bei der Berechnung der Anwesenheitsquote.');
+		$this->terminateWithSuccess(getData($result));
 	}
 
 	public function studentDeleteUserAnwesenheitById() {
@@ -580,16 +584,16 @@ class Api extends Auth_Controller
 			'anwesenheit_user_id' => $anwesenheit_user_id
 		));
 
-		if(!$deleteresp) $this->terminateWithJsonError('Fehler beim löschen des Anwesenheitseintrags.');
+		if(!hasData($deleteresp)) $this->terminateWithJsonError('Fehler beim löschen des Anwesenheitseintrags.');
 
-		$this->outputJsonSuccess($deleteresp);
+		$this->terminateWithSuccess(getData($deleteresp));
 	}
 
 	// ASSISTENZ API
 
 	public function assistenzGetEntschuldigungen()
 	{
-		$this->outputJsonSuccess($this->_ci->EntschuldigungModel->getEntschuldigungen());
+		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungen());
 	}
 
 	public function assistenzUpdateEntschuldigung()
@@ -633,7 +637,7 @@ class Api extends Auth_Controller
 				$this->terminateWithJsonError('Error');
 		}
 
-		$this->outputJsonSuccess('Erfolgreich gespeichert');
+		$this->terminateWithSuccess('Erfolgreich gespeichert');
 	}
 
 }
