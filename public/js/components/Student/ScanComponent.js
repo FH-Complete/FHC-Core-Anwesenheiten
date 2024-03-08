@@ -17,7 +17,8 @@ export default {
 			zugangscodeProcessed: false,
 			codeMaxlength: 8,
 			viewData: null,
-			entry: null
+			entry: null,
+			codeButtonDisabled: true
 		};
 	},
 	props: {
@@ -28,14 +29,13 @@ export default {
 			this.sideMenuEntries = payload;
 		},
 		sendCode() {
-			// only exists so user switches focus from input field and changed event gets triggered when user copy pastes
 			this.processAnwesenheit()
 		},
 		processAnwesenheit() {
 
 			Vue.$fhcapi.Anwesenheit.checkInAnwesenheit({zugangscode: this.internalZugangscode}).then(
 				res => {
-
+					console.log('checkInAnwesenheit', res)
 					if(res.status === 200 && !res.data.error && res.data.data) {
 
 						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
@@ -53,16 +53,21 @@ export default {
 					}
 				}
 			).catch(err => {
-				this.$fhcAlert.alertError("Something went terribly wrong.")
+				console.log(err)
+				this.$fhcAlert.alertError(err.response.data.errors[0].message)
 			})
 
 		},
 		checkValue(event) {
-			const inputVal = event.target.value
-			if(inputVal.length === this.codeMaxlength) {
-				this.internalZugangscode = inputVal
-				this.processAnwesenheit()
-			}
+			this.internalZugangscode = event.target.value
+			this.codeButtonDisabled = !(this.internalZugangscode && this.internalZugangscode.length === this.codeMaxlength)
+
+			console.log('checkValue', this.codeButtonDisabled)
+			// const inputVal = event.target.value
+			// if(inputVal.length === this.codeMaxlength) {
+			// 	this.internalZugangscode = inputVal
+				// this.processAnwesenheit()
+			// }
 
 		}
 	},
@@ -79,9 +84,6 @@ export default {
 			if (this.internalZugangscode && this.zugangscodeProcessed) {
 				return "Anfrage erfolgreich!"
 			} else return "Bitte Zugangscode eingeben."
-		},
-		getSendCodeButtonCondition() {
-			return (this.internalZugangscode && this.internalZugangscode.length === this.codeMaxlength)
 		}
 	},
 	template: `
@@ -91,18 +93,22 @@ export default {
 	</core-navigation-cmpt>
 
 	<div class="row-cols">
-		<div class="row-col card card-body p-4 mt-3 text-center">
+		<div class="row-colp-4 mt-3 text-center">
 			<core-base-layout
 				:title=getBaseLayoutTitle>
 				<template #main>
 					<template v-if="!zugangscodeProcessed">
 						<div class="row">
 							<div class="col-md-12">
-								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @change="checkValue($event)" :placeholder="Zugangscode">
+								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="Zugangscode">
 							</div>
-							
-<!--							TODO: maybe button for UX feel but input events should handle that all-->
-
+						</div>
+						<div class="row mt-3">
+							<div class="col-md-12">
+								<button @click="sendCode" role="button" class="btn btn-primary align-self-center" :disabled=codeButtonDisabled>
+									Code senden
+								</button>
+							</div>
 						</div>
 					</template>
 					<template v-else> 

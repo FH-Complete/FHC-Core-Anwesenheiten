@@ -134,19 +134,8 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		title="Entschuldigungen"
-		mainCols="8"
-		asideCols="4">
+		title="Entschuldigungen">
 		<template #main>
-			<core-filter-cmpt
-				ref="assistenzTable"
-				:tabulator-options="assistenzViewTabulatorOptions"
-				@nw-new-entry="newSideMenuEntryHandler"
-				:table-only=true
-				:hideTopMenu=false
-			></core-filter-cmpt>
-		</template>
-		<template #aside>
 			<div class="row mb-3 align-items-center">
 				<div class="col-2"><label for="von" class="form-label col-sm-1">Von</label></div>
 				<div class="col-10">
@@ -180,6 +169,13 @@ export default {
 					<button class="btn btn-secondary" @click="filtern">Filtern</button>
 				</div>
 			</div>			
+			<core-filter-cmpt
+				ref="assistenzTable"
+				:tabulator-options="assistenzViewTabulatorOptions"
+				@nw-new-entry="newSideMenuEntryHandler"
+				:table-only=true
+				:hideTopMenu=false
+			></core-filter-cmpt>
 		</template>
 	</core-base-layout>
 `

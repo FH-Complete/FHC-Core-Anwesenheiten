@@ -148,7 +148,7 @@ class Anwesenheit_model extends \DB_Model
 	{
 		$query = '
 			SELECT tbl_lehrveranstaltung.bezeichnung,
-				tbl_anwesenheit_status.status_kurzbz as status,
+				tbl_anwesenheit_status.status_kurzbz as student_status,
 				(tbl_anwesenheit.von) as von,
 				(tbl_anwesenheit.bis) as bis,
 				get_anwesenheiten(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,

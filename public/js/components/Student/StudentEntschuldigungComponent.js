@@ -2,7 +2,7 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters, universalFormatter} from "../../mixins/formatters";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
-
+import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 
@@ -12,6 +12,7 @@ export default {
 		CoreBaseLayout,
 		CoreRESTClient,
 		CoreFilterCmpt,
+		BsModal,
 		Upload,
 		"datepicker": VueDatePicker
 	},
@@ -31,7 +32,6 @@ export default {
 				},
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
-				maxHeight: "400px",
 				layout:"fitColumns",
 				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
@@ -57,9 +57,13 @@ export default {
 			});
 		},
 		triggerUpload() {
+			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning('Bitte von Zeit eingeben');
+			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning('Bitte bis Zeit eingeben');
+			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning('Bitte Datei auswählen');
+
 			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
 			{
-				return this.$fhcAlert.alertWarning('Bitte alle Felder ausfüllen');
+				return
 			}
 			if (!this.validate())
 			{
@@ -89,7 +93,11 @@ export default {
 				this.$fhcAlert.alertSuccess('Entschuldigung hochgeladen');
 				this.resetFormData();
 
+			}).catch(err => {
+				this.$fhcAlert.alertError('Fehler bei dem Versuch eine Entschuldigung hochzuladen!');
 			});
+
+			this.$refs.modalContainerEntschuldigungUpload.hide()
 		},
 		formAction: function(cell) {
 			let download = document.createElement('div');
@@ -118,7 +126,10 @@ export default {
 		{
 			window.location = CoreRESTClient._generateRouterURI('/extensions/FHC-Core-Anwesenheiten/Api/studentDownload?entschuldigung=' + dms_id);
 		},
-		deleteEntschuldigung: function(cell) {
+		async deleteEntschuldigung(cell) {
+			if (await this.$fhcAlert.confirmDelete() === false)
+				return;
+
 			let entschuldigung_id = cell.getData().entschuldigung_id;
 			Vue.$fhcapi.Student.deleteEntschuldigung(entschuldigung_id).then(response => {
 				console.log('deleteEntschuldigung', response)
@@ -131,6 +142,9 @@ export default {
 					this.$fhcAlert.alertSuccess('Entschuldigung erfolgreich gelöscht');
 				}
 			});
+		},
+		startUploadEntschuldigung(){
+			this.$refs.modalContainerEntschuldigungUpload.show()
 		},
 		validate: function() {
 			const vonDate = this.entschuldigung.von;
@@ -171,64 +185,62 @@ export default {
 	template: `
 
 	<core-base-layout
-		:title="filterTitle"
-		mainCols="8"
-		asideCols="4">
+		:title="filterTitle">
 		<template #main>
+			<bs-modal ref="modalContainerEntschuldigungUpload" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>Entschuldigung hinzufügen</template>
+				<template v-slot:default>
+					<div class="row mb-3 align-items-center">
+						<div class="col-2 align-items-center"><label for="von" class="form-label">Von</label></div>
+						<div class="col-10">
+							<datepicker
+								id="von"
+								v-model="entschuldigung.von"
+								clearable="false"
+								auto-apply
+								:enable-time-picker="true"
+								:start-time="startTime"
+								format="dd.MM.yyyy HH:mm"
+								model-type="dd.MM.yyyy HH:mm">
+							</datepicker>
+						</div>
+					</div>
+					<div class="row mb-3 align-items-center">
+						<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
+						<div class="col-10">
+							<datepicker
+								id="bis"
+								v-model="entschuldigung.bis"
+								clearable="false"
+								auto-apply
+								:enable-time-picker="true"
+								:start-time="startTime"
+								format="dd.MM.yyyy HH:mm"
+								model-type="dd.MM.yyyy HH:mm">
+							</datepicker>
+						</div>
+					</div>
+		
+					
+					<div class="row">
+						<Upload ref="uploadComponent" v-model="entschuldigung.files"></Upload>
+					</div>
+				</template>
+				<template v-slot:footer>
+					<button class="btn btn-primary" @click="triggerUpload">Upload</button>
+				</template>
+			</bs-modal>
 			<core-filter-cmpt
 				ref="entschuldigungsTable"
 				:tabulator-options="entschuldigungsViewTabulatorOptions"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false
+				newBtnShow=true
+				newBtnLabel="Entschuldigung hochladen"
+				@click:new=startUploadEntschuldigung
 				:sideMenu=false
 			></core-filter-cmpt>
-		</template>
-		<template #aside>
-			<div class="row mb-3 align-items-center">
-				<label for="text" class="form-label">Entschuldigung hochladen</label>
-			</div>
-			<div class="row mb-3 align-items-center">
-				<div class="col-2 align-items-center"><label for="von" class="form-label">Von</label></div>
-				<div class="col-10">
-					<datepicker
-						id="von"
-						v-model="entschuldigung.von"
-						clearable="false"
-						auto-apply
-						:enable-time-picker="true"
-						:start-time="startTime"
-						format="dd.MM.yyyy HH:mm"
-						model-type="dd.MM.yyyy HH:mm">
-					</datepicker>
-				</div>
-			</div>
-			<div class="row mb-3 align-items-center">
-				<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
-				<div class="col-10">
-					<datepicker
-						id="bis"
-						v-model="entschuldigung.bis"
-						clearable="false"
-						auto-apply
-						:enable-time-picker="true"
-						:start-time="startTime"
-						format="dd.MM.yyyy HH:mm"
-						model-type="dd.MM.yyyy HH:mm">
-					</datepicker>
-				</div>
-			</div>
-
-			
-			<div class="row">
-			  <div class="col-8">
-				<Upload ref="uploadComponent" v-model="entschuldigung.files"></Upload>
-			  </div>
-			  <div class="col-4"> 
-				<button class="btn btn-primary" @click="triggerUpload">Upload</button>
-			  </div>
-			</div>
-
 		</template>
 	</core-base-layout>
 `

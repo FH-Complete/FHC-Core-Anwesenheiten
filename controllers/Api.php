@@ -142,7 +142,7 @@ class Api extends FHCAPI_Controller
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
 		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten);
 
-		if(!hasData($result)) $this->terminateWithJsonError("Error updating Anwesenheiten");
+		if(!hasData($result)) $this->terminateWithError("Error updating Anwesenheiten");
 		$this->terminateWithSuccess(getData($result));
 	}
 
@@ -155,7 +155,7 @@ class Api extends FHCAPI_Controller
 		$le_id = $le_ids[0];
 
 		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id);
-		if(!hasData($resultQR)) $this->terminateWithJsonError("No existing Anwesenheitskontrolle found");
+		if(!hasData($resultQR)) $this->terminateWithError("No existing Anwesenheitskontrolle found");
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -205,11 +205,11 @@ class Api extends FHCAPI_Controller
 			'zugangscode' => $shortHash,
 			'anwesenheit_id' => $anwesenheit_id,
 			'insertamum' => date('Y-m-d H:i:s'),
-			'insertvon' => getAuthUID()
+			'insertvon' => $this->_uid
 		));
 
 		if (isError($insert))
-			$this->terminateWithJsonError('Fehler beim Speichern');
+			$this->terminateWithError('Fehler beim Speichern');
 
 		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 	}
@@ -225,7 +225,7 @@ class Api extends FHCAPI_Controller
 			'anwesenheit_id' => $anwesenheit_id
 		));
 
-		if(!$deleteresp) $this->terminateWithJsonError('Fehler beim degenerieren des QRCode');
+		if(!$deleteresp) $this->terminateWithError('Fehler beim degenerieren des QRCode');
 
 		return $deleteresp;
 	}
@@ -305,11 +305,11 @@ class Api extends FHCAPI_Controller
 				'zugangscode' => $shortHash,
 				'anwesenheit_id' => $anwesenheit_id,
 				'insertamum' => date('Y-m-d H:i:s'),
-				'insertvon' => getAuthUID()
+				'insertvon' => $this->_uid
 			));
 
 			if (isError($insert))
-				$this->terminateWithJsonError('Fehler beim Speichern');
+				$this->terminateWithError('Fehler beim Speichern');
 
 			// insert Anwesenheiten entries of every Student as Abwesend
 			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis);
@@ -330,7 +330,7 @@ class Api extends FHCAPI_Controller
 		if($deleteresp) {
 			$this->terminateWithSuccess($deleteresp);
 		} else {
-			$this->terminateWithJsonError('Fehler beim Löschen der Anwesenheitskontrolle');
+			$this->terminateWithError('Fehler beim Löschen der Anwesenheitskontrolle');
 		}
 	}
 
@@ -343,14 +343,20 @@ class Api extends FHCAPI_Controller
 		// find anwesenheitkontrolle by le_id and date
 		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $date);
 
-		if(!hasData($resultKontrolle)) $this->terminateWithJsonError('Keine Anwesenheitskontrolle gefunden für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
+		if(!hasData($resultKontrolle)) $this->terminateWithError('Keine Anwesenheitskontrolle gefunden für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
 		$anwesenheit_id = getData($resultKontrolle)[0]->anwesenheit_id;
 
 		// delete user anwesenheiten by anwesenheit_id of kontrolle
 		$resultDelete = $this->_ci->AnwesenheitUserModel->deleteAllByAnwesenheitId($anwesenheit_id);
 
+		if(!hasData($resultDelete)) $this->terminateWithError('Fehler beim Löschen der User Anwesenheiten für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
+
+
+		// delete kontrolle itself
+		$result = $this->_ci->AnwesenheitModel->delete(array('anwesenheit_id'=>$anwesenheit_id));
+
 		// delete kontrolle
-		if(!hasData($resultDelete)) $this->terminateWithJsonError('Fehler beim Löschen der User Anwesenheiten für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
+		if(!hasData($result)) $this->terminateWithError('Fehler beim Löschen der User Anwesenheiten für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
 
 		$this->terminateWithSuccess('Löschen der Anwesenheitskontrolle für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.' erfolgreich.');
 	}
@@ -366,14 +372,14 @@ class Api extends FHCAPI_Controller
 			/*$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
 
 			if (isError($studiensemester) || !hasData($studiensemester))
-				$this->terminateWithJsonError('Falsche Parameterübergabe');
+				$this->terminateWithError('Falsche Parameterübergabe');
 
 			$studiensemester = getData($studiensemester)[0]->studiensemester_kurzbz;*/
 		}
 
 
-
-		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
+//		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
+		$result = $this->_ci->AnwesenheitModel->getAllByStudent($this->_uid, $studiensemester);
 
 
 
@@ -389,12 +395,13 @@ class Api extends FHCAPI_Controller
 
 		// find relevant entry from tbl_anwesenheit_check via zugangscode
 		$result = $this->_ci->QRModel->loadWhere(array('zugangscode' => $zugangscode));
-		if(!hasData($result)) $this->terminateWithJsonError("Ungültiger Zugangscode eingegeben.");
+		var_dump($result);
+		if(!hasData($result)) $this->terminateWithError("Ungültiger Zugangscode eingegeben.");
 
 		// find relevant entry from tbl_anwesenheit via anwesenheit_id
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
 		$result = $this->_ci->AnwesenheitModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
-		if(!hasData($result)) $this->terminateWithJsonError("Zugangscode hat fehlerhafte Anwesenheitskontrolle hinterlegt.");
+		if(!hasData($result)) $this->terminateWithError("Zugangscode hat fehlerhafte Anwesenheitskontrolle hinterlegt.");
 
 
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
@@ -403,10 +410,10 @@ class Api extends FHCAPI_Controller
 		$result = $this->_ci->LehreinheitModel->loadWhere(array('lehreinheit_id' => $lehreinheit_id));
 		$lehreinheit = $result->retval[0];
 
-		if(!hasData($result)) $this->terminateWithJsonError("Zugangscode hat fehlerhafte Lehreinheit hinterlegt.");
+		if(!hasData($result)) $this->terminateWithError("Zugangscode hat fehlerhafte Lehreinheit hinterlegt.");
 
 		$resultAnwKontrolle = $this->_ci->AnwesenheitModel->getAllPersonIdsForLE($lehreinheit_id);
-		if(!hasData($result)) $this->terminateWithJsonError("Lehreinheit hat keine Teilnehmer hinterlegt.");
+		if(!hasData($result)) $this->terminateWithError("Lehreinheit hat keine Teilnehmer hinterlegt.");
 
 		// check if the student/person sending the request is actually supposed to be in that lehreinheit
 		$isLegit = false;
@@ -421,14 +428,14 @@ class Api extends FHCAPI_Controller
 		}
 
 		// to avoid random people being anwesend in random lectures
-		if(!$isLegit) $this->terminateWithJsonError("Sie sind nicht als Teilnehmer der Lehreinheit eingetragen.");
+		if(!$isLegit) $this->terminateWithError("Sie sind nicht als Teilnehmer der Lehreinheit eingetragen.");
 
 		// check if there is already an anwesenheit written to lehreinheit on date of check
 		$date = date('Y-m-d');
 		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLehreinheitByDate($lehreinheit_id, $date);
 
 		// all entries need to be inserted on start
-		if(!hasData($result)) $this->terminateWithJsonError("Keine Anwesenheitseinträge gefunden für die Lehreinheit an diesem Datum");
+		if(!hasData($result)) $this->terminateWithError("Keine Anwesenheitseinträge gefunden für die Lehreinheit an diesem Datum");
 
 		$isLegit = false;
 		$entryToUpdate = null;
@@ -446,7 +453,7 @@ class Api extends FHCAPI_Controller
 			));
 
 			if (isError($result)) {
-				return terminateWithJsonError('Anwesenheitskontrolle fehlgeschlagen.');
+				return terminateWithError('Anwesenheitskontrolle fehlgeschlagen.');
 			} else {
 				$viewData = $this->_ci->AnwesenheitUserModel->getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id);
 
@@ -460,7 +467,7 @@ class Api extends FHCAPI_Controller
 			}
 
 		} else {
-			$this->terminateWithJsonError("Person und Student ID Mismatch.");
+			$this->terminateWithError("Person und Student ID Mismatch.");
 
 		}
 	}
@@ -468,13 +475,13 @@ class Api extends FHCAPI_Controller
 	public function studentAddEntschuldigung()
 	{
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']))
-			$this->terminateWithJsonError('Falsche Parameterübergabe');
+			$this->terminateWithError('Falsche Parameterübergabe');
 
 		$vonTimestamp = strtotime($_POST['von']);
 		$bisTimestamp = strtotime($_POST['bis']);
 
 		if ($vonTimestamp === false || $bisTimestamp === false)
-			$this->terminateWithJsonError('Falsche Parameterübergabe');
+			$this->terminateWithError('Falsche Parameterübergabe');
 
 		$file = array(
 			'kategorie_kurzbz' => 'fas',
@@ -503,7 +510,7 @@ class Api extends FHCAPI_Controller
 		);
 
 		if (isError($result))
-			$this->terminateWithJsonError(getError($result));
+			$this->terminateWithError(getError($result));
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
@@ -513,7 +520,7 @@ class Api extends FHCAPI_Controller
 		$dms_id = $this->_ci->input->get('entschuldigung');
 
 		if (isEmptyString($dms_id))
-			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
+			$this->terminateWithError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 
 		$person_id = getAuthPersonId();
 
@@ -537,7 +544,7 @@ class Api extends FHCAPI_Controller
 		$entschuldigung_id = $data['entschuldigung_id'];
 
 		if (isEmptyString($entschuldigung_id))
-			$this->terminateWithJsonError('Error');
+			$this->terminateWithError('Error');
 
 		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, /*getAuthPersonId()*/ 106538);
 
@@ -548,11 +555,11 @@ class Api extends FHCAPI_Controller
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
 
 			if (isError($deletedEntschuldigung))
-				$this->terminateWithJsonError(getError($deletedEntschuldigung));
+				$this->terminateWithError(getError($deletedEntschuldigung));
 
 			$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
 			if (isError($deletedFile))
-				$this->terminateWithJsonError(getError($deletedFile));
+				$this->terminateWithError(getError($deletedFile));
 
 			$this->terminateWithSuccess('Success');
 		}
@@ -572,7 +579,7 @@ class Api extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
-		if(!hasData($result)) $this->terminateWithJsonError('Fehler bei der Berechnung der Anwesenheitsquote.');
+		if(!hasData($result)) $this->terminateWithError('Fehler bei der Berechnung der Anwesenheitsquote.');
 		$this->terminateWithSuccess(getData($result));
 	}
 
@@ -584,7 +591,7 @@ class Api extends FHCAPI_Controller
 			'anwesenheit_user_id' => $anwesenheit_user_id
 		));
 
-		if(!hasData($deleteresp)) $this->terminateWithJsonError('Fehler beim löschen des Anwesenheitseintrags.');
+		if(!hasData($deleteresp)) $this->terminateWithError('Fehler beim löschen des Anwesenheitseintrags.');
 
 		$this->terminateWithSuccess(getData($deleteresp));
 	}
@@ -604,14 +611,14 @@ class Api extends FHCAPI_Controller
 		$status = $data['status'];
 
 		if (isEmptyString($entschuldigung_id) || !in_array($status, [true, false]))
-			$this->terminateWithJsonError('Error');
+			$this->terminateWithError('Error');
 
 		$entschuldigung = $this->_ci->EntschuldigungModel->load($entschuldigung_id);
 
 		if (isError($entschuldigung))
-			$this->terminateWithJsonError('Error');
+			$this->terminateWithError('Error');
 		if (!hasData($entschuldigung))
-			$this->terminateWithJsonError('Error');
+			$this->terminateWithError('Error');
 
 		$entschuldigung = getData($entschuldigung)[0];
 		if ($entschuldigung->akzeptiert !== $status)
@@ -620,7 +627,7 @@ class Api extends FHCAPI_Controller
 
 			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheitenByDatesStudent($entschuldigung->von, $entschuldigung->bis, $entschuldigung->person_id, $updateStatus);
 			if (isError($updateAnwesenheit))
-				$this->terminateWithJsonError($updateAnwesenheit);
+				$this->terminateWithError($updateAnwesenheit);
 
 			$update = $this->_ci->EntschuldigungModel->update(
 				$entschuldigung->entschuldigung_id,
@@ -634,7 +641,7 @@ class Api extends FHCAPI_Controller
 			);
 
 			if (isError($update))
-				$this->terminateWithJsonError('Error');
+				$this->terminateWithError('Error');
 		}
 
 		$this->terminateWithSuccess('Erfolgreich gespeichert');

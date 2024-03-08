@@ -2,7 +2,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
-import { lektorFormatters } from "../../mixins/formatters";
+import {lektorFormatters} from "../../mixins/formatters";
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
@@ -33,12 +33,21 @@ export default {
 				},
 				height: false,
 				index: 'datum',
-				layout: 'fitDataFill',
+				layout: 'fitColumns',
 				columns: [
-
-					{title: 'Datum', field: 'datum', headerFilter: true},
-					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter},
-					{title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction, width: 130, minWidth:130, maxWidth:130},
+					{
+						formatter: 'rowSelection',
+						titleFormatter: 'rowSelection',
+						titleFormatterParams: {
+							rowRange: "active" // Only toggle the values of the active filtered rows
+						},
+						headerSort: false,
+						frozen: true,
+						width: 70
+					},
+					{title: 'Datum', field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
+					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1},
+					{title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction, widthGrow: 1},
 				]
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [{
@@ -86,7 +95,13 @@ export default {
 		searchfunctiondummy: function(searchsettings) {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
-		deleteAnwesenheit(cell) {
+		anwCalc(values, data, calcParams){
+			if(this.sum) return this.sum + ' %'
+		},
+		async deleteAnwesenheit(cell) {
+			if (await this.$fhcAlert.confirmDelete() === false)
+				return;
+
 			const anwesenheit_user_id = cell.getData().anwesenheit_user_id;
 
 			Vue.$fhcapi.Anwesenheit.deleteUserAnwesenheitById(anwesenheit_user_id).then(
@@ -219,10 +234,13 @@ export default {
 		</core-navigation-cmpt>
 
 		<core-base-layout
-			:title="filterTitle"
-			mainCols="8"
-			asideCols="4">
+			:title="filterTitle">
 			<template #main>
+				<div class="d-flex justify-content-end align-items-end mt-3">
+					<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" :disabled="!dataChanged">
+						Änderungen Speichern
+					</button>
+				</div>
 				<core-filter-cmpt
 					title=""
 					ref="anwesenheitenByStudentByLvaTable"
@@ -233,15 +251,7 @@ export default {
 					:sideMenu="false" 
 					noColumnFilter>
 				</core-filter-cmpt>
-				<div class="d-flex justify-content-end align-items-end mt-3">
-					<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" :disabled="!dataChanged">
-						Änderungen Speichern
-					</button>
-				</div>
-			</template>
-			<template #aside>
-<!--				<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" />-->
-				<h4> Summe: {{sum}} %</h4>
+				
 			</template>
 		</core-base-layout>
 	</div>`

@@ -42,7 +42,7 @@ export default {
 				},
 				height: func_height(),
 				index: 'prestudent_id',
-				layout: 'fitColumns',
+				layout: '',
 				placeholder: "Keine Daten verfügbar",
 				columns: [
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
@@ -107,7 +107,7 @@ export default {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
 		getExistingQRCode(){
-			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_ids, this.ma_uid, formatDate(this.selectedDate)).then(
+			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate)).then(
 				res => {
 					console.log('getExistingQr', res)
 					if(res.status === 200 && res.data.data) {
@@ -121,7 +121,7 @@ export default {
 			this.url = data.url
 			this.code = data.code
 			this.anwesenheit_id = data.anwesenheit_id
-			this.$refs.modalContainer.show()
+			this.$refs.modalContainerQR.show()
 			this.startRegenerateQR()
 		},
 		getNewQRCode () {
@@ -133,10 +133,14 @@ export default {
 				res => {
 
 					if(res.status === 200 && res.data.data) {
+						this.$refs.modalContainerNewKontrolle.hide()
 						this.showQR(res.data.data)
 					}
 				}
-			)
+			).catch(err => {
+				this.$fhcAlert.alertError("Fehler beim dem Versuch eine neue Anwesenheitskontrolle zu starten")
+				this.$refs.modalContainerNewKontrolle.hide()
+			})
 		},
 		regenerateQR() {
 
@@ -198,6 +202,11 @@ export default {
 				return
 			}
 
+			if (!this.validateTimespan())
+			{
+				return false;
+			}
+
 
 			this.qr = '' // indirectly set start button disabled
 
@@ -207,7 +216,7 @@ export default {
 			this.getNewQRCode()
 		},
 		stopAnwesenheitskontrolle () {
-			this.$refs.modalContainer.hide()
+			this.$refs.modalContainerQR.hide()
 
 			this.qr = null
 			this.url = null
@@ -234,23 +243,28 @@ export default {
 				}
 			)
 		},
-		deleteAnwesenheitskontrolle () {
+		async deleteAnwesenheitskontrolle () {
+			if (await this.$fhcAlert.confirmDelete() === false)
+				return;
+
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
 			Vue.$fhcapi.Anwesenheit.deleteAnwesenheitskontrolle(this.le_ids, date).then(res => {
+				console.log('deleteAnwesenheitskontrolle', res)
 
-				if(res && res.status === 200 && res.data.data) {
+				if(res.meta.status === "success" && res.data.data) {
 					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
 					Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
 						if(res.data.meta.status !== "success") return
 						this.setupData(res.data.data.retval)
 					})
-				} else {
-					this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle.")
-
+				} else if(res.meta.status === "success" && !res.data.data){
+					this.$fhcAlert.alertWarning("Keine Anwesenheitskontrolle gefunden zu löschen!")
 				}
 
+			}).catch(error => {
+				this.$fhcAlert.alertError(error.response.data.errors[0].message)
 			})
 		},
 		setupData(data, returnData = false){
@@ -270,8 +284,8 @@ export default {
 			})
 
 			this.tableStudentData = []
-			const selectedDateFormatted = formatDate(this.selectedDate)
-			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFormatted
+			const selectedDateFormatted = formatDateToDbString(this.selectedDate)
+			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFormatted})
 
 
 			this.namesAndID.forEach((student, index) => {
@@ -290,15 +304,30 @@ export default {
 			if(returnData) {
 				return this.tableStudentData
 			} else {
-				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
+				// this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 			}
 
-		}
+		},
+		openNewAnwesenheitskontrolleModal(){
+			this.$refs.modalContainerNewKontrolle.show()
+		},
+		validateTimespan () {
+			const vonDate = new Date(1995, 10, 16, this.beginn.hours, this.beginn.minutes, this.beginn.seconds)
+			const bisDate = new Date(1995, 10, 16, this.ende.hours, this.ende.minutes, this.ende.seconds)
+
+			if (bisDate < vonDate)
+			{
+				this.$fhcAlert.alertError('Das Enddatum muss nach dem Startdatum liegen.');
+				return false
+			}
+
+			return true;
+		},
 
 	},
 	created(){
-		const selectedDateFormatted = formatDate(this.selectedDate)
+		const selectedDateFormatted = formatDateToDbString(this.selectedDate)
 		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
 		found.title = selectedDateFormatted
 	},
@@ -310,7 +339,7 @@ export default {
 		this.getExistingQRCode()
 
 		// fetch LE data
-		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDate(this.selectedDate))
+		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate))
 			.then(res => this.setupLehreinheitAndLektorData(res));
 
 		//fetch table data
@@ -325,7 +354,7 @@ export default {
 	watch: {
 		selectedDate(newVal) {
 
-			const selectedDateFormatted = formatDate(newVal)
+			const selectedDateFormatted = formatDateToDbString(newVal)
 			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFormatted
 
 				this.namesAndID.forEach((student, index) => {
@@ -347,23 +376,77 @@ export default {
 		</core-navigation-cmpt>
 					
 		<core-base-layout
-			:title="filterTitle"
-			mainCols="8"
-			asideCols="4"
-			>			
+			:title="filterTitle">			
 			<template #main>
-				<bs-modal ref="modalContainer" class="bootstrap-prompt" backdrop="static" 
-				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
-					<template v-slot:title>Anwesenheiten QR</template>
+				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
+					<template v-slot:title>Anwesenheitskontrolle starten</template>
 					<template v-slot:default>
-						<p>URL: {{url}}</p>
-						<p>Code: {{code}}</p>
+						<div class="row mt-4 align-items-center">
+							<div class="col-2"><label for="beginn" class="form-label col-sm-1">Von</label></div>
+							<div class="col-10">
+								<datepicker
+									v-model="beginn"
+									time-picker="true"
+									text-input="true"
+									auto-apply="true">
+								</datepicker>
+							</div>
+						</div>
+						<div class="row mt-4 align-items-center">
+							<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
+							<div class="col-10">
+								<datepicker
+									v-model="ende"
+									time-picker="true"
+									text-input="true"
+									auto-apply="true">
+								</datepicker>
+							</div>
+						</div>
+					</template>
+					<template v-slot:footer>
+						<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">Anwesenheitskontrolle starten</button>
+					</template>
+				</bs-modal>
+				
+				
+				<bs-modal ref="modalContainerQR" class="bootstrap-prompt" backdrop="static" 
+				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
+					<template v-slot:title>Anwesenheitskontrolle</template>
+					<template v-slot:default>
+						<h1 class="text-center">Code: {{code}}</h1>
 						<div v-html="qr" class="text-center"></div>
 					</template>
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">Anwesenheitskontrolle beenden</button>
 					</template>
 				</bs-modal>
+				<div class="row">
+					<div class="col-8"></div>
+					<div class="col-4">
+						<div class="row align-items-center">
+							<div class="col-2"><label for="datum" class="form-label col-sm-1">Datum</label></div>
+							<div class="col-10">
+								<datepicker
+									v-model="selectedDate"
+									locale="de"
+									format="dd-MM-yyyy"
+									text-input="true"
+									auto-apply="true">
+								</datepicker>
+							</div>
+						</div>
+						<div class="row mt-4 align-items-center justify-content-end">
+							<div>
+								<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-primary">
+									Anwesenheitskontrolle löschen 
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				
 				<core-filter-cmpt
 					title=""
 					ref="anwesenheitenTable"
@@ -375,53 +458,10 @@ export default {
 					newBtnShow=true
 					newBtnLabel="Neue Anwesenheitskontrolle starten"
 					:newBtnDisabled=qr
-					@click:new=startNewAnwesenheitskontrolle
+					@click:new=openNewAnwesenheitskontrolleModal
 					:sideMenu="false"
 					noColumnFilter>
 				</core-filter-cmpt>
-			</template>
-			<template #aside>
-				<div class="row align-items-center">
-					<div class="col-2"><label for="datum" class="form-label col-sm-1">Datum</label></div>
-					<div class="col-10">
-						<datepicker
-							v-model="selectedDate"
-							locale="de"
-							format="dd-MM-yyyy"
-							text-input="true"
-							auto-apply="true">
-						</datepicker>
-					</div>
-				</div>
-				<div class="row mt-4 align-items-center">
-					<div class="col-2"><label for="beginn" class="form-label col-sm-1">Von</label></div>
-					<div class="col-10">
-						<datepicker
-							v-model="beginn"
-							time-picker="true"
-							text-input="true"
-							auto-apply="true">
-						</datepicker>
-					</div>
-				</div>
-				<div class="row mt-4 align-items-center">
-					<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
-					<div class="col-10">
-						<datepicker
-							v-model="ende"
-							time-picker="true"
-							text-input="true"
-							auto-apply="true">
-						</datepicker>
-					</div>
-				</div>
-				<div class="row mt-4 align-items-center justify-content-end">
-					<div>
-						<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-primary">
-							Anwesenheitskontrolle löschen 
-						</button>
-					</div>
-				</div>
 			</template>
 		</core-base-layout>
 	</div>`

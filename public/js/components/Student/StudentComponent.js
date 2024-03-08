@@ -32,30 +32,27 @@ export default {
 	template: `
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries">
+		v-bind:add-header-menu-entries="headerMenuEntries"
+		:hideTopMenu=true
+		>
 	</core-navigation-cmpt>
 
 
 	<div class="row-cols">
-		<div class="row">
-			<div class="col-8">
-				<h4>Anwesenheitsverwaltung Student</h4>
-			</div>
-			<div class="col-4">
-				<button type="button" class="btn btn-primary" @click="routeToCodeScan">Code eingeben</button>
-			</div>
-		</div>
+		<core-base-layout>	
+			<template #main>
+				<div class="row">
+					<div class="col-8">
+						<h1 class="h2 mb-5">Anwesenheitsverwaltung Student</h1>
+					</div>
+					<div class="col-4 text-center">
+						<button type="button" class="btn btn-primary" @click="routeToCodeScan">Code eingeben</button>
+					</div>
+				</div>
+				<core-tabs class="mb-5" :config="tabs"></core-tabs>
+			</template>
+		</core-base-layout>
 		
-		<div class="row-col card card-body mt-3">
-			<core-base-layout>	
-				<template #main>
-					<!-- Core Tabs-->
-					<core-tabs class="mb-5" :config="tabs"></core-tabs>
-				</template>
-			</core-base-layout>
-		</div>
-		<!-- Code Documentation -->
-		<doc-layout-base-tabs></doc-layout-base-tabs>
 	</div>
 		
 `
