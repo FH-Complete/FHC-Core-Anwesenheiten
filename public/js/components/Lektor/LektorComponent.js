@@ -40,16 +40,15 @@ export default {
 						})
 					}
 				},
-				height: func_height(),
 				index: 'prestudent_id',
-				layout: '',
+				layout: 'fitColumns',
 				placeholder: "Keine Daten verfügbar",
 				columns: [
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
-					{title: 'Vorname', field: 'vorname', headerFilter: true},
-					{title: 'Nachname', field: 'nachname', headerFilter: true},
-					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center"},
-					{title: 'Summe', field: 'sum', formatter: lektorFormatters.percentFormatter},
+					{title: 'Vorname', field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
+					{title: 'Nachname', field: 'nachname', headerFilter: true, widthGrow: 1, minWidth: 150},
+					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, minWidth: 150},
+					{title: 'Summe', field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, minWidth: 150},
 				]
 			},
 			anwesenheitenTabulatorEventHandlers: [{
@@ -110,7 +109,7 @@ export default {
 			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate)).then(
 				res => {
 					console.log('getExistingQr', res)
-					if(res.status === 200 && res.data.data) {
+					if(res.status === 200 && res.data?.data?.svg) {
 						this.showQR(res.data.data)
 					}
 				}
@@ -182,7 +181,7 @@ export default {
 					let beginn = new Date('1995-10-16 ' + data[0].beginn)
 					let ende = new Date('1995-10-16 ' + data[0].ende)
 
-					res.data.retval.forEach(entry => {
+					data.forEach(entry => {
 						const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
 						const entryEnde = new Date('1995-10-16 ' + entry.ende)
 
@@ -332,7 +331,6 @@ export default {
 		found.title = selectedDateFormatted
 	},
 	mounted() {
-		console.log(this.internalPermissions.authID)
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 
 		// see if test is still running
@@ -409,7 +407,6 @@ export default {
 					</template>
 				</bs-modal>
 				
-				
 				<bs-modal ref="modalContainerQR" class="bootstrap-prompt" backdrop="static" 
 				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
 					<template v-slot:title>Anwesenheitskontrolle</template>
@@ -420,32 +417,7 @@ export default {
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">Anwesenheitskontrolle beenden</button>
 					</template>
-				</bs-modal>
-				<div class="row">
-					<div class="col-8"></div>
-					<div class="col-4">
-						<div class="row align-items-center">
-							<div class="col-2"><label for="datum" class="form-label col-sm-1">Datum</label></div>
-							<div class="col-10">
-								<datepicker
-									v-model="selectedDate"
-									locale="de"
-									format="dd-MM-yyyy"
-									text-input="true"
-									auto-apply="true">
-								</datepicker>
-							</div>
-						</div>
-						<div class="row mt-4 align-items-center justify-content-end">
-							<div>
-								<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-primary">
-									Anwesenheitskontrolle löschen 
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
-				
+				</bs-modal>				
 				
 				<core-filter-cmpt
 					title=""
@@ -461,6 +433,29 @@ export default {
 					@click:new=openNewAnwesenheitskontrolleModal
 					:sideMenu="false"
 					noColumnFilter>
+						<template #actions>
+							<div class="row">
+								<div class="col-2 d-flex align-items-center"><label for="datum" class="form-label col-sm-1">Datum</label></div>
+								<div class="col-10">
+									<datepicker
+										v-model="selectedDate"
+										locale="de"
+										format="dd-MM-yyyy"
+										text-input="true"
+										auto-apply="true">
+									</datepicker>
+								</div>
+							</div>
+							<div class="row justify-content-end">
+								<div>
+									<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger">
+										Anwesenheitskontrolle löschen 
+									</button>
+								</div>
+							</div>
+						</div>
+						</template>
+					
 				</core-filter-cmpt>
 			</template>
 		</core-base-layout>

@@ -37,6 +37,7 @@ class Api extends FHCAPI_Controller
 				'studentCheckInAnwesenheit' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
 				'studentGetAnwesenheitSumByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
 				'studentDeleteUserAnwesenheitById' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'studentDeleteUserAnwesenheitByIds' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
 
 				'assistenzGetEntschuldigungen' => array('admin:rw', 'extension/anwesenheiten_assistenz'),
 				'assistenzUpdateEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz')
@@ -155,7 +156,10 @@ class Api extends FHCAPI_Controller
 		$le_id = $le_ids[0];
 
 		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id);
-		if(!hasData($resultQR)) $this->terminateWithError("No existing Anwesenheitskontrolle found");
+
+		// TODO: maybe handle this as error? should be expected behaviour and thus success
+		if(!hasData($resultQR)) $this->terminateWithSuccess("No existing Anwesenheitskontrolle found");
+
 
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -378,8 +382,8 @@ class Api extends FHCAPI_Controller
 		}
 
 
-//		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
-		$result = $this->_ci->AnwesenheitModel->getAllByStudent($this->_uid, $studiensemester);
+		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
+//		$result = $this->_ci->AnwesenheitModel->getAllByStudent($this->_uid, $studiensemester);
 
 
 
@@ -592,6 +596,17 @@ class Api extends FHCAPI_Controller
 		));
 
 		if(!hasData($deleteresp)) $this->terminateWithError('Fehler beim löschen des Anwesenheitseintrags.');
+
+		$this->terminateWithSuccess(getData($deleteresp));
+	}
+
+	public function studentDeleteUserAnwesenheitByIds() {
+		$result = $this->getPostJSON();
+		$ids = $result->ids;
+
+		$deleteresp = $this->_ci->AnwesenheitUserModel->deleteUserAnwesenheitByIds($ids);
+
+		if(!hasData($deleteresp)) $this->terminateWithError('Fehler beim löschen der Anwesenheitseinträge.');
 
 		$this->terminateWithSuccess(getData($deleteresp));
 	}

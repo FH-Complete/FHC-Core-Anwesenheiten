@@ -89,7 +89,8 @@ export default {
 	template: `
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries">
+		v-bind:add-header-menu-entries="headerMenuEntries"
+		:hideTopMenu=true>
 	</core-navigation-cmpt>
 
 	<div class="row-cols">

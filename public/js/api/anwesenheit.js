@@ -63,6 +63,12 @@ export default {
 
 		return axios.post(url, {anwesenheit_user_id})
 	},
+	async deleteUserAnwesenheitByIds(ids) {
+		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
+			`/extensions/FHC-Core-Anwesenheiten/Api/studentDeleteUserAnwesenheitByIds`;
+
+		return axios.post(url, {ids})
+	},
 	async deleteAnwesenheitskontrolle(le_ids, date) {
 		const url = FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+
 			`/extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteAnwesenheitskontrolle`;

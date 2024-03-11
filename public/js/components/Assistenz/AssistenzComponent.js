@@ -2,7 +2,7 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {universalFormatter} from "../../mixins/formatters";
+import {studentFormatters, universalFormatter} from "../../mixins/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 
 export default {
@@ -36,9 +36,9 @@ export default {
 					{title: 'Vorname', field: 'vorname'},
 					{title: 'Nachname', field: 'nachname'},
 					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter},
-					{title: 'Von', field: 'von'},
-					{title: 'Bis', field: 'bis'},
-					{title: 'Action', field: 'entschuldigung_id', formatter: this.formAction},
+					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, minWidth: 150},
+					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, minWidth: 150},
+					{title: 'Action', field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150},
 				],
 			}
 		};
@@ -130,7 +130,8 @@ export default {
 	template: `
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries">
+		v-bind:add-header-menu-entries="headerMenuEntries"
+		:hideTopMenu=true>
 	</core-navigation-cmpt>
 
 	<core-base-layout

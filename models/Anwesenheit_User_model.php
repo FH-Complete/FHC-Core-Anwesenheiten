@@ -44,7 +44,8 @@ class Anwesenheit_User_model extends \DB_Model
 
 	}
 
-	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis) {
+	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis)
+	{
 		$this->db->trans_start(false);
 
 		// find every student not already having an anwesenheit for the check with given anwesenheit_id
@@ -136,7 +137,7 @@ class Anwesenheit_User_model extends \DB_Model
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
 			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}'
-			ORDER BY datum ASC;
+			ORDER BY datum DESC;
 		";
 
 		return $this->execQuery($query);
@@ -158,7 +159,8 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-	public function getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz) {
+	public function getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz)
+	{
 		$query = "SELECT get_anwesenheiten({$prestudent_id}, {$lv_id}, '{$sem_kurzbz}') as sum";
 
 		return $this->execQuery($query);
@@ -171,7 +173,25 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-	public function deleteAllByAnwesenheitId($anwesenheit_id) {
+	public function deleteUserAnwesenheitByIds($ids)
+	{
+		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = ";
+
+		$index = 0;
+		forEach ($ids as $id) {
+			if($index == 0) $query .= "{$id}";
+			else $query .= " OR anwesenheit_user_id = {$id}";
+
+			$index++;
+		}
+
+		$query .= ";";
+
+		return $this->execQuery($query);
+	}
+
+	public function deleteAllByAnwesenheitId($anwesenheit_id)
+	{
 		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = {$anwesenheit_id}";
 
 		return $this->execQuery($query);

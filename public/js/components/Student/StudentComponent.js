@@ -27,7 +27,15 @@ export default {
 			this.$router.push({
 				name: 'Scan'
 			})
+		},
+		getMobileCss(){
+			return this._.root.data.isMobile ? "" : "navbar navbar-left-side"
 		}
+	},
+	mounted() {
+		console.log(this._.root.data.isMobile)
+
+		// console.log(this.root.data.isMobile)
 	},
 	template: `
 	<core-navigation-cmpt 

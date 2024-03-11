@@ -30,7 +30,7 @@ export const lektorFormatters = {
 		}
 
 		return value
-	},
+	}
 }
 
 export const studentFormatters = {

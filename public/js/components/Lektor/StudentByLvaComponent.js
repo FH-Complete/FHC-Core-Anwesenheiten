@@ -45,27 +45,27 @@ export default {
 						frozen: true,
 						width: 70
 					},
-					{title: 'Datum', field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
-					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1},
-					{title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction, widthGrow: 1},
+					{title: 'Datum', field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
+					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
+					// {title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction, widthGrow: 1, minWidth: 150},
 				]
 			},
-			anwesenheitenByStudentByLvaTabulatorEventHandlers: [{
-				event: "cellClick",
-				handler: (e, cell) => {
-					const row = cell.getRow()
-					const field = cell.getField()
-					if(field !== 'status') return
-
-					const data = cell.getData().status
-					// TODO: (johann) more sophisticated check with db fetched status_type values
-					if(data === "anwesend") {
-						this.setRowStatus(cell, row, 'abwesend')
-					} else if (data === "abwesend") {
-						this.setRowStatus(cell, row, 'anwesend')
-					}
+			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
+			{
+				event: "rowSelected",
+				handler: (row) => {
+					console.log("rowSelected", row)
+					this.selected++
 				}
-			}],
+			},
+			{
+				event: "rowDeselected",
+				handler: (row) => {
+					console.log("rowDeselected", row)
+					this.selected--
+				}
+			}
+			],
 			filterTitle: "",
 			changedData: [],
 			tableData: null,
@@ -76,7 +76,8 @@ export default {
 			verband: null,
 			gruppe: null,
 			sum: null,
-			foto: null
+			foto: null,
+			selected: 0
 		}
 	},
 	props: {
@@ -96,6 +97,7 @@ export default {
 			return Vue.$fhcapi.Search.searchdummy(searchsettings);
 		},
 		anwCalc(values, data, calcParams){
+			// TODO: might not exist in time when network is slow
 			if(this.sum) return this.sum + ' %'
 		},
 		async deleteAnwesenheit(cell) {
@@ -146,11 +148,11 @@ export default {
 			const wrapper = document.createElement('div');
 			wrapper.className = "d-flex gap-3";
 
-			const deleteButton = document.createElement('button');
-			deleteButton.className = 'btn btn-outline-secondary';
-			deleteButton.innerHTML = '<i class="fa fa-trash"></i>';
-			deleteButton.addEventListener('click', () => this.deleteAnwesenheit(cell, false));
-			wrapper.append(deleteButton);
+			// const deleteButton = document.createElement('button');
+			// deleteButton.className = 'btn btn-outline-secondary';
+			// deleteButton.innerHTML = '<i class="fa fa-trash"></i>';
+			// deleteButton.addEventListener('click', () => this.deleteAnwesenheit(cell, false));
+			// wrapper.append(deleteButton);
 
 			const setCheckedButton = document.createElement('button');
 			setCheckedButton.className = 'btn btn-outline-secondary';
@@ -166,9 +168,7 @@ export default {
 
 			return wrapper;
 		},
-		async saveChanges(){
-			const changedData = this.changedData
-			this.changedData = []
+		async saveChanges(changedData){
 			Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(changedData).then(result => {
 				console.log('saveChangedAnwesenheiten', result)
 				if(result.status === 200) {
@@ -183,6 +183,96 @@ export default {
 					this.sum = result.data.data[0].sum
 				})
 			})
+		},
+		setSelectedRowsAnwesend() {
+			const selectedData = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedData()
+			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
+
+			const changedData = []
+			const changedRows = []
+			selectedData.forEach((data,i) => {
+				if(data.status !== "entschuldigt" || data.status === "anwesend") {
+					const newData = {
+						anwesenheit_user_id: data.anwesenheit_user_id,
+						datum: data.datum,
+						status: "anwesend"
+					}
+					selectedRows[i].update(newData)
+					changedData.push(newData)
+					changedRows.push(selectedRows[i])
+				}
+
+			})
+
+
+			this.saveChanges(changedData)
+
+			changedRows.forEach(row => row.toggleSelect())
+		},
+		async setSelectedRowsAbwesend(){
+			const selectedData = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedData()
+			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
+
+			const changedData = []
+			const changedRows = []
+			selectedData.forEach((data,i) => {
+				if(data.status !== "entschuldigt" || data.status === "abwesend") {
+					const newData = {
+						anwesenheit_user_id: data.anwesenheit_user_id,
+						datum: data.datum,
+						status: "abwesend"
+					}
+					selectedRows[i].update(newData)
+					changedData.push(newData)
+					changedRows.push(selectedRows[i])
+				}
+
+			})
+
+			this.saveChanges(changedData)
+
+			changedRows.forEach(row => row.toggleSelect())
+		},
+		async deleteSelectedRows(){
+			if (await this.$fhcAlert.confirmDelete() === false)
+				return;
+
+			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
+			const selectedData = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedData()
+			const ids = []
+			selectedData.forEach(data => {
+				if(data.status !== "entschuldigt") ids.push(data.anwesenheit_user_id)
+			})
+
+			Vue.$fhcapi.Anwesenheit.deleteUserAnwesenheitByIds(ids).then(
+				res => {
+					console.log('deleteUserAnwesenheitByIds', res)
+
+					if(res.status === 200 && res.data.meta.status === "success") {
+						this.$fhcAlert.alertSuccess("Anwesenheiten deleted successfully.")
+						selectedRows.forEach(row => {
+							const rowData = row.getData()
+							if(rowData.status === "entschuldigt"){
+								row.deselect()
+							} else {
+								row.deselect()
+								row.delete()
+							}
+
+						})
+
+						Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
+							console.log('getAnwesenheitSumByLva', result)
+							if(result.status === 200 && result.data.data)
+								this.sum = result.data.data[0].sum
+						})
+
+					} else {
+						this.$fhcAlert.alertSuccess("Error deleting User Anwesenheiten.")
+					}
+				}
+			)
+
 		}
 	},
 	created(){
@@ -230,17 +320,14 @@ export default {
 	
 		<core-navigation-cmpt 
 			v-bind:add-side-menu-entries="appSideMenuEntries"
-			v-bind:add-header-menu-entries="headerMenuEntries">	
+			v-bind:add-header-menu-entries="headerMenuEntries"
+			:hideTopMenu=true>	
 		</core-navigation-cmpt>
 
 		<core-base-layout
 			:title="filterTitle">
 			<template #main>
-				<div class="d-flex justify-content-end align-items-end mt-3">
-					<button @click="saveChanges" role="button" class="btn btn-primary align-self-end" :disabled="!dataChanged">
-						Änderungen Speichern
-					</button>
-				</div>
+
 				<core-filter-cmpt
 					title=""
 					ref="anwesenheitenByStudentByLvaTable"
@@ -250,8 +337,21 @@ export default {
 					:tableOnly
 					:sideMenu="false" 
 					noColumnFilter>
+					<template #actions>
+						<button @click="deleteSelectedRows" role="button" class="btn btn-danger align-self-end" :disabled="!selected">
+							Löschen
+						</button>
+						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
+							Anwesend
+						</button>
+						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
+							Abwesend
+						</button>
+
+						
+					</template>
 				</core-filter-cmpt>
-				
+					
 			</template>
 		</core-base-layout>
 	</div>`

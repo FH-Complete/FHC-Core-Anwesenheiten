@@ -26,13 +26,12 @@ export default {
 	template: `
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries">
+		v-bind:add-header-menu-entries="headerMenuEntries"
+		:hideTopMenu=true>
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		title="Anwesenheiten"
-		mainCols="8"
-		asideCols="4">
+		title="Anwesenheiten Landing Page">
 		<template #main>
 			
 		</template>

@@ -111,7 +111,7 @@ class Anwesenheit_model extends \DB_Model
 	public function getLehreinheitAndLektorInfo($le_id, $ma_uid, $date)
 	{
 		$query = "
-			SELECT * FROM 
+			SELECT DISTINCT * FROM 
 				(
 					SELECT tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehreinheit_id, bezeichnung, kurzbz
 					FROM lehre.tbl_lehrveranstaltung JOIN lehre.tbl_lehreinheit USING (lehrveranstaltung_id)
@@ -184,7 +184,7 @@ class Anwesenheit_model extends \DB_Model
 				JOIN public.tbl_benutzer ON tbl_person.person_id = tbl_benutzer.person_id
 				JOIN extension.tbl_anwesenheit_status ON tbl_anwesenheit_user.status = tbl_anwesenheit_status.status_kurzbz
 			WHERE tbl_benutzer.uid = ? AND tbl_lehreinheit.studiensemester_kurzbz = ?
-			ORDER BY tbl_lehrveranstaltung.bezeichnung, von, bis;
+			ORDER BY tbl_lehrveranstaltung.bezeichnung, von DESC, bis DESC;
 		';
 
 		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
