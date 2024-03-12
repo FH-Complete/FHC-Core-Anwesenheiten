@@ -90,17 +90,18 @@ export default {
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
 		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=true>
+		:hideTopMenu=true
+		leftNavCssClasses="">
 	</core-navigation-cmpt>
 
 	<div class="row-cols">
-		<div class="row-colp-4 mt-3 text-center">
+		<div class="row-col-4 mt-3 text-center">
 			<core-base-layout
 				:title=getBaseLayoutTitle>
 				<template #main>
 					<template v-if="!zugangscodeProcessed">
 						<div class="row">
-							<div class="col-md-12">
+							<div class="col-sm-10 col-10 mx-auto">
 								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="Zugangscode">
 							</div>
 						</div>

@@ -13,34 +13,34 @@ class Api extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'infoGetStudiensemester' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
-				'infoGetAktStudiensemester' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
-				'infoGetLehreinheitAndLektorInfo' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
-				'infoGetStudentInfo' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
+				'infoGetStudiensemester' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw', 'extension/anwesenheiten_student:rw'),
+				'infoGetAktStudiensemester' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw', 'extension/anwesenheiten_student:rw'),
+				'infoGetLehreinheitAndLektorInfo' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw', 'extension/anwesenheiten_student:rw'),
+				'infoGetStudentInfo' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw', 'extension/anwesenheiten_student:rw'),
 
-				'lektorStudentByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorGetAllAnwesenheitenByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorGetAllAnwesenheitenByStudentByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorUpdateAnwesenheiten' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorRegenerateQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorDegenerateQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorGetNewQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorGetExistingQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorDeleteQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'lektorDeleteAnwesenheitskontrolle' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'lektorStudentByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorGetAllAnwesenheitenByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorGetAllAnwesenheitenByStudentByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorUpdateAnwesenheiten' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorRegenerateQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorDegenerateQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorGetNewQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorGetExistingQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorDeleteQRCode' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'lektorDeleteAnwesenheitskontrolle' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
 
-				'studentGetAll' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
-				'studentAddEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_student'),
-				'studentDeleteEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
-				'studentGetEntschuldigungenByPerson' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
-				'studentDownload' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
-				'studentCheckInAnwesenheit' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheit_student'),
-				'studentGetAnwesenheitSumByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor', 'extension/anwesenheiten_student'),
-				'studentDeleteUserAnwesenheitById' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
-				'studentDeleteUserAnwesenheitByIds' => array('admin:rw', 'extension/anwesenheiten_assistenz', 'extension/anwesenheiten_lektor'),
+				'studentGetAll' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw', 'extension/anwesenheiten_student:rw'),
+				'studentAddEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_student:rw'),
+				'studentDeleteEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'studentGetEntschuldigungenByPerson' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'studentDownload' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'studentCheckInAnwesenheit' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'studentGetAnwesenheitSumByLva' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw', 'extension/anwesenheiten_student:rw'),
+				'studentDeleteUserAnwesenheitById' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
+				'studentDeleteUserAnwesenheitByIds' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw'),
 
-				'assistenzGetEntschuldigungen' => array('admin:rw', 'extension/anwesenheiten_assistenz'),
-				'assistenzUpdateEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz')
+				'assistenzGetEntschuldigungen' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw'),
+				'assistenzUpdateEntschuldigung' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw')
 			)
 		);
 
@@ -382,8 +382,8 @@ class Api extends FHCAPI_Controller
 		}
 
 
-		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
-//		$result = $this->_ci->AnwesenheitModel->getAllByStudent($this->_uid, $studiensemester);
+//		$result = $this->_ci->AnwesenheitModel->getAllByStudent('el23b115', $studiensemester);
+		$result = $this->_ci->AnwesenheitModel->getAllByStudent($this->_uid, $studiensemester);
 
 
 

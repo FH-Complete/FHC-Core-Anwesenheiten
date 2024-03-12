@@ -38,7 +38,7 @@ export default {
 					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter},
 					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, minWidth: 150},
 					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, minWidth: 150},
-					{title: 'Action', field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150},
+					{title: 'Action', field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150, tooltip:false},
 				],
 			}
 		};
@@ -77,19 +77,20 @@ export default {
 
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
+			button.title = 'Download';
 			download.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-check"></i>';
-
+			button.title = 'Entschuldigung akzeptieren';
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
 			download.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
-
+			button.title = 'Entschuldigung ablehnen';
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, false));
 			download.append(button);
 
@@ -135,11 +136,12 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		title="Entschuldigungen">
+		title="Entschuldigungsmanagement Studiengangsassistenz">
 		<template #main>
 			<div class="row mb-3 align-items-center">
-				<div class="col-2"><label for="von" class="form-label col-sm-1">Von</label></div>
-				<div class="col-10">
+				
+				<div class="col-1"><label for="von" class="form-label col-sm-1">Von</label></div>
+				<div class="col-3">
 					<datepicker
 						v-model="zeitraum.von"
 						clearable="false"
@@ -153,8 +155,9 @@ export default {
 				</div>
 			</div>
 			<div class="row mb-3 align-items-center">
-				<div class="col-2"><label for="von" class="form-label col-sm-1">Bis</label></div>
-				<div class="col-10">
+				
+				<div class="col-1"><label for="von" class="form-label col-sm-1">Bis</label></div>
+				<div class="col-3">
 					<datepicker
 						v-model="zeitraum.bis"
 						clearable="false"
@@ -165,7 +168,7 @@ export default {
 					></datepicker>
 				</div>
 			</div>
-			<div class="row mb-3 align-content-center justify-content-end">
+			<div class="row mb-3 align-content-center">
 				<div class="col-4 d-flex justify-content-end">
 					<button class="btn btn-secondary" @click="filtern">Filtern</button>
 				</div>

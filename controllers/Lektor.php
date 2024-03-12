@@ -12,7 +12,7 @@ class Lektor extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => 'admin:rw',
+				'index' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw', 'extension/anwesenheiten_lektor:rw')
 			)
 		);
 

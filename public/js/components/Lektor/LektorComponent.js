@@ -66,9 +66,11 @@ export default {
 			}],
 			boundRegenerateQR: null,
 			// TODO: get these via get parameter into properties
-			ma_uid: 'ma0144',
+			ma_uid: 'horauer', //'ma0144',
 			sem_kurzbz: 'WS2023',
 			lv_id: '38733',
+			// le_id: '140394',
+			// le_ids: ['140394'], // TODO: maybe as computed?
 			le_id: '138879',
 			le_ids: ['138879'], // TODO: maybe as computed?
 			filterTitle: "",
@@ -340,12 +342,6 @@ export default {
 		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate))
 			.then(res => this.setupLehreinheitAndLektorData(res));
 
-		//fetch table data
-		// Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
-		// 	console.log('getAllAnwesenheitenByLva', res)
-		// 	if(res.data.meta.status !== "success") return
-		// 	this.setupData(res.data.data.retval)
-		// })
 	},
 	updated(){
 	},
@@ -379,7 +375,7 @@ export default {
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
 					<template v-slot:title>Anwesenheitskontrolle starten</template>
 					<template v-slot:default>
-						<div class="row mt-4 align-items-center">
+						<div class="row align-items-center">
 							<div class="col-2"><label for="beginn" class="form-label col-sm-1">Von</label></div>
 							<div class="col-10">
 								<datepicker
@@ -390,7 +386,7 @@ export default {
 								</datepicker>
 							</div>
 						</div>
-						<div class="row mt-4 align-items-center">
+						<div class="row align-items-center">
 							<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
 							<div class="col-10">
 								<datepicker
@@ -436,7 +432,7 @@ export default {
 						<template #actions>
 							<div class="row">
 								<div class="col-2 d-flex align-items-center"><label for="datum" class="form-label col-sm-1">Datum</label></div>
-								<div class="col-10">
+								<div class="col-9" style="transform: translate(0, -4px); z-index: 99999;">
 									<datepicker
 										v-model="selectedDate"
 										locale="de"
@@ -447,11 +443,9 @@ export default {
 								</div>
 							</div>
 							<div class="row justify-content-end">
-								<div>
-									<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger">
-										Anwesenheitskontrolle löschen 
-									</button>
-								</div>
+								<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger ml-2">
+									Anwesenheitskontrolle löschen 
+								</button>
 							</div>
 						</div>
 						</template>

@@ -24,7 +24,7 @@ export default {
 					{title: 'Lehrveranstaltung', visible: false},
 					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: 'Anwesend', field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1},
+					{title: 'Anwesend', field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
 				],
 				groupBy: ['bezeichnung'],
 				groupStartOpen:false,

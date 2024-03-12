@@ -38,7 +38,7 @@ export default {
 					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, widthGrow: 1, minWidth: 150},
 					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: 'Action', field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 150},
+					{title: 'Action', field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 150, tooltip: false},
 				],
 			},
 			startTime: Vue.ref({ hours: 0, minutes: 0 }),
@@ -108,6 +108,7 @@ export default {
 
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
+			button.title = 'Download';
 			download.append(button);
 
 			if (cell.getData().akzeptiert == null)
@@ -115,7 +116,7 @@ export default {
 				button = document.createElement('button');
 				button.className = 'btn btn-outline-secondary';
 				button.innerHTML = '<i class="fa fa-xmark"></i>';
-
+				button.title = 'Entschuldigung löschen';
 				button.addEventListener('click', () => this.deleteEntschuldigung(cell, 'decline'));
 				download.append(button);
 			}
