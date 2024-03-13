@@ -63,7 +63,6 @@ export const studentFormatters = {
 	formAnwesenheit: function(cell)
 	{
 		let data = cell.getValue();
-		console.log('formAnwesenheit', cell)
 		if (data === "anwesend" || data === 'entschuldigt')
 		{
 			cell.getElement().style.color = "#28a745";
@@ -110,19 +109,6 @@ export const studentFormatters = {
 
 export const universalFormatter = {
 
-	entschuldigungRowFormatter: function(row)
-	{
-		// let value = row.getData().akzeptiert;
-		// let colorClass = "";
-		// if (value == null) {
-		// 	colorClass = "#17a2b8";
-		// } else if (value === true) {
-		// 	colorClass = "#28a745";
-		// } else if (value === false) {
-		// 	colorClass = "#dc3545";
-		// }
-		// row.getElement().style.color = colorClass;
-	},
 	entschuldigungstatusFormatter: function(cell)
 	{
 		let data = cell.getValue()

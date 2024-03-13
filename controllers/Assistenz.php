@@ -13,7 +13,7 @@ class Assistenz extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('admin:rw', 'extension/anwesenheiten_assistenz:rw')
+				'index' => array('admin:rw', 'extension/anwesenheit_assistenz:rw')
 			)
 		);
 

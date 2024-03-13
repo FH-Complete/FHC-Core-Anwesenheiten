@@ -432,7 +432,7 @@ export default {
 						<template #actions>
 							<div class="row">
 								<div class="col-2 d-flex align-items-center"><label for="datum" class="form-label col-sm-1">Datum</label></div>
-								<div class="col-9" style="transform: translate(0, -4px); z-index: 99999;">
+								<div class="col-9">
 									<datepicker
 										v-model="selectedDate"
 										locale="de"

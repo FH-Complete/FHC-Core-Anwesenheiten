@@ -19,8 +19,8 @@ export default {
 	data: function() {
 		return {
 			entschuldigung: {
-				von: null,
-				bis: null,
+				von: Vue.ref({ hours: 0, minutes: 0 }),
+				bis: Vue.ref({ hours: 23, minutes: 59 }),
 				files: []
 			},
 			entschuldigungsViewTabulatorOptions: {
@@ -41,7 +41,6 @@ export default {
 					{title: 'Action', field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 150, tooltip: false},
 				],
 			},
-			startTime: Vue.ref({ hours: 0, minutes: 0 }),
 			filterTitle: ""
 		};
 	},
@@ -168,20 +167,14 @@ export default {
 		resetFormData: function()
 		{
 			this.entschuldigung = {
-				von: null,
-				bis: null,
+				von: Vue.ref({ hours: 0, minutes: 0 }),
+				bis: Vue.ref({ hours: 23, minutes: 59 }),
 				files: []
 			};
 		},
 	},
 	mounted() {
 		// this.loadEntschuldigungen();
-	},
-	watch: {
-		'entschuldigung.von'(newValue) {
-			if (this.entschuldigung.bis === null)
-				this.entschuldigung.bis = newValue;
-		},
 	},
 	template: `
 
@@ -200,7 +193,7 @@ export default {
 								clearable="false"
 								auto-apply
 								:enable-time-picker="true"
-								:start-time="startTime"
+								:start-time="entschuldigung.von"
 								format="dd.MM.yyyy HH:mm"
 								model-type="dd.MM.yyyy HH:mm">
 							</datepicker>
@@ -215,7 +208,7 @@ export default {
 								clearable="false"
 								auto-apply
 								:enable-time-picker="true"
-								:start-time="startTime"
+								:start-time="entschuldigung.bis"
 								format="dd.MM.yyyy HH:mm"
 								model-type="dd.MM.yyyy HH:mm">
 							</datepicker>
