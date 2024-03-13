@@ -75,7 +75,7 @@ export default {
 			semester: null,
 			verband: null,
 			gruppe: null,
-			sum: null,
+			sum: 0,
 			foto: null,
 			selected: 0
 		}
@@ -98,7 +98,7 @@ export default {
 		},
 		anwCalc(values, data, calcParams){
 			// TODO: might not exist in time when network is slow
-			if(this.sum) return this.sum + ' %'
+			return this.sum + ' %'
 		},
 		async deleteAnwesenheit(cell) {
 			if (await this.$fhcAlert.confirmDelete() === false)
@@ -117,7 +117,10 @@ export default {
 						Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
 							console.log('getAnwesenheitSumByLva', result)
 							if(result.status === 200 && result.data.data)
+							{
 								this.sum = result.data.data[0].sum
+								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
+							}
 						})
 
 					} else {
@@ -180,7 +183,10 @@ export default {
 				Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
 					console.log('getAnwesenheitSumByLva', result)
 					if(result.status === 200 && result.data.data)
-					this.sum = result.data.data[0].sum
+					{
+						this.sum = result.data.data[0].sum
+						this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
+					}
 				})
 			})
 		},
@@ -264,7 +270,10 @@ export default {
 						Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
 							console.log('getAnwesenheitSumByLva', result)
 							if(result.status === 200 && result.data.data)
+							{
 								this.sum = result.data.data[0].sum
+								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
+							}
 						})
 
 					} else {

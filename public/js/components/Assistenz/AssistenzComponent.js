@@ -31,7 +31,6 @@ export default {
 				layout: 'fitColumns',
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
-				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
 					{title: 'Vorname', field: 'vorname'},
 					{title: 'Nachname', field: 'nachname'},
@@ -96,7 +95,7 @@ export default {
 
 			return download;
 		},
-		filtern: function()
+		filtern: function() //TODO filter anpassen
 		{
 			if (this.zeitraum.von === null || this.zeitraum.bis === null)
 				return true;
@@ -114,19 +113,6 @@ export default {
 					}
 				]);
 		}
-	},
-	mounted() {
-		// Vue.$fhcapi.Assistenz.getEntschuldigungen().then(response => {
-		//
-		// 	// TODO(johann): check status/error and/or refactor for fhcapi plugin
-		// 	if(this.$refs.assistenzTable) {
-		// 		this.$refs.assistenzTable.tabulator.setData(response.data.data.retval);
-		// 	} else {
-		// 		console.log('no tabulator instanz =(((((')
-		// 	}
-		//
-		//
-		// });
 	},
 	template: `
 	<core-navigation-cmpt 
