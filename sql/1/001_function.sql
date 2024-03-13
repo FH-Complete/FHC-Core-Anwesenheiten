@@ -24,6 +24,3 @@ GROUP BY
 RETURN rec.anwesenheitsquote;
 END;
 $$;
-
-alter function get_anwesenheiten(integer, integer, varchar) owner to fhcomplete;
-grant execute on function get_anwesenheiten(integer, integer, varchar) to vilesci;
