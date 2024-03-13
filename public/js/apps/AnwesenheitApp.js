@@ -1,4 +1,4 @@
-import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
+import fhc_anwesenheitenapifactory from "../api/fhcapifactory.js";
 import LektorComponent from "../components/Lektor/LektorComponent.js";
 import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 // import FhcApi from '../../../../js/plugin/FhcApi.js';

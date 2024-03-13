@@ -24,7 +24,8 @@ INSERT INTO extension.tbl_anwesenheit_status (status_kurzbz, bezeichnung)
 VALUES
     ('anwesend', 'Ja'),
     ('abwesend', 'Nein'),
-    ('entschuldigt', 'Entschuldigt');
+    ('entschuldigt', 'Entschuldigt')
+ON CONFLICT (status_kurzbz) DO NOTHING;
 
 -----------------------------------------------------------------
 

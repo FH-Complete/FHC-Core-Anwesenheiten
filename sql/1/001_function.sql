@@ -1,4 +1,4 @@
-create function get_anwesenheiten(integer, integer, character varying) returns float
+create or replace function get_anwesenheiten(integer, integer, character varying) returns float
     stable
     language plpgsql
 as
