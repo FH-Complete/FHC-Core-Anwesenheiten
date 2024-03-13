@@ -87,8 +87,12 @@ CREATE TABLE IF NOT EXISTS extension.tbl_anwesenheit_user
     anwesenheit_id              integer NOT NULL,
     prestudent_id               integer NOT NULL,
     status                      varchar (32),
+    statussetvon                varchar(32),
+    statussetamum               timestamp without time zone,
     insertamum                  timestamp without time zone DEFAULT now(),
-    insertvon                   varchar (32)
+    insertvon                   varchar (32),
+    updateamum                  timestamp without time zone,
+    updatevon                   varchar(32)
 );
 
 DO $$
@@ -116,6 +120,13 @@ DO $$
 BEGIN
 ALTER TABLE extension.tbl_anwesenheit_user ADD CONSTRAINT tbl_anwesenheit_user_status_fkey
     FOREIGN KEY (status) REFERENCES extension.tbl_anwesenheit_status(status_kurzbz) ON UPDATE CASCADE ON DELETE RESTRICT;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_anwesenheit_user ADD CONSTRAINT tbl_anwesenheit_user_statussetvon_fkey
+    FOREIGN KEY (statussetvon) REFERENCES public.tbl_benutzer(uid) ON UPDATE CASCADE ON DELETE RESTRICT;
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
