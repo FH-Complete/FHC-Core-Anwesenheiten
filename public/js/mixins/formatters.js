@@ -30,6 +30,13 @@ export const lektorFormatters = {
 		}
 
 		return value
+	},
+	fotoFormatter: function (cell) {
+		var value = cell.getValue();
+		if(value === undefined) return
+		const src = 'data:image/jpeg;base64,' + value
+
+		return '<img src="'+src+'" style="max-height: 64px"></img>'
 	}
 }
 

@@ -13,6 +13,7 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->pk = 'anwesenheit_user_id';
 	}
 
+
 	public function updateAnwesenheiten($changedAnwesenheiten)
 	{
 
@@ -195,6 +196,28 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = {$anwesenheit_id}";
 
 		return $this->execQuery($query);
+	}
+
+	public function getPicturesForPrestudentIds($prestudent_ids)
+	{
+
+		$query = "SELECT prestudent_id, foto 
+				FROM public.tbl_student 
+					 JOIN public.tbl_benutzer ON (uid = student_uid)
+					 JOIN tbl_person USING (person_id) WHERE prestudent_id = ";
+
+		$index = 0;
+		forEach ($prestudent_ids as $id) {
+			if($index == 0) $query .= "{$id}";
+			else $query .= " OR prestudent_id = {$id}";
+
+			$index++;
+		}
+
+		$query .= ";";
+
+		return $this->execQuery($query);
+
 	}
 
 }

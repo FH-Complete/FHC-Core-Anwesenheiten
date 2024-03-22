@@ -50,14 +50,12 @@ class Anwesenheit_model extends \DB_Model
 					 LEFT JOIN public.tbl_studentlehrverband USING(student_uid,studiensemester_kurzbz)
 					 LEFT JOIN public.tbl_studiengang ON(tbl_student.studiengang_kz=tbl_studiengang.studiengang_kz)
 			 WHERE
-			     tbl_studentlehrverband.verband != 'I' AND
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id='{$lv_id}'	AND
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz='{$sem_kurzbz}' AND ( ";
 
 		foreach ($le_ids as $index => $le_id) {
-
-			$query .= "vw_student_lehrveranstaltung.lehreinheit_id='{$le_id}'";
 			if ($index > 0) $query .= " OR ";
+			$query .= "vw_student_lehrveranstaltung.lehreinheit_id={$le_id}";
 		}
 
 		$query .= " )) students
@@ -65,6 +63,7 @@ class Anwesenheit_model extends \DB_Model
 			LEFT JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 		ORDER BY nachname";
 
+//		return $query;
 
 		return $this->execQuery($query);
 	}
@@ -76,7 +75,7 @@ class Anwesenheit_model extends \DB_Model
 				JOIN campus.vw_student_lehrveranstaltung USING (lehreinheit_id)
 				JOIN tbl_student ON (tbl_student.student_uid = campus.vw_student_lehrveranstaltung.uid)
 				JOIN tbl_prestudent USING (prestudent_id)
-			WHERE lehreinheit_id = {$le_id} AND verband != 'I';
+			WHERE lehreinheit_id = {$le_id};
 		";
 
 		return $this->execQuery($query);
@@ -143,7 +142,6 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-
 	public function getAllByStudent($student, $studiensemester)
 	{
 		$query = '
@@ -208,6 +206,24 @@ class Anwesenheit_model extends \DB_Model
 					AND status != ?';
 
 		return $this->execQuery($query, [$status, $von, $bis, $person_id, 'anwesend']);
+	}
+
+	public function getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz) {
+		$query = "SELECT DISTINCT tbl_stundenplan.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
+						tbl_stundenplan.mitarbeiter_uid, studiengang_kz, semester, verband, gruppe, gruppe_kurzbz
+		FROM lehre.tbl_lehreinheit LEFT JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
+		WHERE lehrveranstaltung_id = {$lva_id} AND studiensemester_kurzbz = '{$sem_kurzbz}' AND mitarbeiter_uid = '{$ma_uid}'";
+
+		return $this->execQuery($query);
+	}
+
+	public function getAllLehreinheitenForLva($lva_id, $sem_kurzbz) {
+		$query = "SELECT DISTINCT tbl_stundenplan.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
+						tbl_stundenplan.mitarbeiter_uid, studiengang_kz, semester, verband, gruppe, gruppe_kurzbz
+		FROM lehre.tbl_lehreinheit LEFT JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
+		WHERE lehrveranstaltung_id = {$lva_id} AND studiensemester_kurzbz = '{$sem_kurzbz}'";
+
+		return $this->execQuery($query);
 	}
 
 }

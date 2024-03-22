@@ -118,7 +118,8 @@ export default {
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
 		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=true>
+		:hideTopMenu=true
+		leftNavCssClasses="">
 	</core-navigation-cmpt>
 
 	<core-base-layout

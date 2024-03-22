@@ -17,6 +17,9 @@ class Api extends FHCAPI_Controller
 				'infoGetAktStudiensemester' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'infoGetLehreinheitAndLektorInfo' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'infoGetStudentInfo' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'infoGetLehreinheitenForLehrveranstaltungAndMaUid' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'infoGetLehreinheitenForLehrveranstaltung' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'infoGetPicturesForPrestudentIds' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 
 				'lektorStudentByLva' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorGetAllAnwesenheitenByLva' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
@@ -110,6 +113,41 @@ class Api extends FHCAPI_Controller
 		$this->terminateWithSuccess(getData($studentLvaData));
 	}
 
+	public function infoGetLehreinheitenForLehrveranstaltungAndMaUid()
+	{
+		$lva_id = $this->input->get('lva_id');
+		$ma_uid = $this->input->get('ma_uid');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+		$result = $this->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
+		if(!isSuccess($result)) $this->terminateWithError(getError($result));
+		else $this->terminateWithSuccess(getData($result));
+
+	}
+
+	public function infoGetLehreinheitenForLehrveranstaltung()
+	{
+		$lva_id = $this->input->get('lva_id');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		$result = $this->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
+		if(!isSuccess($result)) $this->terminateWithError(getError($result));
+		$this->terminateWithSuccess(getData($result));
+
+	}
+
+
+
+	public function infoGetPicturesForPrestudentIds()
+	{
+		$result = $this->getPostJSON();
+		$prestudent_ids = $result->prestudent_ids;
+
+		$result = $this->_ci->AnwesenheitUserModel->getPicturesForPrestudentIds($prestudent_ids);
+
+		if(!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess($result);
+	}
+
 	// LEKTOR API
 
 	public function lektorGetAllAnwesenheitenByLva()
@@ -119,10 +157,10 @@ class Api extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kurzbz;
 		$le_ids = $result->le_ids ;
 
-		$res = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLektor($lv_id, $le_ids, $sem_kurzbz);
+		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLektor($lv_id, $le_ids, $sem_kurzbz);
 
-		if(!hasData($res)) return null;
-		$this->terminateWithSuccess($res);
+		if(!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess($result);
 	}
 
 	public function lektorGetAllAnwesenheitenByStudentByLva()
@@ -133,7 +171,7 @@ class Api extends FHCAPI_Controller
 
 		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
-		if(!hasData($res)) return null;
+		if(!isSuccess($res)) $this->terminateWithError($res);
 		$this->terminateWithSuccess($res);
 	}
 
@@ -143,7 +181,7 @@ class Api extends FHCAPI_Controller
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
 		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten);
 
-		if(!hasData($result)) $this->terminateWithError("Error updating Anwesenheiten");
+		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess(getData($result));
 	}
 

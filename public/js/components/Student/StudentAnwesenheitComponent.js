@@ -3,7 +3,7 @@ import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters} from "../../mixins/formatters";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
-import {StudiensemesterDropdown} from './Studiensemester.js';
+import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
 
 export default {
 	name: 'StudentAnwesenheitComponent',
@@ -36,6 +36,7 @@ export default {
 	},
 	methods: {
 		ssChangedHandler: function(studiensemester) {
+			console.log('ssChangedHandler')
 			this.studiensemester = studiensemester
 			Vue.$fhcapi.Student.getAll(this.studiensemester).then(response => {
 				// TODO(johann): rework status check once fhcapi plugin is installed
@@ -47,7 +48,8 @@ export default {
 		},
 	},
 	mounted() {
-
+		console.log('entryParams', this._.root.appContext.config.globalProperties.$entryParams)
+		this.studiensemester = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
 	},
 	template: `
 

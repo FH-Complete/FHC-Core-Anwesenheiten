@@ -40,13 +40,16 @@ export default {
 						})
 					}
 				},
+				rowHeight: 88, // foto max-height + 2x padding
 				index: 'prestudent_id',
 				layout: 'fitColumns',
 				placeholder: "Keine Daten verfügbar",
 				columns: [
+					{title: 'Foto', field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: false, minWidth: 100, maxWidth: 100, tooltip: false},
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
 					{title: 'Nachname', field: 'nachname', headerFilter: true, widthGrow: 1, minWidth: 150},
+					{title: 'Gruppe', field: 'gruppe', headerFilter: true, widthGrow: 1, minWidth: 150},
 					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, minWidth: 150},
 					{title: 'Summe', field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, minWidth: 150},
 				]
@@ -65,14 +68,11 @@ export default {
 				}
 			}],
 			boundRegenerateQR: null,
-			// TODO: get these via get parameter into properties
-			ma_uid: 'horauer', //'ma0144',
-			sem_kurzbz: 'WS2023',
-			lv_id: '38733',
-			// le_id: '140394',
-			// le_ids: ['140394'], // TODO: maybe as computed?
-			le_id: '138879',
-			le_ids: ['138879'], // TODO: maybe as computed?
+			boundProgressCounter: null,
+			ma_uid: null,
+			sem_kurzbz: null,
+			lv_id: null,
+			le_ids: [],
 			filterTitle: "",
 			beginn: null,
 			ende: null,
@@ -85,6 +85,10 @@ export default {
 			url: null,
 			code: null,
 			timerID: null,
+			progressTimerID: null,
+			setupPromise: null,
+			regenerateProgress: 0,
+			progressTimerCalc: 0,
 			internalPermissions: JSON.parse(this.permissions)
 		}
 	},
@@ -123,7 +127,7 @@ export default {
 			this.code = data.code
 			this.anwesenheit_id = data.anwesenheit_id
 			this.$refs.modalContainerQR.show()
-			this.startRegenerateQR()
+			if(this.internalPermissions.useRegenerateQR) this.startRegenerateQR()
 		},
 		getNewQRCode () {
 			// js months 0-11, php months 1-12
@@ -145,24 +149,42 @@ export default {
 		},
 		regenerateQR() {
 
+			console.log('regenerateQR')
+			console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+
 			Vue.$fhcapi.Anwesenheit.regenerateQR(this.anwesenheit_id).then(res => {
 				const oldCode = this.code
 				this.qr = res.data.data.svg
 				this.url = res.data.data.url
 				this.code = res.data.data.code
+				console.log('regenerateQR set new QR')
+				console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+
+				//TODO: can wait here
 
 				Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, oldCode)
 			})
 
 		},
-		startRegenerateQR() {
-			this.timerID = setInterval(this.boundRegenerateQR, 30000) // 30s
+		progressCounter() {
+			if(this.regenerateProgress >= this.progressTimerCalc) this.regenerateProgress = 0
+			this.regenerateProgress++
 
+			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+		},
+		startRegenerateQR() {
+			//TODO: interval has certain overhead and is never 100% in sync with actual timer currently
+			this.timerID = setInterval(this.boundRegenerateQR, this.internalPermissions.regenerateQRTimer)
+			this.progressTimerID = setInterval(this.boundProgressCounter, this.progressTimerInterval) // track time passed for regenerate
 		},
 		stopRegenerateQR() {
 			const oldCode = this.code
 			clearInterval(this.timerID)
 			this.timerID = null
+
+			clearInterval(this.progressTimerID)
+			this.progressTimerID = null
+
 			this.qr = null
 			this.url = null
 			this.code = null
@@ -192,6 +214,8 @@ export default {
 
 					})
 
+					// TODO (johann): since we deleted datum and only have von
+					//  & bis setting those variables dates correctly is integral for stundenplan lookup
 					this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
 					this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
 				}
@@ -240,7 +264,7 @@ export default {
 						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle QR Code.")
 					}
 
-					this.stopRegenerateQR()
+					if(this.internalPermissions.useRegenerateQR) this.stopRegenerateQR()
 				}
 			)
 		},
@@ -268,17 +292,21 @@ export default {
 				this.$fhcAlert.alertError(error.response.data.errors[0].message)
 			})
 		},
-		setupData(data, returnData = false){
+		async setupData(data, returnData = false){
+			// TODO: remove date string logic from this method
+
 
 			this.studentsData = new Map()
 			this.namesAndID = []
 			data.forEach(entry => {
 
-
 				if(!this.studentsData.has(entry.prestudent_id)) {
 					this.studentsData.set(entry.prestudent_id, [])
 					if(entry.status && entry.datum) this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
-					this.namesAndID.push({prestudent_id: entry.prestudent_id, vorname: entry.vorname, nachname: entry.nachname, sum: entry.sum})
+					this.namesAndID.push({
+						prestudent_id: entry.prestudent_id, vorname: entry.vorname, nachname: entry.nachname, sum: entry.sum,
+						semester: entry.semester, verband: entry.verband, gruppe: entry.gruppe
+					})
 				} else {
 					this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
 				}
@@ -296,13 +324,18 @@ export default {
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
 				this.tableStudentData.push({prestudent_id: student.prestudent_id,
+					foto: '',
 					vorname: student.vorname,
 					nachname: student.nachname,
+					gruppe: student.semester + student.verband + student.gruppe,
 					status: status ?? '-',
 					sum: student.sum});
 			})
 
+			console.log('names and id', this.namesAndID)
+
 			if(returnData) {
+				await this.fetchStudentPictures()
 				return this.tableStudentData
 			} else {
 				// this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
@@ -325,15 +358,50 @@ export default {
 
 			return true;
 		},
+		async fetchStudentPictures () {
+			const prom = new Promise((resolve, reject) => {
+				const ids = this.namesAndID.map(el => el.prestudent_id)
+				console.log('mapped ids', ids)
 
+				Vue.$fhcapi.Info.getPicturesForPrestudentIds(ids).then(
+					(res) => {
+						console.log('getPicturesForPrestudentIds RES', res)
+						console.log('this.tableStudentData', this.tableStudentData)
+						this.tableStudentData.forEach(data => {
+							data.foto = res.data.data.retval.find(entry => entry.prestudent_id === data.prestudent_id).foto
+						})
+
+						resolve()
+					}
+				)
+			})
+
+			return prom
+		}
 	},
 	created(){
+		this.lv_id = this._.root.appContext.config.globalProperties.$entryParams.lv_id
+		this.sem_kurzbz = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+		this.ma_uid = this.internalPermissions.authID
+
+
 		const selectedDateFormatted = formatDateToDbString(this.selectedDate)
 		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
 		found.title = selectedDateFormatted
 	},
 	mounted() {
+		this.le_ids = this._.root.appContext.config.globalProperties.$entryParams.le_ids
+
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
+		this.boundProgressCounter = this.progressCounter.bind(this)
+
+		// ceiling to check for inside progress calc
+		this.progressTimerCalc = this.internalPermissions.regenerateQRTimer / 10
+		// which is called in an interval
+		this.progressTimerInterval = 10
+		console.log('regenerateQRTimer: ' + this.internalPermissions.regenerateQRTimer)
+		console.log('progressTimerCalc: ' + this.progressTimerCalc)
+		console.log('progressTimerInterval: ' + this.progressTimerInterval)
 
 		// see if test is still running
 		this.getExistingQRCode()
@@ -341,6 +409,8 @@ export default {
 		// fetch LE data
 		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate))
 			.then(res => this.setupLehreinheitAndLektorData(res));
+
+
 
 	},
 	updated(){
@@ -366,7 +436,9 @@ export default {
 	template:`
 		<core-navigation-cmpt 
 			v-bind:add-side-menu-entries="appSideMenuEntries"
-			v-bind:add-header-menu-entries="headerMenuEntries">	
+			v-bind:add-header-menu-entries="headerMenuEntries"
+			:hideTopMenu="true"
+			leftNavCssClasses="">	
 		</core-navigation-cmpt>
 					
 		<core-base-layout
@@ -409,6 +481,14 @@ export default {
 					<template v-slot:default>
 						<h1 class="text-center">Code: {{code}}</h1>
 						<div v-html="qr" class="text-center"></div>
+						<div class="row" style="width: 80%; margin-left: 10%;">
+							
+								<progress 
+									v-if="internalPermissions && internalPermissions.useRegenerateQR"
+									:max="progressTimerCalc"
+									:value="regenerateProgress">
+								</progress>
+						</div>
 					</template>
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">Anwesenheitskontrolle beenden</button>

@@ -4,7 +4,7 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 //require_once('../../../config/extensions/FHC-Core-Anwesenheiten/qrsettings.php');
 //require_once('application/config/extensions/FHC-Core-Anwesenheiten/qrsettings.php');
 
-class Lektor extends Auth_Controller
+class Anw extends Auth_Controller
 {
 	private $_ci;
 	private $_uid;
@@ -15,9 +15,12 @@ class Lektor extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
+				'index' => array('admin:rw', 'extension/anwesenheit_student:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
+
+		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
+		require($qrsetting_filename);
 
 		$this->_ci =& get_instance();
 
@@ -27,7 +30,7 @@ class Lektor extends Auth_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('AuthLib');
 
-//		$this->load->config('qrsettings');
+//		$this->load->config('qrsettings.php');
 
 		$this->loadPhrases(
 			array(
@@ -51,10 +54,10 @@ class Lektor extends Auth_Controller
 	{
 		$viewData = array(
 			'permissions' => [
-				'admin/rw' => $this->permissionlib->isBerechtigt('admin'),
-				'extension/anwesenheit_assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
-				'extension/anwesenheit_lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
-				'extension/anwesenheit_student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
+				'admin' => $this->permissionlib->isBerechtigt('admin'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
+				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
+				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
 				'regenerateQRTimer' => REGENERATE_QR_TIMER,
 				'useRegenerateQR' => USE_REGENERATE_QR

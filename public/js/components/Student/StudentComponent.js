@@ -32,17 +32,23 @@ export default {
 			return this._.root.data.isMobile ? "" : "navbar navbar-left-side"
 		}
 	},
-	mounted() {
-		console.log(this._.root.data.isMobile)
+	beforeCreate() {
+		console.log('beforeCreate')
+	},
+	created() {
+		console.log('created')
 
-		// console.log(this.root.data.isMobile)
+	},
+	mounted() {
+		console.log('mounted')
+		console.log(this._.root.data.isMobile)
 	},
 	template: `
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
 		v-bind:add-header-menu-entries="headerMenuEntries"
 		:hideTopMenu=true
-		>
+		leftNavCssClasses="">
 	</core-navigation-cmpt>
 
 

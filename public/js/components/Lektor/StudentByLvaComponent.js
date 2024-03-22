@@ -98,7 +98,7 @@ export default {
 		},
 		anwCalc(values, data, calcParams){
 			// TODO: might not exist in time when network is slow
-			return this.sum + ' %'
+			return (this.sum ? this.sum : '-') + ' %'
 		},
 		async deleteAnwesenheit(cell) {
 			if (await this.$fhcAlert.confirmDelete() === false)
@@ -290,7 +290,7 @@ export default {
 	mounted() {
 		Vue.$fhcapi.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then((res) => {
 			console.log('getStudentInfo', res);
-			if(res.status !== 200 || !res.data.data) return
+			if (res.status !== 200 || !res.data.data) return
 
 			this.vorname = res.data.data[0].vorname
 			this.nachname = res.data.data[0].nachname
@@ -300,7 +300,8 @@ export default {
 			this.sum = res.data.data[0].sum
 			this.foto = res.data.data[0].foto
 
-			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester + this.verband + this.gruppe
+			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
+				+ this.verband + this.gruppe + ' Summe: ' + (this.sum ? this.sum : '-') + ' %'
 		})
 
 		// Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
@@ -330,13 +331,16 @@ export default {
 		<core-navigation-cmpt 
 			v-bind:add-side-menu-entries="appSideMenuEntries"
 			v-bind:add-header-menu-entries="headerMenuEntries"
-			:hideTopMenu=true>	
+			:hideTopMenu=true
+			leftNavCssClasses="">	
 		</core-navigation-cmpt>
 
 		<core-base-layout
-			:title="filterTitle">
+			:title="filterTitle"
+			:main-cols=[10]
+			:aside-cols=[2]
+			>
 			<template #main>
-
 				<core-filter-cmpt
 					title=""
 					ref="anwesenheitenByStudentByLvaTable"
@@ -356,11 +360,14 @@ export default {
 						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
 							Abwesend
 						</button>
-
-						
 					</template>
 				</core-filter-cmpt>
 					
+			</template>
+			<template #aside>
+				
+				<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" />
+				
 			</template>
 		</core-base-layout>
 	</div>`
