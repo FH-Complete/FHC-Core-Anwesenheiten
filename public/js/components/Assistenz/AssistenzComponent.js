@@ -49,11 +49,13 @@ export default {
 		updateEntschuldigung: function(cell, status)
 		{
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			Vue.$fhcapi.Assistenz.updateEntschuldigung(entschuldigung_id, status).then(response => {
-				console.log('updateEntschuldigung', response)
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/assistenzUpdateEntschuldigung',
+				{entschuldigung_id, status}
+			).then(res => {
+				console.log('updateEntschuldigung', res)
 
-				// TODO(johann): check status/error and/or refactor for fhcapi plugin
-				if (response.status === 200)
+				if (res.meta.status === "success")
 				{
 					cell.getRow().update({'akzeptiert': status});
 					//  TODO(johann): differentiate between accept and deny!

@@ -56,7 +56,7 @@ export default {
 				<div class="col-6">
 					<LehreinheitenDropdown 
 						id="lehreinheit"
-						:options="$entryParams.available_le_ids">
+						:options="$entryParams.available_le_info">
 					</LehreinheitenDropdown>
 <!--					<p v-for="le_id in $entryParams.le_ids" >{{le_id}}</p>-->
 				</div>

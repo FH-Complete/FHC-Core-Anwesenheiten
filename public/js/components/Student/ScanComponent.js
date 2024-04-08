@@ -33,18 +33,21 @@ export default {
 		},
 		processAnwesenheit() {
 
-			Vue.$fhcapi.Anwesenheit.checkInAnwesenheit({zugangscode: this.internalZugangscode}).then(
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentCheckInAnwesenheit',
+				{zugangscode: this.internalZugangscode}
+			).then(
 				res => {
 					console.log('checkInAnwesenheit', res)
-					if(res.status === 200 && !res.data.error && res.data.data) {
+					if(res.meta.status === "success" && res.data) {
 
 						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
 
-						this.entry = JSON.parse(res.data.data.anwesenheitEntry)
+						this.entry = JSON.parse(res.data.anwesenheitEntry)
 						this.entry.von = new Date(this.entry.von)
 						this.entry.bis = new Date(this.entry.bis)
 
-						this.viewData = JSON.parse(res.data.data.viewData).retval[0]
+						this.viewData = JSON.parse(res.data.viewData).retval[0]
 
 						this.zugangscodeProcessed = true
 					} else {
@@ -63,12 +66,6 @@ export default {
 			this.codeButtonDisabled = !(this.internalZugangscode && this.internalZugangscode.length === this.codeMaxlength)
 
 			console.log('checkValue', this.codeButtonDisabled)
-			// const inputVal = event.target.value
-			// if(inputVal.length === this.codeMaxlength) {
-			// 	this.internalZugangscode = inputVal
-				// this.processAnwesenheit()
-			// }
-
 		}
 	},
 	mounted() {

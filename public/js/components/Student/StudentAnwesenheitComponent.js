@@ -38,11 +38,18 @@ export default {
 		ssChangedHandler: function(studiensemester) {
 			console.log('ssChangedHandler')
 			this.studiensemester = studiensemester
-			Vue.$fhcapi.Student.getAll(this.studiensemester).then(response => {
-				// TODO(johann): rework status check once fhcapi plugin is installed
-				console.log('Student.getAll(this.studiensemester)', response)
 
-				this.$refs.uebersichtTable.tabulator.setData(response.data.data.retval);
+			this.$fhcApi.get(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',
+				{studiensemester: this.studiensemester}
+			).then(res => {
+				console.log('Student.getAll(this.studiensemester)', res)
+				if(res.meta.status !== "success") {
+					this.$fhcAlert.alertError("Fehler beim Laden der Anwesenheitsdaten.")
+				} else {
+					this.$refs.uebersichtTable.tabulator.setData(res.data.retval);
+				}
+
 
 			});
 		},

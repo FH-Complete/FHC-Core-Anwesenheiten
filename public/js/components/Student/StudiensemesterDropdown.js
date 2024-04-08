@@ -18,29 +18,17 @@ export const StudiensemesterDropdown = {
 	},
 	methods: {
 		loadDropdown() {
-			//TODO (david) bessere lösung finden
-			Vue.$fhcapi.Info.getStudiensemester().then(response => {
-				console.log('getStudiensemester', response)
+			this.$fhcApi.get('extensions/FHC-Core-Anwesenheiten/Api/infoGetStudiensemester').then(res => {
+				console.log('getStudiensemester', res)
 
-				// TODO(johann): rework status check once fhcapi plugin is installed
-
-				this.options = response.data.data ?? [];
+				if(res.meta.status !== "success") return
+				this.options = res.data ?? [];
 
 				// TODO: if using this component inside setup globalProp is not set
 				this.selectedOption = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
 				this.$emit("ssChanged", this.selectedOption);
 
 				// no need to fetch current semester when it has to be set in global Props
-
-				// if (this.options.length > 0) {
-				// 	Vue.$fhcapi.Info.getAktStudiensemester().then(response => {
-				//
-				// 		// TODO(johann): rework status check once fhcapi plugin is installed
-				// 		console.log('getAktStudiensemester', response)
-				// 		this.selectedOption = response.data.data[0].studiensemester_kurzbz;
-				// 		this.$emit("ssChanged", this.selectedOption);
-				// 	})
-				// }
 			});
 		},
 		ssChanged(e) {

@@ -45,6 +45,7 @@ export default {
 				layout: 'fitColumns',
 				placeholder: "Keine Daten verfügbar",
 				columns: [
+					// TODO: debug foto column selection/visibility logic
 					{title: 'Foto', field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: false, minWidth: 100, maxWidth: 100, tooltip: false},
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
@@ -73,6 +74,7 @@ export default {
 			sem_kurzbz: null,
 			lv_id: null,
 			le_ids: [],
+			fotos: [],
 			filterTitle: "",
 			beginn: null,
 			ende: null,
@@ -105,21 +107,16 @@ export default {
 		newSideMenuEntryHandler: function(payload) {
 			this.appSideMenuEntries = payload;
 		},
-		searchfunction: function(searchsettings) {
-			return Vue.$fhcapi.Search.search(searchsettings);
-		},
-		searchfunctiondummy: function(searchsettings) {
-			return Vue.$fhcapi.Search.searchdummy(searchsettings);
-		},
 		getExistingQRCode(){
-			Vue.$fhcapi.Anwesenheit.getExistingQRCode(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate)).then(
-				res => {
-					console.log('getExistingQr', res)
-					if(res.status === 200 && res.data?.data?.svg) {
-						this.showQR(res.data.data)
-					}
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
+				{le_ids: this.le_ids, ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
+			).then(res => {
+				console.log('getExistingQr', res)
+				if(res.data.svg) {
+					this.showQR(res.data)
 				}
-			)
+			})
 		},
 		showQR (data) {
 			this.qr = data.svg
@@ -133,37 +130,43 @@ export default {
 			// js months 0-11, php months 1-12
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-
-			Vue.$fhcapi.Anwesenheit.getNewQRCode(this.le_ids, this.beginn, this.ende, date).then(
-				res => {
-
-					if(res.status === 200 && res.data.data) {
-						this.$refs.modalContainerNewKontrolle.hide()
-						this.showQR(res.data.data)
-					}
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetNewQRCode',
+				{le_ids: this.le_ids, beginn: this.beginn, ende: this.ende, datum: date}
+			).then(res => {
+				if(res.data) {
+					this.$refs.modalContainerNewKontrolle.hide()
+					this.showQR(res.data)
 				}
-			).catch(err => {
+			}).catch(err => {
 				this.$fhcAlert.alertError("Fehler beim dem Versuch eine neue Anwesenheitskontrolle zu starten")
 				this.$refs.modalContainerNewKontrolle.hide()
 			})
+
 		},
 		regenerateQR() {
 
 			console.log('regenerateQR')
 			console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
-
-			Vue.$fhcapi.Anwesenheit.regenerateQR(this.anwesenheit_id).then(res => {
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorRegenerateQRCode',
+				{anwesenheit_id: this.anwesenheit_id}
+			).then(res => {
 				const oldCode = this.code
-				this.qr = res.data.data.svg
-				this.url = res.data.data.url
-				this.code = res.data.data.code
+				this.qr = res.data.svg
+				this.url = res.data.url
+				this.code = res.data.code
 				console.log('regenerateQR set new QR')
 				console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
 
 				//TODO: can wait here
 
-				Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, oldCode)
+				this.$fhcApi.post(
+					'extensions/FHC-Core-Anwesenheiten/Api/lektorDegenerateQRCode',
+					{anwesenheit_id: this.anwesenheit_id, zugangscode: oldCode}
+				)
 			})
+
 
 		},
 		progressCounter() {
@@ -190,14 +193,17 @@ export default {
 			this.code = null
 
 			// attempt to degenerate one last time to not leave any codes in db
-			Vue.$fhcapi.Anwesenheit.degenerateQR(this.anwesenheit_id, oldCode)
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorDegenerateQRCode',
+				{anwesenheit_id: this.anwesenheit_id, zugangscode: oldCode}
+			)
 		},
 		setupLehreinheitAndLektorData(res) {
 			console.log('setupLehreinheitAndLektorData', res)
 			// TODO: do smth with raum or lektorinfo?
 
-			if(res.status === 200 && res.data.data) {
-				const data = res.data.data
+			if(res.meta.status === 'success' && res.data) {
+				const data = res.data
 				// find out von & bis times for lehreinheit
 				if(data[0].bezeichnung && data[0].kurzbz) this.filterTitle = data[0].bezeichnung + " (" + data[0].kurzbz + ")"
 
@@ -249,16 +255,21 @@ export default {
 
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
-			Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
+				{lv_id: this.lv_id, le_ids: this.le_ids, sem_kurzbz: this.sem_kurzbz}
+			).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
-				if(res.data.meta.status !== "success") return
-				this.setupData(res.data.data.retval)
+				if(res.meta.status !== "success") return
+				this.setupData(res.data.retval)
 			})
 
-			Vue.$fhcapi.Anwesenheit.deleteQRCode(this.le_ids, this.anwesenheit_id).then(
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteQRCode',
+				{le_ids: this.le_ids, anwesenheit_id: this.anwesenheit_id}
+			).then(
 				res => {
-
-					if(res && res.status === 200 && res.data.data) {
+					if(res.meta.status === "success" && res.data) {
 						this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich terminiert.")
 					} else {
 						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle QR Code.")
@@ -274,23 +285,28 @@ export default {
 
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			Vue.$fhcapi.Anwesenheit.deleteAnwesenheitskontrolle(this.le_ids, date).then(res => {
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteAnwesenheitskontrolle',
+				{le_ids: this.le_ids, date: date}
+			).then(res => {
 				console.log('deleteAnwesenheitskontrolle', res)
 
-				if(res.meta.status === "success" && res.data.data) {
+				if(res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
-					Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByLva(this.lv_id, this.le_ids, this.sem_kurzbz).then((res)=>{
+
+					this.$fhcApi.post(
+						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
+						{lv_id: this.lv_id, le_ids: this.le_ids, sem_kurzbz: this.sem_kurzbz}
+					).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
-						if(res.data.meta.status !== "success") return
-						this.setupData(res.data.data.retval)
+						if(res.meta.status !== "success") return
+						this.setupData(res.data)
 					})
-				} else if(res.meta.status === "success" && !res.data.data){
+				} else if(res.meta.status === "success" && !res.data){
 					this.$fhcAlert.alertWarning("Keine Anwesenheitskontrolle gefunden zu löschen!")
 				}
-
-			}).catch(error => {
-				this.$fhcAlert.alertError(error.response.data.errors[0].message)
 			})
+
 		},
 		async setupData(data, returnData = false){
 			// TODO: remove date string logic from this method
@@ -323,8 +339,10 @@ export default {
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
+
 				this.tableStudentData.push({prestudent_id: student.prestudent_id,
-					foto: '',
+					// TODO: test for cases where no foto was available
+					foto: returnData ? '' : this.fotos.find(entry => entry.prestudent_id === student.prestudent_id).foto,
 					vorname: student.vorname,
 					nachname: student.nachname,
 					gruppe: student.semester + student.verband + student.gruppe,
@@ -363,12 +381,16 @@ export default {
 				const ids = this.namesAndID.map(el => el.prestudent_id)
 				console.log('mapped ids', ids)
 
-				Vue.$fhcapi.Info.getPicturesForPrestudentIds(ids).then(
+				this.$fhcApi.post(
+					'extensions/FHC-Core-Anwesenheiten/Api/infoGetPicturesForPrestudentIds',
+					{prestudent_ids: ids}
+				).then(
 					(res) => {
+						this.fotos = res.data.retval
 						console.log('getPicturesForPrestudentIds RES', res)
 						console.log('this.tableStudentData', this.tableStudentData)
 						this.tableStudentData.forEach(data => {
-							data.foto = res.data.data.retval.find(entry => entry.prestudent_id === data.prestudent_id).foto
+							data.foto = res.data.retval.find(entry => entry.prestudent_id === data.prestudent_id).foto
 						})
 
 						resolve()
@@ -407,10 +429,10 @@ export default {
 		this.getExistingQRCode()
 
 		// fetch LE data
-		Vue.$fhcapi.Info.getLehreinheitAndLektorInfo(this.le_ids, this.ma_uid, formatDateToDbString(this.selectedDate))
-			.then(res => this.setupLehreinheitAndLektorData(res));
-
-
+		this.$fhcApi.post(
+			'extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitAndLektorInfo',
+			{le_ids: this.le_ids, ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
+		).then(res => this.setupLehreinheitAndLektorData(res));
 
 	},
 	updated(){

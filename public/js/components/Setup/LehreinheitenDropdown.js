@@ -32,7 +32,7 @@ export const LehreinheitenDropdown = {
 			const selected = e.target.selectedOptions//.forEach(option => this.selectedOptions.push(option.value))
 
 			for (let i = 0; i < selected.length; i++) {
-				this.selectedOptions.push(selected[i].value)
+				this.selectedOptions.push(selected[i]._value.lehreinheit_id)
 			}
 
 			this._.root.appContext.config.globalProperties.$entryParams.le_ids = this.selectedOptions
@@ -42,15 +42,17 @@ export const LehreinheitenDropdown = {
 	},
 
 	template: `
-		<div>
-			<select multiple id="leSelect" v-model="$entryParams.le_ids" @change="leChanged" class="form-control">
+		<div class="mt-2">
+			<select multiple id="leSelect" v-model="$entryParams.le_info" @change="leChanged" class="form-control">
 				<label for="leSelect">Lehreinheiten</label>
 				<option v-for="option in options" :value="option" >
-					{{ option }}
+					<a v-if="option.gruppe_kurzbz"> {{option.gruppe_kurzbz}} </a>
+					<a v-if="option.lehrform_kurzbz"> {{option.lehrform_kurzbz}} <a/>
+					<a v-if="option.semester"> Semester: {{option.semester}} </a>
+					<a v-if="option.verband && option.verband !== ' '"> Verband: {{option.verband}} </a>
+					<a v-if="option.gruppe && option.gruppe !== ' '"> Gruppe: {{option.gruppe}} </a>
 				</option>
 			</select>
-			<div>
-			</div>
 		</div>
 	`
 }

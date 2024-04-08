@@ -47,12 +47,11 @@ export default {
 	methods: {
 		loadEntschuldigungen: function()
 		{
-			Vue.$fhcapi.Student.getEntschuldigungenByPerson().then(response => {
-				console.log('getEntschuldigungenByPerson', response);
-				// TODO(johann): rework status check once fhcapi plugin is installed
-
-				this.$refs.entschuldigungsTable.tabulator.setData(response.data.data.retval);
-
+			this.$fhcApi.get(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPerson',
+			).then(res => {
+				console.log('getEntschuldigungenByPerson', res);
+				this.$refs.entschuldigungsTable.tabulator.setData(res.data);
 			});
 		},
 		triggerUpload() {
@@ -74,11 +73,12 @@ export default {
 			}
 			formData.append('von', this.entschuldigung.von);
 			formData.append('bis', this.entschuldigung.bis);
-			Vue.$fhcapi.Student.addEntschuldigung(formData).then(response => {
-				console.log('addEntschuldigung', response)
-
-				// TODO(johann): rework status check once fhcapi plugin is installed
-				let rowData = response.data.data
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentAddEntschuldigung',
+				formData,{Headers: { "Content-Type": "multipart/form-data" }}
+			).then(res => {
+				console.log('addEntschuldigung', res)
+				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
 					{
 						'dms_id': rowData.dms_id,
@@ -88,7 +88,6 @@ export default {
 						'entschuldigung_id': rowData.entschuldigung_id
 					}
 					, true);
-				// this.ssChangedHandler(this.studiensemester);
 				this.$fhcAlert.alertSuccess('Entschuldigung hochgeladen');
 				this.resetFormData();
 
@@ -131,14 +130,15 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			Vue.$fhcapi.Student.deleteEntschuldigung(entschuldigung_id).then(response => {
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentDeleteEntschuldigung',
+				{entschuldigung_id}
+			).then(response => {
 				console.log('deleteEntschuldigung', response)
 
-				// TODO(johann): rework status check once fhcapi plugin is installed
-				if (response.status === 200)
+				if (response.meta.status === "success")
 				{
 					cell.getRow().delete()
-					// this.ssChangedHandler(this.studiensemester);
 					this.$fhcAlert.alertSuccess('Entschuldigung erfolgreich gelöscht');
 				}
 			});

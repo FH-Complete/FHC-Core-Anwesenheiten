@@ -90,12 +90,6 @@ export default {
 		newSideMenuEntryHandler: function(payload) {
 			this.appSideMenuEntries = payload;
 		},
-		searchfunction: function(searchsettings) {
-			return Vue.$fhcapi.Search.search(searchsettings);
-		},
-		searchfunctiondummy: function(searchsettings) {
-			return Vue.$fhcapi.Search.searchdummy(searchsettings);
-		},
 		anwCalc(values, data, calcParams){
 			// TODO: might not exist in time when network is slow
 			return (this.sum ? this.sum : '-') + ' %'
@@ -106,19 +100,24 @@ export default {
 
 			const anwesenheit_user_id = cell.getData().anwesenheit_user_id;
 
-			Vue.$fhcapi.Anwesenheit.deleteUserAnwesenheitById(anwesenheit_user_id).then(
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentDeleteUserAnwesenheitById',
+				{anwesenheit_user_id}
+			).then(
 				res => {
 					console.log('deleteUserAnwesenheitById', res)
 
-					if(res.status === 200 && res.data.data.anwesenheit_user_id) {
+					if(res.meta.status === "success" && res.data.anwesenheit_user_id) {
 						this.$fhcAlert.alertSuccess("Anwesenheiten deleted successfully.")
 						cell.getRow().delete()
-
-						Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
-							console.log('getAnwesenheitSumByLva', result)
-							if(result.status === 200 && result.data.data)
+						this.$fhcApi.post(
+							'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
+							{id: this.id, lv_id: this.lv_id, sem_kz: this.sem_kz}, null
+						).then(res => {
+							console.log('getAnwesenheitSumByLva', res)
+							if(res.meta.status === "success" && res.data)
 							{
-								this.sum = result.data.data[0].sum
+								this.sum = result.data[0].sum
 								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 							}
 						})
@@ -172,19 +171,25 @@ export default {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			Vue.$fhcapi.Anwesenheit.saveChangedAnwesenheiten(changedData).then(result => {
-				console.log('saveChangedAnwesenheiten', result)
-				if(result.status === 200) {
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorUpdateAnwesenheiten',
+				{changedAnwesenheiten: changedData}
+			).then(res => {
+				console.log('saveChangedAnwesenheiten', res)
+				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
 				} else {
 					this.$fhcAlert.alertError("Something went terribly wrong.")
 				}
 
-				Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
-					console.log('getAnwesenheitSumByLva', result)
-					if(result.status === 200 && result.data.data)
+				this.$fhcApi.post(
+					'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
+					{id: this.id, lv_id: this.lv_id, sem_kz: this.sem_kz}
+				).then(res => {
+					console.log('getAnwesenheitSumByLva', res)
+					if(res.meta.status === "success" && res.data)
 					{
-						this.sum = result.data.data[0].sum
+						this.sum = res.data[0].sum
 						this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 					}
 				})
@@ -250,11 +255,14 @@ export default {
 				if(data.status !== "entschuldigt") ids.push(data.anwesenheit_user_id)
 			})
 
-			Vue.$fhcapi.Anwesenheit.deleteUserAnwesenheitByIds(ids).then(
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/studentDeleteUserAnwesenheitByIds',
+				{ids}
+			).then(
 				res => {
 					console.log('deleteUserAnwesenheitByIds', res)
 
-					if(res.status === 200 && res.data.meta.status === "success") {
+					if(res.meta.status === "success") {
 						this.$fhcAlert.alertSuccess("Anwesenheiten deleted successfully.")
 						selectedRows.forEach(row => {
 							const rowData = row.getData()
@@ -267,11 +275,14 @@ export default {
 
 						})
 
-						Vue.$fhcapi.Student.getAnwesenheitSumByLva(this.id, this.lv_id, this.sem_kz).then(result => {
-							console.log('getAnwesenheitSumByLva', result)
-							if(result.status === 200 && result.data.data)
+						this.$fhcApi.post(
+							'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
+							{id: this.id, lv_id: this.lv_id, sem_kz: this.sem_kz}
+						).then(res => {
+							console.log('getAnwesenheitSumByLva', res)
+							if(res.meta.status === "success" && res.data)
 							{
-								this.sum = result.data.data[0].sum
+								this.sum = res.data[0].sum
 								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 							}
 						})
@@ -288,31 +299,36 @@ export default {
 
 	},
 	mounted() {
-		Vue.$fhcapi.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then((res) => {
+		this.$fhcApi.get(
+			`extensions/FHC-Core-Anwesenheiten/Api/infoGetStudentInfo?prestudent_id=${this.id}&lva_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
+			null, null
+		).then(res => {
 			console.log('getStudentInfo', res);
-			if (res.status !== 200 || !res.data.data) return
+			if (res.meta.status !== "success" || !res.data) return
 
-			this.vorname = res.data.data[0].vorname
-			this.nachname = res.data.data[0].nachname
-			this.semester = res.data.data[0].semester
-			this.verband = res.data.data[0].verband
-			this.gruppe = res.data.data[0].gruppe
-			this.sum = res.data.data[0].sum
-			this.foto = res.data.data[0].foto
+			this.vorname = res.data[0].vorname
+			this.nachname = res.data[0].nachname
+			this.semester = res.data[0].semester
+			this.verband = res.data[0].verband
+			this.gruppe = res.data[0].gruppe
+			this.sum = res.data[0].sum
+			this.foto = res.data[0].foto
 
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
 				+ this.verband + this.gruppe + ' Summe: ' + (this.sum ? this.sum : '-') + ' %'
 		})
 
-		// Vue.$fhcapi.Anwesenheit.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz)
-		// 	.then((res) => {
-		// 		console.log('getAllAnwesenheitenByStudentByLva', res)
-		// 		if(res.status !== 200 || !res.data.data) return
-		//
-		// 		this.tableData = res.data.data.retval
-		// 		this.initialTableData = [...res.data.data.retval]
-		// 		this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
-		// 	})
+		this.$fhcApi.get(
+			`extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
+			null, null
+		).then((res) => {
+			console.log('getAllAnwesenheitenByStudentByLva', res)
+			if(res.meta.status !== "success" || !res.data) return
+
+			this.tableData = res.data.retval
+			this.initialTableData = [...res.data.retval]
+			this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
+		})
 	},
 
 	updated(){
@@ -365,9 +381,7 @@ export default {
 					
 			</template>
 			<template #aside>
-				
-				<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" />
-				
+				<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" style="width: 100%;"/>
 			</template>
 		</core-base-layout>
 	</div>`

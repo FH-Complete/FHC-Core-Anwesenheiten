@@ -1,7 +1,5 @@
-import fhc_anwesenheitenapifactory from "../api/fhcapifactory.js";
 import LektorComponent from "../components/Lektor/LektorComponent.js";
-import FhcAlert from '../../../../js/plugin/FhcAlert.js';
-// import FhcApi from '../../../../js/plugin/FhcApi.js';
+import FhcApi from '../../../../js/plugin/FhcApi.js';
 import Phrasen from "../../../../js/plugin/Phrasen.js";
 import StudentByLvaComponent from "../components/Lektor/StudentByLvaComponent";
 import StudentComponent from "../components/Student/StudentComponent";
@@ -13,8 +11,6 @@ import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
-
-Vue.$fhcapi = fhc_anwesenheitenapifactory;
 
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
@@ -111,6 +107,8 @@ const anwesenheitApp = Vue.createApp({
 		this._.root.appContext.config.globalProperties.$entryParams.sem = searchParams.get('sem')
 	},
 	mounted() {
+		console.log('app mounted')
+		console.log(this)
 		const el = document.getElementById("main");
 		this._.root.appContext.config.globalProperties.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 		el.removeAttribute('permissions')
@@ -121,23 +119,43 @@ const anwesenheitApp = Vue.createApp({
 		const le_ids = []
 
 		// TODO: default select closest one from stundenplan AND SHOW THAT
+		if(this._.root.appContext.config.globalProperties.$entryParams.permissions.lektor
+			|| this._.root.appContext.config.globalProperties.$entryParams.permissions.admin) {
+			this._.root.appContext.config.globalProperties.$fhcApi.get(
+				`extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitenForLehrveranstaltungAndMaUid?lva_id=${lv_id}&ma_uid=${ma_uid}&sem_kurzbz=${sem_kurzbz}`,
+				null,null
+			).then(res => {
+				console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
-		return Vue.$fhcapi.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
-			console.log('getLehreinheitenForLehrveranstaltung Res', res)
-			res.data.data.forEach(leEntry => {
-				if(!le_ids.find(el => el === leEntry.lehreinheit_id)) le_ids.push(leEntry.lehreinheit_id)
+				// merge entries with same LE since DB query uses distinct on gruppe, verband etc and entries can be messy
+
+				const data = []
+
+				res.data.forEach(entry => {
+					const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
+					if(existing) {
+						// supplement info
+						if(!existing.gruppe_kurzbz && entry.gruppe_kurzbz) existing.gruppe_kurzbz = entry.gruppe_kurzbz
+						if(!existing.gruppe || existing.gruppe === ' ' && entry.gruppe && entry.gruppe !== ' ') existing.gruppe = entry.gruppe
+						if(!existing.verband || existing.verband === ' ' && entry.verband && entry.verband !== ' ') existing.verband = entry.verband
+					} else {
+						// enter entry
+						data.push(entry)
+					}
+				})
+
+
+				this._.root.appContext.config.globalProperties.$entryParams.le_info = data
+				this._.root.appContext.config.globalProperties.$entryParams.available_le_info = [...data]
+				data.forEach(leEntry => {
+					if(!le_ids.find(el => el === leEntry.lehreinheit_id)) le_ids.push(leEntry.lehreinheit_id)
+				})
+			}).finally(() => {
+				this._.root.appContext.config.globalProperties.$entryParams.le_ids = le_ids
+				this._.root.appContext.config.globalProperties.$entryParams.available_le_ids = [...le_ids]
+				console.log('le_ids', this._.root.appContext.config.globalProperties.$entryParams.le_ids)
 			})
-
-		}).catch(e => {
-			// this.$fhcAlert.alertError("Keine Lehreinheiten Für LVA " +this.lv_id + ' in ' + this.sem_kurzbz + ' für ' + this.ma_uid + ' gefunden.')
-			console.log('getLehreinheitenForLehrveranstaltung Error',e)
-		}).finally(() => {
-
-			this._.root.appContext.config.globalProperties.$entryParams.le_ids = le_ids
-			this._.root.appContext.config.globalProperties.$entryParams.available_le_ids = [...le_ids]
-			console.log('le_ids', this._.root.appContext.config.globalProperties.$entryParams.le_ids)
-		})
-
+		}
 
 	},
 	updated(){
@@ -146,7 +164,7 @@ const anwesenheitApp = Vue.createApp({
 });
 anwesenheitApp
 	.use(router)
-	.use(FhcAlert)
+	.use(FhcApi)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
 	.mount("#main");

@@ -32,12 +32,12 @@ export default {
 	mounted() {
 		// TODO: differentiate by permission what to show
 
-		Vue.$fhcapi.Student.getAll(this.sem_kurzbz).then(res => {
+		this.$fhcApi.get('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll', {studiensemester: this.sem_kurzbz}).then(res => {
 			console.log(res)
 
-			if(!res.data.data) return
+			if(!res.data) return
 
-			const anw = res.data.data.retval
+			const anw = res.data
 			const anwesendData= [0]
 			const abwesendData= [0]
 			const entschuldigtData= [0]
