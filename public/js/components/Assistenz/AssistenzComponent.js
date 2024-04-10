@@ -97,7 +97,7 @@ export default {
 
 			return download;
 		},
-		filtern: function() //TODO filter anpassen
+		filtern: function()
 		{
 			if (this.zeitraum.von === null || this.zeitraum.bis === null)
 				return true;

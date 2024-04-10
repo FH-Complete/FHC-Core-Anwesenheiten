@@ -160,7 +160,10 @@ class Api extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLektor($lv_id, $le_ids, $sem_kurzbz);
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
-		$this->terminateWithSuccess($result);
+
+		$studiensemester = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
+
+		$this->terminateWithSuccess(array($result, $studiensemester));
 	}
 
 	public function lektorGetAllAnwesenheitenByStudentByLva()

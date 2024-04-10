@@ -121,40 +121,50 @@ const anwesenheitApp = Vue.createApp({
 		// TODO: default select closest one from stundenplan AND SHOW THAT
 		if(this._.root.appContext.config.globalProperties.$entryParams.permissions.lektor
 			|| this._.root.appContext.config.globalProperties.$entryParams.permissions.admin) {
-			this._.root.appContext.config.globalProperties.$fhcApi.get(
-				`extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitenForLehrveranstaltungAndMaUid?lva_id=${lv_id}&ma_uid=${ma_uid}&sem_kurzbz=${sem_kurzbz}`,
-				null,null
-			).then(res => {
-				console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
-				// merge entries with same LE since DB query uses distinct on gruppe, verband etc and entries can be messy
+			console.log('fetching le ids')
+			this._.root.appContext.config.globalProperties.$entryParams.lePromise = new Promise(resolve => {
 
-				const data = []
+				this._.root.appContext.config.globalProperties.$fhcApi.get(
+					`extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitenForLehrveranstaltungAndMaUid?lva_id=${lv_id}&ma_uid=${ma_uid}&sem_kurzbz=${sem_kurzbz}`,
+					null,null
+				).then(res => {
+					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
-				res.data.forEach(entry => {
-					const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
-					if(existing) {
-						// supplement info
-						if(!existing.gruppe_kurzbz && entry.gruppe_kurzbz) existing.gruppe_kurzbz = entry.gruppe_kurzbz
-						if(!existing.gruppe || existing.gruppe === ' ' && entry.gruppe && entry.gruppe !== ' ') existing.gruppe = entry.gruppe
-						if(!existing.verband || existing.verband === ' ' && entry.verband && entry.verband !== ' ') existing.verband = entry.verband
-					} else {
-						// enter entry
-						data.push(entry)
-					}
+					// merge entries with same LE since DB query uses distinct on gruppe, verband etc and entries can be messy
+
+					const data = []
+
+					res.data?.forEach(entry => {
+						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
+						if(existing) {
+							// supplement info
+							if(!existing.gruppe_kurzbz && entry.gruppe_kurzbz) existing.gruppe_kurzbz = entry.gruppe_kurzbz
+							if(!existing.gruppe || existing.gruppe === ' ' && entry.gruppe && entry.gruppe !== ' ') existing.gruppe = entry.gruppe
+							if(!existing.verband || existing.verband === ' ' && entry.verband && entry.verband !== ' ') existing.verband = entry.verband
+						} else {
+							// enter entry
+							data.push(entry)
+						}
+					})
+
+
+					this._.root.appContext.config.globalProperties.$entryParams.le_info = data
+					this._.root.appContext.config.globalProperties.$entryParams.available_le_info = [...data]
+					data.forEach(leEntry => {
+						if(!le_ids.find(el => el === leEntry.lehreinheit_id)) le_ids.push(leEntry.lehreinheit_id)
+					})
+				}).finally(() => {
+					this._.root.appContext.config.globalProperties.$entryParams.le_ids = le_ids
+					this._.root.appContext.config.globalProperties.$entryParams.available_le_ids = [...le_ids]
+					console.log('le_ids', this._.root.appContext.config.globalProperties.$entryParams.le_ids)
+
+					resolve()
 				})
 
-
-				this._.root.appContext.config.globalProperties.$entryParams.le_info = data
-				this._.root.appContext.config.globalProperties.$entryParams.available_le_info = [...data]
-				data.forEach(leEntry => {
-					if(!le_ids.find(el => el === leEntry.lehreinheit_id)) le_ids.push(leEntry.lehreinheit_id)
-				})
-			}).finally(() => {
-				this._.root.appContext.config.globalProperties.$entryParams.le_ids = le_ids
-				this._.root.appContext.config.globalProperties.$entryParams.available_le_ids = [...le_ids]
-				console.log('le_ids', this._.root.appContext.config.globalProperties.$entryParams.le_ids)
 			})
+
+
 		}
 
 	},
@@ -178,7 +188,9 @@ router.beforeEach((to, from) => {
 	console.log('routerbeforeEach entryParams check', eP)
 
 	// if we dont have necessary data get input from setup component
-	if(!eP.lv_id ||!eP.stg_kz || !eP.sem || !eP.sem_kurzbz || eP.le_ids?.length < 1) {
+	if(!eP.lv_id ||!eP.stg_kz || !eP.sem || !eP.sem_kurzbz ||
+		// lektor tries to get list for LVA he is not assigned to
+		(eP.permissions.lektor && eP.le_ids?.length < 1)) {
 		return {name: 'Setup'}
 	} else { // route normally
 		return true

@@ -27,7 +27,7 @@ export default {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva`,
 				ajaxResponse: (url, params, response) => {
 					console.log('getAllAnwesenheitenByLva', response)
-					return this.setupData(response.data.retval, true)
+					return this.setupData(response.data, true)
 				},
 				ajaxConfig: "POST",
 				ajaxContentType:{
@@ -95,12 +95,6 @@ export default {
 		}
 	},
 	props: {
-		students: [],
-		dates: [],
-		parameters: [],
-		// ma_uid: null,
-		// sem_kurzbz: null,
-		// lv_id: null,
 		permissions: null
 	},
 	methods: {
@@ -261,7 +255,7 @@ export default {
 			).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
 				if(res.meta.status !== "success") return
-				this.setupData(res.data.retval)
+				this.setupData(res.data)
 			})
 
 			this.$fhcApi.post(
@@ -308,9 +302,34 @@ export default {
 			})
 
 		},
-		async setupData(data, returnData = false){
+		formatZusatz(entry, stsem) {
+			let zusatz = ''
+			const stsemdatumvon = new Date(stsem.von)
+			const stsemdatumbis = new Date(stsem.bis)
+			// if(entry.studienstatus === 'Abbrecher '||entry.studienstatus === 'Unterbrecher') {
+			// 	// this should never come up anyways?
+			// }
+
+			if(entry.studienstatus === 'Incoming') zusatz = ' (i)'
+			if(entry.bisio_id && entry.studienstatus !== 'Incoming'
+				&& entry.bis > stsemdatumvon && von < stsemdatumbis && ((bis.getTime()-von.getTime())/1000*3600*24) >= 30) {
+				zusatz = ' (o) (ab ' + entry.von + ')'
+			}
+
+			if(entry.lkt_ueberschreibbar === false) zusatz = ' ('+entry.anmerkung+')'
+			if(entry.mitarbeiter_uid !== null) zusatz = ' (ma)'
+			if(entry.stg_kz_student === '9005') { // TODO: remove hardcoded value
+				zusatz = ' (a.o.)'
+			}
+			if(entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) zusatz = ' (d.d.)'
+
+			return zusatz
+		},
+		async setupData(dataParam, returnData = false){
 			// TODO: remove date string logic from this method
 
+			const data = dataParam[0].retval
+			const stsem = dataParam[1].retval[0]
 
 			this.studentsData = new Map()
 			this.namesAndID = []
@@ -321,7 +340,8 @@ export default {
 					if(entry.status && entry.datum) this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
 					this.namesAndID.push({
 						prestudent_id: entry.prestudent_id, vorname: entry.vorname, nachname: entry.nachname, sum: entry.sum,
-						semester: entry.semester, verband: entry.verband, gruppe: entry.gruppe
+						semester: entry.semester, verband: entry.verband, gruppe: entry.gruppe,
+						zusatz: this.formatZusatz(entry, stsem)
 					})
 				} else {
 					this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
@@ -339,12 +359,12 @@ export default {
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
-
+				const nachname = student.nachname + student.zusatz
 				this.tableStudentData.push({prestudent_id: student.prestudent_id,
 					// TODO: test for cases where no foto was available
 					foto: returnData ? '' : this.fotos.find(entry => entry.prestudent_id === student.prestudent_id).foto,
 					vorname: student.vorname,
-					nachname: student.nachname,
+					nachname: nachname,
 					gruppe: student.semester + student.verband + student.gruppe,
 					status: status ?? '-',
 					sum: student.sum});

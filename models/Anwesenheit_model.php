@@ -35,12 +35,17 @@ class Anwesenheit_model extends \DB_Model
 			students.* FROM
 		
 			(SELECT
-				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, studiensemester_kurzbz,
+				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
 			   (SELECT status_kurzbz FROM public.tbl_prestudentstatus
 				WHERE prestudent_id=tbl_student.prestudent_id
-				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus
+				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
+			     tbl_bisio.bisio_id, tbl_bisio.von, tbl_bisio.bis, tbl_student.studiengang_kz AS stg_kz_student,
+			   tbl_note.lkt_ueberschreibbar, tbl_note.anmerkung, tbl_mitarbeiter.mitarbeiter_uid, tbl_person.matr_nr, tbl_person.geschlecht, tbl_studiengang.kurzbzlang,
+			   tbl_mobilitaet.mobilitaetstyp_kurzbz, tbl_zeugnisnote.note,
+			   (CASE WHEN bis.tbl_mobilitaet.studiensemester_kurzbz = vw_student_lehrveranstaltung.studiensemester_kurzbz THEN 1 ELSE 0 END) as doubledegree
+			
 			 FROM
 				 campus.vw_student_lehrveranstaltung
 					 JOIN public.tbl_benutzer USING(uid)
@@ -48,7 +53,13 @@ class Anwesenheit_model extends \DB_Model
 					 LEFT JOIN public.tbl_student ON(uid=student_uid)
 					 LEFT JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
 					 LEFT JOIN public.tbl_studentlehrverband USING(student_uid,studiensemester_kurzbz)
-					 LEFT JOIN public.tbl_studiengang ON(tbl_student.studiengang_kz=tbl_studiengang.studiengang_kz)
+				     LEFT JOIN lehre.tbl_zeugnisnote on(vw_student_lehrveranstaltung.lehrveranstaltung_id=tbl_zeugnisnote.lehrveranstaltung_id
+						AND tbl_zeugnisnote.student_uid=tbl_student.student_uid
+						AND tbl_zeugnisnote.studiensemester_kurzbz=tbl_studentlehrverband.studiensemester_kurzbz)
+					LEFT JOIN lehre.tbl_note USING (note)
+					LEFT JOIN bis.tbl_bisio ON(uid=tbl_bisio.student_uid)
+					LEFT JOIN public.tbl_studiengang ON(tbl_student.studiengang_kz=tbl_studiengang.studiengang_kz)
+			 		LEFT JOIN bis.tbl_mobilitaet USING(prestudent_id)
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id='{$lv_id}'	AND
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz='{$sem_kurzbz}' AND ( ";
