@@ -54,11 +54,8 @@ export default {
 				<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler" id="studiensemester"></StudiensemesterDropdown></div>
 			</div>
 				<div class="col-6">
-					<LehreinheitenDropdown 
-						id="lehreinheit"
-						:options="$entryParams.available_le_info">
+					<LehreinheitenDropdown id="lehreinheit">
 					</LehreinheitenDropdown>
-<!--					<p v-for="le_id in $entryParams.le_ids" >{{le_id}}</p>-->
 				</div>
 <!--				TODO: lva select(lektor fallback), studiengang select (assistenz)-->
 				<div class="col-2">

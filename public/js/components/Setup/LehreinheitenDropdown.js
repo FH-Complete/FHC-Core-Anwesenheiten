@@ -5,7 +5,6 @@ export const LehreinheitenDropdown = {
 	],
 	data () {
 		return {
-			selectedOptions: [...this.options],
 			errors: null,
 		};
 	},
@@ -13,7 +12,7 @@ export const LehreinheitenDropdown = {
 		this.loadDropdown();
 	},
 	props: {
-		options: []
+
 	},
 	methods: {
 		loadDropdown() {
@@ -28,29 +27,18 @@ export const LehreinheitenDropdown = {
 		},
 		leChanged(e) {
 			console.log('leChanged', e)
-			this.selectedOptions = []
-			const selected = e.target.selectedOptions//.forEach(option => this.selectedOptions.push(option.value))
-
-			for (let i = 0; i < selected.length; i++) {
-				this.selectedOptions.push(selected[i]._value.lehreinheit_id)
-			}
-
-			this._.root.appContext.config.globalProperties.$entryParams.le_ids = this.selectedOptions
-
+			const selected = e.target.selectedOptions
+			this._.root.appContext.config.globalProperties.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
 			console.log(this._.root.appContext.config.globalProperties.$entryParams)
 		}
 	},
 
 	template: `
 		<div class="mt-2">
-			<select multiple id="leSelect" v-model="$entryParams.le_info" @change="leChanged" class="form-control">
+			<select id="leSelect" v-model="$entryParams.selected_le_info" @change="leChanged" class="form-control">
 				<label for="leSelect">Lehreinheiten</label>
-				<option v-for="option in options" :value="option" >
-					<a v-if="option.gruppe_kurzbz"> {{option.gruppe_kurzbz}} </a>
-					<a v-if="option.lehrform_kurzbz"> {{option.lehrform_kurzbz}} <a/>
-					<a v-if="option.semester"> Semester: {{option.semester}} </a>
-					<a v-if="option.verband && option.verband !== ' '"> Verband: {{option.verband}} </a>
-					<a v-if="option.gruppe && option.gruppe !== ' '"> Gruppe: {{option.gruppe}} </a>
+				<option v-for="option in $entryParams.available_le_info" :value="option" >
+					<a> {{option.infoString}} </a>
 				</option>
 			</select>
 		</div>

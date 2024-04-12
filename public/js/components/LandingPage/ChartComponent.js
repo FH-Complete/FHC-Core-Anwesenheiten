@@ -29,7 +29,7 @@ export default {
 			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
 				{
 					lv_id: this._.root.appContext.config.globalProperties.$entryParams.lv_id,
-					le_ids: this._.root.appContext.config.globalProperties.$entryParams.le_ids,
+					le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id],
 					sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
 				}).then(res => {
 					console.log('lektorGetAllAnwesenheitenByLva', res)

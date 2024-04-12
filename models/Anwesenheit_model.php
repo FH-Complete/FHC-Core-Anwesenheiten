@@ -62,14 +62,8 @@ class Anwesenheit_model extends \DB_Model
 			 		LEFT JOIN bis.tbl_mobilitaet USING(prestudent_id)
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id='{$lv_id}'	AND
-				 vw_student_lehrveranstaltung.studiensemester_kurzbz='{$sem_kurzbz}' AND ( ";
-
-		foreach ($le_ids as $index => $le_id) {
-			if ($index > 0) $query .= " OR ";
-			$query .= "vw_student_lehrveranstaltung.lehreinheit_id={$le_id}";
-		}
-
-		$query .= " )) students
+				 vw_student_lehrveranstaltung.studiensemester_kurzbz='{$sem_kurzbz}' AND 
+				 vw_student_lehrveranstaltung.lehreinheit_id={$le_ids[0]}) students
 			LEFT JOIN extension.tbl_anwesenheit_user USING(prestudent_id)
 			LEFT JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 		ORDER BY nachname";
@@ -221,9 +215,20 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz) {
 		$query = "SELECT DISTINCT tbl_stundenplan.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
-						tbl_stundenplan.mitarbeiter_uid, studiengang_kz, semester, verband, gruppe, gruppe_kurzbz
+						tbl_stundenplan.mitarbeiter_uid, 
+						tbl_lehreinheitgruppe.studiengang_kz, 
+						tbl_lehreinheitgruppe.semester, 
+						tbl_lehreinheitgruppe.verband, 
+						tbl_lehreinheitgruppe.gruppe, 
+						tbl_lehreinheitgruppe.gruppe_kurzbz,
+						tbl_lehrveranstaltung.kurzbz,
+			 			tbl_studiengang.kurzbzlang
 		FROM lehre.tbl_lehreinheit LEFT JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
-		WHERE lehrveranstaltung_id = {$lva_id} AND studiensemester_kurzbz = '{$sem_kurzbz}' AND mitarbeiter_uid = '{$ma_uid}'";
+			JOIN lehre.tbl_lehreinheitgruppe USING(lehreinheit_id)
+			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+			JOIN public.tbl_studiengang ON (tbl_lehreinheitgruppe.studiengang_kz = tbl_studiengang.studiengang_kz)
+		WHERE lehrveranstaltung_id = {$lva_id} AND studiensemester_kurzbz = '{$sem_kurzbz}' AND mitarbeiter_uid = '{$ma_uid}'
+		ORDER BY tbl_lehreinheitgruppe.gruppe_kurzbz";
 
 		return $this->execQuery($query);
 	}

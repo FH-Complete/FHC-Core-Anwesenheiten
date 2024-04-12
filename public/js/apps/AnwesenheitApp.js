@@ -131,33 +131,46 @@ const anwesenheitApp = Vue.createApp({
 				).then(res => {
 					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
-					// merge entries with same LE since DB query uses distinct on gruppe, verband etc and entries can be messy
+					// merge entries with same LE
 
 					const data = []
 
 					res.data?.forEach(entry => {
+
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if(existing) {
 							// supplement info
-							if(!existing.gruppe_kurzbz && entry.gruppe_kurzbz) existing.gruppe_kurzbz = entry.gruppe_kurzbz
-							if(!existing.gruppe || existing.gruppe === ' ' && entry.gruppe && entry.gruppe !== ' ') existing.gruppe = entry.gruppe
-							if(!existing.verband || existing.verband === ' ' && entry.verband && entry.verband !== ' ') existing.verband = entry.verband
+							existing.infoString += ', '
+							if(entry.gruppe_kurzbz !== null) {
+								existing.infoString +=  entry.gruppe_kurzbz
+							} else {
+								existing.infoString += entry.kurzbzlang + '-' + entry.semester
+								+ (entry.verband ? entry.verband : '')
+								+ (entry.gruppe ? entry.gruppe : '')
+							}
 						} else {
-							// enter entry
+							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
+							// so a new entry will always start with those groups, others are appended afterwards
+							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
+							if(entry.gruppe_kurzbz !== null) {
+								entry.infoString += entry.gruppe_kurzbz
+							} else {
+								entry.infoString += entry.kurzbzlang + '-' + entry.semester
+								+ (entry.verband ? entry.verband : '')
+								+ (entry.gruppe ? entry.gruppe : '')
+							}
+
 							data.push(entry)
 						}
 					})
 
-
-					this._.root.appContext.config.globalProperties.$entryParams.le_info = data
+					this._.root.appContext.config.globalProperties.$entryParams.selected_le_info = data.length ? data[0] : null
 					this._.root.appContext.config.globalProperties.$entryParams.available_le_info = [...data]
-					data.forEach(leEntry => {
-						if(!le_ids.find(el => el === leEntry.lehreinheit_id)) le_ids.push(leEntry.lehreinheit_id)
-					})
+					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 				}).finally(() => {
-					this._.root.appContext.config.globalProperties.$entryParams.le_ids = le_ids
+					this._.root.appContext.config.globalProperties.$entryParams.selected_le_id = le_ids.length? le_ids[0] : null
 					this._.root.appContext.config.globalProperties.$entryParams.available_le_ids = [...le_ids]
-					console.log('le_ids', this._.root.appContext.config.globalProperties.$entryParams.le_ids)
+					console.log('selected_le_id', this._.root.appContext.config.globalProperties.$entryParams.selected_le_id)
 
 					resolve()
 				})
@@ -180,19 +193,25 @@ anwesenheitApp
 	.mount("#main");
 
 router.beforeEach((to, from) => {
-	// dont check for context when scanning or setting up app data
-	if(to.name === "Scan" || to.name === "Setup") return true
 
-	const eP = anwesenheitApp.config.globalProperties.$entryParams
+		// dont check for context when scanning or setting up app data
+		if(to.name === "Scan" || to.name === "Setup") return true
 
-	console.log('routerbeforeEach entryParams check', eP)
+		const eP = anwesenheitApp.config.globalProperties.$entryParams
 
-	// if we dont have necessary data get input from setup component
-	if(!eP.lv_id ||!eP.stg_kz || !eP.sem || !eP.sem_kurzbz ||
-		// lektor tries to get list for LVA he is not assigned to
-		(eP.permissions.lektor && eP.le_ids?.length < 1)) {
-		return {name: 'Setup'}
-	} else { // route normally
-		return true
-	}
+		console.log('routerbeforeEach entryParams check', eP)
+
+		// if we dont have necessary data get input from setup component
+		if(!eP.lv_id ||!eP.stg_kz || !eP.sem || !eP.sem_kurzbz
+			// lektor tries to get list for LVA he is not assigned to
+
+
+			//  TODO: only check for these if lePromise is resolved somehow
+			// || (eP.permissions.lektor && eP.selected_le_id === null || eP.selected_le_id === undefined)
+
+		) {
+			return{name: 'Setup'}
+		} else { // route normally
+			return true
+		}
 })

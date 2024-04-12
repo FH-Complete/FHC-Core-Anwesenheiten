@@ -36,7 +36,7 @@ export default {
 					},
 					body:(url,config,params)=>{
 						return JSON.stringify({
-							lv_id: this.lv_id, le_ids: this.le_ids, sem_kurzbz: this.sem_kurzbz
+							lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz
 						})
 					}
 				},
@@ -73,7 +73,6 @@ export default {
 			ma_uid: null,
 			sem_kurzbz: null,
 			lv_id: null,
-			le_ids: [],
 			fotos: [],
 			filterTitle: "",
 			beginn: null,
@@ -104,7 +103,7 @@ export default {
 		getExistingQRCode(){
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
-				{le_ids: this.le_ids, ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
+				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
 			).then(res => {
 				console.log('getExistingQr', res)
 				if(res.data.svg) {
@@ -126,7 +125,7 @@ export default {
 
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetNewQRCode',
-				{le_ids: this.le_ids, beginn: this.beginn, ende: this.ende, datum: date}
+				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], beginn: this.beginn, ende: this.ende, datum: date}
 			).then(res => {
 				if(res.data) {
 					this.$refs.modalContainerNewKontrolle.hide()
@@ -199,7 +198,7 @@ export default {
 			if(res.meta.status === 'success' && res.data) {
 				const data = res.data
 				// find out von & bis times for lehreinheit
-				if(data[0].bezeichnung && data[0].kurzbz) this.filterTitle = data[0].bezeichnung + " (" + data[0].kurzbz + ")"
+				this.filterTitle = this._.root.appContext.config.globalProperties.$entryParams.selected_le_info.infoString
 
 				if(data[0].beginn && data[0].ende) {
 					let beginn = new Date('1995-10-16 ' + data[0].beginn)
@@ -251,7 +250,7 @@ export default {
 			// fetch table data
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
-				{lv_id: this.lv_id, le_ids: this.le_ids, sem_kurzbz: this.sem_kurzbz}
+				{lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
 			).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
 				if(res.meta.status !== "success") return
@@ -260,7 +259,7 @@ export default {
 
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteQRCode',
-				{le_ids: this.le_ids, anwesenheit_id: this.anwesenheit_id}
+				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], anwesenheit_id: this.anwesenheit_id}
 			).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
@@ -281,7 +280,7 @@ export default {
 
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteAnwesenheitskontrolle',
-				{le_ids: this.le_ids, date: date}
+				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], date: date}
 			).then(res => {
 				console.log('deleteAnwesenheitskontrolle', res)
 
@@ -290,7 +289,7 @@ export default {
 
 					this.$fhcApi.post(
 						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
-						{lv_id: this.lv_id, le_ids: this.le_ids, sem_kurzbz: this.sem_kurzbz}
+						{lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
 					).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
 						if(res.meta.status !== "success") return
@@ -432,8 +431,6 @@ export default {
 		found.title = selectedDateFormatted
 	},
 	mounted() {
-		this.le_ids = this._.root.appContext.config.globalProperties.$entryParams.le_ids
-
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 		this.boundProgressCounter = this.progressCounter.bind(this)
 
@@ -451,7 +448,7 @@ export default {
 		// fetch LE data
 		this.$fhcApi.post(
 			'extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitAndLektorInfo',
-			{le_ids: this.le_ids, ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
+			{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
 		).then(res => this.setupLehreinheitAndLektorData(res));
 
 	},

@@ -26,7 +26,7 @@ export default {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
 					console.log('getEntschuldigungen', response)
-					return response.data.retval
+					return this.setupData(response.data.retval)
 				},
 				layout: 'fitColumns',
 				selectable: false,
@@ -114,6 +114,10 @@ export default {
 						value: this.zeitraum.bis
 					}
 				]);
+		},
+		setupData(entries) {
+			console.log(entries)
+			return entries
 		}
 	},
 	template: `
