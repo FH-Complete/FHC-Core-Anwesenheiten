@@ -116,6 +116,7 @@ export default {
 				]);
 		},
 		setupData(entries) {
+
 			console.log(entries)
 			return entries
 		}

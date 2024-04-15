@@ -317,18 +317,7 @@ export default {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
 				+ this.verband + this.gruppe + ' Summe: ' + (this.sum ? this.sum : '-') + ' %'
 		})
-
-		this.$fhcApi.get(
-			`extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
-			null, null
-		).then((res) => {
-			console.log('getAllAnwesenheitenByStudentByLva', res)
-			if(res.meta.status !== "success" || !res.data) return
-
-			this.tableData = res.data.retval
-			this.initialTableData = [...res.data.retval]
-			this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(this.tableData);
-		})
+		
 	},
 
 	updated(){

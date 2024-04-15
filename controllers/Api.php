@@ -31,6 +31,7 @@ class Api extends FHCAPI_Controller
 				'lektorGetExistingQRCode' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorDeleteQRCode' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorDeleteAnwesenheitskontrolle' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
+				'lektorPollAnwesenheiten' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 
 				'studentGetAll' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'studentAddEntschuldigung' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
@@ -88,11 +89,10 @@ class Api extends FHCAPI_Controller
 
 	public function infoGetLehreinheitAndLektorInfo()
 	{
-		// TODO: remove date parameter after testing
 		$result = $this->getPostJSON();
 		$le_ids = $result->le_ids;
 		$ma_uid = $result->ma_uid;
-		$currentDate = $result->date ;
+		$currentDate = $result->date;
 
 		// workaround for merged le's
 		$le_id = $le_ids[0];
@@ -216,7 +216,10 @@ class Api extends FHCAPI_Controller
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
-			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]->count));
 
 		}
 
@@ -332,7 +335,11 @@ class Api extends FHCAPI_Controller
 
 			// TODO: maybe there is a better way to define $url? is APP_ROOT reliable?
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
-			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+
+
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]->count));
 
 		} else { // create a newqr
 
@@ -359,7 +366,10 @@ class Api extends FHCAPI_Controller
 			// insert Anwesenheiten entries of every Student as Abwesend
 			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis);
 
-			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+			// count entschuldigt entries
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]->count));
 		}
 	}
 
@@ -404,6 +414,14 @@ class Api extends FHCAPI_Controller
 		if(!hasData($result)) $this->terminateWithError('Fehler beim Löschen der User Anwesenheiten für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.'.');
 
 		$this->terminateWithSuccess('Löschen der Anwesenheitskontrolle für Lehreinheit '.$le_id.' am '.$date->year.'-'.$date->month.'-'.$date->day.' erfolgreich.');
+	}
+
+	public function lektorPollAnwesenheiten() {
+		$result = $this->getPostJSON();
+		$anwesenheit_id = $result->anwesenheit_id;
+
+		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+		$this->terminateWithSuccess(getData($countPoll)[0]);
 	}
 
 	// STUDENT API

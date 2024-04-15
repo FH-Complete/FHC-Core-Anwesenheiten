@@ -46,7 +46,7 @@ export default {
 				placeholder: "Keine Daten verfügbar",
 				columns: [
 					// TODO: debug foto column selection/visibility logic
-					{title: 'Foto', field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: false, minWidth: 100, maxWidth: 100, tooltip: false},
+					{title: 'Foto', field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
 					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
 					{title: 'Vorname', field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
 					{title: 'Nachname', field: 'nachname', headerFilter: true, widthGrow: 1, minWidth: 150},
@@ -86,10 +86,14 @@ export default {
 			url: null,
 			code: null,
 			timerID: null,
+			timerIDPolling: null,
 			progressTimerID: null,
 			setupPromise: null,
 			regenerateProgress: 0,
 			progressTimerCalc: 0,
+			polling: false,
+			checkInCount: 0,
+			studentCount: 0,
 			internalPermissions: JSON.parse(this.permissions)
 		}
 	},
@@ -101,6 +105,8 @@ export default {
 			this.appSideMenuEntries = payload;
 		},
 		getExistingQRCode(){
+
+			// TODO: get information of already checked in students as a count
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
 				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
@@ -111,13 +117,36 @@ export default {
 				}
 			})
 		},
+		pollAnwesenheit() {
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorPollAnwesenheiten',
+				{anwesenheit_id: this.anwesenheit_id}
+			).then(res => {
+				console.log('pollAnwesenheit Response',res)
+
+				this.checkInCount = res.data.count
+			})
+		},
+		startPollingAnwesenheiten() {
+			console.log('startPollingAnwesenheiten')
+
+			this.timerIDPolling = setInterval(this.boundPollAnwesenheit, 3000)
+
+		},
+		stopPollingAnwesenheiten() {
+			clearInterval(this.timerIDPolling)
+			this.timerIDPolling = null
+		},
 		showQR (data) {
+			console.log('showQR', data)
 			this.qr = data.svg
 			this.url = data.url
 			this.code = data.code
+			this.checkInCount = data.count
 			this.anwesenheit_id = data.anwesenheit_id
 			this.$refs.modalContainerQR.show()
 			if(this.internalPermissions.useRegenerateQR) this.startRegenerateQR()
+			this.startPollingAnwesenheiten()
 		},
 		getNewQRCode () {
 			// js months 0-11, php months 1-12
@@ -242,6 +271,7 @@ export default {
 		stopAnwesenheitskontrolle () {
 			this.$refs.modalContainerQR.hide()
 
+			this.stopPollingAnwesenheiten() // stops polling loop on server
 			this.qr = null
 			this.url = null
 			this.code = null
@@ -351,6 +381,7 @@ export default {
 			const selectedDateFormatted = formatDateToDbString(this.selectedDate)
 			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFormatted})
 
+			this.studentCount = this.namesAndID.length
 
 			this.namesAndID.forEach((student, index) => {
 
@@ -431,6 +462,7 @@ export default {
 		found.title = selectedDateFormatted
 	},
 	mounted() {
+		this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 		this.boundProgressCounter = this.progressCounter.bind(this)
 
@@ -451,6 +483,10 @@ export default {
 			{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
 		).then(res => this.setupLehreinheitAndLektorData(res));
 
+	},
+	unmounted(){
+		// anwesenheitskontrolle could be active
+		this.stopPollingAnwesenheiten()
 	},
 	updated(){
 	},
@@ -520,13 +556,15 @@ export default {
 					<template v-slot:default>
 						<h1 class="text-center">Code: {{code}}</h1>
 						<div v-html="qr" class="text-center"></div>
+						<div class="text-center">
+							<h3>{{checkInCount}}/{{studentCount}}</h3>
+						</div>
 						<div class="row" style="width: 80%; margin-left: 10%;">
-							
-								<progress 
-									v-if="internalPermissions && internalPermissions.useRegenerateQR"
-									:max="progressTimerCalc"
-									:value="regenerateProgress">
-								</progress>
+							<progress 
+								v-if="internalPermissions && internalPermissions.useRegenerateQR"
+								:max="progressTimerCalc"
+								:value="regenerateProgress">
+							</progress>
 						</div>
 					</template>
 					<template v-slot:footer>

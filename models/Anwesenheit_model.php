@@ -242,4 +242,13 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
+	public function getCheckInCountForAnwesenheitId($anwesenheit_id) {
+		$query = "SELECT COUNT(*)
+		FROM extension.tbl_anwesenheit_user
+			LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
+		WHERE anwesenheit_id = {$anwesenheit_id} AND (status = 'anwesend' OR status = 'entschuldigt')";
+
+		return $this->execQuery($query);
+	}
+
 }
