@@ -47,13 +47,12 @@ class Assistenz extends Auth_Controller
 	{
 		$viewData = array(
 			'permissions' => [
-				'admin/rw' => $this->permissionlib->isBerechtigt('admin'),
-				'extension/anwesenheit_assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
-				'extension/anwesenheit_lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
-				'extension/anwesenheit_student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
+				'admin' => $this->permissionlib->isBerechtigt('admin'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
+				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
+				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID()
-			],
-
+			]
 		);
 
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', $viewData);

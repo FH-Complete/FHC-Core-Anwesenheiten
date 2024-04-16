@@ -22,7 +22,6 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, array($person_id));
 	}
-	//TODO (david) STG mitschicken
 	public function getEntschuldigungen()
 	{
 		$query = 'SELECT dms_id,
@@ -32,9 +31,15 @@ class Entschuldigung_model extends \DB_Model
 						tbl_anwesenheit_entschuldigung.entschuldigung_id,
 						vorname,
 						nachname,
-						akzeptiert
+						akzeptiert,
+						studiengang_kz,
+						bezeichnung,
+						kurzbzlang,
+						orgform_kurzbz
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
+						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_studiengang USING (studiengang_kz)
 					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
 					';
 

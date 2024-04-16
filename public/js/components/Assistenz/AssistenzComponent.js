@@ -4,6 +4,9 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters, universalFormatter} from "../../mixins/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
+import {StudiengangDropdown} from "../Student/StudiengangDropdown";
+import {DateTime} from '../../luxon.js'
+window.DateTime = DateTime
 
 export default {
 	name: 'AssistenzComponent',
@@ -13,6 +16,7 @@ export default {
 		CoreFilterCmpt,
 		CoreRESTClient,
 		Datepicker: VueDatePicker,
+		StudiengangDropdown
 	},
 	data: function() {
 		return {
@@ -26,7 +30,7 @@ export default {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
 					console.log('getEntschuldigungen', response)
-					return this.setupData(response.data.retval)
+					return response.data.retval
 				},
 				layout: 'fitColumns',
 				selectable: false,
@@ -34,12 +38,18 @@ export default {
 				columns: [
 					{title: 'Vorname', field: 'vorname'},
 					{title: 'Nachname', field: 'nachname'},
-					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter},
-					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, minWidth: 150},
-					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, minWidth: 150},
+					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
+					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
+						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}},
+					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
+						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}
+					},
+					{title: 'Studiengang', field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, minWidth: 150, tooltip:false},
 					{title: 'Action', field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150, tooltip:false},
+
 				],
-			}
+			},
+			studiengang: null
 		};
 	},
 	methods: {
@@ -66,7 +76,7 @@ export default {
 		downloadEntschuldigung: function(dms_id)
 		{
 			//TODO fixen damit es die assistenz runterladen kann
-			window.location = CoreRESTClient._generateRouterURI('/extensions/FHC-Core-Anwesenheiten/Api/studentDownload?entschuldigung=' + dms_id);
+			window.location = CoreRESTClient._generateRouterURI('extensions/FHC-Core-Anwesenheiten/Info/studentDownload?entschuldigung=' + dms_id);
 		},
 		formAction: function(cell)
 		{
@@ -97,28 +107,26 @@ export default {
 
 			return download;
 		},
+		bisFilter: function (data, filterParams) {
+			return new Date(data.bis).getTime() <= new Date(filterParams.bis).getTime()
+		},
+		vonFilter: function (data, filterParams) {
+			return new Date(data.von).getTime() >= new Date(filterParams.von).getTime()
+		},
+		studiengangFilter: function (data, filterParams) {
+			return data.studiengang_kz === Number(filterParams.studiengang)
+		},
 		filtern: function()
 		{
-			if (this.zeitraum.von === null || this.zeitraum.bis === null)
-				return true;
+			this.$refs.assistenzTable.tabulator.clearFilter()
 
-			this.$refs.assistenzTable.tabulator.setFilter([
-					{
-						field: "von",
-						type: ">=",
-						value: this.zeitraum.von
-					},
-					{
-						field: "bis",
-						type: "<=",
-						value: this.zeitraum.bis
-					}
-				]);
+			if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
+			if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
+			if (this.studiengang) this.$refs.assistenzTable.tabulator.addFilter(this.studiengangFilter, {studiengang: this.studiengang})
 		},
-		setupData(entries) {
-
-			console.log(entries)
-			return entries
+		sgChangedHandler: function(studiengang) {
+			console.log('sgChangedHandler', studiengang)
+			this.studiengang = studiengang
 		}
 	},
 	template: `
@@ -132,41 +140,51 @@ export default {
 	<core-base-layout
 		title="Entschuldigungsmanagement Studiengangsassistenz">
 		<template #main>
-			<div class="row mb-3 align-items-center">
+			<div class="row">
+				<div class="col-4">
+					<div class="row mb-3 align-items-center">
+						<StudiengangDropdown
+							@sgChanged="sgChangedHandler">
+					
+						</StudiengangDropdown>
+					</div>
+					<div class="row mb-3 align-items-center">
+						
+						<div class="col-2"><label for="von">Von</label></div>
+						<div class="col-10">
+							<datepicker
+								v-model="zeitraum.von"
+								clearable="false"
+								auto-apply
+								:enable-time-picker="false"
+								format="dd.MM.yyyy"
+								model-type="yyyy-MM-dd"
+							></datepicker>
+						</div>
+					</div>
+					<div class="row mb-3 align-items-center">
+						
+						<div class="col-2"><label for="von" class="form-label col-sm-1">Bis</label></div>
+						<div class="col-10">
+							<datepicker
+								v-model="zeitraum.bis"
+								clearable="false"
+								auto-apply
+								:enable-time-picker="false"
+								format="dd.MM.yyyy"
+								model-type="yyyy-MM-dd"
+							></datepicker>
+						</div>
+					</div>
+					<div class="row mb-3 align-content-center">
+						<div class="col-12 d-flex justify-content-end">
+							<button class="btn btn-secondary" @click="filtern">Filtern</button>
+						</div>
+					</div>		
+				</div>
 				
-				<div class="col-1"><label for="von" class="form-label col-sm-1">Von</label></div>
-				<div class="col-3">
-					<datepicker
-						v-model="zeitraum.von"
-						clearable="false"
-						auto-apply
-						:enable-time-picker="false"
-						format="dd.MM.yyyy"
-						model-type="yyyy-MM-dd"
-					></datepicker>
-					<!--viewMode="months"
-					month-picker-->
-				</div>
-			</div>
-			<div class="row mb-3 align-items-center">
 				
-				<div class="col-1"><label for="von" class="form-label col-sm-1">Bis</label></div>
-				<div class="col-3">
-					<datepicker
-						v-model="zeitraum.bis"
-						clearable="false"
-						auto-apply
-						:enable-time-picker="false"
-						format="dd.MM.yyyy"
-						model-type="yyyy-MM-dd"
-					></datepicker>
-				</div>
 			</div>
-			<div class="row mb-3 align-content-center">
-				<div class="col-4 d-flex justify-content-end">
-					<button class="btn btn-secondary" @click="filtern">Filtern</button>
-				</div>
-			</div>			
 			<core-filter-cmpt
 				ref="assistenzTable"
 				:tabulator-options="assistenzViewTabulatorOptions"

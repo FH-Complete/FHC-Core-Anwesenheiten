@@ -36,6 +36,7 @@ $includesArray = array(
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/mixins/formatters.js',
+		'public/extensions/FHC-Core-Anwesenheiten/js/luxon.js'
 	)
 );
 

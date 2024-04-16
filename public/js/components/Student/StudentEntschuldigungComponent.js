@@ -57,7 +57,7 @@ export default {
 		triggerUpload() {
 			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning('Bitte von Zeit eingeben');
 			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning('Bitte bis Zeit eingeben');
-			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning('Bitte Datei auswählen');
+			if(!this.entschuldigung.files.length) this.$fhcAlert.alertWarning('Bitte Datei auswählen');
 
 			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
 			{
@@ -123,7 +123,7 @@ export default {
 		},
 		downloadEntschuldigung: function(dms_id)
 		{
-			window.location = CoreRESTClient._generateRouterURI('/extensions/FHC-Core-Anwesenheiten/Api/studentDownload?entschuldigung=' + dms_id);
+			window.location = CoreRESTClient._generateRouterURI('extensions/FHC-Core-Anwesenheiten/Info/studentDownload?entschuldigung=' + dms_id);
 		},
 		async deleteEntschuldigung(cell) {
 			if (await this.$fhcAlert.confirmDelete() === false)

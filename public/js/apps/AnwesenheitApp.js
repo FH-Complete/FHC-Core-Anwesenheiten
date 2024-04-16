@@ -199,10 +199,16 @@ router.beforeEach((to, from) => {
 
 		const eP = anwesenheitApp.config.globalProperties.$entryParams
 
-		console.log('routerbeforeEach entryParams check', eP)
+		console.log('routerbeforeEach globalProperties check', anwesenheitApp.config.globalProperties)
+
+		// booleans that either variable is missing
+		const stg_kz = !!!eP.stg_kz
+		const lv_id = !!!eP.lv_id
+		const sem = !!!eP.sem
+		const sem_kurzbz = !!!eP.sem_kurzbz
 
 		// if we dont have necessary data get input from setup component
-		if(!eP.lv_id ||!eP.stg_kz || !eP.sem || !eP.sem_kurzbz
+		if(eP.permissions.lektor && lv_id || stg_kz || sem || sem_kurzbz
 			// lektor tries to get list for LVA he is not assigned to
 
 

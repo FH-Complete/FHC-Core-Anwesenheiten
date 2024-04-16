@@ -31,7 +31,8 @@ export default {
 					lv_id: this._.root.appContext.config.globalProperties.$entryParams.lv_id,
 					le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id],
 					sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
-				}).then(res => {
+				})
+				.then(res => {
 					console.log('lektorGetAllAnwesenheitenByLva', res)
 
 				let anwCounter = 0
@@ -116,6 +117,15 @@ export default {
 				});
 
 			})
+
+			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudiengang',
+				{
+					stg_kz: this._.root.appContext.config.globalProperties.$entryParams.stg_kz,
+					sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+				})
+				.then(res => {
+					console.log(res)
+				})
 		},
 		setupStudentGraphs() {
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?

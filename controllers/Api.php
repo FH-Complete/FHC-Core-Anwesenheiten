@@ -20,6 +20,7 @@ class Api extends FHCAPI_Controller
 				'infoGetLehreinheitenForLehrveranstaltungAndMaUid' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'infoGetLehreinheitenForLehrveranstaltung' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'infoGetPicturesForPrestudentIds' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'infoGetStudiengaenge' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 
 				'lektorStudentByLva' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorGetAllAnwesenheitenByLva' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
@@ -32,12 +33,12 @@ class Api extends FHCAPI_Controller
 				'lektorDeleteQRCode' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorDeleteAnwesenheitskontrolle' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorPollAnwesenheiten' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
+				'lektorGetAllAnwesenheitenByStudiengang' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 
 				'studentGetAll' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'studentAddEntschuldigung' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentDeleteEntschuldigung' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentGetEntschuldigungenByPerson' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'studentDownload' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentCheckInAnwesenheit' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentGetAnwesenheitSumByLva' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'studentDeleteUserAnwesenheitById' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
@@ -143,6 +144,14 @@ class Api extends FHCAPI_Controller
 		$prestudent_ids = $result->prestudent_ids;
 
 		$result = $this->_ci->AnwesenheitUserModel->getPicturesForPrestudentIds($prestudent_ids);
+
+		if(!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess($result);
+	}
+
+	public function infoGetStudiengaenge()
+	{
+		$result = $this->_ci->AnwesenheitModel->getStudiengaenge();
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess($result);
@@ -424,6 +433,16 @@ class Api extends FHCAPI_Controller
 		$this->terminateWithSuccess(getData($countPoll)[0]);
 	}
 
+	public function lektorGetAllAnwesenheitenByStudiengang() {
+		$result = $this->getPostJSON();
+		$stg_kz = $result->stg_kz;
+		$sem_kurzbz = $result->sem_kurzbz;
+
+		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByStudiengang($stg_kz, $sem_kurzbz);
+
+		$this->terminateWithSuccess(getData($result));
+	}
+
 	// STUDENT API
 
 	public function studentGetAll()
@@ -550,7 +569,7 @@ class Api extends FHCAPI_Controller
 			'insertvon' => $this->_uid
 		);
 
-		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf'));
+		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
 		$dmsFile = getData($dmsFile);
 
 		$dmsId = $dmsFile['dms_id'];
@@ -571,29 +590,6 @@ class Api extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
-	}
-
-	public function studentDownload()
-	{
-		$dms_id = $this->_ci->input->get('entschuldigung');
-
-		if (isEmptyString($dms_id))
-			$this->terminateWithError($this->_ci->p->t('ui', 'errorFelderFehlen'));
-
-		$person_id = getAuthPersonId();
-
-		//TODO (david) noch prüfen ob der Mitarbeiter Zugriff haben sollte
-		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid))
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
-		else
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);
-
-		if (hasData($zuordnung))
-		{
-			$file = $this->_ci->dmslib->download($dms_id, 'Entschuldigung.pdf', 'attachment');
-			$this->outputFile(getData($file));
-		}
-
 	}
 
 	public function studentDeleteEntschuldigung()

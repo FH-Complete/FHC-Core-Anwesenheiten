@@ -57,7 +57,13 @@ export const studentFormatters = {
 
 			return formattedDate;
 		}
+
 		return value;
+	},
+
+	formStudiengangKz: function (cell) {
+		const rowData = cell.getRow().getData()
+		return rowData.kurzbzlang + ' ' + rowData.bezeichnung
 	},
 
 	customGroupHeader: function(value, count, data, group)

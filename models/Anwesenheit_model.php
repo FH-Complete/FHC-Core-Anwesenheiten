@@ -251,4 +251,24 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
+	public function getStudiengaenge()
+	{
+		$query ="SELECT
+					studiengang_kz,
+					bezeichnung,
+					kurzbzlang,
+					orgform_kurzbz
+				FROM tbl_studiengang
+				WHERE aktiv = true AND studiengang_kz > 0
+				ORDER BY studiengang_kz";
+
+		return $this->execReadOnlyQuery($query);
+	}
+
+	public function getAllAnwesenheitenByStudiengang($stg_kz, $sem_kurzbz) {
+		$query ="";
+
+		return $this->execReadOnlyQuery($query);
+	}
+
 }
