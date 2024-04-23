@@ -28,7 +28,6 @@ export default {
 		},
 		ssChangedHandler(e){
 			console.log('ssChangedHandler Setup', e)
-			// TODO: set entryParams semkurzbz here
 		},
 		routeToLandingPage() {
 			this.$router.push({
@@ -57,7 +56,6 @@ export default {
 					<LehreinheitenDropdown id="lehreinheit">
 					</LehreinheitenDropdown>
 				</div>
-<!--				TODO: lva select(lektor fallback), studiengang select (assistenz)-->
 				<div class="col-2">
 					<button  class="btn btn-primary" @click="routeToLandingPage">Landing Page</button>
 				</div>

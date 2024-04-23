@@ -73,6 +73,18 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
+	public function getAllAnwesenheitenByLva($lv_id, $sem_kurzbz) {
+		$query ="
+		SELECT
+			extension.tbl_anwesenheit_user.status
+		FROM
+			extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
+			JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
+		WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND lehrveranstaltung_id = '{$lv_id}'";
+
+		return $this->execQuery($query);
+	}
+
 	public function getAllPersonIdsForLE($le_id)
 	{
 		$query = "
@@ -259,14 +271,27 @@ class Anwesenheit_model extends \DB_Model
 					kurzbzlang,
 					orgform_kurzbz
 				FROM tbl_studiengang
-				WHERE aktiv = true AND studiengang_kz > 0
+				WHERE aktiv = true
 				ORDER BY studiengang_kz";
 
 		return $this->execReadOnlyQuery($query);
 	}
 
 	public function getAllAnwesenheitenByStudiengang($stg_kz, $sem_kurzbz) {
-		$query ="";
+		$query ="SELECT
+			extension.tbl_anwesenheit_user.status
+		FROM
+			(SELECT
+				prestudent_id
+			 FROM
+				public.tbl_studentlehrverband
+				JOIN public.tbl_student USING(student_uid)
+				JOIN public.tbl_prestudent USING(prestudent_id)
+			 WHERE
+				tbl_student.studiengang_kz = {$stg_kz}
+				AND tbl_studentlehrverband.studiensemester_kurzbz = '{$sem_kurzbz}') students
+			JOIN extension.tbl_anwesenheit_user USING(prestudent_id)
+			JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id";
 
 		return $this->execReadOnlyQuery($query);
 	}

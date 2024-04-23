@@ -24,7 +24,7 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva`,
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned`,
 				ajaxResponse: (url, params, response) => {
 					console.log('getAllAnwesenheitenByLva', response)
 					return this.setupData(response.data, true)
@@ -111,7 +111,6 @@ export default {
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
 				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
 			).then(res => {
-				console.log('getExistingQr', res)
 				if(res.data.svg) {
 					this.showQR(res.data)
 				}
@@ -122,14 +121,10 @@ export default {
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorPollAnwesenheiten',
 				{anwesenheit_id: this.anwesenheit_id}
 			).then(res => {
-				console.log('pollAnwesenheit Response',res)
-
 				this.checkInCount = res.data.count
 			})
 		},
 		startPollingAnwesenheiten() {
-			console.log('startPollingAnwesenheiten')
-
 			this.timerIDPolling = setInterval(this.boundPollAnwesenheit, 3000)
 
 		},
@@ -138,7 +133,6 @@ export default {
 			this.timerIDPolling = null
 		},
 		showQR (data) {
-			console.log('showQR', data)
 			this.qr = data.svg
 			this.url = data.url
 			this.code = data.code
@@ -168,8 +162,8 @@ export default {
 		},
 		regenerateQR() {
 
-			console.log('regenerateQR')
-			console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+			// console.log('regenerateQR')
+			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorRegenerateQRCode',
 				{anwesenheit_id: this.anwesenheit_id}
@@ -178,8 +172,8 @@ export default {
 				this.qr = res.data.svg
 				this.url = res.data.url
 				this.code = res.data.code
-				console.log('regenerateQR set new QR')
-				console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+				// console.log('regenerateQR set new QR')
+				// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
 
 				//TODO: can wait here
 
@@ -279,7 +273,7 @@ export default {
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
 			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
 				{lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
 			).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
@@ -318,7 +312,7 @@ export default {
 					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
 
 					this.$fhcApi.post(
-						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
+						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
 						{lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
 					).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
@@ -355,13 +349,13 @@ export default {
 			return zusatz
 		},
 		async setupData(dataParam, returnData = false){
-			// TODO: remove date string logic from this method
 
 			const data = dataParam[0].retval
 			const stsem = dataParam[1].retval[0]
 
 			this.studentsData = new Map()
 			this.namesAndID = []
+			// retrieve students from anwesenheiten data and gather their entries
 			data.forEach(entry => {
 
 				if(!this.studentsData.has(entry.prestudent_id)) {
@@ -377,16 +371,18 @@ export default {
 				}
 			})
 
+			// date string formatting
+			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
+			const dateParts = selectedDateDBFormatted.split( "-")
+			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
+
 			this.tableStudentData = []
-			const selectedDateFormatted = formatDateToDbString(this.selectedDate)
-			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFormatted})
-
 			this.studentCount = this.namesAndID.length
-
 			this.namesAndID.forEach((student, index) => {
 
 				const studentDataEntry = this.studentsData.get(student.prestudent_id)
-				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
+				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
 				const nachname = student.nachname + student.zusatz
@@ -399,8 +395,6 @@ export default {
 					status: status ?? '-',
 					sum: student.sum});
 			})
-
-			console.log('names and id', this.namesAndID)
 
 			if(returnData) {
 				await this.fetchStudentPictures()
@@ -429,7 +423,6 @@ export default {
 		async fetchStudentPictures () {
 			const prom = new Promise((resolve, reject) => {
 				const ids = this.namesAndID.map(el => el.prestudent_id)
-				console.log('mapped ids', ids)
 
 				this.$fhcApi.post(
 					'extensions/FHC-Core-Anwesenheiten/Api/infoGetPicturesForPrestudentIds',
@@ -437,8 +430,6 @@ export default {
 				).then(
 					(res) => {
 						this.fotos = res.data.retval
-						console.log('getPicturesForPrestudentIds RES', res)
-						console.log('this.tableStudentData', this.tableStudentData)
 						this.tableStudentData.forEach(data => {
 							data.foto = res.data.retval.find(entry => entry.prestudent_id === data.prestudent_id).foto
 						})
@@ -456,10 +447,12 @@ export default {
 		this.sem_kurzbz = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
 		this.ma_uid = this.internalPermissions.authID
 
+		const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
+		const dateParts = selectedDateDBFormatted.split( "-")
+		const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 
-		const selectedDateFormatted = formatDateToDbString(this.selectedDate)
 		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
-		found.title = selectedDateFormatted
+		found.title = selectedDateFrontendFormatted
 	},
 	mounted() {
 		this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
@@ -470,9 +463,9 @@ export default {
 		this.progressTimerCalc = this.internalPermissions.regenerateQRTimer / 10
 		// which is called in an interval
 		this.progressTimerInterval = 10
-		console.log('regenerateQRTimer: ' + this.internalPermissions.regenerateQRTimer)
-		console.log('progressTimerCalc: ' + this.progressTimerCalc)
-		console.log('progressTimerInterval: ' + this.progressTimerInterval)
+		// console.log('regenerateQRTimer: ' + this.internalPermissions.regenerateQRTimer)
+		// console.log('progressTimerCalc: ' + this.progressTimerCalc)
+		// console.log('progressTimerInterval: ' + this.progressTimerInterval)
 
 		// see if test is still running
 		this.getExistingQRCode()
@@ -493,12 +486,14 @@ export default {
 	watch: {
 		selectedDate(newVal) {
 
-			const selectedDateFormatted = formatDateToDbString(newVal)
-			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFormatted
+			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
+			const dateParts = selectedDateDBFormatted.split( "-")
+			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
 
 				this.namesAndID.forEach((student, index) => {
 					const studentDataEntry = this.studentsData.get(student.prestudent_id)
-					const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateFormatted)
+					const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 					const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
 					const foundEntry = this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
@@ -593,7 +588,7 @@ export default {
 									<datepicker
 										v-model="selectedDate"
 										locale="de"
-										format="dd-MM-yyyy"
+										format="dd.MM.yyyy"
 										text-input="true"
 										auto-apply="true">
 									</datepicker>

@@ -20,8 +20,7 @@ $includesArray = array(
 	'primevue3' => true,
 	'phrases' => array(
 		'global',
-		'ui',
-		'filter'
+		'ui'
 	),
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',

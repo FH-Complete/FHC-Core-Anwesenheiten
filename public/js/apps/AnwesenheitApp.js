@@ -107,11 +107,13 @@ const anwesenheitApp = Vue.createApp({
 		this._.root.appContext.config.globalProperties.$entryParams.sem = searchParams.get('sem')
 	},
 	mounted() {
-		console.log('app mounted')
-		console.log(this)
 		const el = document.getElementById("main");
 		this._.root.appContext.config.globalProperties.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
+		console.log('permissions', this._.root.appContext.config.globalProperties.$entryParams.permissions)
+
 		el.removeAttribute('permissions')
+
+
 
 		const ma_uid = this._.root.appContext.config.globalProperties.$entryParams.permissions.authID
 		const sem_kurzbz = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
@@ -208,7 +210,7 @@ router.beforeEach((to, from) => {
 		const sem_kurzbz = !!!eP.sem_kurzbz
 
 		// if we dont have necessary data get input from setup component
-		if(eP.permissions.lektor && lv_id || stg_kz || sem || sem_kurzbz
+		if(eP.permissions.lektor && (lv_id || stg_kz || sem || sem_kurzbz)
 			// lektor tries to get list for LVA he is not assigned to
 
 

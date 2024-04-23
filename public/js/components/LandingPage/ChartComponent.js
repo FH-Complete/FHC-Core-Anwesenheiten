@@ -23,177 +23,185 @@ export default {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
 		},
+		countAnwesenheitDataPie (statusArr) {
+			let anwCounter = 0
+			let abwCounter = 0
+			let entCounter = 0
+			const anwesenheitenData = [{
+				name: 'Anwesend',
+				color: '#02c016',
+				y: 0
+			},
+				{
+					name: 'Abwesend',
+					color: '#e60606',
+					y: 0
+				},
+				{
+					name: 'Entschuldigt',
+					color: '#1841fe',
+					y: 0
+				}]
+
+			statusArr.forEach(entry => {
+				if(!entry.status) return
+				switch(entry.status) {
+					case 'abwesend':
+						abwCounter++
+						break;
+					case 'anwesend':
+						anwCounter++
+						break;
+					case 'entschuldigt':
+						entCounter++
+						break;
+				}
+			})
+
+			anwesenheitenData[0].y = Number((anwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+			anwesenheitenData[1].y = Number((abwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+			anwesenheitenData[2].y = Number((entCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+
+			return anwesenheitenData
+		},
+		addPieChartToWrapper (anwesenheitenData, elementID, title) {
+			Highcharts.chart(elementID, {
+				chart: {
+					type: 'pie'
+				},
+				title: {
+					text: title
+				},
+				tooltip: {
+					valueSuffix: '%'
+				},
+				plotOptions: {
+					series: {
+						allowPointSelect: true,
+						dataLabels: [{
+							enabled: true,
+							distance: 20
+						}, {
+							enabled: true,
+							distance: -40,
+							format: '{point.percentage:.1f}%',
+							style: {
+								fontSize: '1.2em',
+								textOutline: 'none',
+								opacity: 0.7
+							},
+							filter: {
+								operator: '>',
+								property: 'percentage',
+								value: 10
+							}
+						}]
+					}
+				},
+				series: [
+					{
+						name: 'Quote',
+						colorByPoint: true,
+						data: anwesenheitenData
+					}
+				]
+			});
+		},
 		async setupLektorGraphs() {
 			await this._.root.appContext.config.globalProperties.$entryParams.lePromise
+			const wrapperDiv = document.getElementById('highchartWrapper')
+
+			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
+			{
+				lv_id: this._.root.appContext.config.globalProperties.$entryParams.lv_id,
+				le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id],
+				sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+			})
+			.then(res => {
+				console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
+				if(!res.data[0].retval) return
+				const anwesenheitenData = this.countAnwesenheitDataPie(res.data[0].retval)
+
+				const containerByLvaLektor = document.createElement('div')
+				const id = 'containerByLvaLektor'
+				containerByLvaLektor.id = id
+				wrapperDiv.appendChild(containerByLvaLektor)
+
+				this.addPieChartToWrapper(anwesenheitenData, id, 'anwByLVA & lektor')
+			})
+
+			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudiengang',
+			{
+				stg_kz: this._.root.appContext.config.globalProperties.$entryParams.stg_kz,
+				sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+			})
+			.then(res => {
+				console.log('lektorGetAllAnwesenheitenByStudiengang', res)
+
+				if(!res.data) return
+				const anwesenheitenData = this.countAnwesenheitDataPie(res.data)
+
+				const containerByStg = document.createElement('div')
+				const id = 'containerByStg'
+				containerByStg.id = id
+				wrapperDiv.appendChild(containerByStg)
+
+				this.addPieChartToWrapper(anwesenheitenData, id, 'anwByStg')
+			})
 
 			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
 				{
 					lv_id: this._.root.appContext.config.globalProperties.$entryParams.lv_id,
-					le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id],
 					sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
 				})
 				.then(res => {
 					console.log('lektorGetAllAnwesenheitenByLva', res)
 
-				let anwCounter = 0
-				let abwCounter = 0
-				let entCounter = 0
-				const anwesenheitenData = [{
-						name: 'Anwesend',
-						color: '#02c016',
-						y: 0
-					},
-					{
-						name: 'Abwesend',
-						color: '#e60606',
-						y: 0
-					},
-					{
-						name: 'Entschuldigt',
-						color: '#1841fe',
-						y: 0
-					}]
+					if(!res.data) return
+					const anwesenheitenData = this.countAnwesenheitDataPie(res.data.retval)
 
-				res.data[0].retval.forEach(entry => {
-					if(!entry.status) return
-					switch(entry.status) {
-						case 'abwesend':
-							abwCounter++
-							break;
-						case 'anwesend':
-							anwCounter++
-							break;
-						case 'entschuldigt':
-							entCounter++
-							break;
-					}
-				})
+					const containerByLva = document.createElement('div')
+					const id = 'containerByLva'
+					containerByLva.id = id
+					wrapperDiv.appendChild(containerByLva)
 
-				anwesenheitenData[0].y = Number((anwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
-				anwesenheitenData[1].y = Number((abwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
-				anwesenheitenData[2].y = Number((entCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
-
-				Highcharts.chart('container', {
-					chart: {
-						type: 'pie'
-					},
-					title: {
-						text: 'Anwesenheitsquote ' // TODO: maybe enter lva/le bezeichnung here
-					},
-					tooltip: {
-						valueSuffix: '%'
-					},
-					plotOptions: {
-						series: {
-							allowPointSelect: true,
-							// cursor: 'pointer',
-							dataLabels: [{
-								enabled: true,
-								distance: 20
-							}, {
-								enabled: true,
-								distance: -40,
-								format: '{point.percentage:.1f}%',
-								style: {
-									fontSize: '1.2em',
-									textOutline: 'none',
-									opacity: 0.7
-								},
-								filter: {
-									operator: '>',
-									property: 'percentage',
-									value: 10
-								}
-							}]
-						}
-					},
-					series: [
-						{
-							name: 'Quote',
-							colorByPoint: true,
-							data: anwesenheitenData
-						}
-					]
-				});
-
-			})
-
-			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudiengang',
-				{
-					stg_kz: this._.root.appContext.config.globalProperties.$entryParams.stg_kz,
-					sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
-				})
-				.then(res => {
-					console.log(res)
+					this.addPieChartToWrapper(anwesenheitenData, id, 'anwByLva')
 				})
 		},
 		setupStudentGraphs() {
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
+			const wrapperDiv = document.getElementById('highchartWrapper')
+
 			this.$fhcApi.get('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',
 				{studiensemester: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz}).then(res => {
 				console.log('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',res)
 
-				if(!res.data) return
+				if(!res.data.retval) return
 
 				const anw = res.data.retval
-				const anwesendData= []
-				const abwesendData= []
-				const entschuldigtData= []
 				const categories = []
-
 				anw.forEach(entry => {
-					if(categories.indexOf(entry.bezeichnung) < 0) {
-						categories.push(entry.bezeichnung)
-						anwesendData.push(0)
-						abwesendData.push(0)
-						entschuldigtData.push(0)
-					}
-
-				})
-
-				// TODO: remove hardcoded statuschecks
-				anw.forEach(entry => {
-					const categoryIndex = categories.indexOf(entry.bezeichnung)
-					if(entry.student_status === "anwesend") {
-						anwesendData[categoryIndex]++
-					} else if (entry.student_status === "abwesend") {
-						abwesendData[categoryIndex]++
-					} else if (entry.student_status === "entschuldigt") {
-						entschuldigtData[categoryIndex]++
+					const cat = categories.find(el => el.bezeichnung === entry.bezeichnung)
+					if (!cat) {
+						categories.push({bezeichnung: entry.bezeichnung, data: [{status: entry.student_status}]})
+					} else {
+						cat.data.push({status: entry.student_status})
 					}
 				})
 
-				console.log('anwesendData', anwesendData)
-				console.log('abwesendData', abwesendData)
-				console.log('entschuldigtData', entschuldigtData)
-				console.log('categories', categories)
+				categories.forEach(category => {
+					const anwesenheitenData = this.countAnwesenheitDataPie(category.data)
 
-				Highcharts.chart('container', {
-					chart: {
-						type: 'bar'
-					},
-					title: {
-						text: 'Anwesenheiten'
-					},
-					xAxis: {
-						categories: categories
-					},
-					yAxis: {
-						title: {
-							text: 'Stunden anwesend'
-						}
-					},
-					series: [{
-						name: 'Anwesend',
-						data: anwesendData
-					}, {
-						name: 'Abwesend',
-						data: abwesendData
-					},
-						{
-							name: 'Entschuldigt',
-							data: entschuldigtData
-						}]
+					const containerCategory = document.createElement('div')
+					const id = category.bezeichnung
+					containerCategory.id = id
+
+					containerCategory.style.flex = '1 0 300px';
+					containerCategory.style.margin = '10px';
+					containerCategory.style.maxWidth = '500px';
+					wrapperDiv.appendChild(containerCategory)
+
+					this.addPieChartToWrapper(anwesenheitenData, id, category.bezeichnung)
 				})
 			})
 		}
@@ -206,23 +214,17 @@ export default {
 	created() {
 		this.isLektor = this._.root.appContext.config.globalProperties.$entryParams.permissions.lektor
 		this.isStudent = this._.root.appContext.config.globalProperties.$entryParams.permissions.student
-
-		console.log('this.isLektor', this.isLektor)
-		console.log('this.isStudent', this.isStudent)
 	},
 	mounted() {
-		// TODO: differentiate by permission what to show
-
 		if(this.isStudent) {
 			this.setupStudentGraphs()
 		} else if (this.isLektor) {
-			console.log('mounted chart component would attempt to fetch with le ids now')
 			this.setupLektorGraphs()
 		}
 
 	},
 	template: `
-	<div id="container" ref="highchartWrapper">
+	<div id="highchartWrapper" style="display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center;">
 
 	</div>
 `

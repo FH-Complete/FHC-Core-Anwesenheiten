@@ -60,7 +60,8 @@ class Anw extends Auth_Controller
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
 				'regenerateQRTimer' => REGENERATE_QR_TIMER,
-				'useRegenerateQR' => USE_REGENERATE_QR
+				'useRegenerateQR' => USE_REGENERATE_QR,
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz')
 			]
 		);
 

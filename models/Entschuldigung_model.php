@@ -22,7 +22,7 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, array($person_id));
 	}
-	public function getEntschuldigungen()
+	public function getAllEntschuldigungen()
 	{
 		$query = 'SELECT dms_id,
 						von,
@@ -42,6 +42,37 @@ class Entschuldigung_model extends \DB_Model
 						JOIN public.tbl_studiengang USING (studiengang_kz)
 					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
 					';
+
+		return $this->execReadOnlyQuery($query);
+	}
+
+	public function getEntschuldigungenForStudiengaenge($stg_kz_arr)
+	{
+
+		$query = 'SELECT dms_id,
+						von,
+						bis,
+						public.tbl_person.person_id,
+						tbl_anwesenheit_entschuldigung.entschuldigung_id,
+						vorname,
+						nachname,
+						akzeptiert,
+						studiengang_kz,
+						bezeichnung,
+						kurzbzlang,
+						orgform_kurzbz
+					FROM extension.tbl_anwesenheit_entschuldigung
+						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
+						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_studiengang USING (studiengang_kz)
+					WHERE tbl_studiengang.aktiv = true AND (';
+
+		foreach($stg_kz_arr as $index => $stg_kz) {
+			if($index > 0) $query .= " OR ";
+			$query .= "tbl_studiengang.studiengang_kz = {$stg_kz}";
+		}
+
+		$query .= ') ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';
 
 		return $this->execReadOnlyQuery($query);
 	}
@@ -72,5 +103,18 @@ class Entschuldigung_model extends \DB_Model
 						AND akzeptiert IS NULL';
 
 		return $this->execReadOnlyQuery($query, array($entschuldigung_id, $person_id));
+	}
+
+	public function getMailInfoForStudent($person_id) {
+		$query = "SELECT tbl_person.vorname, tbl_person.nachname, tbl_student.student_uid, tbl_studiengang.email,
+				   tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_studiengang.orgform_kurzbz, tbl_student.semester
+			FROM tbl_person
+				JOIN tbl_prestudent USING (person_id)
+				JOIN tbl_studiengang USING (studiengang_kz)
+				JOIN tbl_student USING(prestudent_id)
+			WHERE person_id = {$person_id}
+		";
+
+		return $this->execReadOnlyQuery($query);
 	}
 }

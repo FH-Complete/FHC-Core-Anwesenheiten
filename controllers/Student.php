@@ -48,7 +48,8 @@ class Student extends Auth_Controller
 				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
-				'authID' => getAuthUID()
+				'authID' => getAuthUID(),
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz')
 			]
 		);
 

@@ -27,7 +27,6 @@ export default {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPerson',
 				ajaxResponse: (url, params, response) => {
 					console.log('getEntschuldigungenByPerson', response)
-					// TODO(johann): rework status check once fhcapi plugin is installed
 					return response.data.retval
 				},
 				selectable: false,
@@ -147,8 +146,13 @@ export default {
 			this.$refs.modalContainerEntschuldigungUpload.show()
 		},
 		validate: function() {
-			const vonDate = this.entschuldigung.von;
-			const bisDate = this.entschuldigung.bis;
+			// javaScript Date objects are 0-indexed, subtract 1 from the month
+
+			const vonParts = this.entschuldigung.von.split(/[ .:]/); // Split by dot, space, or colon
+			const vonDate = new Date(vonParts[2], vonParts[1] - 1, vonParts[0], vonParts[3], vonParts[4]);
+
+			const bisParts = this.entschuldigung.bis.split(/[ .:]/); // Split by dot, space, or colon
+			const bisDate = new Date(bisParts[2], bisParts[1] - 1, bisParts[0], bisParts[3], bisParts[4]);
 
 			if (bisDate < vonDate)
 			{
@@ -156,12 +160,6 @@ export default {
 				return false
 			}
 
-			/*const oneMonthLater = vonDate;
-			oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
-			if (bisDate > oneMonthLater)
-			{
-				return confirm('Der eingegebener Zeitraum ist auffallend hoch. Dennoch speichern?');
-			}*/
 			return true;
 		},
 		resetFormData: function()
@@ -174,7 +172,7 @@ export default {
 		},
 	},
 	mounted() {
-		// this.loadEntschuldigungen();
+
 	},
 	template: `
 

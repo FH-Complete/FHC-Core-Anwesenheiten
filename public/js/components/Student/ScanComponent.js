@@ -56,8 +56,7 @@ export default {
 					}
 				}
 			).catch(err => {
-				console.log(err)
-				this.$fhcAlert.alertError(err.response.data.errors[0].message)
+				this.$fhcAlert.alertError(err.message)
 			})
 
 		},

@@ -50,9 +50,12 @@ export default {
 				name: 'LandingPage'
 			})
 		},
+		async setupPhrasen() {
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('anwesenheiten')
+		}
 	},
 	mounted() {
-
+		this.setupPhrasen()
 	},
 	watch: {
 
@@ -68,18 +71,6 @@ export default {
 	<core-base-layout
 		title="Anwesenheiten Landing Page">
 		<template #main>
-			<div class="row">
-				<p>internalPermissions.authID: {{internalPermissions.authID}}</p>
-				<p>internalPermissions.admin: {{internalPermissions.admin}}</p>
-				<p>internalPermissions.student: {{internalPermissions.student}}</p>
-				<p>internalPermissions.lektor: {{internalPermissions.lektor}}</p>
-				<p>internalPermissions.assistenz: {{internalPermissions.assistenz}}</p>
-				
-				<p>$entryParams.lv_id: {{$entryParams.lv_id}}</p>
-				<p>$entryParams.stg_kz: {{$entryParams.stg_kz}}</p>
-				<p>$entryParams.sem_kurzbz: {{$entryParams.sem_kurzbz}}</p>
-				<p>$entryParams.sem: {{$entryParams.sem}}</p>
-			</div>
 			<div class="row">
 				<div class="col-2" v-if="internalPermissions.student || internalPermissions.admin">
 					<button  class="btn btn-primary" @click="routeToStudent">Student</button>

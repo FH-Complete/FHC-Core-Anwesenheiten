@@ -32,6 +32,17 @@ export default {
 					console.log('getEntschuldigungen', response)
 					return response.data.retval
 				},
+				ajaxConfig: "POST",
+				ajaxContentType:{
+					headers:{
+						'Content-Type': 'application/json'
+					},
+					body:(url,config,params)=>{
+						return JSON.stringify({
+							stg_kz_arr: this._.root.appContext.config.globalProperties.$entryParams.permissions.studiengaengeAssistenz
+						})
+					}
+				},
 				layout: 'fitColumns',
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
@@ -75,7 +86,6 @@ export default {
 		},
 		downloadEntschuldigung: function(dms_id)
 		{
-			//TODO fixen damit es die assistenz runterladen kann
 			window.location = CoreRESTClient._generateRouterURI('extensions/FHC-Core-Anwesenheiten/Info/studentDownload?entschuldigung=' + dms_id);
 		},
 		formAction: function(cell)
@@ -128,6 +138,9 @@ export default {
 			console.log('sgChangedHandler', studiengang)
 			this.studiengang = studiengang
 		}
+	},
+	mounted() {
+
 	},
 	template: `
 	<core-navigation-cmpt 

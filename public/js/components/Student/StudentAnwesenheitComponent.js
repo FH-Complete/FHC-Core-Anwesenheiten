@@ -47,7 +47,7 @@ export default {
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError("Fehler beim Laden der Anwesenheitsdaten.")
 				} else {
-					this.$refs.uebersichtTable.tabulator.setData(res.data.retval);
+					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
 				}
 
 
@@ -63,9 +63,8 @@ export default {
 	<core-base-layout
 		:title="filterTitle">
 		<template #main>
-			<div class="row"><label for="studiensemester">Studiensemester</label></div>
 			<div class="row">
-				<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler" id="studiensemester"></StudiensemesterDropdown></div>
+				<div class="col-8"><StudiensemesterDropdown @ssChanged="ssChangedHandler"></StudiensemesterDropdown></div>
 			</div>
 			<core-filter-cmpt
 				ref="uebersichtTable"
