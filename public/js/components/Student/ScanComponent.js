@@ -41,7 +41,7 @@ export default {
 					console.log('checkInAnwesenheit', res)
 					if(res.meta.status === "success" && res.data) {
 
-						this.$fhcAlert.alertSuccess("Anwesenheit checked.")
+						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/eintragErfolgreich'))
 
 						this.entry = JSON.parse(res.data.anwesenheitEntry)
 						this.entry.von = new Date(this.entry.von)
@@ -78,8 +78,8 @@ export default {
 		},
 		getBaseLayoutTitle() {
 			if (this.internalZugangscode && this.zugangscodeProcessed) {
-				return "Anfrage erfolgreich!"
-			} else return "Bitte Zugangscode eingeben."
+				return this._.root.appContext.config.globalProperties.$p.t('global/eintragErfolgreich')
+			} else return this._.root.appContext.config.globalProperties.$p.t('global/bitteZugangscodeEingeben')
 		}
 	},
 	template: `
@@ -98,13 +98,13 @@ export default {
 					<template v-if="!zugangscodeProcessed">
 						<div class="row">
 							<div class="col-sm-10 col-10 mx-auto">
-								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="Zugangscode">
+								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder=$p.t('global/code')>
 							</div>
 						</div>
 						<div class="row mt-3">
 							<div class="col-md-12">
 								<button @click="sendCode" role="button" class="btn btn-primary align-self-center" :disabled=codeButtonDisabled>
-									Code senden
+									{{ $p.t('global/codeSenden') }}
 								</button>
 							</div>
 						</div>
@@ -114,7 +114,7 @@ export default {
 							<div>
 								<p>{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
 								<p>{{entry.von.toLocaleDateString()}}:  {{entry.von.toLocaleTimeString()}} - {{entry.bis.toLocaleTimeString()}}</p>
-								<p>{{viewData.vorname}} {{viewData.nachname}} wurde registriert.</p>
+								<p>{{viewData.vorname}} {{viewData.nachname}} {{$p.t('global/wurdeRegistriert')}}.</p>
 							</div>
 						</div>
 					</template>

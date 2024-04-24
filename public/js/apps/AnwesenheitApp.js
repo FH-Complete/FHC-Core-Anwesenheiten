@@ -105,6 +105,9 @@ const anwesenheitApp = Vue.createApp({
 		this._.root.appContext.config.globalProperties.$entryParams.stg_kz = searchParams.get('stg_kz')
 		this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 		this._.root.appContext.config.globalProperties.$entryParams.sem = searchParams.get('sem')
+
+
+		this._.root.appContext.config.globalProperties.$capitalize = (string) => {return string[0].toUpperCase() + string.slice(1);}
 	},
 	mounted() {
 		const el = document.getElementById("main");

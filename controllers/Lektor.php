@@ -27,6 +27,9 @@ class Lektor extends Auth_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('AuthLib');
 
+		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
+		require($qrsetting_filename);
+
 //		$this->load->config('qrsettings');
 
 		$this->loadPhrases(

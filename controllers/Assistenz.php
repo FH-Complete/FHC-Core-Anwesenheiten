@@ -19,6 +19,9 @@ class Assistenz extends Auth_Controller
 
 		$this->_ci =& get_instance();
 
+		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
+		require($qrsetting_filename);
+
 		// load libraries
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('WidgetLib');

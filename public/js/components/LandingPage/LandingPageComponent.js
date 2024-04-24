@@ -16,6 +16,7 @@ export default {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			internalPermissions: JSON.parse(this.permissions),
+			titleText: ''
 		};
 	},
 	props: {
@@ -51,11 +52,20 @@ export default {
 			})
 		},
 		async setupPhrasen() {
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('anwesenheiten')
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('global')
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('ui')
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('person')
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('lehre')
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('table')
+			await this._.root.appContext.config.globalProperties.$p.loadCategory('filter')
+
+			this.titleText = this._.root.appContext.config.globalProperties.$p.t('global/digitalesAnwManagement')
 		}
 	},
-	mounted() {
+	created() {
 		this.setupPhrasen()
+	},
+	mounted() {
 	},
 	watch: {
 
@@ -69,7 +79,7 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		title="Anwesenheiten Landing Page">
+		:title=titleText >
 		<template #main>
 			<div class="row">
 				<div class="col-2" v-if="internalPermissions.student || internalPermissions.admin">

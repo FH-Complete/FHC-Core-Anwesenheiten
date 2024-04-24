@@ -8,12 +8,10 @@ export const StudiensemesterDropdown = {
 			options: [],
 			selectedOption: [],
 			errors: null,
-			labelText: ''
 		};
 	},
 	created() {
 		this.loadDropdown();
-		this.labelText = this._.root.appContext.config.globalProperties.$p.t('ui/select_studiensemester')
 	},
 	props() {
 
@@ -36,7 +34,7 @@ export const StudiensemesterDropdown = {
 	},
 
 	template: `
-		<div class="col-3"><label for="studiensemester">{{labelText}}</label></div>
+		<div class="col-3"><label for="studiensemester">{{ $p.t('lehre/studiensemester') }}</label></div>
 		<div class="col-3">
 			<select v-model="selectedOption" @change="ssChanged" class="form-control" id="studiensemester">
 				<option v-for="option in options" :value="option.studiensemester_kurzbz">

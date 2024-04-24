@@ -22,9 +22,9 @@ export default {
 				placeholder: "Keine Daten verfügbar",
 				columns: [
 					{title: 'Lehrveranstaltung', visible: false},
-					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: 'Anwesend', field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('ui/von'), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/bis'), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/anwesend')), field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
 				],
 				groupBy: ['bezeichnung'],
 				groupStartOpen:false,
@@ -45,7 +45,7 @@ export default {
 			).then(res => {
 				console.log('Student.getAll(this.studiensemester)', res)
 				if(res.meta.status !== "success") {
-					this.$fhcAlert.alertError("Fehler beim Laden der Anwesenheitsdaten.")
+					this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
 					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
 				}

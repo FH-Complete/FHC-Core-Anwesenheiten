@@ -28,17 +28,17 @@ export default {
 			let abwCounter = 0
 			let entCounter = 0
 			const anwesenheitenData = [{
-				name: 'Anwesend',
+				name: this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/anwesend')),
 				color: '#02c016',
 				y: 0
 			},
 				{
-					name: 'Abwesend',
+					name: this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/abwesend')),
 					color: '#e60606',
 					y: 0
 				},
 				{
-					name: 'Entschuldigt',
+					name:  this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/entschuldigt')),
 					color: '#1841fe',
 					y: 0
 				}]

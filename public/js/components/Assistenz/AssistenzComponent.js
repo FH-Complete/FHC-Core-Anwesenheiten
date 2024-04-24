@@ -47,20 +47,21 @@ export default {
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
 				columns: [
-					{title: 'Vorname', field: 'vorname'},
-					{title: 'Nachname', field: 'nachname'},
-					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
-					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
+					{title: this._.root.appContext.config.globalProperties.$p.t('person/vorname'), field: 'vorname'},
+					{title: this._.root.appContext.config.globalProperties.$p.t('person/nachname'), field: 'nachname'},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
+					{title: this._.root.appContext.config.globalProperties.$p.t('ui/von'), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
 						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}},
-					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/bis'), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
 						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}
 					},
-					{title: 'Studiengang', field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, minWidth: 150, tooltip:false},
-					{title: 'Action', field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150, tooltip:false},
+					{title: this._.root.appContext.config.globalProperties.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, minWidth: 150, tooltip:false},
+					{title: this._.root.appContext.config.globalProperties.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150, tooltip:false},
 
 				],
 			},
-			studiengang: null
+			studiengang: null,
+			titleText: ''
 		};
 	},
 	methods: {
@@ -80,7 +81,7 @@ export default {
 				{
 					cell.getRow().update({'akzeptiert': status});
 					//  TODO(johann): differentiate between accept and deny!
-					this.$fhcAlert.alertSuccess('Erfolgreich gespeichert');
+					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('ui/gespeichert'));
 				}
 			});
 		},
@@ -98,20 +99,20 @@ export default {
 
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-			button.title = 'Download';
+			button.title = this._.root.appContext.config.globalProperties.$p.t('table/download');
 			download.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-check"></i>';
-			button.title = 'Entschuldigung akzeptieren';
+			button.title = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungAkzeptieren');
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
 			download.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
-			button.title = 'Entschuldigung ablehnen';
+			button.title = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungAblehnen');
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, false));
 			download.append(button);
 
@@ -140,7 +141,8 @@ export default {
 		}
 	},
 	mounted() {
-
+		this.titleText = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungsmanagementStudiengangsassistenz')
+		console.log('person test', this._.root.appContext.config.globalProperties.$p.t('person/vorname'))
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -151,19 +153,18 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		title="Entschuldigungsmanagement Studiengangsassistenz">
+		:title=titleText>
 		<template #main>
 			<div class="row">
 				<div class="col-4">
 					<div class="row mb-3 align-items-center">
 						<StudiengangDropdown
 							@sgChanged="sgChangedHandler">
-					
 						</StudiengangDropdown>
 					</div>
 					<div class="row mb-3 align-items-center">
 						
-						<div class="col-2"><label for="von">Von</label></div>
+						<div class="col-2"><label for="von">{{ $capitalize($p.t('ui/von')) }}</label></div>
 						<div class="col-10">
 							<datepicker
 								v-model="zeitraum.von"
@@ -177,7 +178,7 @@ export default {
 					</div>
 					<div class="row mb-3 align-items-center">
 						
-						<div class="col-2"><label for="von" class="form-label col-sm-1">Bis</label></div>
+						<div class="col-2"><label for="von" class="form-label col-sm-1">{{ $capitalize($p.t('global/bis')) }}</label></div>
 						<div class="col-10">
 							<datepicker
 								v-model="zeitraum.bis"
@@ -191,7 +192,7 @@ export default {
 					</div>
 					<div class="row mb-3 align-content-center">
 						<div class="col-12 d-flex justify-content-end">
-							<button class="btn btn-secondary" @click="filtern">Filtern</button>
+							<button class="btn btn-secondary" @click="filtern">{{ $p.t('filter/filterApply') }}</button>
 						</div>
 					</div>		
 				</div>

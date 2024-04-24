@@ -46,20 +46,18 @@ export default {
 				placeholder: "Keine Daten verfügbar",
 				columns: [
 					// TODO: debug foto column selection/visibility logic
-					{title: 'Foto', field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
-					{title: 'Prestudent ID', field: 'prestudent_id', visible: false},
-					{title: 'Vorname', field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
-					{title: 'Nachname', field: 'nachname', headerFilter: true, widthGrow: 1, minWidth: 150},
-					{title: 'Gruppe', field: 'gruppe', headerFilter: true, widthGrow: 1, minWidth: 150},
-					{title: 'Aktuelles Datum', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, minWidth: 150},
-					{title: 'Summe', field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
+					{title: this._.root.appContext.config.globalProperties.$p.t('person/student'), field: 'prestudent_id', visible: false},
+					{title: this._.root.appContext.config.globalProperties.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('lehre/gruppe'), field: 'gruppe', headerFilter: true, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/datum'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/summe'), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, minWidth: 150},
 				]
 			},
 			anwesenheitenTabulatorEventHandlers: [{
 				event: "rowClick",
 				handler: (e, row) => {
-					// TODO (johann): detect if rowclick was on name columns, else dont route or do smth else
-
 					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
 
 					this.$router.push({
@@ -155,7 +153,7 @@ export default {
 					this.showQR(res.data)
 				}
 			}).catch(err => {
-				this.$fhcAlert.alertError("Fehler beim dem Versuch eine neue Anwesenheitskontrolle zu starten")
+				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorStartAnwKontrolle'))
 				this.$refs.modalContainerNewKontrolle.hide()
 			})
 
@@ -245,7 +243,7 @@ export default {
 		},
 		startNewAnwesenheitskontrolle(){
 			if(!this.beginn || !this.ende) {
-				this.$fhcAlert.alertError("Beginn und Ende der Anwesenheitskontrolle müssen gesetzt sein!")
+				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwStartAndEndSet'))
 				return
 			}
 
@@ -287,9 +285,9 @@ export default {
 			).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
-						this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich terminiert.")
+						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwKontrolleBeendet'))
 					} else {
-						this.$fhcAlert.alertError("Something went terribly wrong with deleting the Anwesenheitskontrolle QR Code.")
+						this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorDeleteQRCode'))
 					}
 
 					if(this.internalPermissions.useRegenerateQR) this.stopRegenerateQR()
@@ -309,7 +307,7 @@ export default {
 				console.log('deleteAnwesenheitskontrolle', res)
 
 				if(res.meta.status === "success" && res.data) {
-					this.$fhcAlert.alertSuccess("Anwesenheitskontrolle erfolgreich gelöscht.")
+					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/deleteAnwKontrolleConfirmation'))
 
 					this.$fhcApi.post(
 						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
@@ -320,7 +318,7 @@ export default {
 						this.setupData(res.data)
 					})
 				} else if(res.meta.status === "success" && !res.data){
-					this.$fhcAlert.alertWarning("Keine Anwesenheitskontrolle gefunden zu löschen!")
+					this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/noAnwKontrolleFoundToDelete'))
 				}
 			})
 
@@ -414,7 +412,7 @@ export default {
 
 			if (bisDate < vonDate)
 			{
-				this.$fhcAlert.alertError('Das Enddatum muss nach dem Startdatum liegen.');
+				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorValidateTimes'));
 				return false
 			}
 
@@ -455,6 +453,8 @@ export default {
 		found.title = selectedDateFrontendFormatted
 	},
 	mounted() {
+
+
 		this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 		this.boundProgressCounter = this.progressCounter.bind(this)
@@ -515,10 +515,10 @@ export default {
 			:title="filterTitle">			
 			<template #main>
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
-					<template v-slot:title>Anwesenheitskontrolle starten</template>
+					<template v-slot:title>{{ $p.t('global/neueAnwKontrolle') }}</template>
 					<template v-slot:default>
 						<div class="row align-items-center">
-							<div class="col-2"><label for="beginn" class="form-label col-sm-1">Von</label></div>
+							<div class="col-2"><label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label></div>
 							<div class="col-10">
 								<datepicker
 									v-model="beginn"
@@ -529,7 +529,7 @@ export default {
 							</div>
 						</div>
 						<div class="row align-items-center">
-							<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
+							<div class="col-2 align-items-center"><label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label></div>
 							<div class="col-10">
 								<datepicker
 									v-model="ende"
@@ -541,13 +541,13 @@ export default {
 						</div>
 					</template>
 					<template v-slot:footer>
-						<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">Anwesenheitskontrolle starten</button>
+						<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
 					</template>
 				</bs-modal>
 				
 				<bs-modal ref="modalContainerQR" class="bootstrap-prompt" backdrop="static" 
 				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
-					<template v-slot:title>Anwesenheitskontrolle</template>
+					<template v-slot:title>{{ $p.t('global/zugangscode') }}</template>
 					<template v-slot:default>
 						<h1 class="text-center">Code: {{code}}</h1>
 						<div v-html="qr" class="text-center"></div>
@@ -563,7 +563,7 @@ export default {
 						</div>
 					</template>
 					<template v-slot:footer>
-						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">Anwesenheitskontrolle beenden</button>
+						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">{{ $p.t('global/endAnwKontrolle') }}</button>
 					</template>
 				</bs-modal>				
 				
@@ -576,14 +576,14 @@ export default {
 					@nw-new-entry="newSideMenuEntryHandler"
 					:tableOnly
 					newBtnShow=true
-					newBtnLabel="Neue Anwesenheitskontrolle starten"
+					:newBtnLabel=$p.t('global/neueAnwKontrolle')
 					:newBtnDisabled=qr
 					@click:new=openNewAnwesenheitskontrolleModal
 					:sideMenu="false"
 					noColumnFilter>
 						<template #actions>
 							<div class="row">
-								<div class="col-2 d-flex align-items-center"><label for="datum" class="form-label col-sm-1">Datum</label></div>
+								<div class="col-2 d-flex align-items-center"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/datum') }}</label></div>
 								<div class="col-9">
 									<datepicker
 										v-model="selectedDate"
@@ -596,7 +596,7 @@ export default {
 							</div>
 							<div class="row justify-content-end">
 								<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger ml-2">
-									Anwesenheitskontrolle löschen 
+									{{ $p.t('global/deleteAnwKontrolle') }}
 								</button>
 							</div>
 						</div>

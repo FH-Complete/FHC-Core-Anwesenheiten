@@ -45,9 +45,8 @@ export default {
 						frozen: true,
 						width: 70
 					},
-					{title: 'Datum', field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
-					{title: 'Status', field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
-					// {title: 'Action', field: 'anwesenheit_user_id', formatter: this.formAction, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/datum'), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
 				]
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
@@ -108,7 +107,7 @@ export default {
 					console.log('deleteUserAnwesenheitById', res)
 
 					if(res.meta.status === "success" && res.data.anwesenheit_user_id) {
-						this.$fhcAlert.alertSuccess("Anwesenheiten deleted successfully.")
+						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwUserDeleteSuccess'))
 						cell.getRow().delete()
 						this.$fhcApi.post(
 							'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
@@ -123,13 +122,14 @@ export default {
 						})
 
 					} else {
-						this.$fhcAlert.alertSuccess("Error deleting User Anwesenheit.")
+						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwUserDelete'))
 					}
 				}
 			)
 
 		},
 		setRowStatus(cell, row, status) {
+			//TODO: remove hardcoded status
 			if(cell.getData().status === status || cell.getData().status === "entschuldigt") return
 
 			const newRow = {
@@ -177,9 +177,9 @@ export default {
 			).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {
-					this.$fhcAlert.alertSuccess("Anwesenheiten updated successfully.")
+					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwUserUpdateSuccess'))
 				} else {
-					this.$fhcAlert.alertError("Something went terribly wrong.")
+					this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwUserUpdate'))
 				}
 
 				this.$fhcApi.post(
@@ -263,7 +263,7 @@ export default {
 					console.log('deleteUserAnwesenheitByIds', res)
 
 					if(res.meta.status === "success") {
-						this.$fhcAlert.alertSuccess("Anwesenheiten deleted successfully.")
+						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwUserDeleteSuccess'))
 						selectedRows.forEach(row => {
 							const rowData = row.getData()
 							if(rowData.status === "entschuldigt"){
@@ -288,7 +288,7 @@ export default {
 						})
 
 					} else {
-						this.$fhcAlert.alertSuccess("Error deleting User Anwesenheiten.")
+						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwUserDelete'))
 					}
 				}
 			)
@@ -315,7 +315,9 @@ export default {
 			this.foto = res.data[0].foto
 
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
-				+ this.verband + this.gruppe + ' Summe: ' + (this.sum ? this.sum : '-') + ' %'
+				+ this.verband + this.gruppe + ' ' +
+				this._.root.appContext.config.globalProperties.$p.t('global/summe')
+				+ ': ' + (this.sum ? this.sum : '-') + ' %'
 		})
 		
 	},
@@ -357,13 +359,13 @@ export default {
 					noColumnFilter>
 					<template #actions>
 						<button @click="deleteSelectedRows" role="button" class="btn btn-danger align-self-end" :disabled="!selected">
-							Löschen
+							{{ $p.t('ui/loeschen' }}
 						</button>
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
-							Anwesend
+							{{ $capitalize($p.t('global/anwesend')) }}
 						</button>
 						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
-							Abwesend
+							{{ $capitalize($p.t('global/abwesend')) }}
 						</button>
 					</template>
 				</core-filter-cmpt>

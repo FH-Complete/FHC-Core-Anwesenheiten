@@ -36,7 +36,7 @@ class Anw extends Auth_Controller
 			array(
 				'global',
 				'ui',
-				'filter'
+				'anwesenheiten'
 			)
 		);
 

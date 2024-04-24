@@ -14,8 +14,8 @@ export default {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			tabs: {
-				tab1: { title: 'Anwesenheiten', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-				tab2: { title: 'Entschuldigungen', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+				tab1: { title: this._.root.appContext.config.globalProperties.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				tab2: { title: this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
 			}
 		};
 	},
@@ -57,10 +57,10 @@ export default {
 			<template #main>
 				<div class="row">
 					<div class="col-8">
-						<h1 class="h2 mb-5">Anwesenheitsverwaltung Student</h1>
+						<h1 class="h2 mb-5">{{ $p.t('global/anwesenheitenverwaltung') }}</h1>
 					</div>
 					<div class="col-4 text-center">
-						<button type="button" class="btn btn-primary" @click="routeToCodeScan">Code eingeben</button>
+						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
 					</div>
 				</div>
 				<core-tabs class="mb-5" :config="tabs"></core-tabs>

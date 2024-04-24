@@ -34,10 +34,10 @@ export default {
 				layout:"fitColumns",
 				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
-					{title: 'Status', field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, widthGrow: 1, minWidth: 150},
-					{title: 'Von', field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: 'Bis', field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: 'Action', field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 150, tooltip: false},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('ui/von'), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('global/bis'), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
+					{title: this._.root.appContext.config.globalProperties.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 150, tooltip: false},
 				],
 			},
 			filterTitle: ""
@@ -54,9 +54,9 @@ export default {
 			});
 		},
 		triggerUpload() {
-			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning('Bitte von Zeit eingeben');
-			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning('Bitte bis Zeit eingeben');
-			if(!this.entschuldigung.files.length) this.$fhcAlert.alertWarning('Bitte Datei auswählen');
+			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/warningEnterVonZeit'));
+			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/warningEnterBisZeit'));
+			if(!this.entschuldigung.files.length) this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/warningChooseFile'));
 
 			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
 			{
@@ -87,11 +87,11 @@ export default {
 						'entschuldigung_id': rowData.entschuldigung_id
 					}
 					, true);
-				this.$fhcAlert.alertSuccess('Entschuldigung hochgeladen');
+				this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungUploaded'));
 				this.resetFormData();
 
 			}).catch(err => {
-				this.$fhcAlert.alertError('Fehler bei dem Versuch eine Entschuldigung hochzuladen!');
+				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorEntschuldigungUpload'));
 			});
 
 			this.$refs.modalContainerEntschuldigungUpload.hide()
@@ -105,7 +105,7 @@ export default {
 
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-			button.title = 'Download';
+			button.title = this._.root.appContext.config.globalProperties.$p.t('table/download');
 			download.append(button);
 
 			if (cell.getData().akzeptiert == null)
@@ -113,7 +113,7 @@ export default {
 				button = document.createElement('button');
 				button.className = 'btn btn-outline-secondary';
 				button.innerHTML = '<i class="fa fa-xmark"></i>';
-				button.title = 'Entschuldigung löschen';
+				button.title = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungLöschen');
 				button.addEventListener('click', () => this.deleteEntschuldigung(cell, 'decline'));
 				download.append(button);
 			}
@@ -138,7 +138,7 @@ export default {
 				if (response.meta.status === "success")
 				{
 					cell.getRow().delete()
-					this.$fhcAlert.alertSuccess('Entschuldigung erfolgreich gelöscht');
+					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungLöschenErfolg'));
 				}
 			});
 		},
@@ -156,7 +156,7 @@ export default {
 
 			if (bisDate < vonDate)
 			{
-				this.$fhcAlert.alertError('Das Enddatum muss nach dem Startdatum liegen.');
+				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorValidateTimes'));
 				return false
 			}
 
@@ -180,10 +180,10 @@ export default {
 		:title="filterTitle">
 		<template #main>
 			<bs-modal ref="modalContainerEntschuldigungUpload" class="bootstrap-prompt" dialogClass="modal-lg">
-				<template v-slot:title>Entschuldigung hinzufügen</template>
+				<template v-slot:title>{{$p.t('global/addEntschuldigung')}}</template>
 				<template v-slot:default>
 					<div class="row mb-3 align-items-center">
-						<div class="col-2 align-items-center"><label for="von" class="form-label">Von</label></div>
+						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label></div>
 						<div class="col-10">
 							<datepicker
 								id="von"
@@ -198,7 +198,7 @@ export default {
 						</div>
 					</div>
 					<div class="row mb-3 align-items-center">
-						<div class="col-2 align-items-center"><label for="von" class="form-label">Bis</label></div>
+						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('global/bis'))}}</label></div>
 						<div class="col-10">
 							<datepicker
 								id="bis"
@@ -219,7 +219,7 @@ export default {
 					</div>
 				</template>
 				<template v-slot:footer>
-					<button class="btn btn-primary" @click="triggerUpload">Upload</button>
+					<button class="btn btn-primary" @click="triggerUpload">{{$p.t('ui/hochladen')}}</button>
 				</template>
 			</bs-modal>
 			<core-filter-cmpt
@@ -229,7 +229,7 @@ export default {
 				:table-only=true
 				:hideTopMenu=false
 				newBtnShow=true
-				newBtnLabel="Entschuldigung hochladen"
+				:newBtnLabel=$p.t('global/entschuldigungHochladen')
 				@click:new=startUploadEntschuldigung
 				:sideMenu=false
 			></core-filter-cmpt>
