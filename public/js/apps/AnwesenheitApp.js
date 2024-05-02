@@ -106,8 +106,12 @@ const anwesenheitApp = Vue.createApp({
 		this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 		this._.root.appContext.config.globalProperties.$entryParams.sem = searchParams.get('sem')
 
-
-		this._.root.appContext.config.globalProperties.$capitalize = (string) => {return string[0].toUpperCase() + string.slice(1);}
+		this._.root.appContext.config.globalProperties.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
+		console.log(this._.root.appContext.config.globalProperties.$entryParams.phrasenPromise)
+		this._.root.appContext.config.globalProperties.$capitalize = (string) => {
+			if(!string) return ''
+			return string[0].toUpperCase() + string.slice(1);
+		}
 	},
 	mounted() {
 		const el = document.getElementById("main");
@@ -115,8 +119,6 @@ const anwesenheitApp = Vue.createApp({
 		console.log('permissions', this._.root.appContext.config.globalProperties.$entryParams.permissions)
 
 		el.removeAttribute('permissions')
-
-
 
 		const ma_uid = this._.root.appContext.config.globalProperties.$entryParams.permissions.authID
 		const sem_kurzbz = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
@@ -137,7 +139,6 @@ const anwesenheitApp = Vue.createApp({
 					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
 					// merge entries with same LE
-
 					const data = []
 
 					res.data?.forEach(entry => {
@@ -175,8 +176,8 @@ const anwesenheitApp = Vue.createApp({
 				}).finally(() => {
 					this._.root.appContext.config.globalProperties.$entryParams.selected_le_id = le_ids.length? le_ids[0] : null
 					this._.root.appContext.config.globalProperties.$entryParams.available_le_ids = [...le_ids]
-					console.log('selected_le_id', this._.root.appContext.config.globalProperties.$entryParams.selected_le_id)
 
+					console.log('globalProps', this._.root.appContext.config.globalProperties)
 					resolve()
 				})
 
@@ -198,31 +199,14 @@ anwesenheitApp
 	.mount("#main");
 
 router.beforeEach((to, from) => {
-
-		// dont check for context when scanning or setting up app data
-		if(to.name === "Scan" || to.name === "Setup") return true
-
 		const eP = anwesenheitApp.config.globalProperties.$entryParams
 
-		console.log('routerbeforeEach globalProperties check', anwesenheitApp.config.globalProperties)
-
-		// booleans that either variable is missing
-		const stg_kz = !!!eP.stg_kz
-		const lv_id = !!!eP.lv_id
-		const sem = !!!eP.sem
-		const sem_kurzbz = !!!eP.sem_kurzbz
-
-		// if we dont have necessary data get input from setup component
-		if(eP.permissions.lektor && (lv_id || stg_kz || sem || sem_kurzbz)
-			// lektor tries to get list for LVA he is not assigned to
-
-
-			//  TODO: only check for these if lePromise is resolved somehow
-			// || (eP.permissions.lektor && eP.selected_le_id === null || eP.selected_le_id === undefined)
-
-		) {
-			return{name: 'Setup'}
-		} else { // route normally
-			return true
+		// skip landing page for assistenz since they got no content there
+		if(eP.permissions.assistenz && to.name === "LandingPage") {
+			return eP.phrasenPromise.then( () =>{
+				return {name: "Assistenz"}
+			})
 		}
+
+		return true
 })

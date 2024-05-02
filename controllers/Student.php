@@ -26,7 +26,6 @@ class Student extends Auth_Controller
 		require($qrsetting_filename);
 
 		$this->_ci->load->library('PermissionLib');
-		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 

@@ -23,7 +23,6 @@ class Info extends Auth_Controller
 		$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
 
 		$this->_ci->load->library('PermissionLib');
-		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 
@@ -35,7 +34,7 @@ class Info extends Auth_Controller
 		$dms_id = $this->_ci->input->get('entschuldigung');
 
 		if (isEmptyString($dms_id))
-			$this->terminateWithError($this->_ci->p->t('ui', 'errorFelderFehlen'));
+			$this->terminateWithError($this->_ci->p->t('global', 'wrongParameters'));
 
 		$person_id = getAuthPersonId();
 

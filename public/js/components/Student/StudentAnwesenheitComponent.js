@@ -19,17 +19,19 @@ export default {
 			studentViewTabulatorOptions: {
 				layout: 'fitColumns',
 				selectable: false,
-				placeholder: "Keine Daten verfügbar",
+				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{title: 'Lehrveranstaltung', visible: false},
-					{title: this._.root.appContext.config.globalProperties.$p.t('ui/von'), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/bis'), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/anwesend')), field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1},
 				],
 				groupBy: ['bezeichnung'],
 				groupStartOpen:false,
 				rowFormatter: studentFormatters.anwesenheitRowFormatter,
-				groupHeader: studentFormatters.customGroupHeader
+				groupHeader: studentFormatters.customGroupHeader,
+				persistence:true,
+				persistenceID: "studentAnwTable"
 			},
 			filterTitle: ""
 		};
@@ -45,7 +47,7 @@ export default {
 			).then(res => {
 				console.log('Student.getAll(this.studiensemester)', res)
 				if(res.meta.status !== "success") {
-					this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorLoadingAnwesenheiten'))
+					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
 					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
 				}
@@ -55,8 +57,7 @@ export default {
 		},
 	},
 	mounted() {
-		console.log('entryParams', this._.root.appContext.config.globalProperties.$entryParams)
-		this.studiensemester = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+		this.studiensemester = this.$entryParams.sem_kurzbz
 	},
 	template: `
 

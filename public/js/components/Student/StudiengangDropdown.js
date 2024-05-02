@@ -24,7 +24,7 @@ export const StudiengangDropdown = {
 				if(res.meta.status !== "success") return
 				this.options = res.data.retval ?? [];
 
-				this.selectedOption = this._.root.appContext.config.globalProperties.$entryParams.stg_kz
+				this.selectedOption = this.$entryParams.stg_kz
 				this.$emit("sgChanged", this.selectedOption);
 
 			});

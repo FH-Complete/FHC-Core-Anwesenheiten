@@ -39,26 +39,28 @@ export default {
 					},
 					body:(url,config,params)=>{
 						return JSON.stringify({
-							stg_kz_arr: this._.root.appContext.config.globalProperties.$entryParams.permissions.studiengaengeAssistenz
+							stg_kz_arr: this.$entryParams.permissions.studiengaengeAssistenz
 						})
 					}
 				},
 				layout: 'fitColumns',
 				selectable: false,
-				placeholder: "Keine Daten verfügbar",
+				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: this._.root.appContext.config.globalProperties.$p.t('person/vorname'), field: 'vorname'},
-					{title: this._.root.appContext.config.globalProperties.$p.t('person/nachname'), field: 'nachname'},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
-					{title: this._.root.appContext.config.globalProperties.$p.t('ui/von'), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
+					{title: this.$p.t('person/vorname'), field: 'vorname'},
+					{title: this.$p.t('person/nachname'), field: 'nachname'},
+					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, sorter: "datetime",
 						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/bis'), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, sorter: "datetime",
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, sorter: "datetime",
 						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}
 					},
-					{title: this._.root.appContext.config.globalProperties.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, minWidth: 150, tooltip:false},
-					{title: this._.root.appContext.config.globalProperties.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, minWidth: 150, tooltip:false},
+					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
+					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false},
 
 				],
+				persistence:true,
+				persistenceID: "assistenzTable"
 			},
 			studiengang: null,
 			titleText: ''
@@ -80,8 +82,7 @@ export default {
 				if (res.meta.status === "success")
 				{
 					cell.getRow().update({'akzeptiert': status});
-					//  TODO(johann): differentiate between accept and deny!
-					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('ui/gespeichert'));
+					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
 				}
 			});
 		},
@@ -99,20 +100,20 @@ export default {
 
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-			button.title = this._.root.appContext.config.globalProperties.$p.t('table/download');
+			button.title = this.$p.t('table/download');
 			download.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-check"></i>';
-			button.title = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungAkzeptieren');
+			button.title = this.$p.t('global/entschuldigungAkzeptieren');
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
 			download.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
-			button.title = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungAblehnen');
+			button.title = this.$p.t('global/entschuldigungAblehnen');
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, false));
 			download.append(button);
 
@@ -141,8 +142,10 @@ export default {
 		}
 	},
 	mounted() {
-		this.titleText = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungsmanagementStudiengangsassistenz')
-		console.log('person test', this._.root.appContext.config.globalProperties.$p.t('person/vorname'))
+		// this.titleText = this.$p.t('global/entschuldigungsmanagementStudiengangsassistenz')
+
+		// const bis = Vue.computed(()=> this.$capitalize(this.$p.t('global/bis')))
+		// this.$refs.assistenzTable.tabulator.updateColumnDefinition('bis', bis.value)
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -153,7 +156,7 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		:title=titleText>
+		:title="$p.t('global/entschuldigungsmanagementStudiengangsassistenz')">
 		<template #main>
 			<div class="row">
 				<div class="col-4">

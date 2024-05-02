@@ -27,21 +27,25 @@ export default {
 			let anwCounter = 0
 			let abwCounter = 0
 			let entCounter = 0
+
+			const anw = Vue.computed(()=> this.$capitalize(this.$p.t('global/anwesend')) )
+			const abw = Vue.computed(()=> this.$capitalize(this.$p.t('global/abwesend')) )
+			const ent = Vue.computed(()=> this.$capitalize(this.$p.t('global/entschuldigt')) )
 			const anwesenheitenData = [{
-				name: this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/anwesend')),
+				name: anw.value,
 				color: '#02c016',
 				y: 0
 			},
-				{
-					name: this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/abwesend')),
-					color: '#e60606',
-					y: 0
-				},
-				{
-					name:  this._.root.appContext.config.globalProperties.$capitalize(this._.root.appContext.config.globalProperties.$p.t('global/entschuldigt')),
-					color: '#1841fe',
-					y: 0
-				}]
+			{
+				name: abw.value,
+				color: '#e60606',
+				y: 0
+			},
+			{
+				name:  ent.value,
+				color: '#1841fe',
+				y: 0
+			}]
 
 			statusArr.forEach(entry => {
 				if(!entry.status) return
@@ -108,32 +112,37 @@ export default {
 			});
 		},
 		async setupLektorGraphs() {
-			await this._.root.appContext.config.globalProperties.$entryParams.lePromise
+			await this.$entryParams.lePromise
+			await this.$entryParams.phrasenPromise
+			if(!this.$entryParams.selected_le_id) return
+
 			const wrapperDiv = document.getElementById('highchartWrapper')
 
-			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
+			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
 			{
-				lv_id: this._.root.appContext.config.globalProperties.$entryParams.lv_id,
-				le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id],
-				sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+				lv_id: this.$entryParams.lv_id,
+				le_ids: [this.$entryParams.selected_le_id],
+				sem_kurzbz: this.$entryParams.sem_kurzbz
 			})
 			.then(res => {
 				console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
-				if(!res.data[0].retval) return
-				const anwesenheitenData = this.countAnwesenheitDataPie(res.data[0].retval)
+				if(!res.data) return
+				const anwesenheitenData = this.countAnwesenheitDataPie(res.data[1])
 
 				const containerByLvaLektor = document.createElement('div')
 				const id = 'containerByLvaLektor'
 				containerByLvaLektor.id = id
 				wrapperDiv.appendChild(containerByLvaLektor)
 
-				this.addPieChartToWrapper(anwesenheitenData, id, 'anwByLVA & lektor')
+				this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByLe', {le: this.$entryParams.selected_le_info.infoString}))
 			})
+
+
 
 			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudiengang',
 			{
-				stg_kz: this._.root.appContext.config.globalProperties.$entryParams.stg_kz,
-				sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+				stg_kz: this.$entryParams.stg_kz,
+				sem_kurzbz: this.$entryParams.sem_kurzbz
 			})
 			.then(res => {
 				console.log('lektorGetAllAnwesenheitenByStudiengang', res)
@@ -146,13 +155,13 @@ export default {
 				containerByStg.id = id
 				wrapperDiv.appendChild(containerByStg)
 
-				this.addPieChartToWrapper(anwesenheitenData, id, 'anwByStg')
+				this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByStg', {stg: this.$entryParams.selected_le_info.kurzbzlang}))
 			})
 
 			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
 				{
-					lv_id: this._.root.appContext.config.globalProperties.$entryParams.lv_id,
-					sem_kurzbz: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+					lv_id: this.$entryParams.lv_id,
+					sem_kurzbz: this.$entryParams.sem_kurzbz
 				})
 				.then(res => {
 					console.log('lektorGetAllAnwesenheitenByLva', res)
@@ -165,15 +174,17 @@ export default {
 					containerByLva.id = id
 					wrapperDiv.appendChild(containerByLva)
 
-					this.addPieChartToWrapper(anwesenheitenData, id, 'anwByLva')
+					this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByLva', {lva: this.$entryParams.selected_le_info.kurzbz}))
 				})
 		},
-		setupStudentGraphs() {
+		async setupStudentGraphs() {
+			await this.$entryParams.lePromise
+			await this.$entryParams.phrasenPromise
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
 			const wrapperDiv = document.getElementById('highchartWrapper')
 
 			this.$fhcApi.get('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',
-				{studiensemester: this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz}).then(res => {
+				{studiensemester: this.$entryParams.sem_kurzbz}).then(res => {
 				console.log('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',res)
 
 				if(!res.data.retval) return
@@ -212,8 +223,8 @@ export default {
 		type: null
 	},
 	created() {
-		this.isLektor = this._.root.appContext.config.globalProperties.$entryParams.permissions.lektor
-		this.isStudent = this._.root.appContext.config.globalProperties.$entryParams.permissions.student
+		this.isLektor = this.$entryParams.permissions.lektor
+		this.isStudent = this.$entryParams.permissions.student
 	},
 	mounted() {
 		if(this.isStudent) {

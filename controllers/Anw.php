@@ -1,9 +1,6 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-//require_once('../../../config/extensions/FHC-Core-Anwesenheiten/qrsettings.php');
-//require_once('application/config/extensions/FHC-Core-Anwesenheiten/qrsettings.php');
-
 class Anw extends Auth_Controller
 {
 	private $_ci;
@@ -26,11 +23,8 @@ class Anw extends Auth_Controller
 
 		// load libraries
 		$this->_ci->load->library('PermissionLib');
-		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('AuthLib');
-
-//		$this->load->config('qrsettings.php');
 
 		$this->loadPhrases(
 			array(

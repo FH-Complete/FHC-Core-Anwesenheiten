@@ -34,6 +34,7 @@ export default {
 				height: false,
 				index: 'datum',
 				layout: 'fitColumns',
+				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{
 						formatter: 'rowSelection',
@@ -45,9 +46,11 @@ export default {
 						frozen: true,
 						width: 70
 					},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/datum'), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
-				]
+					{title: this.$p.t('global/datum'), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
+					{title: this.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1},
+				],
+				persistence:true,
+				persistenceID: "lektorDetailViewStudentByLva"
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
 			{
@@ -66,6 +69,7 @@ export default {
 			}
 			],
 			filterTitle: "",
+			filterSubtitle: "",
 			changedData: [],
 			tableData: null,
 			initialTableData: null,
@@ -107,7 +111,7 @@ export default {
 					console.log('deleteUserAnwesenheitById', res)
 
 					if(res.meta.status === "success" && res.data.anwesenheit_user_id) {
-						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwUserDeleteSuccess'))
+						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
 						cell.getRow().delete()
 						this.$fhcApi.post(
 							'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
@@ -122,7 +126,7 @@ export default {
 						})
 
 					} else {
-						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwUserDelete'))
+						this.$fhcAlert.alertSuccess(this.$p.t('global/errorAnwUserDelete'))
 					}
 				}
 			)
@@ -177,9 +181,9 @@ export default {
 			).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {
-					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwUserUpdateSuccess'))
+					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
 				} else {
-					this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwUserUpdate'))
+					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
 				this.$fhcApi.post(
@@ -263,7 +267,7 @@ export default {
 					console.log('deleteUserAnwesenheitByIds', res)
 
 					if(res.meta.status === "success") {
-						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwUserDeleteSuccess'))
+						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
 						selectedRows.forEach(row => {
 							const rowData = row.getData()
 							if(rowData.status === "entschuldigt"){
@@ -288,7 +292,7 @@ export default {
 						})
 
 					} else {
-						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwUserDelete'))
+						this.$fhcAlert.alertSuccess(this.$p.t('global/errorAnwUserDelete'))
 					}
 				}
 			)
@@ -315,8 +319,8 @@ export default {
 			this.foto = res.data[0].foto
 
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
-				+ this.verband + this.gruppe + ' ' +
-				this._.root.appContext.config.globalProperties.$p.t('global/summe')
+				+ this.verband + this.gruppe + ' '
+			this.filterSubtitle = this.$p.t('global/summe')
 				+ ': ' + (this.sum ? this.sum : '-') + ' %'
 		})
 		
@@ -344,6 +348,7 @@ export default {
 
 		<core-base-layout
 			:title="filterTitle"
+			:subtitle="filterSubtitle"
 			:main-cols=[10]
 			:aside-cols=[2]
 			>
@@ -359,7 +364,7 @@ export default {
 					noColumnFilter>
 					<template #actions>
 						<button @click="deleteSelectedRows" role="button" class="btn btn-danger align-self-end" :disabled="!selected">
-							{{ $p.t('ui/loeschen' }}
+							{{ $p.t('ui/loeschen') }}
 						</button>
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesend')) }}

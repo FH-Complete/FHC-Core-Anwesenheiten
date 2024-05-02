@@ -6,38 +6,34 @@ export const LehreinheitenDropdown = {
 	data () {
 		return {
 			errors: null,
+			internal_available_le_info: [],
+			internal_selected_le_info: null
 		};
-	},
-	created() {
-		this.loadDropdown();
 	},
 	props: {
 
 	},
 	methods: {
-		loadDropdown() {
-			// load every LE for selected/given LVA
-			// const lva_id = this._.root.appContext.config.globalProperties.$entryParams.lv_id
-			// const sem_kz = 		this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
-			// Vue.$fhcapi.Info.getLehreinheitenForLehrveranstaltung(lva_id, sem_kz).then(
-			// 	res => {
-			// 		console.log('getLehreinheitenForLehrveranstaltung', res)
-			// 	}
-			// )
-		},
 		leChanged(e) {
 			console.log('leChanged', e)
 			const selected = e.target.selectedOptions
-			this._.root.appContext.config.globalProperties.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
-			console.log(this._.root.appContext.config.globalProperties.$entryParams)
+			this.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
+		},
+		async setupData() {
+			await this.$entryParams.lePromise.then(() => {
+				this.internal_available_le_info = this.$entryParams.available_le_info
+				this.internal_selected_le_info =  this.$entryParams.selected_le_info
+			})
 		}
 	},
-
+	mounted() {
+		this.setupData()
+	},
 	template: `
 		<div class="mt-2">
-			<select id="leSelect" v-model="$entryParams.selected_le_info" @change="leChanged" class="form-control">
-				<label for="leSelect">Lehreinheiten</label>
-				<option v-for="option in $entryParams.available_le_info" :value="option" >
+			<label for="leSelect">{{ $p.t('lehre/lehreinheit') }}</label>
+			<select id="leSelect" v-model="internal_selected_le_info" @change="leChanged" class="form-control">
+				<option v-for="option in internal_available_le_info" :value="option" >
 					<a> {{option.infoString}} </a>
 				</option>
 			</select>

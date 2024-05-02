@@ -19,9 +19,7 @@ $includesArray = array(
 	'vue3' => true,
 	'primevue3' => true,
 	'phrases' => array(
-		'global',
-		'ui',
-		'anwesenheiten'
+		'ui', 'person', 'lehre', 'table', 'filter', 'global'
 	),
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',

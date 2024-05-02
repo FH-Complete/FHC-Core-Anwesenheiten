@@ -30,15 +30,17 @@ export default {
 					return response.data.retval
 				},
 				selectable: false,
-				placeholder: "Keine Daten verfügbar",
+				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
 				layout:"fitColumns",
 				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('ui/von'), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/bis'), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 150, tooltip: false},
+					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1},
+					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false},
 				],
+				persistence:true,
+				persistenceID: "studentEntschuldigungenTable"
 			},
 			filterTitle: ""
 		};
@@ -54,9 +56,9 @@ export default {
 			});
 		},
 		triggerUpload() {
-			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/warningEnterVonZeit'));
-			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/warningEnterBisZeit'));
-			if(!this.entschuldigung.files.length) this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/warningChooseFile'));
+			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
+			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
+			if(!this.entschuldigung.files.length) this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
 
 			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
 			{
@@ -87,11 +89,11 @@ export default {
 						'entschuldigung_id': rowData.entschuldigung_id
 					}
 					, true);
-				this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungUploaded'));
+				this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
 				this.resetFormData();
 
 			}).catch(err => {
-				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorEntschuldigungUpload'));
+				this.$fhcAlert.alertError(this.$p.t('global/errorEntschuldigungUpload'));
 			});
 
 			this.$refs.modalContainerEntschuldigungUpload.hide()
@@ -105,7 +107,7 @@ export default {
 
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-			button.title = this._.root.appContext.config.globalProperties.$p.t('table/download');
+			button.title = this.$p.t('table/download');
 			download.append(button);
 
 			if (cell.getData().akzeptiert == null)
@@ -113,7 +115,7 @@ export default {
 				button = document.createElement('button');
 				button.className = 'btn btn-outline-secondary';
 				button.innerHTML = '<i class="fa fa-xmark"></i>';
-				button.title = this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungLöschen');
+				button.title = this.$p.t('global/entschuldigungLöschen');
 				button.addEventListener('click', () => this.deleteEntschuldigung(cell, 'decline'));
 				download.append(button);
 			}
@@ -138,7 +140,7 @@ export default {
 				if (response.meta.status === "success")
 				{
 					cell.getRow().delete()
-					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungLöschenErfolg'));
+					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungLöschenErfolg'));
 				}
 			});
 		},
@@ -156,7 +158,7 @@ export default {
 
 			if (bisDate < vonDate)
 			{
-				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorValidateTimes'));
+				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
 				return false
 			}
 
@@ -229,7 +231,7 @@ export default {
 				:table-only=true
 				:hideTopMenu=false
 				newBtnShow=true
-				:newBtnLabel=$p.t('global/entschuldigungHochladen')
+				:newBtnLabel="$p.t('global/entschuldigungHochladen')"
 				@click:new=startUploadEntschuldigung
 				:sideMenu=false
 			></core-filter-cmpt>

@@ -24,10 +24,10 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned`,
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2`,
 				ajaxResponse: (url, params, response) => {
 					console.log('getAllAnwesenheitenByLva', response)
-					return this.setupData(response.data, true)
+					return this.setupDataV2(response.data, true)
 				},
 				ajaxConfig: "POST",
 				ajaxContentType:{
@@ -36,24 +36,26 @@ export default {
 					},
 					body:(url,config,params)=>{
 						return JSON.stringify({
-							lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz
+							lv_id: this.lv_id, le_ids: [this.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz
 						})
 					}
 				},
 				rowHeight: 88, // foto max-height + 2x padding
 				index: 'prestudent_id',
 				layout: 'fitColumns',
-				placeholder: "Keine Daten verfügbar",
+				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					// TODO: debug foto column selection/visibility logic
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
-					{title: this._.root.appContext.config.globalProperties.$p.t('person/student'), field: 'prestudent_id', visible: false},
-					{title: this._.root.appContext.config.globalProperties.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('lehre/gruppe'), field: 'gruppe', headerFilter: true, widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/datum'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, minWidth: 150},
-					{title: this._.root.appContext.config.globalProperties.$p.t('global/summe'), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, minWidth: 150},
-				]
+					{title: this.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
+					{title: this.$p.t('person/student'), field: 'prestudent_id', visible: false,tooltip:false},
+					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, tooltip:false},
+					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, tooltip:false},
+					{title: this.$p.t('lehre/gruppe'), field: 'gruppe', headerFilter: true, widthGrow: 1, tooltip:false},
+					{title: this.$p.t('global/datum'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, tooltip:false},
+					{title: this.$p.t('global/summe'), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false},
+				],
+				persistence:true,
+				persistenceID: "lektorOverviewLe"
 			},
 			anwesenheitenTabulatorEventHandlers: [{
 				event: "rowClick",
@@ -107,7 +109,7 @@ export default {
 			// TODO: get information of already checked in students as a count
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
-				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
+				{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
 			).then(res => {
 				if(res.data.svg) {
 					this.showQR(res.data)
@@ -146,14 +148,14 @@ export default {
 
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetNewQRCode',
-				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], beginn: this.beginn, ende: this.ende, datum: date}
+				{le_ids: [this.$entryParams.selected_le_id], beginn: this.beginn, ende: this.ende, datum: date}
 			).then(res => {
 				if(res.data) {
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
 			}).catch(err => {
-				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorStartAnwKontrolle'))
+				this.$fhcAlert.alertError(this.$p.t('global/errorStartAnwKontrolle'))
 				this.$refs.modalContainerNewKontrolle.hide()
 			})
 
@@ -219,7 +221,7 @@ export default {
 			if(res.meta.status === 'success' && res.data) {
 				const data = res.data
 				// find out von & bis times for lehreinheit
-				this.filterTitle = this._.root.appContext.config.globalProperties.$entryParams.selected_le_info.infoString
+				this.filterTitle = this.$entryParams.selected_le_info.infoString
 
 				if(data[0].beginn && data[0].ende) {
 					let beginn = new Date('1995-10-16 ' + data[0].beginn)
@@ -243,7 +245,7 @@ export default {
 		},
 		startNewAnwesenheitskontrolle(){
 			if(!this.beginn || !this.ende) {
-				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorAnwStartAndEndSet'))
+				this.$fhcAlert.alertError(this.$p.t('global/errorAnwStartAndEndSet'))
 				return
 			}
 
@@ -271,23 +273,23 @@ export default {
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
 			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
-				{lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
+				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
+				{lv_id: this.lv_id, le_ids: [this.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
 			).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
 				if(res.meta.status !== "success") return
-				this.setupData(res.data)
+				this.setupDataV2(res.data)
 			})
 
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteQRCode',
-				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], anwesenheit_id: this.anwesenheit_id}
+				{le_ids: [this.$entryParams.selected_le_id], anwesenheit_id: this.anwesenheit_id}
 			).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
-						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/anwKontrolleBeendet'))
+						this.$fhcAlert.alertSuccess(this.$p.t('global/anwKontrolleBeendet'))
 					} else {
-						this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorDeleteQRCode'))
+						this.$fhcAlert.alertError(this.$p.t('global/errorDeleteQRCode'))
 					}
 
 					if(this.internalPermissions.useRegenerateQR) this.stopRegenerateQR()
@@ -302,23 +304,23 @@ export default {
 
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteAnwesenheitskontrolle',
-				{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], date: date}
+				{le_ids: [this.$entryParams.selected_le_id], date: date}
 			).then(res => {
 				console.log('deleteAnwesenheitskontrolle', res)
 
 				if(res.meta.status === "success" && res.data) {
-					this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/deleteAnwKontrolleConfirmation'))
+					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
 					this.$fhcApi.post(
-						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssigned',
-						{lv_id: this.lv_id, le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
+						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
+						{lv_id: this.lv_id, le_ids: [this.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
 					).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
 						if(res.meta.status !== "success") return
-						this.setupData(res.data)
+						this.setupDataV2(res.data)
 					})
 				} else if(res.meta.status === "success" && !res.data){
-					this.$fhcAlert.alertWarning(this._.root.appContext.config.globalProperties.$p.t('global/noAnwKontrolleFoundToDelete'))
+					this.$fhcAlert.alertWarning(this.$p.t('global/noAnwKontrolleFoundToDelete'))
 				}
 			})
 
@@ -345,6 +347,52 @@ export default {
 			if(entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) zusatz = ' (d.d.)'
 
 			return zusatz
+		},
+		setupDataV2(data, returnData = false) {
+			const students = data[0]
+			const anwEntries = data[1]
+			const stsem = data[2][0]
+
+			this.studentsData = new Map()
+
+			students.forEach(entry => {
+				entry.zusatz = this.formatZusatz(entry, stsem)
+				this.studentsData.set(entry.prestudent_id, [])
+			})
+
+			anwEntries.forEach(entry => {
+				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
+			})
+
+			// date string formatting
+			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
+			const dateParts = selectedDateDBFormatted.split( "-")
+			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
+
+			this.tableStudentData = []
+			this.studentCount = students.length
+			students.forEach(student => {
+
+				const studentDataEntry = this.studentsData.get(student.prestudent_id)
+				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
+				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
+
+				const nachname = student.nachname + student.zusatz
+				this.tableStudentData.push({prestudent_id: student.prestudent_id,
+					foto: student.foto,
+					vorname: student.vorname,
+					nachname: nachname,
+					gruppe: student.semester + student.verband + student.gruppe,
+					status: status ?? '-',
+					sum: student.sum});
+			})
+
+			if(returnData) {
+				return this.tableStudentData
+			} else {
+				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+			}
 		},
 		async setupData(dataParam, returnData = false){
 
@@ -398,7 +446,6 @@ export default {
 				await this.fetchStudentPictures()
 				return this.tableStudentData
 			} else {
-				// this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 			}
 
@@ -412,7 +459,7 @@ export default {
 
 			if (bisDate < vonDate)
 			{
-				this.$fhcAlert.alertError(this._.root.appContext.config.globalProperties.$p.t('global/errorValidateTimes'));
+				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
 				return false
 			}
 
@@ -441,8 +488,8 @@ export default {
 		}
 	},
 	created(){
-		this.lv_id = this._.root.appContext.config.globalProperties.$entryParams.lv_id
-		this.sem_kurzbz = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
+		this.lv_id = this.$entryParams.lv_id
+		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.internalPermissions.authID
 
 		const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
@@ -453,8 +500,6 @@ export default {
 		found.title = selectedDateFrontendFormatted
 	},
 	mounted() {
-
-
 		this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 		this.boundProgressCounter = this.progressCounter.bind(this)
@@ -473,7 +518,7 @@ export default {
 		// fetch LE data
 		this.$fhcApi.post(
 			'extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitAndLektorInfo',
-			{le_ids: [this._.root.appContext.config.globalProperties.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
+			{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
 		).then(res => this.setupLehreinheitAndLektorData(res));
 
 	},
@@ -576,7 +621,7 @@ export default {
 					@nw-new-entry="newSideMenuEntryHandler"
 					:tableOnly
 					newBtnShow=true
-					:newBtnLabel=$p.t('global/neueAnwKontrolle')
+					:newBtnLabel="$p.t('global/neueAnwKontrolle')"
 					:newBtnDisabled=qr
 					@click:new=openNewAnwesenheitskontrolleModal
 					:sideMenu="false"

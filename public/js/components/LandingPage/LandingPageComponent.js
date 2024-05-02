@@ -3,20 +3,24 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import ChartComponent from '../LandingPage/ChartComponent.js'
 
+import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
+import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
+
 export default {
 	name: 'LandingPageComponent',
 	components: {
 		CoreBaseLayout,
 		CoreNavigationCmpt,
 		CoreRESTClient,
-		ChartComponent
+		ChartComponent,
+		BsModal,
+		LehreinheitenDropdown
 	},
 	data: function() {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			internalPermissions: JSON.parse(this.permissions),
-			titleText: ''
 		};
 	},
 	props: {
@@ -31,39 +35,38 @@ export default {
 				name: 'Student'
 			})
 		},
-		routeToLektor() {
-			this.$router.push({
-				name: 'Lektor'
-			})
+		async routeToLektor() {
+			await this.$entryParams.lePromise
+			await this.$entryParams.phrasenPromise
+
+			if(!this.$entryParams.selected_le_id && !this.$entryParams.available_le_ids.length) {
+				// NO LE => NO KONTROLLE
+				this.$fhcAlert.alertError(this.$p.t('global/keineAnwkontrolleMöglichWeilLEFehlt'))
+				return
+			} else if (this.$entryParams.selected_le_id && this.$entryParams.available_le_ids.length > 1) {
+				// MULTIPLE LE SHOW SELECTION MODAL
+				this.$refs.modalContainerLESelect.show()
+				return
+			} else {
+				// ONE LE
+				this.$router.push({
+					name: 'Lektor'
+				})
+			}
 		},
 		routeToAssistenz() {
 			this.$router.push({
 				name: 'Assistenz'
 			})
 		},
-		routeToSetup() {
+		loadLE() {
+			this.$refs.modalContainerLESelect.hide()
 			this.$router.push({
-				name: 'Setup'
+				name: 'Lektor'
 			})
-		},
-		routeToLanding() {
-			this.$router.push({
-				name: 'LandingPage'
-			})
-		},
-		async setupPhrasen() {
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('global')
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('ui')
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('person')
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('lehre')
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('table')
-			await this._.root.appContext.config.globalProperties.$p.loadCategory('filter')
-
-			this.titleText = this._.root.appContext.config.globalProperties.$p.t('global/digitalesAnwManagement')
 		}
 	},
 	created() {
-		this.setupPhrasen()
 	},
 	mounted() {
 	},
@@ -79,23 +82,34 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		:title=titleText >
+		:title="$p.t('global/digitalesAnwManagement')" >
 		<template #main>
-			<div class="row">
-				<div class="col-2" v-if="internalPermissions.student || internalPermissions.admin">
-					<button  class="btn btn-primary" @click="routeToStudent">Student</button>
+			<bs-modal ref="modalContainerLESelect" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>
+				<template v-slot:default>
+					<LehreinheitenDropdown id="lehreinheit">
+					</LehreinheitenDropdown>
+				</template>
+				<template v-slot:footer>
+					<button type="button" class="btn btn-primary" :disabled="$entryParams.selected_le_id === null" @click="loadLE"> Lehreinheit laden </button>
+				</template>
+			</bs-modal>
+		
+			<div style="margin-bottom: 12px;">
+				<div class="col-sm-10 col-10 mx-auto">
+					<div class="row" v-if="internalPermissions.lektor || internalPermissions.admin">
+						<button  class="btn btn-primary btn-block btn-lg" @click="routeToLektor">Anwesenheiten verwalten</button>
+					</div>
+					<div class="row" v-if="internalPermissions.student || internalPermissions.admin">
+						<button  class="btn btn-primary btn-block btn-lg" @click="routeToStudent">Anwesenheiten verwalten</button>
+					</div>
 				</div>
-				<div class="col-2" v-if="internalPermissions.lektor || internalPermissions.admin">
-					<button  class="btn btn-primary" @click="routeToLektor">Lektor</button>
-				</div>
-				<div class="col-2" v-if="internalPermissions.assistenz || internalPermissions.admin">
-					<button  class="btn btn-primary" @click="routeToAssistenz">Assistenz</button>
-				</div>
-				<div class="col-2">
-					<button  class="btn btn-primary" @click="routeToSetup">Setup</button>
-				</div>
-				
 			</div>
+			<div class="col-2" v-if="internalPermissions.assistenz || internalPermissions.admin">
+				<button  class="btn btn-primary" @click="routeToAssistenz">Assistenz</button>
+			</div>
+			
+			
 			<ChartComponent></ChartComponent>
 			
 		</template>

@@ -14,8 +14,8 @@ export default {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			tabs: {
-				tab1: { title: this._.root.appContext.config.globalProperties.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-				tab2: { title: this._.root.appContext.config.globalProperties.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+				tab1: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				tab2: { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
 			}
 		};
 	},
@@ -28,20 +28,6 @@ export default {
 				name: 'Scan'
 			})
 		},
-		getMobileCss(){
-			return this._.root.data.isMobile ? "" : "navbar navbar-left-side"
-		}
-	},
-	beforeCreate() {
-		console.log('beforeCreate')
-	},
-	created() {
-		console.log('created')
-
-	},
-	mounted() {
-		console.log('mounted')
-		console.log(this._.root.data.isMobile)
 	},
 	template: `
 	<core-navigation-cmpt 

@@ -19,7 +19,6 @@ export default {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
-
 		};
 	},
 	methods: {
@@ -28,11 +27,6 @@ export default {
 		},
 		ssChangedHandler(e){
 			console.log('ssChangedHandler Setup', e)
-		},
-		routeToLandingPage() {
-			this.$router.push({
-				name: 'LandingPage'
-			})
 		},
 	},
 	mounted() {
@@ -46,21 +40,20 @@ export default {
 		leftNavCssClasses="">
 	</core-navigation-cmpt>
 
-	<core-base-layout
-		title="Setup">
-		<template #main>
-			<div class="row">
-				<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler" id="studiensemester"></StudiensemesterDropdown></div>
-			</div>
-				<div class="col-6">
-					<LehreinheitenDropdown id="lehreinheit">
-					</LehreinheitenDropdown>
-				</div>
-				<div class="col-2">
-					<button  class="btn btn-primary" @click="routeToLandingPage">Landing Page</button>
-				</div>
-		</template>
-	</core-base-layout>
+	<div>
+		<div class="row">
+			<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler" id="studiensemester"></StudiensemesterDropdown></div>
+		</div>
+		<div class="col-6">
+			<LehreinheitenDropdown id="lehreinheit">
+			</LehreinheitenDropdown>
+		</div>
+		<div class="col-2">
+			<button  class="btn btn-primary" @click="routeToLandingPage">Landing Page</button>
+		</div>
+	</div>
+			
+
 `
 };
 

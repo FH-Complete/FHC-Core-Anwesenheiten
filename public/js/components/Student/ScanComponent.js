@@ -41,7 +41,7 @@ export default {
 					console.log('checkInAnwesenheit', res)
 					if(res.meta.status === "success" && res.data) {
 
-						this.$fhcAlert.alertSuccess(this._.root.appContext.config.globalProperties.$p.t('global/eintragErfolgreich'))
+						this.$fhcAlert.alertSuccess(this.$p.t('global/eintragErfolgreich'))
 
 						this.entry = JSON.parse(res.data.anwesenheitEntry)
 						this.entry.von = new Date(this.entry.von)
@@ -78,8 +78,8 @@ export default {
 		},
 		getBaseLayoutTitle() {
 			if (this.internalZugangscode && this.zugangscodeProcessed) {
-				return this._.root.appContext.config.globalProperties.$p.t('global/eintragErfolgreich')
-			} else return this._.root.appContext.config.globalProperties.$p.t('global/bitteZugangscodeEingeben')
+				return this.$p.t('global/eintragErfolgreich')
+			} else return this.$p.t('global/bitteZugangscodeEingeben')
 		}
 	},
 	template: `
