@@ -20,6 +20,10 @@ export const LehreinheitenDropdown = {
 			this.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
 		},
 		async setupData() {
+			if(!(this._.root.appContext.config.globalProperties.$entryParams.permissions.lektor
+				|| this._.root.appContext.config.globalProperties.$entryParams.permissions.admin)) {
+				return
+			}
 			await this.$entryParams.lePromise.then(() => {
 				this.internal_available_le_info = this.$entryParams.available_le_info
 				this.internal_selected_le_info =  this.$entryParams.selected_le_info

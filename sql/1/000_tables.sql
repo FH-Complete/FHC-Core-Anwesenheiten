@@ -138,13 +138,31 @@ GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_anwesenheit_user TO 
 
 -----------------------------------------------------------------
 
+CREATE SEQUENCE IF NOT EXISTS extension.tbl_anwesenheit_check_id_seq
+	START WITH 1
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 1;
+
+GRANT SELECT, UPDATE ON SEQUENCE extension.tbl_anwesenheit_check_id_seq TO vilesci;
+GRANT SELECT, UPDATE ON SEQUENCE extension.tbl_anwesenheit_check_id_seq TO fhcomplete;
+GRANT SELECT, UPDATE ON SEQUENCE extension.tbl_anwesenheit_check_id_seq TO web;
+
 CREATE TABLE IF NOT EXISTS extension.tbl_anwesenheit_check
 (
-    zugangscode                 varchar (32),
+	anwesenheit_check_id        integer NOT NULL default NEXTVAL('extension.tbl_anwesenheit_check_id_seq'::regClass),
+	zugangscode                 varchar (32),
     anwesenheit_id              integer NOT NULL,
     insertamum                  timestamp without time zone DEFAULT now(),
     insertvon                   varchar (32)
 );
+
+DO $$
+BEGIN
+	ALTER TABLE extension.tbl_anwesenheit_check ADD CONSTRAINT tbl_anwesenheit_check_pkey PRIMARY KEY (anwesenheit_check_id);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 DO $$
 BEGIN

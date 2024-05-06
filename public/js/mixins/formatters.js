@@ -32,11 +32,23 @@ export const lektorFormatters = {
 		return value
 	},
 	fotoFormatter: function (cell) {
-		var value = cell.getValue();
+		let value = cell.getValue();
 		if(value === undefined) return
-		const src = 'data:image/jpeg;base64,' + value
 
-		return '<img src="'+src+'" style="max-height: 64px"></img>'
+		return '<img src="'+value+'" style="max-height: 64px"></img>'
+	},
+	dateOnlyTimeFormatter: function (cell) {
+		const value = cell.getValue();
+
+		if(value === undefined) return ''
+
+		const date = new Date(value);
+		let hours = date.getHours();
+		let minutes = date.getMinutes();
+
+		hours = (hours < 10) ? '0' + hours : hours;
+		minutes = (minutes < 10) ? '0' + minutes : minutes;
+		return hours + ':' + minutes
 	}
 }
 

@@ -98,7 +98,7 @@ export default {
 					<template v-if="!zugangscodeProcessed">
 						<div class="row">
 							<div class="col-sm-10 col-10 mx-auto">
-								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder=$p.t('global/code')>
+								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="$p.t('global/code')">
 							</div>
 						</div>
 						<div class="row mt-3">

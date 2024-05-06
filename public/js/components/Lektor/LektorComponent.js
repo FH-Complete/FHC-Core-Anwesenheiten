@@ -47,12 +47,12 @@ export default {
 				columns: [
 					// TODO: debug foto column selection/visibility logic
 					{title: this.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
-					{title: this.$p.t('person/student'), field: 'prestudent_id', visible: false,tooltip:false},
-					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, tooltip:false},
-					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, tooltip:false},
-					{title: this.$p.t('lehre/gruppe'), field: 'gruppe', headerFilter: true, widthGrow: 1, tooltip:false},
-					{title: this.$p.t('global/datum'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, tooltip:false},
-					{title: this.$p.t('global/summe'), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false},
+					{title: this.$p.t('person/student'), field: 'prestudent_id', visible: false,tooltip:false, minWidth: 150},
+					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('lehre/gruppe'), field: 'gruppe', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('global/datum'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('global/summe'), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false, minWidth: 150},
 				],
 				persistence:true,
 				persistenceID: "lektorOverviewLe"
@@ -80,6 +80,7 @@ export default {
 			selectedDate: new Date(Date.now()),
 			// selectedDate: new Date('2023-10-02'),
 			studentsData: null,
+			students: [],
 			namesAndID: null,
 			tableStudentData: null,
 			qr: null,
@@ -90,7 +91,7 @@ export default {
 			progressTimerID: null,
 			setupPromise: null,
 			regenerateProgress: 0,
-			progressTimerCalc: 0,
+			progressMax: 0,
 			polling: false,
 			checkInCount: 0,
 			studentCount: 0,
@@ -163,7 +164,7 @@ export default {
 		regenerateQR() {
 
 			// console.log('regenerateQR')
-			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorRegenerateQRCode',
 				{anwesenheit_id: this.anwesenheit_id}
@@ -173,7 +174,7 @@ export default {
 				this.url = res.data.url
 				this.code = res.data.code
 				// console.log('regenerateQR set new QR')
-				// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+				// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
 
 				//TODO: can wait here
 
@@ -186,10 +187,10 @@ export default {
 
 		},
 		progressCounter() {
-			if(this.regenerateProgress >= this.progressTimerCalc) this.regenerateProgress = 0
+			if(this.regenerateProgress >= this.progressMax) this.regenerateProgress = 0
 			this.regenerateProgress++
 
-			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressTimerCalc)
+			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
 		},
 		startRegenerateQR() {
 			//TODO: interval has certain overhead and is never 100% in sync with actual timer currently
@@ -349,13 +350,13 @@ export default {
 			return zusatz
 		},
 		setupDataV2(data, returnData = false) {
-			const students = data[0]
-			const anwEntries = data[1]
-			const stsem = data[2][0]
+			this.students = data[0] ?? []
+			const anwEntries = data[1] ?? []
+			const stsem = data[2][0] ?? []
 
 			this.studentsData = new Map()
 
-			students.forEach(entry => {
+			this.students.forEach(entry => {
 				entry.zusatz = this.formatZusatz(entry, stsem)
 				this.studentsData.set(entry.prestudent_id, [])
 			})
@@ -371,8 +372,8 @@ export default {
 			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
 
 			this.tableStudentData = []
-			this.studentCount = students.length
-			students.forEach(student => {
+			this.studentCount = this.students.length
+			this.students.forEach(student => {
 
 				const studentDataEntry = this.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
@@ -505,11 +506,11 @@ export default {
 		this.boundProgressCounter = this.progressCounter.bind(this)
 
 		// ceiling to check for inside progress calc
-		this.progressTimerCalc = this.internalPermissions.regenerateQRTimer / 10
+		this.progressMax = this.internalPermissions.regenerateQRTimer / 10
 		// which is called in an interval
 		this.progressTimerInterval = 10
 		// console.log('regenerateQRTimer: ' + this.internalPermissions.regenerateQRTimer)
-		// console.log('progressTimerCalc: ' + this.progressTimerCalc)
+		// console.log('progressMax: ' + this.progressMax)
 		// console.log('progressTimerInterval: ' + this.progressTimerInterval)
 
 		// see if test is still running
@@ -536,13 +537,13 @@ export default {
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
 
-				this.namesAndID.forEach((student, index) => {
-					const studentDataEntry = this.studentsData.get(student.prestudent_id)
-					const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-					const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
+			this.students.forEach((student, index) => {
+				const studentDataEntry = this.studentsData.get(student.prestudent_id)
+				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
+				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
-					const foundEntry = this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
-					foundEntry.status = status
+				const foundEntry = this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
+				foundEntry.status = status
 			})
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData([...this.tableStudentData]);
@@ -602,7 +603,7 @@ export default {
 						<div class="row" style="width: 80%; margin-left: 10%;">
 							<progress 
 								v-if="internalPermissions && internalPermissions.useRegenerateQR"
-								:max="progressTimerCalc"
+								:max="progressMax"
 								:value="regenerateProgress">
 							</progress>
 						</div>

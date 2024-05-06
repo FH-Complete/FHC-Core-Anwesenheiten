@@ -48,15 +48,15 @@ export default {
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{title: this.$p.t('person/vorname'), field: 'vorname'},
-					{title: this.$p.t('person/nachname'), field: 'nachname'},
+					{title: this.$p.t('person/nachname'), field: 'nachname'} ,
 					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, sorter: "datetime",
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate, sorter: "datetime",
 						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, sorter: "datetime",
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate, sorter: "datetime",
 						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}
 					},
 					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
-					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false},
+					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 150},
 
 				],
 				persistence:true,

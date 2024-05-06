@@ -23,4 +23,12 @@ class QR_model extends \DB_Model
 
 		return $this->execQuery($query);
 	}
+
+	public function deleteOlderThanMilliseconds($milliseconds) {
+		$query = "
+			DELETE FROM extension.tbl_anwesenheit_check
+			WHERE tbl_anwesenheit_check.insertamum < NOW() - INTERVAL '{$milliseconds} milliseconds';";
+
+		return $this->execQuery($query);
+	}
 }

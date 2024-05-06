@@ -2,7 +2,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
-import {lektorFormatters} from "../../mixins/formatters";
+import {lektorFormatters, studentFormatters} from "../../mixins/formatters";
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
@@ -46,8 +46,10 @@ export default {
 						frozen: true,
 						width: 70
 					},
-					{title: this.$p.t('global/datum'), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
-					{title: this.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1},
+					{title: this.$p.t('global/datum'), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
+					{title: this.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 				],
 				persistence:true,
 				persistenceID: "lektorDetailViewStudentByLva"
@@ -195,6 +197,8 @@ export default {
 					{
 						this.sum = res.data[0].sum
 						this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
+
+						this.setFilterTitle()
 					}
 				})
 			})
@@ -288,6 +292,8 @@ export default {
 							{
 								this.sum = res.data[0].sum
 								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
+
+								this.setFilterTitle()
 							}
 						})
 
@@ -297,6 +303,12 @@ export default {
 				}
 			)
 
+		},
+		setFilterTitle() {
+			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
+				+ this.verband + this.gruppe + ' '
+			this.filterSubtitle = this.$p.t('global/summe')
+				+ ': ' + (this.sum ? this.sum : '-') + ' %'
 		}
 	},
 	created(){
@@ -318,10 +330,8 @@ export default {
 			this.sum = res.data[0].sum
 			this.foto = res.data[0].foto
 
-			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
-				+ this.verband + this.gruppe + ' '
-			this.filterSubtitle = this.$p.t('global/summe')
-				+ ': ' + (this.sum ? this.sum : '-') + ' %'
+			this.setFilterTitle()
+
 		})
 		
 	},
@@ -377,7 +387,7 @@ export default {
 					
 			</template>
 			<template #aside>
-				<img v-if="foto" :src="'data:image/jpeg;base64,'+ foto" style="width: 100%;"/>
+				<img v-if="foto" :src="foto" style="width: 100%;"/>
 			</template>
 		</core-base-layout>
 	</div>`

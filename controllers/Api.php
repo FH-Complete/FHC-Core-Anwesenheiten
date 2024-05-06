@@ -118,7 +118,7 @@ class Api extends FHCAPI_Controller
 		$lva_id = $this->input->get('lva_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
-		$studentLvaData = $this->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz);
+		$studentLvaData = $this->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, APP_ROOT);
 
 		$this->terminateWithSuccess(getData($studentLvaData));
 	}
@@ -189,7 +189,7 @@ class Api extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kurzbz;
 		$le_ids = $result->le_ids ;
 
-		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_ids, $sem_kurzbz);
+		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_ids, $sem_kurzbz, APP_ROOT);
 
 		if(!hasData($result)) $this->terminateWithError('no students found');
 		$students = getData($result);
@@ -360,6 +360,18 @@ class Api extends FHCAPI_Controller
 
 		} else { // reuse existing one
 			$anwesenheit_id = $resultKontrolle->retval[0]->anwesenheit_id;
+
+			// update time of kontrolle
+			$update = $this->_ci->AnwesenheitModel->update($anwesenheit_id, array(
+				'lehreinheit_id' => $le_id,
+				'insertamum' => date('Y-m-d H:i:s'),
+				'von' => $von,
+				'bis' => $bis
+			));
+
+			if(isError($update)) {
+				$this->terminateWithError('Error Updating Anwesenheitskontrolle', 'general');
+			}
 
 			$resultQR = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 
@@ -547,6 +559,14 @@ class Api extends FHCAPI_Controller
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
 		$result = $this->_ci->AnwesenheitModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCodeLinkedToInvalidKontrolle'), 'general');
+
+		$von = $result->retval[0]->von;
+		$bis = $result->retval[0]->bis;
+		$now = date("Y-m-d H:i:s");
+
+		if(!($von <= $now && $now <= $bis)) {
+			$this->terminateWithError($this->p->t('global', 'errorCodeSentInTimeOutsideKontrolle'), 'general');
+		}
 
 
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;

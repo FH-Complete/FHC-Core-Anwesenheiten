@@ -31,7 +31,7 @@ class Anwesenheit_model extends \DB_Model
 			ta.anwesenheit_id,
 			DATE(ta.von) as datum,
 			extension.tbl_anwesenheit_user.status,
-			get_anwesenheiten(tbl_anwesenheit_user.prestudent_id, students.lehrveranstaltung_id, students.studiensemester_kurzbz) as sum,
+			get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, students.lehrveranstaltung_id, students.studiensemester_kurzbz) as sum,
 			students.* FROM
 		
 			(SELECT
@@ -73,9 +73,11 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-	public function getStudentsForLVAandLEandSemester($lv_id, $le_ids, $sem_kurzbz) {
+	public function getStudentsForLVAandLEandSemester($lv_id, $le_ids, $sem_kurzbz, $root) {
 		$query = "SELECT
-				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, foto, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
+				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, 
+				    CONCAT('{$root}', 'cis/public/bild.php?src=person&person_id=') || person_id as foto   
+				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
 			   (SELECT status_kurzbz FROM public.tbl_prestudentstatus
@@ -201,10 +203,12 @@ class Anwesenheit_model extends \DB_Model
 
 	}
 
-	public function getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz)
+	public function getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, $root)
 	{
 		$query = "
-			SELECT vorname, nachname, foto, semester, verband, gruppe, get_anwesenheiten({$prestudent_id}, {$lva_id}, '{$sem_kurzbz}') as sum
+			SELECT vorname, nachname, 
+			      CONCAT('{$root}', 'cis/public/bild.php?src=person&person_id=') || person_id as foto,
+			    semester, verband, gruppe, get_anwesenheiten_by_time({$prestudent_id}, {$lva_id}, '{$sem_kurzbz}') as sum
 			FROM public.tbl_benutzer
 					 JOIN public.tbl_person USING(person_id)
 					 LEFT JOIN public.tbl_student ON(uid=student_uid)
@@ -222,7 +226,7 @@ class Anwesenheit_model extends \DB_Model
 				tbl_anwesenheit_status.status_kurzbz as student_status,
 				(tbl_anwesenheit.von) as von,
 				(tbl_anwesenheit.bis) as bis,
-				get_anwesenheiten(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,
+				get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,
 				(
 					SELECT entschuldigung.akzeptiert
 					FROM extension.tbl_anwesenheit_entschuldigung entschuldigung

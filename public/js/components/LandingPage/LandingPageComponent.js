@@ -91,7 +91,7 @@ export default {
 					</LehreinheitenDropdown>
 				</template>
 				<template v-slot:footer>
-					<button type="button" class="btn btn-primary" :disabled="$entryParams.selected_le_id === null" @click="loadLE"> Lehreinheit laden </button>
+					<button type="button" class="btn btn-primary" :disabled="$entryParams.selected_le_id === null" @click="loadLE">{{ $p.t('global/leLaden') }}</button>
 				</template>
 			</bs-modal>
 		

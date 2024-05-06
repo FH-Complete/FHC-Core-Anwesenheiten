@@ -132,7 +132,8 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
 		$query = "
-			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status
+			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status,
+			       extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis
 			FROM extension.tbl_anwesenheit
 				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
@@ -147,7 +148,7 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
 	{
 		$query = "
-			SELECT vorname, nachname, bezeichnung, kurzbz, verband, foto
+			SELECT vorname, nachname, bezeichnung, kurzbz, verband
 			FROM campus.vw_student_lehrveranstaltung
 					 JOIN public.tbl_student ON (uid = student_uid)
 					 JOIN public.tbl_benutzer USING (uid)
@@ -162,7 +163,7 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
-		$query = "SELECT get_anwesenheiten({$prestudent_id}, {$lv_id}, '{$sem_kurzbz}') as sum";
+		$query = "SELECT get_anwesenheiten_by_time({$prestudent_id}, {$lv_id}, '{$sem_kurzbz}') as sum";
 
 		return $this->execQuery($query);
 	}
@@ -201,7 +202,7 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getPicturesForPrestudentIds($prestudent_ids)
 	{
 
-		$query = "SELECT prestudent_id, foto 
+		$query = "SELECT prestudent_id, person_id
 				FROM public.tbl_student 
 					 JOIN public.tbl_benutzer ON (uid = student_uid)
 					 JOIN tbl_person USING (person_id) WHERE prestudent_id = ";
