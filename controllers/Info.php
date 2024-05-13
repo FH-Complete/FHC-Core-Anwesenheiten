@@ -10,7 +10,7 @@ class Info extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'studentDownload' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw')
+				'studentDownload' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw')
 			)
 		);
 

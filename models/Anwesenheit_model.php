@@ -110,6 +110,27 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query);
 	}
 
+	public function getStudentsForLvaInSemester($lv_id, $sem_kurzbz) {
+		$query = "SELECT
+				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id 
+				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
+			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
+			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe
+			
+			 FROM
+				 campus.vw_student_lehrveranstaltung
+					 JOIN public.tbl_benutzer USING(uid)
+					 JOIN public.tbl_person USING(person_id)
+					 LEFT JOIN public.tbl_student ON(uid=student_uid)
+					 LEFT JOIN public.tbl_mitarbeiter ON(uid=mitarbeiter_uid)
+					 LEFT JOIN public.tbl_studentlehrverband USING(student_uid,studiensemester_kurzbz)
+			 WHERE
+				 vw_student_lehrveranstaltung.lehrveranstaltung_id={$lv_id}	AND
+				 vw_student_lehrveranstaltung.studiensemester_kurzbz='{$sem_kurzbz}';";
+
+		return $this->execReadOnlyQuery($query);
+	}
+
 	public function getAnwesenheitenEntriesForStudents($prestudentIds) {
 		$query = "
 			SELECT
@@ -352,6 +373,25 @@ class Anwesenheit_model extends \DB_Model
 				AND tbl_studentlehrverband.studiensemester_kurzbz = '{$sem_kurzbz}') students
 			JOIN extension.tbl_anwesenheit_user USING(prestudent_id)
 			JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id";
+
+		return $this->execReadOnlyQuery($query);
+	}
+
+	public function getLektorIsTeachingLE($le_id, $ma_uid) {
+		$query = "SELECT COUNT(*) > 0
+			FROM lehre.tbl_lehreinheitmitarbeiter
+			WHERE lehreinheit_id = {$le_id} AND mitarbeiter_uid = '{$ma_uid}'";
+
+		return $this->execReadOnlyQuery($query);
+	}
+
+	public function getLektorenForLvaInSemester($lva_id, $sem_kurzbz) {
+		$query = "SELECT DISTINCT (mitarbeiter_uid), anrede, titelpre, vorname, vornamen, nachname, titelpost
+			FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING (lehreinheit_id)
+			JOIN public.tbl_benutzer ON (public.tbl_benutzer.uid = lehre.tbl_lehreinheitmitarbeiter.mitarbeiter_uid)
+			JOIN public.tbl_person USING (person_id)
+			WHERE lehre.tbl_lehreinheit.lehrveranstaltung_id = {$lva_id} 
+			  AND lehre.tbl_lehreinheit.studiensemester_kurzbz = '{$sem_kurzbz}';";
 
 		return $this->execReadOnlyQuery($query);
 	}

@@ -71,10 +71,13 @@ export default {
 		addPieChartToWrapper (anwesenheitenData, elementID, title) {
 			Highcharts.chart(elementID, {
 				chart: {
-					type: 'pie'
+					type: 'pie',
+					height: 250,
+					width: 250
 				},
 				title: {
-					text: title
+					text: title,
+					size: '12px'
 				},
 				tooltip: {
 					valueSuffix: '%'
@@ -112,7 +115,7 @@ export default {
 			});
 		},
 		async setupLektorGraphs() {
-			await this.$entryParams.lePromise
+			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
 			if(!this.$entryParams.selected_le_id) return
 
@@ -178,7 +181,7 @@ export default {
 				})
 		},
 		async setupStudentGraphs() {
-			await this.$entryParams.lePromise
+			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
 			const wrapperDiv = document.getElementById('highchartWrapper')
@@ -209,7 +212,8 @@ export default {
 
 					containerCategory.style.flex = '1 0 300px';
 					containerCategory.style.margin = '10px';
-					containerCategory.style.maxWidth = '500px';
+					// containerCategory.style.maxWidth = '250px';
+					// containerCategory.style.maxHeight = '250px';
 					wrapperDiv.appendChild(containerCategory)
 
 					this.addPieChartToWrapper(anwesenheitenData, id, category.bezeichnung)
@@ -223,10 +227,12 @@ export default {
 		type: null
 	},
 	created() {
-		this.isLektor = this.$entryParams.permissions.lektor
-		this.isStudent = this.$entryParams.permissions.student
+
 	},
 	mounted() {
+		this.isLektor = this.$entryParams.permissions.lektor
+		this.isStudent = this.$entryParams.permissions.student
+
 		if(this.isStudent) {
 			this.setupStudentGraphs()
 		} else if (this.isLektor) {

@@ -12,12 +12,12 @@ class Anw extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('admin:rw', 'extension/anwesenheit_student:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_student:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
 
 		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require($qrsetting_filename);
+		require_once($qrsetting_filename);
 
 		$this->_ci =& get_instance();
 

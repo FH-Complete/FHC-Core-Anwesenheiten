@@ -10,7 +10,7 @@ class Student extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 			)
 		);
 
@@ -23,7 +23,7 @@ class Student extends Auth_Controller
 		$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
 
 		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require($qrsetting_filename);
+		require_once($qrsetting_filename);
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');

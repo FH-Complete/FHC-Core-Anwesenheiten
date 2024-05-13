@@ -177,9 +177,10 @@ export default {
 			return wrapper;
 		},
 		async saveChanges(changedData){
+			console.log(this.$entryParams)
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorUpdateAnwesenheiten',
-				{changedAnwesenheiten: changedData}
+				{changedAnwesenheiten: changedData, le_id: this.$entryParams.selected_le_id}
 			).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {

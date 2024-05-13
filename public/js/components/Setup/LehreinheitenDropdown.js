@@ -20,14 +20,20 @@ export const LehreinheitenDropdown = {
 			this.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
 		},
 		async setupData() {
-			if(!(this._.root.appContext.config.globalProperties.$entryParams.permissions.lektor
-				|| this._.root.appContext.config.globalProperties.$entryParams.permissions.admin)) {
+			console.log('lehreinheiten dropdown setup data')
+			if(!(this.$entryParams.permissions.lektor
+				|| this.$entryParams.permissions.admin)) {
 				return
 			}
-			await this.$entryParams.lePromise.then(() => {
+			await this.$entryParams.setupPromise.then(() => {
+				console.log('lehreinheiten dropdown setupPromise then')
 				this.internal_available_le_info = this.$entryParams.available_le_info
 				this.internal_selected_le_info =  this.$entryParams.selected_le_info
 			})
+		},
+		resetData() {
+			this.internal_available_le_info = this.$entryParams.available_le_info
+			this.internal_selected_le_info =  this.$entryParams.selected_le_info
 		}
 	},
 	mounted() {
@@ -41,6 +47,7 @@ export const LehreinheitenDropdown = {
 					<a> {{option.infoString}} </a>
 				</option>
 			</select>
+
 		</div>
 	`
 }

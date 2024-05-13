@@ -41,6 +41,7 @@ export default {
 					}
 				},
 				rowHeight: 88, // foto max-height + 2x padding
+				height: false,
 				index: 'prestudent_id',
 				layout: 'fitColumns',
 				placeholder: this.$p.t('global/noDataAvailable'),
@@ -110,7 +111,7 @@ export default {
 			// TODO: get information of already checked in students as a count
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
-				{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
+				{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
 			).then(res => {
 				if(res.data.svg) {
 					this.showQR(res.data)
@@ -519,7 +520,7 @@ export default {
 		// fetch LE data
 		this.$fhcApi.post(
 			'extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitAndLektorInfo',
-			{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.ma_uid, date: formatDateToDbString(this.selectedDate)}
+			{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}
 		).then(res => this.setupLehreinheitAndLektorData(res));
 
 	},
@@ -645,7 +646,6 @@ export default {
 									{{ $p.t('global/deleteAnwKontrolle') }}
 								</button>
 							</div>
-						</div>
 						</template>
 					
 				</core-filter-cmpt>

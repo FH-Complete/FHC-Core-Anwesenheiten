@@ -13,14 +13,14 @@ class Assistenz extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('admin:rw', 'extension/anwesenheit_assistenz:rw')
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw')
 			)
 		);
 
 		$this->_ci =& get_instance();
 
 		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require($qrsetting_filename);
+		require_once($qrsetting_filename);
 
 		// load libraries
 		$this->_ci->load->library('PermissionLib');

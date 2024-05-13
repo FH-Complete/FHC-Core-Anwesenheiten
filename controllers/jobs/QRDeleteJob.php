@@ -19,24 +19,25 @@ class QRDeleteJob extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 	}
 
+
+
 	public function deleteOldCodes()
 	{
-
 		$this->logInfo('Start job queue scheduler FHC-Core-Anwesenheiten->deleteOldCodes');
 
 		$milliseconds = QR_EXPIRATION_TIMER;
 
 		$result = $this->QRModel->deleteOlderThanMilliseconds($milliseconds);
 
+		$rows_affected = $this->QRModel->db->affected_rows();
+
 		if (isError($result))
 		{
 			$this->logError(getError($result), $milliseconds);
+		} else {
+			$this->logInfo($rows_affected." QR Codes deleted.");
 		}
 
-		// TODO: log successful delete?
-
 		$this->logInfo('End job queue scheduler FHC-Core-Anwesenheiten->deleteOldCodes');
-
 	}
-
 }
