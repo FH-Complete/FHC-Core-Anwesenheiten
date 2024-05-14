@@ -87,7 +87,6 @@ export default {
 			qr: null,
 			url: null,
 			code: null,
-			timerID: null,
 			timerIDPolling: null,
 			progressTimerID: null,
 			setupPromise: null,
@@ -96,11 +95,9 @@ export default {
 			polling: false,
 			checkInCount: 0,
 			studentCount: 0,
-			internalPermissions: JSON.parse(this.permissions)
 		}
 	},
 	props: {
-		permissions: null
 	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
@@ -111,7 +108,7 @@ export default {
 			// TODO: get information of already checked in students as a count
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
-				{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
+				{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
 			).then(res => {
 				if(res.data.svg) {
 					this.showQR(res.data)
@@ -141,7 +138,7 @@ export default {
 			this.checkInCount = data.count
 			this.anwesenheit_id = data.anwesenheit_id
 			this.$refs.modalContainerQR.show()
-			if(this.internalPermissions.useRegenerateQR) this.startRegenerateQR()
+			if(this.$entryParams.permissions.useRegenerateQR) this.startRegenerateQR()
 			this.startPollingAnwesenheiten()
 		},
 		getNewQRCode () {
@@ -188,23 +185,23 @@ export default {
 
 		},
 		progressCounter() {
+			if(this.regenerateProgress === this.progressMax) {
+				this.regenerateQR()
+			}
 			if(this.regenerateProgress >= this.progressMax) this.regenerateProgress = 0
 			this.regenerateProgress++
 
 			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
 		},
 		startRegenerateQR() {
-			//TODO: interval has certain overhead and is never 100% in sync with actual timer currently
-			this.timerID = setInterval(this.boundRegenerateQR, this.internalPermissions.regenerateQRTimer)
 			this.progressTimerID = setInterval(this.boundProgressCounter, this.progressTimerInterval) // track time passed for regenerate
 		},
 		stopRegenerateQR() {
 			const oldCode = this.code
-			clearInterval(this.timerID)
-			this.timerID = null
 
 			clearInterval(this.progressTimerID)
 			this.progressTimerID = null
+			this.regenerateProgress = 0
 
 			this.qr = null
 			this.url = null
@@ -216,6 +213,26 @@ export default {
 				{anwesenheit_id: this.anwesenheit_id, zugangscode: oldCode}
 			)
 		},
+		setTimespanForKontrolle(data) {
+			if(data[0].beginn && data[0].ende) {
+				let beginn = new Date('1995-10-16 ' + data[0].beginn)
+				let ende = new Date('1995-10-16 ' + data[0].ende)
+
+				data.forEach(entry => {
+					const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
+					const entryEnde = new Date('1995-10-16 ' + entry.ende)
+
+					if(entryBeginn <= beginn) beginn = entryBeginn
+					if(entryEnde >= ende) ende = entryEnde
+
+				})
+
+				// TODO (johann): since we deleted datum and only have von
+				//  & bis setting those variables dates correctly is integral for stundenplan lookup
+				this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
+				this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
+			}
+		},
 		setupLehreinheitAndLektorData(res) {
 			console.log('setupLehreinheitAndLektorData', res)
 			// TODO: do smth with raum or lektorinfo?
@@ -225,24 +242,8 @@ export default {
 				// find out von & bis times for lehreinheit
 				this.filterTitle = this.$entryParams.selected_le_info.infoString
 
-				if(data[0].beginn && data[0].ende) {
-					let beginn = new Date('1995-10-16 ' + data[0].beginn)
-					let ende = new Date('1995-10-16 ' + data[0].ende)
+				this.setTimespanForKontrolle(data)
 
-					data.forEach(entry => {
-						const entryBeginn = new Date('1995-10-16 ' + entry.beginn)
-						const entryEnde = new Date('1995-10-16 ' + entry.ende)
-
-						if(entryBeginn <= beginn) beginn = entryBeginn
-						if(entryEnde >= ende) ende = entryEnde
-
-					})
-
-					// TODO (johann): since we deleted datum and only have von
-					//  & bis setting those variables dates correctly is integral for stundenplan lookup
-					this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
-					this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
-				}
 			}
 		},
 		startNewAnwesenheitskontrolle(){
@@ -294,7 +295,7 @@ export default {
 						this.$fhcAlert.alertError(this.$p.t('global/errorDeleteQRCode'))
 					}
 
-					if(this.internalPermissions.useRegenerateQR) this.stopRegenerateQR()
+					if(this.$entryParams.permissions.useRegenerateQR) this.stopRegenerateQR()
 				}
 			)
 		},
@@ -487,12 +488,19 @@ export default {
 			})
 
 			return prom
+		},
+		routeToLandingPage() {
+
+			this.$router.push({
+				name: 'LandingPage'
+			})
+
 		}
 	},
 	created(){
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
-		this.ma_uid = this.internalPermissions.authID
+		this.ma_uid = this.$entryParams.permissions.authID
 
 		const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
 		const dateParts = selectedDateDBFormatted.split( "-")
@@ -507,12 +515,9 @@ export default {
 		this.boundProgressCounter = this.progressCounter.bind(this)
 
 		// ceiling to check for inside progress calc
-		this.progressMax = this.internalPermissions.regenerateQRTimer / 10
+		this.progressMax = this.$entryParams.permissions.regenerateQRTimer / 10
 		// which is called in an interval
 		this.progressTimerInterval = 10
-		// console.log('regenerateQRTimer: ' + this.internalPermissions.regenerateQRTimer)
-		// console.log('progressMax: ' + this.progressMax)
-		// console.log('progressTimerInterval: ' + this.progressTimerInterval)
 
 		// see if test is still running
 		this.getExistingQRCode()
@@ -520,7 +525,7 @@ export default {
 		// fetch LE data
 		this.$fhcApi.post(
 			'extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitAndLektorInfo',
-			{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}
+			{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}
 		).then(res => this.setupLehreinheitAndLektorData(res));
 
 	},
@@ -536,6 +541,20 @@ export default {
 			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+
+			// load stundenplan hours for ma_uid, le_id and selected date
+			this.$fhcApi.post(
+				'extensions/FHC-Core-Anwesenheiten/Api/infoGetStundenPlanEntriesForLEandLektorOnDate',
+				{le_id: this.$entryParams.selected_le_id, ma_uid: this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}
+			).then(res => {
+				console.log(res)
+
+				// TODO: FIND SOMETHING IN STUNDEPLAN TO TEST WITH AND SET KONTROLLE BEGINN END LIKE IN MOUNTED LE INFO METHOD
+
+				if(res?.data?.retval) this.setTimespanForKontrolle(res.data.retval)
+
+			})
+
 			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
 
 			this.students.forEach((student, index) => {
@@ -557,6 +576,10 @@ export default {
 			:hideTopMenu="true"
 			leftNavCssClasses="">	
 		</core-navigation-cmpt>
+					
+		<row>
+			<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
+		</row>
 					
 		<core-base-layout
 			:title="filterTitle">			
@@ -603,7 +626,7 @@ export default {
 						</div>
 						<div class="row" style="width: 80%; margin-left: 10%;">
 							<progress 
-								v-if="internalPermissions && internalPermissions.useRegenerateQR"
+								v-if="$entryParams.permissions.useRegenerateQR"
 								:max="progressMax"
 								:value="regenerateProgress">
 							</progress>

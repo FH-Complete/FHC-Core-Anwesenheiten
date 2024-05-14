@@ -46,9 +46,7 @@ $this->load->view('templates/FHC-Header', $includesArray);
 
 <body>
 <div id="main" permissions='<?php echo json_encode($permissions) ?>'>
-	<router-view
-		permissions='<?php echo json_encode($permissions) ?>'
-	>
+	<router-view>
 	
 	</router-view>
 </div>

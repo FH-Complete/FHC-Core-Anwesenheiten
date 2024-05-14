@@ -49,7 +49,7 @@ class Entschuldigung_model extends \DB_Model
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr)
 	{
 
-		$query = 'SELECT dms_id,
+		$query = 'SELECT DISTINCT dms_id,
 						von,
 						bis,
 						public.tbl_person.person_id,

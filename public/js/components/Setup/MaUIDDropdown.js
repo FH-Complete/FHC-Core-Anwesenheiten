@@ -15,7 +15,7 @@ export const MaUIDDropdown = {
 	},
 	methods: {
 		reloadAvailableLE() {
-			const ma_uid = this.$entryParams.selected_maUID.mitarbeiter_uid
+			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
 			const sem_kurzbz = this.$entryParams.sem_kurzbz
 			const lv_id = this.$entryParams.lv_id
 			const le_ids = []
@@ -98,6 +98,10 @@ export const MaUIDDropdown = {
 				this.internal_available_maUID = this.$entryParams.available_maUID
 				this.internal_selected_maUID =  this.$entryParams.selected_maUID
 			})
+		},
+		resetData() {
+			this.internal_available_maUID = this.$entryParams.available_maUID
+			this.internal_selected_maUID =  this.$entryParams.selected_maUID
 		}
 	},
 	mounted() {
@@ -105,8 +109,8 @@ export const MaUIDDropdown = {
 	},
 	template: `
 		<div class="mt-2">
-			<label for="leSelect">{{ $p.t('lehre/lektor') }}</label>
-			<select id="leSelect" v-model="internal_selected_maUID" @change="maUIDChanged" class="form-control">
+			<label for="maSelect">{{ $p.t('lehre/lektor') }}</label>
+			<select id="maSelect" v-model="internal_selected_maUID" @change="maUIDChanged" class="form-control">
 				<option v-for="option in internal_available_maUID" :value="option" >
 					<a> {{option.infoString}} </a>
 				</option>

@@ -15,15 +15,14 @@ export default {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
-			isLektor: false,
-			isStudent: false
 		};
 	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
 		},
-		countAnwesenheitDataPie (statusArr) {
+		countAnwesenheitDataPie (statusArrParam) {
+			const statusArr = statusArrParam ?? []
 			let anwCounter = 0
 			let abwCounter = 0
 			let entCounter = 0
@@ -230,12 +229,10 @@ export default {
 
 	},
 	mounted() {
-		this.isLektor = this.$entryParams.permissions.lektor
-		this.isStudent = this.$entryParams.permissions.student
 
-		if(this.isStudent) {
+		if(this.$entryParams.permissions.student) {
 			this.setupStudentGraphs()
-		} else if (this.isLektor) {
+		} else if (this.$entryParams.permissions.lektor || this.$entryParams.permissions.admin) {
 			this.setupLektorGraphs()
 		}
 

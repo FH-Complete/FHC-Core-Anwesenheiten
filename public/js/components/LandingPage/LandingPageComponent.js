@@ -22,11 +22,11 @@ export default {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
-			internalPermissions: JSON.parse(this.permissions),
+
 		};
 	},
 	props: {
-		permissions: null,
+
 	},
 	methods: {
 		async createdSetup () {
@@ -46,7 +46,6 @@ export default {
 
 				el.removeAttribute('permissions')
 
-				this.$entryParams.setupPromise = this.handleSetup()
 
 				resolve()
 			})
@@ -110,7 +109,7 @@ export default {
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz)
 
 					maProm.then(()=>{
-						ma_uid = this.$entryParams.selected_maUID
+						ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
 						console.log('add le setup promise')
 						promises.push(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids))
 						console.log('add student setup promise')
@@ -163,6 +162,8 @@ export default {
 							infoString
 						})
 					})
+
+					this.$refs.MADropdown.resetData()
 
 				}).finally(()=> {
 					console.log('handleMaSetup finally')
@@ -220,6 +221,9 @@ export default {
 
 					this.$entryParams.selected_le_id = le_ids.length ? le_ids[0] : null
 					this.$entryParams.available_le_ids = [...le_ids]
+
+					this.$refs.LEDropdown.resetData()
+
 					resolve()
 				}).finally(() => {
 					console.log('handleLeSetup finally')
@@ -238,16 +242,10 @@ export default {
 		}
 	},
 	created(){
-		this.createdSetup()
+		if(!this.$entryParams.permissions) this.createdSetup()
+		this.$entryParams.setupPromise = this.handleSetup()
 	},
 	mounted() {
-		// const el = document.getElementById("main");
-		// this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
-		// console.log('permissions', this.$entryParams.permissions)
-		//
-		// el.removeAttribute('permissions')
-
-
 
 	},
 	watch: {
@@ -269,7 +267,7 @@ export default {
 				<template v-slot:default>
 					<div>
 						<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
-						 id="maUID" @maUIDchanged="maUIDchangedHandler">
+						 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
 						</MaUIDDropdown>
 					
 						<LehreinheitenDropdown id="lehreinheit" ref="LEDropdown">
@@ -284,16 +282,16 @@ export default {
 		
 			<div style="margin-bottom: 12px;">
 				<div class="col-sm-10 col-10 mx-auto">
-					<div class="row" v-if="internalPermissions?.lektor || internalPermissions?.admin">
+					<div class="row mt-4" v-if="$entryParams.permissions?.lektor || $entryParams.permissions?.admin">
 						<button  class="btn btn-primary btn-block btn-lg" @click="routeToLektor">Anwesenheiten verwalten Lektor</button>
 					</div>
-					<div class="row" v-if="internalPermissions?.student || internalPermissions?.admin">
+					<div class="row mt-4" v-if="$entryParams.permissions?.student || $entryParams.permissions?.admin">
 						<button  class="btn btn-primary btn-block btn-lg" @click="routeToStudent">Anwesenheiten verwalten Student</button>
 					</div>
+					<div class="row mt-4" v-if="$entryParams.permissions?.assistenz || $entryParams.permissions?.admin">
+						<button  class="btn btn-primary btn-block btn-lg" @click="routeToAssistenz">Anwesenheiten verwalten Assistenz</button>
+					</div>
 				</div>
-			</div>
-			<div class="col-2" v-if="internalPermissions?.assistenz || internalPermissions?.admin">
-				<button  class="btn btn-primary" @click="routeToAssistenz">Assistenz</button>
 			</div>
 			
 			

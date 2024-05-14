@@ -189,20 +189,6 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-	public function getHoursForLE($le_id, $date)
-	{
-		// TODO: test how reliable this is in edge cases
-
-		$query = "
-			SELECT * FROM (SELECT DISTINCT(stunde)
-			FROM lehre.tbl_stundenplan JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
-			WHERE lehreinheit_id = {$le_id} AND DATE(lehre.tbl_stundenplan.datum) = '{$date}')
-				stunden JOIN lehre.tbl_stunde USING(stunde);
-		";
-
-		return $this->execQuery($query);
-	}
-
 	public function getLehreinheitAndLektorInfo($le_id, $ma_uid, $date)
 	{
 		$query = "
@@ -222,6 +208,15 @@ class Anwesenheit_model extends \DB_Model
 
 		return $this->execQuery($query);
 
+	}
+
+	public function getStundenPlanEntriesForLEandLektorOnDate($le_id, $ma_uid, $date) {
+		$query = "SELECT Distinct mitarbeiter_uid, beginn, ende, lehreinheit_id
+			FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
+			WHERE mitarbeiter_uid = '{$ma_uid}'
+			AND datum = '{$date}' AND lehreinheit_id = {$le_id}";
+
+		return $this->execReadOnlyQuery($query);
 	}
 
 	public function getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, $root)

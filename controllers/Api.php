@@ -23,6 +23,7 @@ class Api extends FHCAPI_Controller
 				'infoGetStudiengaenge' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'infoGetLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
 				'infoGetStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
+				'infoGetStundenPlanEntriesForLEandLektorOnDate' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 
 				'lektorStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'lektorGetAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
@@ -187,6 +188,17 @@ class Api extends FHCAPI_Controller
 		$this->terminateWithSuccess($result);
 	}
 
+	public function infoGetStundenPlanEntriesForLEandLektorOnDate() {
+		$result = $this->getPostJSON();
+		$le_id = $result->le_id;
+		$ma_uid = $result->ma_uid;
+		$date = $result->date;
+
+		$result = $this->_ci->AnwesenheitModel->getStundenPlanEntriesForLEandLektorOnDate($le_id, $ma_uid, $date);
+		if(!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess($result);
+	}
+
 	// LEKTOR API
 
 	public function lektorGetAllAnwesenheitenByLvaAssigned()
@@ -214,7 +226,8 @@ class Api extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_ids, $sem_kurzbz, APP_ROOT);
 
-		if(!hasData($result)) $this->terminateWithError('no students found');
+		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFound'), 'general');
 		$students = getData($result);
 
 		$func = function($value) {
@@ -603,18 +616,18 @@ class Api extends FHCAPI_Controller
 
 		// find relevant entry from tbl_anwesenheit_check via zugangscode
 		$result = $this->_ci->QRModel->loadWhere(array('zugangscode' => $zugangscode));
-		var_dump($result);
+
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorInvalidCode'), 'general');
 
-		$codeDateString = $result->retval[0]->insertamum;
-		$codeDateTime = new DateTime($codeDateString);
-
-		$nowString = date("Y-m-d H:i:s");
-		$nowDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $nowString);
-
-		$timeDiffInMilliseconds = ($codeDateTime.getTimestamp() - $nowDateTime.getTimeStamp()) * 1000;
-
-		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError($this->p->t('global', 'errorCodeTooOld'), 'general');
+//		$codeDateString = $result->retval[0]->insertamum;
+//		$codeDateTime = new DateTime($codeDateString);
+//
+//		$nowString = date("Y-m-d H:i:s");
+//		$nowDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $nowString);
+//
+//		$timeDiffInMilliseconds = ($codeDateTime.getTimestamp() - $nowDateTime.getTimeStamp()) * 1000;
+//
+//		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError($this->p->t('global', 'errorCodeTooOld'), 'general');
 
 		// find relevant entry from tbl_anwesenheit via anwesenheit_id
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
@@ -624,9 +637,9 @@ class Api extends FHCAPI_Controller
 		$von = $result->retval[0]->von;
 		$bis = $result->retval[0]->bis;
 
-		if(!($von <= $nowString && $nowString <= $bis)) {
-			$this->terminateWithError($this->p->t('global', 'errorCodeSentInTimeOutsideKontrolle'), 'general');
-		}
+//		if(!($von <= $nowString && $nowString <= $bis)) {
+//			$this->terminateWithError($this->p->t('global', 'errorCodeSentInTimeOutsideKontrolle'), 'general');
+//		}
 
 
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;

@@ -50,7 +50,7 @@ class Assistenz extends Auth_Controller
 	{
 		$viewData = array(
 			'permissions' => [
-				'admin' => $this->permissionlib->isBerechtigt('admin'),
+				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
 				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),

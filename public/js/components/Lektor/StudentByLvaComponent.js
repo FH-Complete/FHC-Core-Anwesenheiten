@@ -310,6 +310,11 @@ export default {
 				+ this.verband + this.gruppe + ' '
 			this.filterSubtitle = this.$p.t('global/summe')
 				+ ': ' + (this.sum ? this.sum : '-') + ' %'
+		},
+		routeToLektor() {
+			this.$router.push({
+				name: 'Lektor'
+			})
 		}
 	},
 	created(){
@@ -357,6 +362,9 @@ export default {
 			leftNavCssClasses="">	
 		</core-navigation-cmpt>
 
+		<row>
+			<button class="btn btn-outline-secondary" @click="routeToLektor"><a><i class="fa fa-chevron-left"></i></a></button>
+		</row>
 		<core-base-layout
 			:title="filterTitle"
 			:subtitle="filterSubtitle"
@@ -364,6 +372,7 @@ export default {
 			:aside-cols=[2]
 			>
 			<template #main>
+					
 				<core-filter-cmpt
 					title=""
 					ref="anwesenheitenByStudentByLvaTable"
