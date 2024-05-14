@@ -34,9 +34,9 @@ export default {
 				layout:"fitColumns",
 				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
-					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1},
+					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, minWidth: 150, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false},
 				],
 				persistence:true,
