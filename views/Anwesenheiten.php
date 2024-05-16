@@ -30,6 +30,8 @@ $includesArray = array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/highcharts.src.js',
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
+		'vendor/npm-asset/primevue/dropdown/dropdown.js'
+
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',

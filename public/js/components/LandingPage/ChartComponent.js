@@ -21,11 +21,8 @@ export default {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
 		},
-		countAnwesenheitDataPie (statusArrParam) {
+		countAnwesenheitDataPie (statusArrParam, mode = 'byEntry') {
 			const statusArr = statusArrParam ?? []
-			let anwCounter = 0
-			let abwCounter = 0
-			let entCounter = 0
 
 			const anw = Vue.computed(()=> this.$capitalize(this.$p.t('global/anwesend')) )
 			const abw = Vue.computed(()=> this.$capitalize(this.$p.t('global/abwesend')) )
@@ -46,24 +43,58 @@ export default {
 				y: 0
 			}]
 
-			statusArr.forEach(entry => {
-				if(!entry.status) return
-				switch(entry.status) {
-					case 'abwesend':
-						abwCounter++
-						break;
-					case 'anwesend':
-						anwCounter++
-						break;
-					case 'entschuldigt':
-						entCounter++
-						break;
-				}
-			})
+			if(mode === 'byEntry') {
+				let anwCounter = 0
+				let abwCounter = 0
+				let entCounter = 0
 
-			anwesenheitenData[0].y = Number((anwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
-			anwesenheitenData[1].y = Number((abwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
-			anwesenheitenData[2].y = Number((entCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+				statusArr.forEach(entry => {
+					if(!entry.status) return
+					switch(entry.status) {
+						case 'abwesend':
+							abwCounter++
+							break;
+						case 'anwesend':
+							anwCounter++
+							break;
+						case 'entschuldigt':
+							entCounter++
+							break;
+					}
+				})
+
+				anwesenheitenData[0].y = Number((anwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+				anwesenheitenData[1].y = Number((abwCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+				anwesenheitenData[2].y = Number((entCounter / (abwCounter + anwCounter + entCounter) * 100).toFixed(2))
+			} else if (mode === 'byTime') {
+				let anwTime = 0
+				let abwTime = 0
+				let entTime = 0
+
+				statusArr.forEach(entry => {
+					if(!entry.status) return
+
+					const entryVonDate = new Date(entry.von)
+					const entryBisDate = new Date(entry.bis)
+					const diff = entryBisDate.getTime() - entryVonDate.getTime()
+					switch(entry.status) {
+						case 'abwesend':
+							abwTime += diff
+							break;
+						case 'anwesend':
+							anwTime += diff
+							break;
+						case 'entschuldigt':
+							entTime += diff
+							break;
+					}
+				})
+
+				anwesenheitenData[0].y = Number((anwTime / (abwTime + anwTime + entTime) * 100).toFixed(2))
+				anwesenheitenData[1].y = Number((abwTime / (abwTime + anwTime + entTime) * 100).toFixed(2))
+				anwesenheitenData[2].y = Number((entTime / (abwTime + anwTime + entTime) * 100).toFixed(2))
+			}
+
 
 			return anwesenheitenData
 		},
@@ -86,13 +117,13 @@ export default {
 						allowPointSelect: true,
 						dataLabels: [{
 							enabled: true,
-							distance: 20
+							distance: 10
 						}, {
 							enabled: true,
-							distance: -40,
+							distance: -20,
 							format: '{point.percentage:.1f}%',
 							style: {
-								fontSize: '1.2em',
+								fontSize: '0.6em',
 								textOutline: 'none',
 								opacity: 0.7
 							},
@@ -178,8 +209,10 @@ export default {
 
 					this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByLva', {lva: this.$entryParams.selected_le_info.kurzbz}))
 				})
+
 		},
 		async setupStudentGraphs() {
+			console.log(this.$entryParams)
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
@@ -196,26 +229,27 @@ export default {
 				anw.forEach(entry => {
 					const cat = categories.find(el => el.bezeichnung === entry.bezeichnung)
 					if (!cat) {
-						categories.push({bezeichnung: entry.bezeichnung, data: [{status: entry.student_status}]})
+						categories.push({bezeichnung: entry.bezeichnung, data: [{status: entry.student_status, von: entry.von, bis: entry.bis}]})
 					} else {
-						cat.data.push({status: entry.student_status})
+						cat.data.push({status: entry.student_status, von: entry.von, bis: entry.bis})
 					}
 				})
 
 				categories.forEach(category => {
-					const anwesenheitenData = this.countAnwesenheitDataPie(category.data)
+					const anwesenheitenDataByTime = this.countAnwesenheitDataPie(category.data, 'byTime')
 
-					const containerCategory = document.createElement('div')
-					const id = category.bezeichnung
-					containerCategory.id = id
+					const containerCategoryByTime = document.createElement('div')
+					const idByTime = category.bezeichnung + ' byTime'
+					containerCategoryByTime.id = idByTime
 
-					containerCategory.style.flex = '1 0 300px';
-					containerCategory.style.margin = '10px';
+					containerCategoryByTime.style.flex = '1 0 300px';
+					containerCategoryByTime.style.margin = '10px';
 					// containerCategory.style.maxWidth = '250px';
 					// containerCategory.style.maxHeight = '250px';
-					wrapperDiv.appendChild(containerCategory)
+					wrapperDiv.appendChild(containerCategoryByTime)
 
-					this.addPieChartToWrapper(anwesenheitenData, id, category.bezeichnung)
+					this.addPieChartToWrapper(anwesenheitenDataByTime, idByTime, category.bezeichnung)
+
 				})
 			})
 		}

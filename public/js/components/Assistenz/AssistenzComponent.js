@@ -4,6 +4,9 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters, universalFormatter} from "../../mixins/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
+
+// import Dropdown from '../../../../../../../vendor/npm-asset/primevue/dropdown/dropdown.js'
+
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
 import {DateTime} from '../../luxon.js'
 window.DateTime = DateTime
@@ -136,16 +139,15 @@ export default {
 			if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
 			if (this.studiengang) this.$refs.assistenzTable.tabulator.addFilter(this.studiengangFilter, {studiengang: this.studiengang})
 		},
-		sgChangedHandler: function(studiengang) {
-			console.log('sgChangedHandler', studiengang)
-			this.studiengang = studiengang
+		sgChangedHandler: function(e) {
+			console.log('sgChangedHandler', e)
+			this.studiengang = e.value ? e.value.studiengang_kz : null
 		}
 	},
 	mounted() {
 		// this.titleText = this.$p.t('global/entschuldigungsmanagementStudiengangsassistenz')
 
 		// const bis = Vue.computed(()=> this.$capitalize(this.$p.t('global/bis')))
-		// this.$refs.assistenzTable.tabulator.updateColumnDefinition('bis', bis.value)
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -159,10 +161,10 @@ export default {
 		:title="$p.t('global/entschuldigungsmanagementStudiengangsassistenz')">
 		<template #main>
 			<div class="row">
-				<div class="col-4">
+				<div class="col-5">
 					<div class="row mb-3 align-items-center">
 						<StudiengangDropdown
-							@sgChanged="sgChangedHandler">
+							:allowedStg="$entryParams.permissions.studiengaengeAssistenz" @sgChanged="sgChangedHandler">
 						</StudiengangDropdown>
 					</div>
 					<div class="row mb-3 align-items-center">

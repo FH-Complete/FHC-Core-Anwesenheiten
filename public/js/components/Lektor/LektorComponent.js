@@ -95,6 +95,7 @@ export default {
 			polling: false,
 			checkInCount: 0,
 			studentCount: 0,
+			isAllowedToStartKontrolle: true
 		}
 	},
 	props: {
@@ -542,6 +543,10 @@ export default {
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 
+
+			const today = new Date(Date.now())
+			this.isAllowedToStartKontrolle = areDatesSame(newVal, today)
+
 			// load stundenplan hours for ma_uid, le_id and selected date
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/infoGetStundenPlanEntriesForLEandLektorOnDate',
@@ -551,7 +556,7 @@ export default {
 
 				// TODO: FIND SOMETHING IN STUNDEPLAN TO TEST WITH AND SET KONTROLLE BEGINN END LIKE IN MOUNTED LE INFO METHOD
 
-				if(res?.data?.retval) this.setTimespanForKontrolle(res.data.retval)
+				if(res?.data?.retval && res?.data?.retval?.length) this.setTimespanForKontrolle(res.data.retval)
 
 			})
 
@@ -598,7 +603,7 @@ export default {
 								</datepicker>
 							</div>
 						</div>
-						<div class="row align-items-center">
+						<div class="row align-items-center mt-4">
 							<div class="col-2 align-items-center"><label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label></div>
 							<div class="col-10">
 								<datepicker
@@ -647,7 +652,7 @@ export default {
 					:tableOnly
 					newBtnShow=true
 					:newBtnLabel="$p.t('global/neueAnwKontrolle')"
-					:newBtnDisabled=qr
+					:newBtnDisabled=false
 					@click:new=openNewAnwesenheitskontrolleModal
 					:sideMenu="false"
 					noColumnFilter>

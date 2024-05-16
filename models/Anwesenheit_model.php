@@ -155,7 +155,8 @@ class Anwesenheit_model extends \DB_Model
 	public function getAllAnwesenheitenByLva($lv_id, $sem_kurzbz) {
 		$query ="
 		SELECT
-			extension.tbl_anwesenheit_user.status
+			extension.tbl_anwesenheit_user.status,
+			ta.von, ta.bis
 		FROM
 			extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 			JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
@@ -339,7 +340,7 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-	public function getStudiengaenge()
+	public function getStudiengaengeFiltered($allowed_stg)
 	{
 		$query ="SELECT
 					studiengang_kz,
@@ -348,7 +349,16 @@ class Anwesenheit_model extends \DB_Model
 					orgform_kurzbz
 				FROM tbl_studiengang
 				WHERE aktiv = true
-				ORDER BY studiengang_kz";
+				
+				AND studiengang_kz IN (";
+
+				foreach ($allowed_stg as $index => $id) {
+					if($index > 0) $query .= ", ";
+					$query .= $id;
+				}
+				$query .= ")";
+
+		$query .= "ORDER BY studiengang_kz";
 
 		return $this->execReadOnlyQuery($query);
 	}

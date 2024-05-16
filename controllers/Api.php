@@ -164,7 +164,12 @@ class Api extends FHCAPI_Controller
 
 	public function infoGetStudiengaenge()
 	{
-		$result = $this->_ci->AnwesenheitModel->getStudiengaenge();
+		$result = $this->getPostJSON();
+		$allowed_stg = $result->allowed_stg;
+		// TODO: default allowed_stg ? or just save error throw when none assigned
+
+
+		$result = $this->_ci->AnwesenheitModel->getStudiengaengeFiltered($allowed_stg);
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess($result);
@@ -619,15 +624,18 @@ class Api extends FHCAPI_Controller
 
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorInvalidCode'), 'general');
 
-//		$codeDateString = $result->retval[0]->insertamum;
-//		$codeDateTime = new DateTime($codeDateString);
-//
-//		$nowString = date("Y-m-d H:i:s");
-//		$nowDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $nowString);
-//
-//		$timeDiffInMilliseconds = ($codeDateTime.getTimestamp() - $nowDateTime.getTimeStamp()) * 1000;
-//
-//		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError($this->p->t('global', 'errorCodeTooOld'), 'general');
+		// calculate age of zugangscode, since it might be a data relic a student abuses
+		$codeDateString = $result->retval[0]->insertamum;
+		$codeDateTime = new DateTime($codeDateString);
+
+		$nowString = date("Y-m-d H:i:s");
+		$nowDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $nowString);
+
+		$interval = $nowDateTime->diff($codeDateTime);
+		$timeDiffInMilliseconds = $interval->d * 24 * 60 * 60 * 1000 + $interval->h * 60 * 60 * 1000 + $interval->i * 60 * 1000 + $interval->s * 1000;
+
+		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError($this->p->t('global', 'errorCodeTooOld'), 'general');
+
 
 		// find relevant entry from tbl_anwesenheit via anwesenheit_id
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
@@ -646,7 +654,7 @@ class Api extends FHCAPI_Controller
 
 		// find relevant lehreinheit from relevant entry
 		$result = $this->_ci->LehreinheitModel->loadWhere(array('lehreinheit_id' => $lehreinheit_id));
-		$lehreinheit = $result->retval[0];
+//		$lehreinheit = $result->retval[0];
 
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCodeLinkedToInvalidLE'), 'general');
 
@@ -670,7 +678,7 @@ class Api extends FHCAPI_Controller
 
 		// check if there is already an anwesenheit written to lehreinheit on date of check
 		$date = date('Y-m-d');
-		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLehreinheitByDate($lehreinheit_id, $date);
+		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLehreinheitByDate($lehreinheit_id, $von);
 
 		// all entries need to be inserted on start
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorNoUserEntriesForAttendanceCheckFound'), 'general');
@@ -698,9 +706,9 @@ class Api extends FHCAPI_Controller
 				// if inserted successfully return some information to display who has entered
 				// his anwesenheitscheck for which date and lehreinheit
 				$this->terminateWithSuccess(array(
-					'message' => 'Anwesenheitskontrolle erfolgreich.',
 					'anwesenheitEntry' => json_encode($entry),
-					'viewData' => json_encode($viewData)
+					'viewData' => json_encode($viewData),
+					$nowDateTime, $codeDateTime, $interval
 				));
 			}
 
@@ -750,7 +758,7 @@ class Api extends FHCAPI_Controller
 		if (isError($result))
 			$this->terminateWithError(getError($result));
 
-		$this->sendEmailToAssistenz();
+//		$this->sendEmailToAssistenz();
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result), 'emailInfo' => $emailInfo]);
 	}
@@ -815,6 +823,8 @@ class Api extends FHCAPI_Controller
 		if (hasData($zuordnung))
 		{
 			$entschuldigung = getData($zuordnung)[0];
+
+			// terminate with error if entschuldigung is already accepted/declined
 
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
 

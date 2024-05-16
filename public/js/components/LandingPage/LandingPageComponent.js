@@ -121,6 +121,8 @@ export default {
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
 				} else if(this.$entryParams.permissions.lektor) {
 					resolve(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz,le_ids))
+				} else if(this.$entryParams.permissions.student) {
+					resolve()
 				}
 
 			})
