@@ -760,7 +760,7 @@ class Api extends FHCAPI_Controller
 
 //		$this->sendEmailToAssistenz();
 
-		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result), 'emailInfo' => $emailInfo]);
+		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
 
 	public function sendEmailToAssistenz () {

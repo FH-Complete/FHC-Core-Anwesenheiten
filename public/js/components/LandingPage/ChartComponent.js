@@ -151,45 +151,45 @@ export default {
 
 			const wrapperDiv = document.getElementById('highchartWrapper')
 
-			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
-			{
-				lv_id: this.$entryParams.lv_id,
-				le_ids: [this.$entryParams.selected_le_id],
-				sem_kurzbz: this.$entryParams.sem_kurzbz
-			})
-			.then(res => {
-				console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
-				if(!res.data) return
-				const anwesenheitenData = this.countAnwesenheitDataPie(res.data[1])
-
-				const containerByLvaLektor = document.createElement('div')
-				const id = 'containerByLvaLektor'
-				containerByLvaLektor.id = id
-				wrapperDiv.appendChild(containerByLvaLektor)
-
-				this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByLe', {le: this.$entryParams.selected_le_info.infoString}))
-			})
-
-
-
-			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudiengang',
-			{
-				stg_kz: this.$entryParams.stg_kz,
-				sem_kurzbz: this.$entryParams.sem_kurzbz
-			})
-			.then(res => {
-				console.log('lektorGetAllAnwesenheitenByStudiengang', res)
-
-				if(!res.data) return
-				const anwesenheitenData = this.countAnwesenheitDataPie(res.data)
-
-				const containerByStg = document.createElement('div')
-				const id = 'containerByStg'
-				containerByStg.id = id
-				wrapperDiv.appendChild(containerByStg)
-
-				this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByStg', {stg: this.$entryParams.selected_le_info.kurzbzlang}))
-			})
+			// this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
+			// {
+			// 	lv_id: this.$entryParams.lv_id,
+			// 	le_ids: [this.$entryParams.selected_le_id],
+			// 	sem_kurzbz: this.$entryParams.sem_kurzbz
+			// })
+			// .then(res => {
+			// 	console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
+			// 	if(!res.data) return
+			// 	const anwesenheitenData = this.countAnwesenheitDataPie(res.data[1])
+			//
+			// 	const containerByLvaLektor = document.createElement('div')
+			// 	const id = 'containerByLvaLektor'
+			// 	containerByLvaLektor.id = id
+			// 	wrapperDiv.appendChild(containerByLvaLektor)
+			//
+			// 	this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByLe', {le: this.$entryParams.selected_le_info.infoString}))
+			// })
+			//
+			//
+			//
+			// this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudiengang',
+			// {
+			// 	stg_kz: this.$entryParams.stg_kz,
+			// 	sem_kurzbz: this.$entryParams.sem_kurzbz
+			// })
+			// .then(res => {
+			// 	console.log('lektorGetAllAnwesenheitenByStudiengang', res)
+			//
+			// 	if(!res.data) return
+			// 	const anwesenheitenData = this.countAnwesenheitDataPie(res.data)
+			//
+			// 	const containerByStg = document.createElement('div')
+			// 	const id = 'containerByStg'
+			// 	containerByStg.id = id
+			// 	wrapperDiv.appendChild(containerByStg)
+			//
+			// 	this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByStg', {stg: this.$entryParams.selected_le_info.kurzbzlang}))
+			// })
 
 			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLva',
 				{
