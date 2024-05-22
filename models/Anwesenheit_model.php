@@ -80,6 +80,7 @@ class Anwesenheit_model extends \DB_Model
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
+			   	get_anwesenheiten_by_time(prestudent_id, $lv_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
 			   (SELECT status_kurzbz FROM public.tbl_prestudentstatus
 				WHERE prestudent_id=tbl_student.prestudent_id
 				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
@@ -131,7 +132,7 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query);
 	}
 
-	public function getAnwesenheitenEntriesForStudents($prestudentIds) {
+	public function getAnwesenheitenEntriesForStudents($prestudentIds, $le_id) {
 		$query = "
 			SELECT
 				anwesenheit_user_id,
@@ -146,7 +147,7 @@ class Anwesenheit_model extends \DB_Model
 			if($index > 0) $query .= ", ";
 			$query .= $id;
 		}
-		$query .= ");";
+		$query .= ") AND ta.lehreinheit_id = '{$le_id}';";
 
 
 		return $this->execReadOnlyQuery($query);

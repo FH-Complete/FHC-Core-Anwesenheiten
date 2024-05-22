@@ -240,7 +240,7 @@ class Api extends FHCAPI_Controller
 		};
 
 		$prestudentIds = array_map($func, $students);
-		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudents($prestudentIds);
+		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudents($prestudentIds, $le_ids[0]);
 		$anwesenheiten = getData($result);
 
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
