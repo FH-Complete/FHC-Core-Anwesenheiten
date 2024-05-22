@@ -815,8 +815,8 @@ class Api extends FHCAPI_Controller
 		$data = json_decode($this->input->raw_input_stream, true);
 		$entschuldigung_id = $data['entschuldigung_id'];
 
-		if (isEmptyString($entschuldigung_id))
-			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+//		if (isEmptyString($entschuldigung_id))
+//			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
 
