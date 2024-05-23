@@ -95,11 +95,16 @@ export const MaUIDDropdown = {
 				return
 			}
 			await this.$entryParams.setupPromise.then(() => {
+				console.log('mauid dropdown setupPromise then')
+
 				this.internal_available_maUID = this.$entryParams.available_maUID
 				this.internal_selected_maUID =  this.$entryParams.selected_maUID
+				console.log('this.internal_selected_maUID', this.internal_selected_maUID)
+
 			})
 		},
 		resetData() {
+			console.log('mauidDD resetData')
 			this.internal_available_maUID = this.$entryParams.available_maUID
 			this.internal_selected_maUID =  this.$entryParams.selected_maUID
 		}

@@ -28,6 +28,12 @@ export default {
 				name: 'Scan'
 			})
 		},
+
+	},
+	mounted: {
+
+		// TODO: data for assistenz/admin access and student access!
+
 	},
 	template: `
 	<core-navigation-cmpt 

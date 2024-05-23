@@ -6,6 +6,7 @@ import ChartComponent from '../LandingPage/ChartComponent.js'
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown"
+import {StudentDropdown} from "../Setup/StudentDropdown"
 
 export default {
 	name: 'LandingPageComponent',
@@ -16,7 +17,8 @@ export default {
 		ChartComponent,
 		BsModal,
 		LehreinheitenDropdown,
-		MaUIDDropdown
+		MaUIDDropdown,
+		StudentDropdown
 	},
 	data: function() {
 		return {
@@ -54,9 +56,16 @@ export default {
 			this.sideMenuEntries = payload;
 		},
 		routeToStudent() {
-			this.$router.push({
-				name: 'Student'
-			})
+
+			if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+				this.$refs.modalContainerStudentSetup.show()
+			} else {
+				this.$router.push({
+					name: 'Student'
+				})
+			}
+
+
 		},
 		routeToAssistenz() {
 			this.$router.push({
@@ -67,6 +76,13 @@ export default {
 			this.$refs.modalContainerKontrolleSetup.hide()
 			this.$router.push({
 				name: 'Lektor'
+			})
+		},
+		loadStudentPage() {
+			this.$refs.modalContainerStudentSetup.hide()
+
+			this.$router.push({
+				name: 'Student'
 			})
 		},
 		async routeToLektor() {
@@ -108,7 +124,7 @@ export default {
 
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz)
 
-					maProm.then(()=>{
+					maProm.then(()=> {
 						ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
 						console.log('add le setup promise')
 						promises.push(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids))
@@ -134,6 +150,19 @@ export default {
 					null, null
 				).then(res => {
 					console.log('infoGetStudentsForLvaInSemester', res)
+					this.$entryParams.availableStudents = []
+
+					res?.data?.retval?.forEach(e => {
+						const infoString = e.vorname + ' ' + e.nachname + ' ' + e.semester + e.verband + e.gruppe
+						this.$entryParams.availableStudents.push({
+							vorname: e.vorname, nachname: e.nachname,
+							prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
+							lehreinheit_id: e.lehreinheit_id, lehrveranstaltung_id: e.lehrveranstaltung_id,
+							semester: e.semester, verband: e.verband, gruppe: e.gruppe,
+							infoString
+						})
+					})
+
 				}).finally(()=>{resolve()})
 			})
 		},
@@ -151,7 +180,7 @@ export default {
 					const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 						+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 						+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
-					this.$entryParams.selected_maUID = lektor ? {mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
+					this.$entryParams.selected_maUID = lektor ?{mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
 
 
 					res.data?.retval?.forEach(lektor => {
@@ -218,6 +247,7 @@ export default {
 					})
 
 					this.$entryParams.selected_le_info = data.length ? data[0] : null
+					console.log('this.$entryParams.selected_le_info', this.$entryParams.selected_le_info)
 					this.$entryParams.available_le_info = [...data]
 					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 
@@ -239,8 +269,11 @@ export default {
 				})
 			})
 		},
-		maUIDchangedHandler() {
+		maUIDchangedHandler(e) {
 			this.$refs.LEDropdown.resetData()
+		},
+		studentUIDchangedHandler(e) {
+			console.log('studentUIDchangedHandler', e)
 		}
 	},
 	created(){
@@ -279,6 +312,20 @@ export default {
 				</template>
 				<template v-slot:footer>
 					<button type="button" class="btn btn-primary" :disabled="$entryParams?.selected_le_id === null" @click="loadLE">{{ $p.t('global/leLaden') }}</button>
+				</template>
+			</bs-modal>
+			
+			<bs-modal ref="modalContainerStudentSetup" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>{{ $p.t('global/studentConfig') }}</template>
+				<template v-slot:default>
+					<div>
+						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
+						 id="studentUID" ref="studentDropdown" @studentUIDchanged="studentUIDchangedHandler">
+						</StudentDropdown>
+					</div>
+				</template>
+				<template v-slot:footer>
+					<button type="button" class="btn btn-primary" :disabled="" @click="loadStudentPage">{{ $p.t('global/studentLaden') }}</button>
 				</template>
 			</bs-modal>
 		

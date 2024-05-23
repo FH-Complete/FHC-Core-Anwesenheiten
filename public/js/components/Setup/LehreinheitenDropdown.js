@@ -29,9 +29,11 @@ export const LehreinheitenDropdown = {
 				console.log('lehreinheiten dropdown setupPromise then')
 				this.internal_available_le_info = this.$entryParams.available_le_info
 				this.internal_selected_le_info =  this.$entryParams.selected_le_info
+				console.log('this.internal_selected_le_info', this.internal_selected_le_info)
 			})
 		},
 		resetData() {
+			console.log('leidDD resetData')
 			this.internal_available_le_info = this.$entryParams.available_le_info
 			this.internal_selected_le_info =  this.$entryParams.selected_le_info
 		}

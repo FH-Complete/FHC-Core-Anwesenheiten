@@ -113,7 +113,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStudentsForLvaInSemester($lv_id, $sem_kurzbz) {
 		$query = "SELECT
-				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id 
+				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id, uid
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe

@@ -42,8 +42,10 @@ export default {
 			this.studiensemester = studiensemester
 
 			this.$fhcApi.get(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',
-				{studiensemester: this.studiensemester}
+				// 'extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',
+				// {studiensemester: this.studiensemester}
+				'extensions/FHC-Core-Anwesenheiten/Api/studentGetAllByUID',
+				{studiensemester: this.studiensemester, uid: this.uid}
 			).then(res => {
 				console.log('Student.getAll(this.studiensemester)', res)
 				if(res.meta.status !== "success") {

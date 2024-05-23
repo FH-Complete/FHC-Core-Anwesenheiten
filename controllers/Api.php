@@ -41,9 +41,11 @@ class Api extends FHCAPI_Controller
 				'lektorGetAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 
 				'studentGetAll' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'studentGetAllByUID' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'studentAddEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentDeleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentGetEntschuldigungenByPerson' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'studentGetEntschuldigungenByPersonAndUID' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentCheckInAnwesenheit' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentGetAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'studentDeleteUserAnwesenheitById' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
@@ -612,6 +614,25 @@ class Api extends FHCAPI_Controller
 		}
 	}
 
+	public function studentGetAllByUID()
+	{
+		$studiensemester = $this->_ci->input->get('studiensemester');
+		$uid = $this->_ci->input->get('uid');
+
+		if (!isEmptyString($studiensemester))
+		{
+			$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
+
+			if (isError($studiensemester) || !hasData($studiensemester))
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+			$studiensemester = getData($studiensemester)[0]->studiensemester_kurzbz;
+
+			$result = $this->_ci->AnwesenheitModel->getAllByStudent($uid, $studiensemester);
+			$this->terminateWithSuccess($result);
+		}
+	}
+
 	public function studentCheckInAnwesenheit() {
 
 		$result = $this->getPostJSON();
@@ -842,6 +863,13 @@ class Api extends FHCAPI_Controller
 	public function studentGetEntschuldigungenByPerson()
 	{
 		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson(getAuthPersonId()));
+	}
+
+	public function studentGetEntschuldigungenByPersonAndUID() {
+		$result = $this->getPostJSON();
+		$person_id = $result->person_id;
+
+		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id));
 	}
 
 	public function studentGetAnwesenheitSumByLva() {
