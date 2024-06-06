@@ -39,6 +39,7 @@ class Entschuldigung_model extends \DB_Model
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
 					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
 					';
@@ -72,6 +73,7 @@ class Entschuldigung_model extends \DB_Model
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
 					WHERE tbl_studiengang.aktiv = true AND (';
 

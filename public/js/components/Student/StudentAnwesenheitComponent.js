@@ -41,11 +41,14 @@ export default {
 			console.log('ssChangedHandler')
 			this.studiensemester = studiensemester
 
+			console.log('this.$entryParams.selected_student', this.$entryParams.selected_student)
+
+			// toggle anwesenheiten loading procedure based on admin or student login
+			const uid = this.$entryParams.selected_student ? this.$entryParams?.selected_student.uid : this.$entryParams.viewDataStudent.student_uid
+
 			this.$fhcApi.get(
-				// 'extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',
-				// {studiensemester: this.studiensemester}
 				'extensions/FHC-Core-Anwesenheiten/Api/studentGetAllByUID',
-				{studiensemester: this.studiensemester, uid: this.uid}
+				{studiensemester: this.studiensemester, uid}
 			).then(res => {
 				console.log('Student.getAll(this.studiensemester)', res)
 				if(res.meta.status !== "success") {

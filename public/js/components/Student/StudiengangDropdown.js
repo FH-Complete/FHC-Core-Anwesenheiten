@@ -22,13 +22,16 @@ export const StudiengangDropdown = {
 	methods: {
 		loadDropdown() {
 			console.log('loadDropdown', this.allowedStg)
+			const admin = this.$entryParams.permissions.admin
 			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/infoGetStudiengaenge',
-				{allowed_stg: this.allowedStg}).then(res => {
+				{allowed_stg: this.allowedStg, admin}).then(res => {
 				console.log('getStudiengänge', res)
 
 				if(res.meta.status !== "success") return
 				this.options = res.data.retval ?? [];
 
+				this.$entryParams.studiengaengeAdmin = res.data.retval.map(e => e.studiengang_kz)
+				console.log(this.$entryParams.studiengaengeAdmin)
 				// this.selectedOption = this.$entryParams.stg_kz
 
 			});

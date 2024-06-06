@@ -41,6 +41,7 @@ class Api extends FHCAPI_Controller
 				'lektorGetAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 
 				'studentGetAll' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'studentGetViewData' => array ('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentGetAllByUID' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'studentAddEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'studentDeleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
@@ -65,6 +66,7 @@ class Api extends FHCAPI_Controller
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 
+		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 
@@ -168,13 +170,21 @@ class Api extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 		$allowed_stg = $result->allowed_stg;
+		$admin = $result->admin; // TODO: find better solution
 		// TODO: default allowed_stg ? or just save error throw when none assigned
 
+		if($admin) {
+			$result = $this->_ci->AnwesenheitModel->getStudiengaenge();
 
-		$result = $this->_ci->AnwesenheitModel->getStudiengaengeFiltered($allowed_stg);
+			if(!isSuccess($result)) $this->terminateWithError($result);
+			$this->terminateWithSuccess($result);
+		} else {
+			$result = $this->_ci->AnwesenheitModel->getStudiengaengeFiltered($allowed_stg);
 
-		if(!isSuccess($result)) $this->terminateWithError($result);
-		$this->terminateWithSuccess($result);
+			if(!isSuccess($result)) $this->terminateWithError($result);
+			$this->terminateWithSuccess($result);
+		}
+
 	}
 
 	public function infoGetLektorsForLvaInSemester() {
@@ -614,6 +624,19 @@ class Api extends FHCAPI_Controller
 		}
 	}
 
+	public function studentGetViewData() {
+		$result = $this->getPostJSON();
+		$uid = $result->uid;
+
+		if($uid === null) $uid = $this->_uid;
+
+		$result = $this->_ci->AnwesenheitModel->getStudentViewData($uid);
+
+		if(isError($result)) $this->terminateWithError($result);
+
+		$this->terminateWithSuccess($result);
+	}
+
 	public function studentGetAllByUID()
 	{
 		$studiensemester = $this->_ci->input->get('studiensemester');
@@ -741,7 +764,7 @@ class Api extends FHCAPI_Controller
 
 	public function studentAddEntschuldigung()
 	{
-		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']))
+		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$vonTimestamp = strtotime($_POST['von']);
@@ -768,7 +791,7 @@ class Api extends FHCAPI_Controller
 		$bis = date('Y-m-d H:i:s', $bisTimestamp);
 		$result = $this->_ci->EntschuldigungModel->insert(
 			array(
-				'person_id' => getAuthPersonId(),
+				'person_id' => $_POST['person_id'],
 				'von' => $von,
 				'bis' => $bis,
 				'dms_id' => $dmsId,
@@ -914,6 +937,11 @@ class Api extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 		$stg_kz_arr = $result->stg_kz_arr;
+		$admin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+
+		if($admin === true) {
+			$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getAllEntschuldigungen());
+		}
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithError($this->p->t('global', 'errorNoSTGassigned'), 'general');
 

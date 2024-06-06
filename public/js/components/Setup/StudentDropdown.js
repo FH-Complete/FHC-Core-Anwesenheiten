@@ -15,7 +15,7 @@ export const StudentDropdown = {
 	},
 	methods: {
 		studentChanged(e) {
-			console.log('studentChanged', e)
+			// console.log('studentChanged', e)
 			const selected = e.target.selectedOptions
 			this.$entryParams.selected_student = selected[0]._value
 			console.log('this.$entryParams.selected_student', this.$entryParams.selected_student)

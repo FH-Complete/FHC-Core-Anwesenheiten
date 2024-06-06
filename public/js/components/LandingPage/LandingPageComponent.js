@@ -41,6 +41,8 @@ export default {
 				this.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 				this.$entryParams.sem = searchParams.get('sem')
 
+				this.setupViewDataRefs()
+
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
@@ -54,6 +56,17 @@ export default {
 		},
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
+		},
+		setupViewDataRefs(){
+			this.$entryParams.viewDataStudent = {}
+			this.$entryParams.viewDataStudent.vorname = Vue.ref('')
+			this.$entryParams.viewDataStudent.nachname = Vue.ref('')
+			this.$entryParams.viewDataStudent.uid = Vue.ref('')
+			this.$entryParams.viewDataStudent.person_id = Vue.ref('')
+			this.$entryParams.viewDataStudent.prestudent_id = Vue.ref('')
+			this.$entryParams.viewDataStudent.gruppe = Vue.ref('')
+			this.$entryParams.viewDataStudent.verband = Vue.ref('')
+			this.$entryParams.viewDataStudent.semester = Vue.ref('')
 		},
 		routeToStudent() {
 
@@ -159,9 +172,13 @@ export default {
 							prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
 							lehreinheit_id: e.lehreinheit_id, lehrveranstaltung_id: e.lehrveranstaltung_id,
 							semester: e.semester, verband: e.verband, gruppe: e.gruppe,
+							uid: e.uid, person_id: e.person_id,
 							infoString
 						})
 					})
+
+
+					this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
 
 				}).finally(()=>{resolve()})
 			})
@@ -198,7 +215,6 @@ export default {
 
 				}).finally(()=> {
 					console.log('handleMaSetup finally')
-					// console.log('globalProps', this)
 					resolve()
 				})
 			})
@@ -325,7 +341,7 @@ export default {
 					</div>
 				</template>
 				<template v-slot:footer>
-					<button type="button" class="btn btn-primary" :disabled="" @click="loadStudentPage">{{ $p.t('global/studentLaden') }}</button>
+					<button type="button" class="btn btn-primary" @click="loadStudentPage">{{ $p.t('global/studentLaden') }}</button>
 				</template>
 			</bs-modal>
 		

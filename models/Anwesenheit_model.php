@@ -132,6 +132,16 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query);
 	}
 
+	public function getStudentViewData($uid) {
+		$query = "SELECT vorname, nachname, prestudent_id, public.tbl_person.person_id, student_uid, semester, verband, gruppe
+					FROM public.tbl_person
+						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
+					WHERE public.tbl_student.student_uid = '{$uid}';";
+
+		return $this->execReadOnlyQuery($query);
+	}
+
 	public function getAnwesenheitenEntriesForStudents($prestudentIds, $le_id) {
 		$query = "
 			SELECT
@@ -339,6 +349,19 @@ class Anwesenheit_model extends \DB_Model
 		WHERE anwesenheit_id = {$anwesenheit_id} AND (status = 'anwesend' OR status = 'entschuldigt')";
 
 		return $this->execQuery($query);
+	}
+
+	public function getStudiengaenge() {
+		$query ="SELECT
+					studiengang_kz,
+					bezeichnung,
+					kurzbzlang,
+					orgform_kurzbz
+				FROM tbl_studiengang
+				WHERE aktiv = true
+				ORDER BY studiengang_kz";
+
+		return $this->execReadOnlyQuery($query);
 	}
 
 	public function getStudiengaengeFiltered($allowed_stg)

@@ -24,10 +24,21 @@ export default {
 				files: []
 			},
 			entschuldigungsViewTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPerson',
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPersonAndUID',
 				ajaxResponse: (url, params, response) => {
 					console.log('getEntschuldigungenByPerson', response)
 					return response.data.retval
+				},
+				ajaxConfig: "POST",
+				ajaxContentType: {
+					headers:{
+						'Content-Type': 'application/json'
+					},
+					body:(url,config,params)=>{
+						return JSON.stringify({
+							person_id: this.$entryParams.selected_student ? this.$entryParams.selected_student.person_id : this.$entryParams.viewDataStudent.person_id
+						})
+					}
 				},
 				selectable: false,
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
@@ -46,15 +57,6 @@ export default {
 		};
 	},
 	methods: {
-		loadEntschuldigungen: function()
-		{
-			this.$fhcApi.get(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPerson',
-			).then(res => {
-				console.log('getEntschuldigungenByPerson', res);
-				this.$refs.entschuldigungsTable.tabulator.setData(res.data);
-			});
-		},
 		triggerUpload() {
 			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
 			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
@@ -74,6 +76,10 @@ export default {
 			}
 			formData.append('von', this.entschuldigung.von);
 			formData.append('bis', this.entschuldigung.bis);
+
+			const person_id = this.$entryParams.selected_student ? this.$entryParams?.selected_student.person_id : this.$entryParams.viewDataStudent.person_id
+
+			formData.append('person_id', person_id);
 			this.$fhcApi.post(
 				'extensions/FHC-Core-Anwesenheiten/Api/studentAddEntschuldigung',
 				formData,{Headers: { "Content-Type": "multipart/form-data" }}

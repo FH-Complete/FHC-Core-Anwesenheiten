@@ -4,9 +4,6 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters, universalFormatter} from "../../mixins/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-
-// import Dropdown from '../../../../../../../vendor/npm-asset/primevue/dropdown/dropdown.js'
-
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
 import {DateTime} from '../../luxon.js'
 window.DateTime = DateTime
@@ -145,9 +142,7 @@ export default {
 		}
 	},
 	mounted() {
-		// this.titleText = this.$p.t('global/entschuldigungsmanagementStudiengangsassistenz')
 
-		// const bis = Vue.computed(()=> this.$capitalize(this.$p.t('global/bis')))
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -156,6 +151,10 @@ export default {
 		:hideTopMenu=true
 		leftNavCssClasses="">
 	</core-navigation-cmpt>
+
+	<row>
+		<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
+	</row>
 
 	<core-base-layout
 		:title="$p.t('global/entschuldigungsmanagementStudiengangsassistenz')">
