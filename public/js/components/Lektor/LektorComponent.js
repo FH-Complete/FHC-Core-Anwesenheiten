@@ -24,10 +24,10 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2`,
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByLvaAssigned`,
 				ajaxResponse: (url, params, response) => {
 					console.log('getAllAnwesenheitenByLva', response)
-					return this.setupDataV2(response.data, true)
+					return this.setupData(response.data, true)
 				},
 				ajaxConfig: "POST",
 				ajaxContentType:{
@@ -107,20 +107,15 @@ export default {
 		getExistingQRCode(){
 
 			// TODO: get information of already checked in students as a count
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetExistingQRCode',
-				{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}, null
-			).then(res => {
+			this.$fhcApi.Kontrolle.getExistingQRCode(le_id)
+				.then(res => {
 				if(res.data.svg) {
 					this.showQR(res.data)
 				}
 			})
 		},
 		pollAnwesenheit() {
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorPollAnwesenheiten',
-				{anwesenheit_id: this.anwesenheit_id}
-			).then(res => {
+			this.$fhcApi.Kontrolle.pollAnwesenheiten(this.anwesenheit_id).then(res => {
 				this.checkInCount = res.data.count
 			})
 		},
@@ -146,10 +141,7 @@ export default {
 			// js months 0-11, php months 1-12
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetNewQRCode',
-				{le_ids: [this.$entryParams.selected_le_id], beginn: this.beginn, ende: this.ende, datum: date}
-			).then(res => {
+			this.$fhcApi.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id, date, this.beginn, this.ende, date).then(res => {
 				if(res.data) {
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
@@ -164,10 +156,7 @@ export default {
 
 			// console.log('regenerateQR')
 			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorRegenerateQRCode',
-				{anwesenheit_id: this.anwesenheit_id}
-			).then(res => {
+			this.$fhcApi.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(res => {
 				const oldCode = this.code
 				this.qr = res.data.svg
 				this.url = res.data.url
@@ -177,10 +166,7 @@ export default {
 
 				//TODO: can wait here
 
-				this.$fhcApi.post(
-					'extensions/FHC-Core-Anwesenheiten/Api/lektorDegenerateQRCode',
-					{anwesenheit_id: this.anwesenheit_id, zugangscode: oldCode}
-				)
+				this.$fhcApi.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 			})
 
 
@@ -209,10 +195,7 @@ export default {
 			this.code = null
 
 			// attempt to degenerate one last time to not leave any codes in db
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorDegenerateQRCode',
-				{anwesenheit_id: this.anwesenheit_id, zugangscode: oldCode}
-			)
+			this.$fhcApi.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 		},
 		setTimespanForKontrolle(data) {
 			if(data[0].beginn && data[0].ende) {
@@ -276,19 +259,13 @@ export default {
 
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
-				{lv_id: this.lv_id, le_ids: [this.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
-			).then(res => {
+			this.$fhcApi.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
 				if(res.meta.status !== "success") return
-				this.setupDataV2(res.data)
+				this.setupData(res.data)
 			})
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteQRCode',
-				{le_ids: [this.$entryParams.selected_le_id], anwesenheit_id: this.anwesenheit_id}
-			).then(
+			this.$fhcApi.Kontrolle.deleteQRCode(this.anwesenheit_id).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwKontrolleBeendet'))
@@ -306,22 +283,16 @@ export default {
 
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorDeleteAnwesenheitskontrolle',
-				{le_ids: [this.$entryParams.selected_le_id], date: date}
-			).then(res => {
+			this.$fhcApi.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id, date).then(res => {
 				console.log('deleteAnwesenheitskontrolle', res)
 
 				if(res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
-					this.$fhcApi.post(
-						'extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByLvaAssignedV2',
-						{lv_id: this.lv_id, le_ids: [this.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz}
-					).then((res)=>{
+					this.$fhcApi.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
 						if(res.meta.status !== "success") return
-						this.setupDataV2(res.data)
+						this.setupData(res.data)
 					})
 				} else if(res.meta.status === "success" && !res.data){
 					this.$fhcAlert.alertWarning(this.$p.t('global/noAnwKontrolleFoundToDelete'))
@@ -352,7 +323,7 @@ export default {
 
 			return zusatz
 		},
-		setupDataV2(data, returnData = false) {
+		setupData(data, returnData = false) {
 			this.students = data[0] ?? []
 			const anwEntries = data[1] ?? []
 			const stsem = data[2][0] ?? []
@@ -398,62 +369,6 @@ export default {
 				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 			}
 		},
-		async setupData(dataParam, returnData = false){
-
-			const data = dataParam[0].retval
-			const stsem = dataParam[1].retval[0]
-
-			this.studentsData = new Map()
-			this.namesAndID = []
-			// retrieve students from anwesenheiten data and gather their entries
-			data.forEach(entry => {
-
-				if(!this.studentsData.has(entry.prestudent_id)) {
-					this.studentsData.set(entry.prestudent_id, [])
-					if(entry.status && entry.datum) this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
-					this.namesAndID.push({
-						prestudent_id: entry.prestudent_id, vorname: entry.vorname, nachname: entry.nachname, sum: entry.sum,
-						semester: entry.semester, verband: entry.verband, gruppe: entry.gruppe,
-						zusatz: this.formatZusatz(entry, stsem)
-					})
-				} else {
-					this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
-				}
-			})
-
-			// date string formatting
-			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
-			const dateParts = selectedDateDBFormatted.split( "-")
-			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
-			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
-
-			this.tableStudentData = []
-			this.studentCount = this.namesAndID.length
-			this.namesAndID.forEach((student, index) => {
-
-				const studentDataEntry = this.studentsData.get(student.prestudent_id)
-				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-
-				const nachname = student.nachname + student.zusatz
-				this.tableStudentData.push({prestudent_id: student.prestudent_id,
-					// TODO: test for cases where no foto was available
-					foto: returnData ? '' : this.fotos.find(entry => entry.prestudent_id === student.prestudent_id).foto,
-					vorname: student.vorname,
-					nachname: nachname,
-					gruppe: student.semester + student.verband + student.gruppe,
-					status: status ?? '-',
-					sum: student.sum});
-			})
-
-			if(returnData) {
-				await this.fetchStudentPictures()
-				return this.tableStudentData
-			} else {
-				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
-			}
-
-		},
 		openNewAnwesenheitskontrolleModal(){
 			this.$refs.modalContainerNewKontrolle.show()
 		},
@@ -468,27 +383,6 @@ export default {
 			}
 
 			return true;
-		},
-		async fetchStudentPictures () {
-			const prom = new Promise((resolve, reject) => {
-				const ids = this.namesAndID.map(el => el.prestudent_id)
-
-				this.$fhcApi.post(
-					'extensions/FHC-Core-Anwesenheiten/Api/infoGetPicturesForPrestudentIds',
-					{prestudent_ids: ids}
-				).then(
-					(res) => {
-						this.fotos = res.data.retval
-						this.tableStudentData.forEach(data => {
-							data.foto = res.data.retval.find(entry => entry.prestudent_id === data.prestudent_id).foto
-						})
-
-						resolve()
-					}
-				)
-			})
-
-			return prom
 		},
 		routeToLandingPage() {
 
@@ -524,10 +418,10 @@ export default {
 		this.getExistingQRCode()
 
 		// fetch LE data
-		this.$fhcApi.post(
-			'extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitAndLektorInfo',
-			{le_ids: [this.$entryParams.selected_le_id], ma_uid: this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}
-		).then(res => this.setupLehreinheitAndLektorData(res));
+		const date = formatDateToDbString(this.selectedDate)
+		const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+		this.$fhcApi.Kontrolle.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
+			.then(res => this.setupLehreinheitAndLektorData(res));
 
 	},
 	unmounted(){
@@ -548,10 +442,10 @@ export default {
 			this.isAllowedToStartKontrolle = areDatesSame(newVal, today)
 
 			// load stundenplan hours for ma_uid, le_id and selected date
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/infoGetStundenPlanEntriesForLEandLektorOnDate',
-				{le_id: this.$entryParams.selected_le_id, ma_uid: this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid, date: formatDateToDbString(this.selectedDate)}
-			).then(res => {
+			const date = formatDateToDbString(this.selectedDate)
+			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			this.$fhcApi.Info.getStundenPlanEntriesForLEandLektorOnDate(this.$entryParams.selected_le_id, ma_uid, date)
+				.then(res => {
 				console.log(res)
 
 				// TODO: FIND SOMETHING IN STUNDEPLAN TO TEST WITH AND SET KONTROLLE BEGINN END LIKE IN MOUNTED LE INFO METHOD

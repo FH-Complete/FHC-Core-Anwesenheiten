@@ -27,7 +27,7 @@ export default {
 				bis: null
 			},
 			assistenzViewTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/assistenzGetEntschuldigungen',
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
 					console.log('getEntschuldigungen', response)
 					return response.data.retval
@@ -73,10 +73,8 @@ export default {
 		updateEntschuldigung: function(cell, status)
 		{
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/assistenzUpdateEntschuldigung',
-				{entschuldigung_id, status}
-			).then(res => {
+
+			this.$fhcApi.Administration.updateEntschuldigung(entschuldigung_id, status).then(res => {
 				console.log('updateEntschuldigung', res)
 
 				if (res.meta.status === "success")

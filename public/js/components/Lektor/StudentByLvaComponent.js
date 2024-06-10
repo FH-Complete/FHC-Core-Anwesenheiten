@@ -22,7 +22,7 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenByStudentByLvaTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/Api/lektorGetAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
 				ajaxResponse: (url, params, response) => {
 					console.log('getAllAnwesenheitenByStudentByLva', response)
 					if(response.meta.status !== "success") return []
@@ -105,20 +105,15 @@ export default {
 
 			const anwesenheit_user_id = cell.getData().anwesenheit_user_id;
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentDeleteUserAnwesenheitById',
-				{anwesenheit_user_id}
-			).then(
+			this.$fhcApi.Profil.deleteUserAnwesenheitById(anwesenheit_user_id).then(
 				res => {
 					console.log('deleteUserAnwesenheitById', res)
 
 					if(res.meta.status === "success" && res.data.anwesenheit_user_id) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
 						cell.getRow().delete()
-						this.$fhcApi.post(
-							'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
-							{id: this.id, lv_id: this.lv_id, sem_kz: this.sem_kz}, null
-						).then(res => {
+
+						this.$fhcApi.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 							console.log('getAnwesenheitSumByLva', res)
 							if(res.meta.status === "success" && res.data)
 							{
@@ -178,10 +173,7 @@ export default {
 		},
 		async saveChanges(changedData){
 			console.log(this.$entryParams)
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/lektorUpdateAnwesenheiten',
-				{changedAnwesenheiten: changedData, le_id: this.$entryParams.selected_le_id}
-			).then(res => {
+			this.$fhcApi.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
@@ -189,10 +181,7 @@ export default {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
-				this.$fhcApi.post(
-					'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
-					{id: this.id, lv_id: this.lv_id, sem_kz: this.sem_kz}
-				).then(res => {
+				this.$fhcApi.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 					console.log('getAnwesenheitSumByLva', res)
 					if(res.meta.status === "success" && res.data)
 					{
@@ -264,10 +253,7 @@ export default {
 				if(data.status !== "entschuldigt") ids.push(data.anwesenheit_user_id)
 			})
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentDeleteUserAnwesenheitByIds',
-				{ids}
-			).then(
+			this.$fhcApi.Profil.deleteUserAnwesenheitByIds(ids).then(
 				res => {
 					console.log('deleteUserAnwesenheitByIds', res)
 
@@ -284,10 +270,7 @@ export default {
 
 						})
 
-						this.$fhcApi.post(
-							'extensions/FHC-Core-Anwesenheiten/Api/studentGetAnwesenheitSumByLva',
-							{id: this.id, lv_id: this.lv_id, sem_kz: this.sem_kz}
-						).then(res => {
+						this.$fhcApi.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 							console.log('getAnwesenheitSumByLva', res)
 							if(res.meta.status === "success" && res.data)
 							{
@@ -321,10 +304,7 @@ export default {
 
 	},
 	mounted() {
-		this.$fhcApi.get(
-			`extensions/FHC-Core-Anwesenheiten/Api/infoGetStudentInfo?prestudent_id=${this.id}&lva_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
-			null, null
-		).then(res => {
+		this.$fhcApi.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
 			console.log('getStudentInfo', res);
 			if (res.meta.status !== "success" || !res.data) return
 

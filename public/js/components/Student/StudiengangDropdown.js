@@ -23,8 +23,7 @@ export const StudiengangDropdown = {
 		loadDropdown() {
 			console.log('loadDropdown', this.allowedStg)
 			const admin = this.$entryParams.permissions.admin
-			this.$fhcApi.post('extensions/FHC-Core-Anwesenheiten/Api/infoGetStudiengaenge',
-				{allowed_stg: this.allowedStg, admin}).then(res => {
+			this.$fhcApi.Info.getStudiengaenge(this.allowedStg, admin).then(res => {
 				console.log('getStudiengänge', res)
 
 				if(res.meta.status !== "success") return

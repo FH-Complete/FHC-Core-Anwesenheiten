@@ -18,7 +18,7 @@ export const StudiensemesterDropdown = {
 	},
 	methods: {
 		loadDropdown() {
-			this.$fhcApi.get('extensions/FHC-Core-Anwesenheiten/Api/infoGetStudiensemester').then(res => {
+			this.$fhcApi.Info.getStudiensemester().then(res => {
 				console.log('getStudiensemester', res)
 
 				if(res.meta.status !== "success") return

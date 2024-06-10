@@ -1,13 +1,13 @@
 import Search from "./search.js";
-import Anwesenheit from "./anwesenheit.js";
-import Student from "./student.js";
+import Kontrolle from "./kontrolle.js";
+import Profil from "./profil.js";
 import Info from "./info.js";
-import Assistenz from "./assistenz.js";
+import Administration from "./administration.js";
 
 export default {
 	"Search": Search,
-	"Anwesenheit": Anwesenheit,
-	"Student": Student,
+	"Kontrolle": Kontrolle,
+	"Profil": Profil,
 	"Info": Info,
-	"Assistenz": Assistenz,
+	"Administration": Administration
 };

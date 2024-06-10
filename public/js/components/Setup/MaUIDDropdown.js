@@ -22,10 +22,7 @@ export const MaUIDDropdown = {
 
 			return new Promise(resolve => {
 
-				this.$fhcApi.get(
-					`extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitenForLehrveranstaltungAndMaUid?lva_id=${lv_id}&ma_uid=${ma_uid}&sem_kurzbz=${sem_kurzbz}`,
-					null, null
-				).then(res => {
+				this.$fhcApi.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
 					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
 					// merge entries with same LE

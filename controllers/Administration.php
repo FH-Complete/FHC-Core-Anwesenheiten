@@ -1,32 +1,32 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-class Student extends Auth_Controller
+class Administration extends Auth_Controller
 {
 
 	private $_ci;
 	private $_uid;
 
+	/**
+	 * Constructor
+	 */
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw')
 			)
 		);
 
 		$this->_ci =& get_instance();
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
-		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
-		$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
 
 		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
 		require_once($qrsetting_filename);
 
+		// load libraries
 		$this->_ci->load->library('PermissionLib');
+		$this->_ci->load->library('WidgetLib');
 		$this->_ci->load->library('PhrasesLib');
+		$this->_ci->load->library('AuthLib');
 		$this->_ci->load->library('DmsLib');
 
 		$this->loadPhrases(
@@ -36,12 +36,16 @@ class Student extends Auth_Controller
 				'filter'
 			)
 		);
-
+		// Load helpers
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
+
 	}
 
-
+	/**
+	 * Index Controller
+	 * @return void
+	 */
 	public function index()
 	{
 		$viewData = array(

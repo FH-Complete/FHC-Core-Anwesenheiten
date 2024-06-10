@@ -73,7 +73,7 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
-	public function getStudentsForLVAandLEandSemester($lv_id, $le_ids, $sem_kurzbz, $root) {
+	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root) {
 		$query = "SELECT
 				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, 
 				    CONCAT('{$root}', 'cis/public/bild.php?src=person&person_id=') || person_id as foto   
@@ -106,7 +106,7 @@ class Anwesenheit_model extends \DB_Model
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id='{$lv_id}'	AND
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz='{$sem_kurzbz}' AND 
-				 vw_student_lehrveranstaltung.lehreinheit_id={$le_ids[0]}";
+				 vw_student_lehrveranstaltung.lehreinheit_id={$le_id}";
 
 		return $this->execReadOnlyQuery($query);
 	}

@@ -33,10 +33,7 @@ export default {
 		},
 		processAnwesenheit() {
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentCheckInAnwesenheit',
-				{zugangscode: this.internalZugangscode}
-			).then(
+			this.$fhcApi.Profil.checkInAnwesenheit(this.internalZugangscode).then(
 				res => {
 					console.log('checkInAnwesenheit', res)
 					if(res.meta.status === "success" && res.data) {

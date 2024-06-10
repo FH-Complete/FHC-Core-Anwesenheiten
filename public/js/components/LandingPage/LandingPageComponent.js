@@ -158,10 +158,7 @@ export default {
 		},
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
-				this.$fhcApi.get(
-					`extensions/FHC-Core-Anwesenheiten/Api/infoGetStudentsForLvaInSemester?lva_id=${lv_id}&sem=${sem_kurzbz}`,
-					null, null
-				).then(res => {
+				this.$fhcApi.Info.getStudentsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					console.log('infoGetStudentsForLvaInSemester', res)
 					this.$entryParams.availableStudents = []
 
@@ -187,10 +184,7 @@ export default {
 			console.log('handleMaSetup start')
 			// TODO: historic data access?
 			return new Promise(resolve => {
-				this.$fhcApi.get(
-					`extensions/FHC-Core-Anwesenheiten/Api/infoGetLektorsForLvaInSemester?lva_id=${lv_id}&sem=${sem_kurzbz}`,
-					null, null
-				).then(res => {
+				this.$fhcApi.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					console.log('handleMaSetup then')
 					this.$entryParams.available_maUID = []
 					const lektor = res.data.retval[0]
@@ -222,12 +216,7 @@ export default {
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
 			console.log('handleLeSetup start')
 			return new Promise(resolve => {
-
-				this.$fhcApi.get(
-					`extensions/FHC-Core-Anwesenheiten/Api/infoGetLehreinheitenForLehrveranstaltungAndMaUid?lva_id=${lv_id}&ma_uid=${ma_uid}&sem_kurzbz=${sem_kurzbz}`,
-					null, null
-				).then(res => {
-					console.log('handleLeSetup then')
+				this.$fhcApi.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
 					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
 					// merge entries with same LE

@@ -24,7 +24,7 @@ export default {
 				files: []
 			},
 			entschuldigungsViewTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/Api/studentGetEntschuldigungenByPersonAndUID',
+				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
 				ajaxResponse: (url, params, response) => {
 					console.log('getEntschuldigungenByPerson', response)
 					return response.data.retval
@@ -80,10 +80,7 @@ export default {
 			const person_id = this.$entryParams.selected_student ? this.$entryParams?.selected_student.person_id : this.$entryParams.viewDataStudent.person_id
 
 			formData.append('person_id', person_id);
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentAddEntschuldigung',
-				formData,{Headers: { "Content-Type": "multipart/form-data" }}
-			).then(res => {
+			this.$fhcApi.Profil.addEntschuldigung(formData).then(res => {
 				console.log('addEntschuldigung', res)
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
@@ -137,10 +134,7 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentDeleteEntschuldigung',
-				{entschuldigung_id}
-			).then(response => {
+			this.$fhcApi.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
 				console.log('deleteEntschuldigung', response)
 
 				if (response.meta.status === "success")

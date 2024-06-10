@@ -43,9 +43,7 @@ export default {
 		// if student is logged in as himself load his own viewData
 		if(!this.$entryParams.selected_student_info) {
 
-			this.$fhcApi.post(
-				'extensions/FHC-Core-Anwesenheiten/Api/studentGetViewData', {uid: null}
-			).then(res => {
+			this.$fhcApi.Profil.getProfileViewData(null).then(res => {
 				console.log('studentGetViewData', res)
 
 				const data = res.data.retval[0]
