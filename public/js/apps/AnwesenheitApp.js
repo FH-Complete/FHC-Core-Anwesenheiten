@@ -9,6 +9,7 @@ import ScanComponent from "../components/Student/ScanComponent";
 import SetupComponent from "../components/Setup/SetupComponent";
 import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent";
+import fhcapifactory from "../api/fhcapifactory";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -113,7 +114,7 @@ anwesenheitApp.config.globalProperties.$capitalize = (string) => {
 
 anwesenheitApp
 	.use(router)
-	.use(FhcApi)
+	.use(FhcApi, fhcapifactory)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
 	.mount("#main");
