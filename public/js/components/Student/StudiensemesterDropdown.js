@@ -18,7 +18,7 @@ export const StudiensemesterDropdown = {
 	},
 	methods: {
 		loadDropdown() {
-			this.$fhcApi.Info.getStudiensemester().then(res => {
+			this.$fhcApi.factory.Info.getStudiensemester().then(res => {
 				console.log('getStudiensemester', res)
 
 				if(res.meta.status !== "success") return

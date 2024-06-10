@@ -33,7 +33,7 @@ export default {
 		},
 		processAnwesenheit() {
 
-			this.$fhcApi.Profil.checkInAnwesenheit(this.internalZugangscode).then(
+			this.$fhcApi.factory.Profil.checkInAnwesenheit(this.internalZugangscode).then(
 				res => {
 					console.log('checkInAnwesenheit', res)
 					if(res.meta.status === "success" && res.data) {

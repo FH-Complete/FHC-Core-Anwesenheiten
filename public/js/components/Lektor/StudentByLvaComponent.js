@@ -105,7 +105,7 @@ export default {
 
 			const anwesenheit_user_id = cell.getData().anwesenheit_user_id;
 
-			this.$fhcApi.Profil.deleteUserAnwesenheitById(anwesenheit_user_id).then(
+			this.$fhcApi.factory.Profil.deleteUserAnwesenheitById(anwesenheit_user_id).then(
 				res => {
 					console.log('deleteUserAnwesenheitById', res)
 
@@ -113,7 +113,7 @@ export default {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
 						cell.getRow().delete()
 
-						this.$fhcApi.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
+						this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 							console.log('getAnwesenheitSumByLva', res)
 							if(res.meta.status === "success" && res.data)
 							{
@@ -173,7 +173,7 @@ export default {
 		},
 		async saveChanges(changedData){
 			console.log(this.$entryParams)
-			this.$fhcApi.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
+			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
@@ -181,7 +181,7 @@ export default {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
-				this.$fhcApi.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
+				this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 					console.log('getAnwesenheitSumByLva', res)
 					if(res.meta.status === "success" && res.data)
 					{
@@ -253,7 +253,7 @@ export default {
 				if(data.status !== "entschuldigt") ids.push(data.anwesenheit_user_id)
 			})
 
-			this.$fhcApi.Profil.deleteUserAnwesenheitByIds(ids).then(
+			this.$fhcApi.factory.Profil.deleteUserAnwesenheitByIds(ids).then(
 				res => {
 					console.log('deleteUserAnwesenheitByIds', res)
 
@@ -270,7 +270,7 @@ export default {
 
 						})
 
-						this.$fhcApi.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
+						this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 							console.log('getAnwesenheitSumByLva', res)
 							if(res.meta.status === "success" && res.data)
 							{
@@ -304,7 +304,7 @@ export default {
 
 	},
 	mounted() {
-		this.$fhcApi.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
+		this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
 			console.log('getStudentInfo', res);
 			if (res.meta.status !== "success" || !res.data) return
 

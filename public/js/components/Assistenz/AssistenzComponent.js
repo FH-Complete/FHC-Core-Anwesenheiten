@@ -74,7 +74,7 @@ export default {
 		{
 			let entschuldigung_id = cell.getData().entschuldigung_id;
 
-			this.$fhcApi.Administration.updateEntschuldigung(entschuldigung_id, status).then(res => {
+			this.$fhcApi.factory.Administration.updateEntschuldigung(entschuldigung_id, status).then(res => {
 				console.log('updateEntschuldigung', res)
 
 				if (res.meta.status === "success")
@@ -137,6 +137,11 @@ export default {
 		sgChangedHandler: function(e) {
 			console.log('sgChangedHandler', e)
 			this.studiengang = e.value ? e.value.studiengang_kz : null
+		},
+		routeToLandingPage(){
+			this.$router.push({
+				name: 'LandingPage'
+			})
 		}
 	},
 	mounted() {

@@ -22,7 +22,7 @@ export const MaUIDDropdown = {
 
 			return new Promise(resolve => {
 
-				this.$fhcApi.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
+				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
 					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
 					// merge entries with same LE

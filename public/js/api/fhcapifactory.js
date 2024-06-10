@@ -5,9 +5,11 @@ import Info from "./info.js";
 import Administration from "./administration.js";
 
 export default {
-	"Search": Search,
-	"Kontrolle": Kontrolle,
-	"Profil": Profil,
-	"Info": Info,
-	"Administration": Administration
+	factory: {
+		"Search": Search,
+		"Kontrolle": Kontrolle,
+		"Profil": Profil,
+		"Info": Info,
+		"Administration": Administration
+	}
 };

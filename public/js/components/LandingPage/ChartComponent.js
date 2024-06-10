@@ -151,7 +151,7 @@ export default {
 
 			const wrapperDiv = document.getElementById('highchartWrapper')
 
-			// this.$fhcApi.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
+			// this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
 			// 	console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
 			// 	if(!res.data) return
 			// 	const anwesenheitenData = this.countAnwesenheitDataPie(res.data[1])
@@ -167,7 +167,7 @@ export default {
 			//
 
 
-			// this.$fhcApi.Kontrolle.getAllAnwesenheitenByStudiengang(this.$entryParams.stg_kz, this.$entryParams.sem_kurzbz).then(res => {
+			// this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByStudiengang(this.$entryParams.stg_kz, this.$entryParams.sem_kurzbz).then(res => {
 			// 	console.log('lektorGetAllAnwesenheitenByStudiengang', res)
 			//
 			// 	if(!res.data) return
@@ -181,7 +181,7 @@ export default {
 			// 	this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByStg', {stg: this.$entryParams.selected_le_info.kurzbzlang}))
 			// })
 
-			this.$fhcApi.Kontrolle.getAllAnwesenheitenByLva(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz).then(res => {
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLva(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz).then(res => {
 					console.log('lektorGetAllAnwesenheitenByLva', res)
 
 					if(!res.data) return
@@ -203,7 +203,7 @@ export default {
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
 			const wrapperDiv = document.getElementById('highchartWrapper')
 
-			this.$fhcApi.Profil.getAllAnw(this.$entryParams.sem_kurzbz).then(res => {
+			this.$fhcApi.factory.Profil.getAllAnw(this.$entryParams.sem_kurzbz).then(res => {
 				console.log('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',res)
 
 				if(!res.data.retval) return

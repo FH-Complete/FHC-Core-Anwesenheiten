@@ -1,11 +1,8 @@
 <?php
 
-namespace api;
-use Auth_Controller;
-
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-class InfoApi extends Auth_Controller
+class InfoApi extends FHCAPI_Controller
 {
 
 	private $_ci;
@@ -29,7 +26,7 @@ class InfoApi extends Auth_Controller
 		);
 
 		$this->_ci =& get_instance();
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitenModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
@@ -64,7 +61,7 @@ class InfoApi extends Auth_Controller
 		$ma_uid = $result->ma_uid;
 		$currentDate = $result->date;
 
-		$lektorLehreinheitData = $this->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $currentDate);
+		$lektorLehreinheitData = $this->_ci->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $currentDate);
 
 		$this->terminateWithSuccess(getData($lektorLehreinheitData));
 	}
@@ -75,7 +72,7 @@ class InfoApi extends Auth_Controller
 		$lva_id = $this->input->get('lva_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
-		$studentLvaData = $this->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, APP_ROOT);
+		$studentLvaData = $this->_ci->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, APP_ROOT);
 
 		$this->terminateWithSuccess(getData($studentLvaData));
 	}
@@ -85,7 +82,7 @@ class InfoApi extends Auth_Controller
 		$lva_id = $this->input->get('lva_id');
 		$ma_uid = $this->input->get('ma_uid');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
-		$result = $this->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
+		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
 		else $this->terminateWithSuccess(getData($result));
 
@@ -96,7 +93,7 @@ class InfoApi extends Auth_Controller
 		$lva_id = $this->input->get('lva_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
-		$result = $this->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
+		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
 		$this->terminateWithSuccess(getData($result));
 
@@ -176,7 +173,6 @@ class InfoApi extends Auth_Controller
 		}
 
 	}
-
 
 	private function _setAuthUID()
 	{

@@ -106,4 +106,12 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
 	}
 
+	private function _setAuthUID()
+	{
+		$this->_uid = getAuthUID();
+
+		if (!$this->_uid)
+			show_error('User authentification failed');
+	}
+
 }

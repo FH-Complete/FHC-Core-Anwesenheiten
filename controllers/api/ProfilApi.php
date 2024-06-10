@@ -382,6 +382,12 @@ class ProfilApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(getData($deleteresp));
 	}
 
+	private function _setAuthUID()
+	{
+		$this->_uid = getAuthUID();
 
+		if (!$this->_uid)
+			show_error('User authentification failed');
+	}
 
 }

@@ -46,7 +46,7 @@ export default {
 			// toggle anwesenheiten loading procedure based on admin or student login
 			const uid = this.$entryParams.selected_student ? this.$entryParams?.selected_student.uid : this.$entryParams.viewDataStudent.student_uid
 
-			this.$fhcApi.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
+			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
 				console.log('Student.getAllByUID(this.studiensemester, uid)', res)
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))

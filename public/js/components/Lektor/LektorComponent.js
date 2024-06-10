@@ -36,7 +36,7 @@ export default {
 					},
 					body:(url,config,params)=>{
 						return JSON.stringify({
-							lv_id: this.lv_id, le_ids: [this.$entryParams.selected_le_id], sem_kurzbz: this.sem_kurzbz
+							lv_id: this.lv_id, le_id: this.$entryParams.selected_le_id, sem_kurzbz: this.sem_kurzbz
 						})
 					}
 				},
@@ -107,7 +107,7 @@ export default {
 		getExistingQRCode(){
 
 			// TODO: get information of already checked in students as a count
-			this.$fhcApi.Kontrolle.getExistingQRCode(le_id)
+			this.$fhcApi.factory.Kontrolle.getExistingQRCode(this.$entryParams.selected_le_id)
 				.then(res => {
 				if(res.data.svg) {
 					this.showQR(res.data)
@@ -115,7 +115,7 @@ export default {
 			})
 		},
 		pollAnwesenheit() {
-			this.$fhcApi.Kontrolle.pollAnwesenheiten(this.anwesenheit_id).then(res => {
+			this.$fhcApi.factory.Kontrolle.pollAnwesenheiten(this.anwesenheit_id).then(res => {
 				this.checkInCount = res.data.count
 			})
 		},
@@ -141,7 +141,7 @@ export default {
 			// js months 0-11, php months 1-12
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			this.$fhcApi.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id, date, this.beginn, this.ende, date).then(res => {
+			this.$fhcApi.factory.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id, date, this.beginn, this.ende, date).then(res => {
 				if(res.data) {
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
@@ -156,7 +156,7 @@ export default {
 
 			// console.log('regenerateQR')
 			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
-			this.$fhcApi.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(res => {
+			this.$fhcApi.factory.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(res => {
 				const oldCode = this.code
 				this.qr = res.data.svg
 				this.url = res.data.url
@@ -166,7 +166,7 @@ export default {
 
 				//TODO: can wait here
 
-				this.$fhcApi.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
+				this.$fhcApi.factory.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 			})
 
 
@@ -195,7 +195,7 @@ export default {
 			this.code = null
 
 			// attempt to degenerate one last time to not leave any codes in db
-			this.$fhcApi.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
+			this.$fhcApi.factory.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 		},
 		setTimespanForKontrolle(data) {
 			if(data[0].beginn && data[0].ende) {
@@ -259,13 +259,13 @@ export default {
 
 			// TODO: maybe only fetch new entries and merge
 			// fetch table data
-			this.$fhcApi.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
 				console.log('getAllAnwesenheitenByLva', res)
 				if(res.meta.status !== "success") return
 				this.setupData(res.data)
 			})
 
-			this.$fhcApi.Kontrolle.deleteQRCode(this.anwesenheit_id).then(
+			this.$fhcApi.factory.Kontrolle.deleteQRCode(this.anwesenheit_id).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwKontrolleBeendet'))
@@ -283,13 +283,13 @@ export default {
 
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			this.$fhcApi.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id, date).then(res => {
+			this.$fhcApi.factory.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id, date).then(res => {
 				console.log('deleteAnwesenheitskontrolle', res)
 
 				if(res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
-					this.$fhcApi.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then((res)=>{
+					this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then((res)=>{
 						console.log('getAllAnwesenheitenByLva', res)
 						if(res.meta.status !== "success") return
 						this.setupData(res.data)
@@ -385,11 +385,9 @@ export default {
 			return true;
 		},
 		routeToLandingPage() {
-
 			this.$router.push({
 				name: 'LandingPage'
 			})
-
 		}
 	},
 	created(){
@@ -420,7 +418,7 @@ export default {
 		// fetch LE data
 		const date = formatDateToDbString(this.selectedDate)
 		const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
-		this.$fhcApi.Kontrolle.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
+		this.$fhcApi.factory.Info.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
 			.then(res => this.setupLehreinheitAndLektorData(res));
 
 	},
@@ -444,7 +442,7 @@ export default {
 			// load stundenplan hours for ma_uid, le_id and selected date
 			const date = formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
-			this.$fhcApi.Info.getStundenPlanEntriesForLEandLektorOnDate(this.$entryParams.selected_le_id, ma_uid, date)
+			this.$fhcApi.factory.Info.getStundenPlanEntriesForLEandLektorOnDate(this.$entryParams.selected_le_id, ma_uid, date)
 				.then(res => {
 				console.log(res)
 

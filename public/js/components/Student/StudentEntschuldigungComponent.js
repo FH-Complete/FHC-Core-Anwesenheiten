@@ -80,7 +80,7 @@ export default {
 			const person_id = this.$entryParams.selected_student ? this.$entryParams?.selected_student.person_id : this.$entryParams.viewDataStudent.person_id
 
 			formData.append('person_id', person_id);
-			this.$fhcApi.Profil.addEntschuldigung(formData).then(res => {
+			this.$fhcApi.factory.Profil.addEntschuldigung(formData).then(res => {
 				console.log('addEntschuldigung', res)
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
@@ -134,7 +134,7 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
+			this.$fhcApi.factory.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
 				console.log('deleteEntschuldigung', response)
 
 				if (response.meta.status === "success")
