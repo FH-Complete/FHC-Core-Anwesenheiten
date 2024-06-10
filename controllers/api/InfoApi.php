@@ -22,7 +22,8 @@ class InfoApi extends FHCAPI_Controller
 				'getLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
 				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
 				'getStundenPlanEntriesForLEandLektorOnDate' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-			)
+				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
+				)
 		);
 
 		$this->_ci =& get_instance();
@@ -172,6 +173,16 @@ class InfoApi extends FHCAPI_Controller
 			$this->outputFile(getData($file));
 		}
 
+	}
+
+	public function getLvViewDataInfo() {
+		$result = $this->getPostJSON();
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+
+		$result = $this->_ci->AnwesenheitModel->getLvViewDataInfo($lv_id, $sem_kurzbz);
+		if(!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess($result);
 	}
 
 	private function _setAuthUID()
