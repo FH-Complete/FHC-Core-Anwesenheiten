@@ -90,9 +90,9 @@ export default {
 			throw error;
 		}
 	},
-	async getLvViewDataInfo(lv_id, sem_kurzbz) {
+	async getLvViewDataInfo(lv_id) {
 		try {
-			const payload = {lv_lid, sem_kurzbz}
+			const payload = {lv_id}
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getLvViewDataInfo'
 			return this.$fhcApi.post(url, payload, null)
 		} catch (error) {

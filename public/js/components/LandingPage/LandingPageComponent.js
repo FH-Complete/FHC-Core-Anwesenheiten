@@ -43,6 +43,10 @@ export default {
 
 				this.setupViewDataRefs()
 
+				if(this.$entryParams.lv_id) {
+					this.loadLvViewData()
+				}
+
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
@@ -58,6 +62,15 @@ export default {
 			this.sideMenuEntries = payload;
 		},
 		setupViewDataRefs(){
+			this.$entryParams.viewDataLv = {}
+			this.$entryParams.viewDataLv.benotung = Vue.ref('')
+			this.$entryParams.viewDataLv.bezeichnung = Vue.ref('')
+			this.$entryParams.viewDataLv.kurzbz = Vue.ref('')
+			this.$entryParams.viewDataLv.lehrveranstaltung_id = Vue.ref('')
+			this.$entryParams.viewDataLv.oe_kurzbz = Vue.ref('')
+			this.$entryParams.viewDataLv.orgform_kurzbz = Vue.ref('')
+			this.$entryParams.viewDataLv.raumtyp_kurzbz = Vue.ref('')
+
 			this.$entryParams.viewDataStudent = {}
 			this.$entryParams.viewDataStudent.vorname = Vue.ref('')
 			this.$entryParams.viewDataStudent.nachname = Vue.ref('')
@@ -83,6 +96,11 @@ export default {
 		routeToAssistenz() {
 			this.$router.push({
 				name: 'Assistenz'
+			})
+		},
+		loadLvViewData() {
+			this.$fhcApi.factory.Info.getLvViewDataInfo(this.$entryParams.lv_id).then(res => {
+				if(res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
 			})
 		},
 		loadLE() {
@@ -277,6 +295,15 @@ export default {
 		maUIDchangedHandler(e) {
 			this.$refs.LEDropdown.resetData()
 		},
+		setLvViewData(data) {
+			this.$entryParams.viewDataLv.benotung = data.benotung
+			this.$entryParams.viewDataLv.bezeichnung = data.bezeichnung
+			this.$entryParams.viewDataLv.kurzbz = data.kurzbz
+			this.$entryParams.viewDataLv.lehrveranstaltung_id = data.lehrveranstaltung_id
+			this.$entryParams.viewDataLv.oe_kurzbz = data.oe_kurzbz
+			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
+			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
+		},
 		studentUIDchangedHandler(e) {
 			console.log('studentUIDchangedHandler', e)
 		}
@@ -300,7 +327,7 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		:title="$p.t('global/digitalesAnwManagement')" >
+		:title="($p.t('global/digitalesAnwManagement'))+' '+$entryParams.viewDataLv.kurzbz +' - '+$entryParams.viewDataLv.bezeichnung" >
 		<template #main>
 			<bs-modal ref="modalContainerKontrolleSetup" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>

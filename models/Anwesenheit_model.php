@@ -425,13 +425,10 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query);
 	}
 
-	public function getLvViewDataInfo($lv_id, $sem_kurzbz){
-		$query = "SELECT DISTINCT (mitarbeiter_uid), anrede, titelpre, vorname, vornamen, nachname, titelpost
-			FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING (lehreinheit_id)
-			JOIN public.tbl_benutzer ON (public.tbl_benutzer.uid = lehre.tbl_lehreinheitmitarbeiter.mitarbeiter_uid)
-			JOIN public.tbl_person USING (person_id)
-			WHERE lehre.tbl_lehreinheit.lehrveranstaltung_id = {$lva_id} 
-			  AND lehre.tbl_lehreinheit.studiensemester_kurzbz = '{$sem_kurzbz}';";
+	public function getLvViewDataInfo($lv_id){
+		$query = "SELECT lehrveranstaltung_id, kurzbz, bezeichnung, orgform_kurzbz, lehrtyp_kurzbz, oe_kurzbz, raumtyp_kurzbz, benotung
+			FROM lehre.tbl_lehrveranstaltung
+			WHERE lehre.tbl_lehrveranstaltung.lehrveranstaltung_id = {$lv_id};";
 
 		return $this->execReadOnlyQuery($query);
 	}

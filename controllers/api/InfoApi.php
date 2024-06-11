@@ -152,9 +152,8 @@ class InfoApi extends FHCAPI_Controller
 	public function getLvViewDataInfo() {
 		$result = $this->getPostJSON();
 		$lv_id = $result->lv_id;
-		$sem_kurzbz = $result->sem_kurzbz;
 
-		$result = $this->_ci->AnwesenheitModel->getLvViewDataInfo($lv_id, $sem_kurzbz);
+		$result = $this->_ci->AnwesenheitModel->getLvViewDataInfo($lv_id);
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess($result);
 	}
