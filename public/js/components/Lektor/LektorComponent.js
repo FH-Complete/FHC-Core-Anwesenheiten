@@ -74,15 +74,15 @@ export default {
 			ma_uid: null,
 			sem_kurzbz: null,
 			lv_id: null,
-			fotos: [],
+			dates: [],
 			filterTitle: "",
 			beginn: null,
 			ende: null,
 			selectedDate: new Date(Date.now()),
+			showAllVar: false,
 			// selectedDate: new Date('2023-10-02'),
 			studentsData: null,
 			students: [],
-			namesAndID: null,
 			tableStudentData: null,
 			qr: null,
 			url: null,
@@ -126,6 +126,61 @@ export default {
 		stopPollingAnwesenheiten() {
 			clearInterval(this.timerIDPolling)
 			this.timerIDPolling = null
+		},
+		showAll() {
+			// set tabulator column definition to show every distinct date fetched
+
+			if(!this.showAllVar) {
+				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 4)
+				this.dates.forEach(date => newCols.push({
+					title: date, field: date
+					, formatter: lektorFormatters.anwesenheitFormatterValue
+					, hozAlign:"center",widthGrow: 1, tooltip:false, minWidth: 150
+				}))
+				newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+
+				const newData = this.setupAllData(newCols)
+
+
+				this.$refs.anwesenheitenTable.tabulator.setColumns(newCols)
+				this.$refs.anwesenheitenTable.tabulator.setData(newData)
+				this.showAllVar = true
+			} else {
+
+				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns);
+				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+
+				this.showAllVar = false
+			}
+
+
+
+		},
+		setupAllData(cols){
+			const data = []
+
+			this.students.forEach(student => {
+
+				const nachname = student.nachname + student.zusatz
+				const row = {
+					prestudent_id: student.prestudent_id,
+					foto: student.foto,
+					vorname: student.vorname,
+					nachname: nachname,
+					gruppe: student.semester + student.verband + student.gruppe,
+					sum: student.sum
+				}
+				const studentDataEntry = this.studentsData.get(student.prestudent_id)
+				studentDataEntry.forEach(entry => {
+					row[entry.datum] = entry.status
+				})
+
+				data.push(row)
+			})
+
+			console.log('setupAllData', data)
+
+			return data
 		},
 		showQR (data) {
 			this.qr = data.svg
@@ -334,11 +389,17 @@ export default {
 				entry.zusatz = this.formatZusatz(entry, stsem)
 				this.studentsData.set(entry.prestudent_id, [])
 			})
+			this.dates = []
 
 			anwEntries.forEach(entry => {
 				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
-			})
 
+				const datum = entry.datum
+				if(this.dates.indexOf(datum) < 0) {
+					this.dates.push(datum)
+				}
+			})
+			console.log('dates', this.dates)
 			// date string formatting
 			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
@@ -362,6 +423,9 @@ export default {
 					status: status ?? '-',
 					sum: student.sum});
 			})
+
+			console.log('tableStudentData', this.tableStudentData)
+			console.log('studentsData', this.studentsData)
 
 			if(returnData) {
 				return this.tableStudentData
@@ -561,11 +625,22 @@ export default {
 									</datepicker>
 								</div>
 							</div>
-							<div class="row justify-content-end">
-								<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger ml-2">
-									{{ $p.t('global/deleteAnwKontrolle') }}
-								</button>
+							<div class="col-6">
+								<div class="row justify-content-end">
+									<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger ml-2">
+										{{ $p.t('global/deleteAnwKontrolle') }}
+									</button>
+								</div>
 							</div>
+							<div class="col-6">
+								<div class="row justify-content-end">
+									<button @click="showAll" role="button" class="btn btn-secondary ml-2">
+										{{showAllVar ? 'Einen Termin anzeigen' : 'Alle Termine anzeigen'}}
+									</button>
+								</div>
+							</div>
+							
+							
 						</template>
 					
 				</core-filter-cmpt>

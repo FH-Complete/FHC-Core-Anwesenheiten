@@ -13,6 +13,20 @@ export const lektorFormatters = {
 			return '<i class="fa fa-check"></i>' + '(Entschuldigung akzeptiert)'
 		} else return '-'
 	},
+	anwesenheitFormatterValue: function (cell) {
+		const data = cell.getValue()
+		if (data === "anwesend") {
+			cell.getElement().style.color = "#28a745";
+			return '<i class="fa fa-check"></i>'
+		} else if (data === "abwesend") {
+			cell.getElement().style.color = "#dc3545";
+			return '<i class="fa fa-xmark"></i>'
+		} else if (data === "entschuldigt") {
+			cell.getElement().style.color = "#28a745";
+			// return '<i class="fa fa-bed"></i>'
+			return '<i class="fa fa-check"></i>' + '(Entschuldigung akzeptiert)'
+		} else return '-'
+	},
 	percentFormatter: function (cell) {
 		return cell.getData().sum ? cell.getData().sum + ' %' : '';
 	},
