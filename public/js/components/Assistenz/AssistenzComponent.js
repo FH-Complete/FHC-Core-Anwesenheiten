@@ -86,8 +86,7 @@ export default {
 		},
 		downloadEntschuldigung: function(dms_id)
 		{
-			window.location = CoreRESTClient._generateRouterURI('extensions/FHC-Core-Anwesenheiten/api/InfoApi/getEntschuldigungFile?entschuldigung=' + dms_id);
-		},
+			window.location = CoreRESTClient._generateRouterURI('extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile?entschuldigung=' + dms_id);		},
 		formAction: function(cell)
 		{
 			let download = document.createElement('div');

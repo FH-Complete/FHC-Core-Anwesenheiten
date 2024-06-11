@@ -11,7 +11,6 @@ class InfoApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getEntschuldigungFile' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'getStudiensemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getAktStudiensemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getLehreinheitAndLektorInfo' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
@@ -148,31 +147,6 @@ class InfoApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getStundenPlanEntriesForLEandLektorOnDate($le_id, $ma_uid, $date);
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess($result);
-	}
-	
-	public function getEntschuldigungFile()
-	{
-		$dms_id = $this->_ci->input->get('entschuldigung');
-
-		if (isEmptyString($dms_id))
-			$this->terminateWithError($this->_ci->p->t('global', 'wrongParameters'));
-
-		$person_id = getAuthPersonId();
-
-		//TODO (david) noch prüfen ob der Mitarbeiter Zugriff haben sollte
-		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid))
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
-		else
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);
-
-		if (hasData($zuordnung)) {
-			$file = $this->_ci->dmslib->download($dms_id, null, 'attachment');
-			// remove server filepath from name
-			preg_match("~[^/]+$~", $file->retval->name, $matches);
-			$file->retval->name = $matches[0];
-			$this->outputFile(getData($file));
-		}
-
 	}
 
 	public function getLvViewDataInfo() {

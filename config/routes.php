@@ -8,6 +8,7 @@ $route['extensions/FHC-Core-Anwesenheiten/Kontrolle/.+'] = 'extensions/FHC-Core-
 $route['extensions/FHC-Core-Anwesenheiten/kontrolle/.+'] = 'extensions/FHC-Core-Anwesenheiten/Kontrolle/index';
 $route['extensions/FHC-Core-Anwesenheiten/Lektor/.+'] = 'extensions/FHC-Core-Anwesenheiten/Kontrolle/index';
 $route['extensions/FHC-Core-Anwesenheiten/lektor/.+'] = 'extensions/FHC-Core-Anwesenheiten/Kontrolle/index';
+$route['extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile.*'] = 'extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile';
 $route['extensions/FHC-Core-Anwesenheiten/Profil/.+'] = 'extensions/FHC-Core-Anwesenheiten/Profil/index';
 $route['extensions/FHC-Core-Anwesenheiten/profil/.+'] = 'extensions/FHC-Core-Anwesenheiten/Profil/index';
 $route['extensions/FHC-Core-Anwesenheiten/Student/.+'] = 'extensions/FHC-Core-Anwesenheiten/Profil/index';
