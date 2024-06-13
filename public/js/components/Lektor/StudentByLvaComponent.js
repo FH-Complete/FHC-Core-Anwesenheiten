@@ -172,7 +172,7 @@ export default {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			console.log(this.$entryParams)
+
 			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {

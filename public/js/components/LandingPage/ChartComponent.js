@@ -150,7 +150,7 @@ export default {
 			if(!this.$entryParams.selected_le_id) return
 
 			const wrapperDiv = document.getElementById('highchartWrapper')
-
+			if(!wrapperDiv) return
 			// this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
 			// 	console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
 			// 	if(!res.data) return
@@ -202,6 +202,7 @@ export default {
 			await this.$entryParams.phrasenPromise
 			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
 			const wrapperDiv = document.getElementById('highchartWrapper')
+			if(!wrapperDiv) return
 
 			this.$fhcApi.factory.Profil.getAllAnw(this.$entryParams.sem_kurzbz).then(res => {
 				console.log('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',res)

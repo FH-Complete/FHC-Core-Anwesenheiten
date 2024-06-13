@@ -106,5 +106,14 @@ export default {
 			throw error;
 		}
 	},
+	async getAnwQuoteForPrestudentIds(ids, lv_id, sem_kurzbz) {
+		try {
+			const payload = {ids, lv_id, sem_kurzbz}
+			const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAnwQuoteForPrestudentIds';
+			return this.$fhcApi.post(url, payload, null)
+		} catch (error) {
+			throw error;
+		}
+	}
 	
 }

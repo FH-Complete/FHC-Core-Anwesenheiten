@@ -59,24 +59,37 @@ export default {
 				persistenceID: "lektorOverviewLe"
 			},
 			anwesenheitenTabulatorEventHandlers: [{
-				event: "rowClick",
-				handler: (e, row) => {
+				event: "cellClick",
+				handler: (e, cell) => {
+
+					// on non date fields route to student by lva component
+					const field = cell.getColumn().getField()
+
+					const row = cell.getRow()
 					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
 
-					this.$router.push({
-						name: 'StudentByLva',
-						params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
-					})
+					if(field === "gruppe" || field === "foto" || field === "prestudent_id" ||
+						field === "vorname" || field === "nachname" || field === "sum") {
+
+
+						this.$router.push({
+							name: 'StudentByLva',
+							params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
+						})
+					} else { // on date fields toggle state edit
+						this.toggleAnwStatus(e, cell, prestudent_id)
+					}
 				}
 			}],
 			boundRegenerateQR: null,
 			boundProgressCounter: null,
+			beginn: null,
+			changedData: [],
 			ma_uid: null,
 			sem_kurzbz: null,
 			lv_id: null,
 			dates: [],
 			filterTitle: "",
-			beginn: null,
 			ende: null,
 			selectedDate: new Date(Date.now()),
 			showAllVar: false,
@@ -235,6 +248,30 @@ export default {
 
 			// console.log('current Progress: ' + this.regenerateProgress + ' from ' + this.progressMax)
 		},
+		saveChanges () {
+			const changedStudents = new Set(this.changedData.map(e => e.prestudent_id))
+			console.log('changedStudents', changedStudents)
+			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, this.changedData).then((res) => {
+
+				if(res.meta.status === "success") {
+					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
+				} else {
+					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
+				}
+
+				// TODO: reload sums of changed stuff maybe idk
+				const changedStudentsArr = [...changedStudents]
+				this.$fhcApi.factory.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
+					.then(res => {
+					console.log('getAnwQuoteForPrestudentIds', res)
+
+						this.updateSumData(res.data.retval)
+				})
+
+			})
+
+			this.changedData = []
+		},
 		startRegenerateQR() {
 			this.progressTimerID = setInterval(this.boundProgressCounter, this.progressTimerInterval) // track time passed for regenerate
 		},
@@ -332,6 +369,16 @@ export default {
 				}
 			)
 		},
+		updateSumData (data) {
+			data.forEach(e => {
+				const student = this.students.find(s => s.prestudent_id === e.prestudent_id)
+				student.sum = e.sum
+				const studentTable = this.tableStudentData.find(s => s.prestudent_id === e.prestudent_id)
+				studentTable.sum = e.sum
+			})
+
+			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+		},
 		async deleteAnwesenheitskontrolle () {
 			if (await this.$fhcAlert.confirmDelete() === false)
 				return;
@@ -392,7 +439,7 @@ export default {
 			this.dates = []
 
 			anwEntries.forEach(entry => {
-				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status})
+				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status, anwesenheit_user_id: entry.anwesenheit_user_id})
 
 				const datum = entry.datum
 				if(this.dates.indexOf(datum) < 0) {
@@ -436,6 +483,42 @@ export default {
 		openNewAnwesenheitskontrolleModal(){
 			this.$refs.modalContainerNewKontrolle.show()
 		},
+		toggleAnwStatus (e, cell, prestudent_id) {
+
+			const value = cell.getValue()
+			let date = cell.getColumn().getField() // '2024-10-24' or 'status'
+			if(date === 'status') {
+				date = formatDateToDbString(this.selectedDate)
+			}
+
+			const arrWrapped = this.studentsData.get(prestudent_id)
+			const arr = JSON.parse(JSON.stringify(arrWrapped))
+			const found = arr.find(e => e.datum === date)
+			const anwesenheit_user_id = found.anwesenheit_user_id
+
+			if(value === "abwesend") {
+
+				const newEntry = {
+					prestudent_id, date, status: "anwesend", anwesenheit_user_id
+				}
+
+				this.handleChange(newEntry)
+				cell.setValue("anwesend")
+
+			} else if (value === "anwesend") {
+				const newEntry = {
+					prestudent_id, date, status: "abwesend", anwesenheit_user_id
+				}
+				this.handleChange(newEntry)
+				cell.setValue("abwesend")
+			}
+		},
+		handleChange(newEntry) {
+			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
+			if(updateFoundIndex >= 0) this.changedData.splice(updateFoundIndex, 1)
+			else this.changedData.push(newEntry)
+
+		},
 		validateTimespan () {
 			const vonDate = new Date(1995, 10, 16, this.beginn.hours, this.beginn.minutes, this.beginn.seconds)
 			const bisDate = new Date(1995, 10, 16, this.ende.hours, this.ende.minutes, this.ende.seconds)
@@ -467,6 +550,10 @@ export default {
 		found.title = selectedDateFrontendFormatted
 	},
 	mounted() {
+		const now = new Date(Date.now())
+		this.beginn = {hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds()}
+		this.ende = {hours: now.getHours() + 2, minutes: now.getMinutes(), seconds: now.getSeconds()}
+
 		this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 		this.boundRegenerateQR = this.regenerateQR.bind(this)
 		this.boundProgressCounter = this.progressCounter.bind(this)
@@ -494,7 +581,7 @@ export default {
 	},
 	watch: {
 		selectedDate(newVal) {
-
+			this.showAllVar = false
 			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
@@ -636,6 +723,13 @@ export default {
 								<div class="row justify-content-end">
 									<button @click="showAll" role="button" class="btn btn-secondary ml-2">
 										{{showAllVar ? 'Einen Termin anzeigen' : 'Alle Termine anzeigen'}}
+									</button>
+								</div>
+							</div>
+							<div class="col-6">
+								<div class="row justify-content-end">
+									<button @click="saveChanges" :disabled="!changedData.length" role="button" class="btn btn-secondary ml-2">
+										Änderungen speichern
 									</button>
 								</div>
 							</div>

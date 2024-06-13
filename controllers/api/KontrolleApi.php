@@ -24,6 +24,7 @@ class KontrolleApi extends FHCAPI_Controller
 				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByStudiengang' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
+				'getAnwQuoteForPrestudentIds' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
 
@@ -415,6 +416,19 @@ class KontrolleApi extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kurzbz;
 
 		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLva($lv_id,  $sem_kurzbz);
+
+		if(!isSuccess($result)) $this->terminateWithError($result);
+
+		$this->terminateWithSuccess($result);
+	}
+
+	public function getAnwQuoteForPrestudentIds() {
+		$result = $this->getPostJSON();
+		$ids = $result->ids;
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+
+		$result = $this->_ci->AnwesenheitUserModel->getAnwQuoteForPrestudentIds($ids, $lv_id,  $sem_kurzbz);
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
 

@@ -168,6 +168,21 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query);
 	}
 
+	public function getAnwQuoteForPrestudentIds($prestudent_Ids, $lv_id, $sem_kurzbz)
+	{
+		$query = "
+			SELECT prestudent_id, get_anwesenheiten_by_time(prestudent_id, {$lv_id}, '{$sem_kurzbz}') as sum
+			FROM public.tbl_student
+			WHERE prestudent_id IN (";
+
+		foreach ($prestudent_Ids as $index => $id) {
+			if($index > 0) $query .= ", ";
+			$query .= $id;
+		}
+		$query .= ");";
+
+		return $this->execQuery($query);
+	}
 	public function deleteUserAnwesenheitById($anwesenheit_user_id)
 	{
 		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = {$anwesenheit_user_id}";

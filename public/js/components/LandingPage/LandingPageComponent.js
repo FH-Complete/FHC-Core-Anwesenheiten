@@ -24,7 +24,7 @@ export default {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
-
+			loaded: false
 		};
 	},
 	props: {
@@ -40,6 +40,7 @@ export default {
 				this.$entryParams.stg_kz = searchParams.get('stg_kz')
 				this.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 				this.$entryParams.sem = searchParams.get('sem')
+				this.$entryParams.initRouted = false
 
 				this.setupViewDataRefs()
 
@@ -167,7 +168,16 @@ export default {
 
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
 				} else if(this.$entryParams.permissions.lektor) {
-					resolve(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz,le_ids))
+					resolve(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz,le_ids).then(()=>{
+						if(this.$entryParams.available_le_ids.length === 1 && !this.$entryParams.initRouted) {
+
+							// automagically skip landing page if there is no selection of LE necessary
+							this.$entryParams.initRouted = true
+							this.$router.push({
+								name: 'Lektor'
+							})
+						}
+					}))
 				} else if(this.$entryParams.permissions.student) {
 					resolve()
 				}
@@ -310,7 +320,9 @@ export default {
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
-		this.$entryParams.setupPromise = this.handleSetup()
+		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
+			this.loaded = true
+		})
 	},
 	mounted() {
 
@@ -327,7 +339,7 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		:title="($p.t('global/digitalesAnwManagement'))+' '+$entryParams.viewDataLv.kurzbz +' - '+$entryParams.viewDataLv.bezeichnung" >
+		:title="($p.t('global/digitalesAnwManagement'))+' '+$entryParams.viewDataLv.kurzbz +' - '+$entryParams.viewDataLv.bezeichnung">
 		<template #main>
 			<bs-modal ref="modalContainerKontrolleSetup" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>
@@ -361,21 +373,24 @@ export default {
 				</template>
 			</bs-modal>
 		
-			<div style="margin-bottom: 12px;">
-				<div class="col-sm-10 col-10 mx-auto">
-					<div class="row mt-4" v-if="$entryParams.permissions?.lektor || $entryParams.permissions?.admin">
-						<button  class="btn btn-primary btn-block btn-lg" @click="routeToLektor">Anwesenheiten verwalten Lektor</button>
-					</div>
-					<div class="row mt-4" v-if="$entryParams.permissions?.student || $entryParams.permissions?.admin">
-						<button  class="btn btn-primary btn-block btn-lg" @click="routeToStudent">Anwesenheiten verwalten Student</button>
-					</div>
-					<div class="row mt-4" v-if="$entryParams.permissions?.assistenz || $entryParams.permissions?.admin">
-						<button  class="btn btn-primary btn-block btn-lg" @click="routeToAssistenz">Anwesenheiten verwalten Assistenz</button>
+			<div id="visibilityWrapper" v-if="loaded">
+				<div style="margin-bottom: 12px;">
+					<div class="col-sm-10 col-10 mx-auto">
+						<div class="row mt-4" v-if="$entryParams.permissions?.lektor || $entryParams.permissions?.admin">
+							<button  class="btn btn-primary btn-block btn-lg" @click="routeToLektor">Anwesenheiten verwalten Lektor</button>
+						</div>
+						<div class="row mt-4" v-if="$entryParams.permissions?.student || $entryParams.permissions?.admin">
+							<button  class="btn btn-primary btn-block btn-lg" @click="routeToStudent">Anwesenheiten verwalten Student</button>
+						</div>
+						<div class="row mt-4" v-if="$entryParams.permissions?.assistenz || $entryParams.permissions?.admin">
+							<button  class="btn btn-primary btn-block btn-lg" @click="routeToAssistenz">Anwesenheiten verwalten Assistenz</button>
+						</div>
 					</div>
 				</div>
+				
+				
+				
 			</div>
-			
-			
 			<ChartComponent></ChartComponent>
 			
 		</template>
