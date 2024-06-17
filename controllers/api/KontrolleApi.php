@@ -20,7 +20,7 @@ class KontrolleApi extends FHCAPI_Controller
 				'getNewQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getExistingQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'deleteQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
+				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
 				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByStudiengang' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),

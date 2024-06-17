@@ -21,8 +21,9 @@ class InfoApi extends FHCAPI_Controller
 				'getLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
 				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
 				'getStundenPlanEntriesForLEandLektorOnDate' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
-				)
+				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getLETermine' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
+			)
 		);
 
 		$this->_ci =& get_instance();
@@ -62,8 +63,9 @@ class InfoApi extends FHCAPI_Controller
 		$currentDate = $result->date;
 
 		$lektorLehreinheitData = $this->_ci->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $currentDate);
+		$leTermine = $this->_ci->AnwesenheitModel->getLETermine($le_id);
 
-		$this->terminateWithSuccess(getData($lektorLehreinheitData));
+		$this->terminateWithSuccess(array(getData($lektorLehreinheitData), getData($leTermine)));
 	}
 
 	public function getStudentInfo()
@@ -158,6 +160,15 @@ class InfoApi extends FHCAPI_Controller
 		$this->terminateWithSuccess($result);
 	}
 
+	public function getLETermine() {
+		$result = $this->getPostJSON();
+		$le_id = $result->le_id;
+
+		$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
+		if(!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess($result);
+	}
+
 	private function _setAuthUID()
 	{
 		$this->_uid = getAuthUID();
@@ -167,4 +178,3 @@ class InfoApi extends FHCAPI_Controller
 	}
 
 }
-

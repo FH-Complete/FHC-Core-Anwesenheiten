@@ -55,7 +55,8 @@ class Administration extends Auth_Controller
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz')
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz'),
+				'controller' => "Admin"
 			]
 		);
 

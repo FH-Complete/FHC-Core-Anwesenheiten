@@ -4,6 +4,7 @@ import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
 import { lektorFormatters } from "../../mixins/formatters";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
+import {TermineDropdown} from "../Setup/TermineDropdown";
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
@@ -15,6 +16,7 @@ export default {
 		CoreFilterCmpt,
 		CoreNavigationCmpt,
 		BsModal,
+		TermineDropdown,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -220,6 +222,11 @@ export default {
 			})
 
 		},
+		handleTerminChanged(termin) {
+			console.log('termin changed', termin)
+
+			this.setTimespanForKontrolleTermin(termin)
+		},
 		regenerateQR() {
 
 			// console.log('regenerateQR')
@@ -250,6 +257,7 @@ export default {
 		},
 		saveChanges () {
 			const changedStudents = new Set(this.changedData.map(e => e.prestudent_id))
+			const changedData = this.changedData
 			console.log('changedStudents', changedStudents)
 			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, this.changedData).then((res) => {
 
@@ -259,7 +267,20 @@ export default {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
-				// TODO: reload sums of changed stuff maybe idk
+				// debugger
+				// // TODO: update tableData to avoid refetching every anwesenheit
+				// changedData.forEach(entry => {
+				// 	debugger
+				// 	// find studentsData entry and edit
+				// 	const sD = this.studentsData.get(entry.prestudent_id)
+				// 	sD.status = entry.status
+				// 	debugger
+				// 	// find tableStudentData entry and edit
+				//
+				// 	const tSD = this.tableStudentData.find(e => e.prestudent_id === entry.prestudent_id)
+				// 	tSD[entry.datum]
+				// })
+
 				const changedStudentsArr = [...changedStudents]
 				this.$fhcApi.factory.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
 					.then(res => {
@@ -289,7 +310,17 @@ export default {
 			// attempt to degenerate one last time to not leave any codes in db
 			this.$fhcApi.factory.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 		},
+		setTimespanForKontrolleTermin(termin, setDate = true) {
+			if(setDate) this.selectedDate = new Date(termin.datum)
+
+			const beginn = new Date('1995-10-16 ' + termin.beginn)
+			const ende = new Date('1995-10-16 ' + termin.ende)
+
+			this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
+			this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
+		},
 		setTimespanForKontrolle(data) {
+			// TODO: rewrite the sql of this to get better formed data
 			if(data[0].beginn && data[0].ende) {
 				let beginn = new Date('1995-10-16 ' + data[0].beginn)
 				let ende = new Date('1995-10-16 ' + data[0].ende)
@@ -314,13 +345,44 @@ export default {
 			// TODO: do smth with raum or lektorinfo?
 
 			if(res.meta.status === 'success' && res.data) {
-				const data = res.data
+				const viewData = res.data[0]
 				// find out von & bis times for lehreinheit
 				this.filterTitle = this.$entryParams.selected_le_info.infoString
 
-				this.setTimespanForKontrolle(data)
+				// todo filter termine in future/past
+
+				res.data?.[1]?.forEach(termin => {
+					const dateParts = termin.datum.split( "-")
+					termin.datumFrontend = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+				})
+				this.termine = res.data[1]
+				this.$refs.termineDropdown.setTermine(res.data[1])
+				if(this.termine.length) {
+					const termin = this.findClosestTermin();
+					console.log('findClosestTermin', termin)
+
+					this.setTimespanForKontrolleTermin(termin, false)
+
+					this.termine.forEach(t => this.dates.push(t.datum))
+
+				} else this.setTimespanForKontrolle(viewData)
 
 			}
+		},
+		findClosestTermin() {
+			const todayTime = new Date(Date.now()).getTime()
+			let nearestFutureTermin = null
+			this.termine.forEach((termin, i) => {
+				termin.timeDiff = new Date(termin.datum).getTime() - todayTime
+				if (i === 0) {
+					nearestFutureTermin = termin
+				} else {
+					nearestFutureTermin = (termin.timeDiff < nearestFutureTermin.timeDiff && termin.timeDiff > 0) ? termin : nearestFutureTermin
+				}
+			})
+
+			console.log('nearestFutureTermin', nearestFutureTermin)
+			return nearestFutureTermin
 		},
 		startNewAnwesenheitskontrolle(){
 			if(!this.beginn || !this.ende) {
@@ -425,6 +487,19 @@ export default {
 
 			return zusatz
 		},
+		setDates(anwEntries) {
+
+			// from anw entries
+			anwEntries.forEach(entry => {
+				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status, anwesenheit_user_id: entry.anwesenheit_user_id})
+
+				const datum = entry.datum
+				if(this.dates.indexOf(datum) < 0) {
+					this.dates.push(datum)
+				}
+			})
+			console.log('dates', this.dates)
+		},
 		setupData(data, returnData = false) {
 			this.students = data[0] ?? []
 			const anwEntries = data[1] ?? []
@@ -438,15 +513,9 @@ export default {
 			})
 			this.dates = []
 
-			anwEntries.forEach(entry => {
-				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status, anwesenheit_user_id: entry.anwesenheit_user_id})
+			this.setDates(anwEntries)
 
-				const datum = entry.datum
-				if(this.dates.indexOf(datum) < 0) {
-					this.dates.push(datum)
-				}
-			})
-			console.log('dates', this.dates)
+
 			// date string formatting
 			const selectedDateDBFormatted = formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
@@ -486,6 +555,7 @@ export default {
 		toggleAnwStatus (e, cell, prestudent_id) {
 
 			const value = cell.getValue()
+			if(value === undefined) return
 			let date = cell.getColumn().getField() // '2024-10-24' or 'status'
 			if(date === 'status') {
 				date = formatDateToDbString(this.selectedDate)
@@ -494,6 +564,7 @@ export default {
 			const arrWrapped = this.studentsData.get(prestudent_id)
 			const arr = JSON.parse(JSON.stringify(arrWrapped))
 			const found = arr.find(e => e.datum === date)
+
 			const anwesenheit_user_id = found.anwesenheit_user_id
 
 			if(value === "abwesend") {
@@ -657,6 +728,9 @@ export default {
 								</datepicker>
 							</div>
 						</div>
+						<div class="row align items center mt-8">
+							<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
+						</div>
 					</template>
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
@@ -712,7 +786,7 @@ export default {
 									</datepicker>
 								</div>
 							</div>
-							<div class="col-6">
+							<div class="col-6" v-if="$entryParams.permissions.admin || $entryParams.permissions.assistenz">
 								<div class="row justify-content-end">
 									<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger ml-2">
 										{{ $p.t('global/deleteAnwKontrolle') }}

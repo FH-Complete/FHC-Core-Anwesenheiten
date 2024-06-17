@@ -59,7 +59,7 @@ class Anwesenheit_User_model extends \DB_Model
 						SELECT tbl_prestudent.person_id
 						FROM tbl_prestudent
 						WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
-							AND '{$von}' >= entschuldigung.von AND '{$bis}' <= entschuldigung.bis
+							AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
 					)
 					ORDER BY akzeptiert DESC NULLS LAST
 					LIMIT 1
@@ -71,13 +71,13 @@ class Anwesenheit_User_model extends \DB_Model
 					   SELECT tbl_prestudent.person_id
 					   FROM tbl_prestudent
 					   WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
-						 AND '{$von}' >= entschuldigung.von AND '{$bis}' <= entschuldigung.bis
+						 AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
 				   )
 				   LIMIT 1
 				) as exists_entschuldigung
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
-			WHERE lehreinheit_id = $le_id AND verband != 'I'
+			WHERE lehreinheit_id = ? AND verband != 'I'
 			
 			AND prestudent_id NOT IN(
 				SELECT students.prestudent_id as prestudent_id FROM
@@ -87,12 +87,12 @@ class Anwesenheit_User_model extends \DB_Model
 				(SELECT prestudent_id
 				 FROM campus.vw_student_lehrveranstaltung
 						  JOIN public.tbl_student ON (uid = student_uid)
-				 WHERE lehreinheit_id = {$le_id} AND
+				 WHERE lehreinheit_id = ? AND
 					   verband != 'I') students USING(prestudent_id)
-			WHERE anwesenheit_id = $anwesenheit_id);
+			WHERE anwesenheit_id = ?);
 		";
 
-		$result = $this->execQuery($query);
+		$result = $this->execQuery($query, [$von, $bis, $von, $bis, $le_id, $le_id, $anwesenheit_id]);
 
 		// and insert them with their respecting status
 		if(hasData($result)) {
@@ -138,11 +138,11 @@ class Anwesenheit_User_model extends \DB_Model
 				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
-			WHERE studiensemester_kurzbz = '{$sem_kurzbz}' AND prestudent_id = {$prestudent_id} AND lehrveranstaltung_id = '{$lv_id}'
+			WHERE studiensemester_kurzbz = ? AND prestudent_id = ? AND lehrveranstaltung_id = ?
 			ORDER BY datum DESC;
 		";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
 	}
 
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
@@ -154,18 +154,18 @@ class Anwesenheit_User_model extends \DB_Model
 					 JOIN public.tbl_benutzer USING (uid)
 					 JOIN tbl_person USING (person_id)
 			WHERE
-			  lehreinheit_id = {$lehreinheit_id}
-			  AND prestudent_id = {$prestudent_id};
+			  lehreinheit_id = ?
+			  AND prestudent_id = ?;
 		";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$lehreinheit_id, $prestudent_id]);
 	}
 
 	public function getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
-		$query = "SELECT get_anwesenheiten_by_time({$prestudent_id}, {$lv_id}, '{$sem_kurzbz}') as sum";
+		$query = "SELECT get_anwesenheiten_by_time(?, ?, ?) as sum";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$prestudent_id, $lv_id, $sem_kurzbz]);
 	}
 
 	public function getAnwQuoteForPrestudentIds($prestudent_Ids, $lv_id, $sem_kurzbz)

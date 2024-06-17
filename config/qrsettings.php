@@ -9,3 +9,5 @@ define('REGENERATE_QR_TIMER', 30000); //30 seconds
 define('USE_REGENERATE_QR', true);
 // used in deleteOldQR Cronjob
 define('QR_EXPIRATION_TIMER', 3600000); // 1 hour
+// frist welche entscheidet wie weit in die Vergangenheit eine neue Entschuldigung reichen darf
+define('ENTSCHULDIGUNG_MAX_REACH', 7); // 7 days

@@ -21,8 +21,8 @@ class ProfilApi extends FHCAPI_Controller
 				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'checkInAnwesenheit' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
 				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'deleteUserAnwesenheitById' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'deleteUserAnwesenheitByIds' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
+				'deleteUserAnwesenheitById' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
+				'deleteUserAnwesenheitByIds' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw')
 			)
 		);
 

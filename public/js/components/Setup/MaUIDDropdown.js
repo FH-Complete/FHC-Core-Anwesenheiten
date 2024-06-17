@@ -64,23 +64,14 @@ export const MaUIDDropdown = {
 					this.$entryParams.available_le_ids = [...le_ids]
 
 					resolve()
-				}).finally(() => {
-					// TODO: le promise never enters then case... set properties somewhere
-
-
-					console.log('LEs reloaded from MAUID dropdown')
-					console.log('$entryParams', this.$entryParams)
-
 				})
 			})
 
 		},
 		maUIDChanged(e) {
-			console.log('maUIDChanged', e)
 			const selected = e.target.selectedOptions
 
 			// reload LEs
-			console.log('selected', selected)
 			this.$entryParams.selected_maUID = selected[0]._value
 			this.reloadAvailableLE().then(() => {
 				this.$emit('maUIDchanged')
@@ -92,16 +83,11 @@ export const MaUIDDropdown = {
 				return
 			}
 			await this.$entryParams.setupPromise.then(() => {
-				console.log('mauid dropdown setupPromise then')
-
 				this.internal_available_maUID = this.$entryParams.available_maUID
 				this.internal_selected_maUID =  this.$entryParams.selected_maUID
-				console.log('this.internal_selected_maUID', this.internal_selected_maUID)
-
 			})
 		},
 		resetData() {
-			console.log('mauidDD resetData')
 			this.internal_available_maUID = this.$entryParams.available_maUID
 			this.internal_selected_maUID =  this.$entryParams.selected_maUID
 		}
@@ -112,7 +98,7 @@ export const MaUIDDropdown = {
 	template: `
 		<div class="mt-2">
 			<label for="maSelect">{{ $p.t('lehre/lektor') }}</label>
-			<select id="maSelect" v-model="internal_selected_maUID" @change="maUIDChanged" class="form-control">
+			<select id="maSelect" @change="maUIDChanged" class="form-control">
 				<option v-for="option in internal_available_maUID" :value="option" >
 					<a> {{option.infoString}} </a>
 				</option>

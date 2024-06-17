@@ -96,7 +96,16 @@ export default {
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getLvViewDataInfo'
 			return this.$fhcApi.post(url, payload, null)
 		} catch (error) {
-
+			throw error;
+		}
+	},
+	async getLETermine(le_id) {
+		try {
+			const payload = {le_id}
+			const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getLETermine'
+			return this.$fhcApi.post(url, payload, null)
+		} catch (error) {
+			throw error;
 		}
 	}
 	
