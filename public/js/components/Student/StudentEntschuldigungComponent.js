@@ -38,7 +38,7 @@ export default {
 					},
 					body:(url,config,params)=>{
 						return JSON.stringify({
-							person_id: this.$entryParams.selected_student ? this.$entryParams.selected_student.person_id : this.$entryParams.viewDataStudent.person_id
+							person_id: this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 						})
 					}
 				},
@@ -51,6 +51,7 @@ export default {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false},
+					{title: this.$p.t('global/notiz'), field: 'notiz', tooltip:false, minWidth: 150}
 				],
 				persistence:true,
 				persistenceID: "studentEntschuldigungenTable"
@@ -79,7 +80,7 @@ export default {
 			formData.append('von', this.entschuldigung.von);
 			formData.append('bis', this.entschuldigung.bis);
 
-			const person_id = this.$entryParams.selected_student ? this.$entryParams?.selected_student.person_id : this.$entryParams.viewDataStudent.person_id
+			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
 			formData.append('person_id', person_id);
 			this.$fhcApi.factory.Profil.addEntschuldigung(formData).then(res => {

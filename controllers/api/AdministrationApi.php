@@ -68,6 +68,7 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$entschuldigung_id = $data['entschuldigung_id'];
 		$status = $data['status'];
+		$notiz = $data['notiz'];
 
 		if (isEmptyString($entschuldigung_id) || !in_array($status, [true, false]))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
@@ -95,7 +96,8 @@ class AdministrationApi extends FHCAPI_Controller
 					'updateamum' => date('Y-m-d H:i:s'),
 					'statussetvon' => $this->_uid,
 					'statussetamum' => date('Y-m-d H:i:s'),
-					'akzeptiert' => $status
+					'akzeptiert' => $status,
+					'notiz' => $notiz
 				)
 			);
 

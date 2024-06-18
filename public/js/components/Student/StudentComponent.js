@@ -60,7 +60,7 @@ export default {
 			});
 
 		} else { // admin or assistenz check student data - set viewdata from selected student
-			const data = this.$entryParams.selected_student
+			const data = this.$entryParams.selected_student_info
 			this.viewDataStudent.vorname = data.vorname
 			this.viewDataStudent.nachname = data.nachname
 			this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid

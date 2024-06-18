@@ -5,12 +5,12 @@ import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters, universalFormatter} from "../../mixins/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
-import {DateTime} from '../../luxon.js'
-window.DateTime = DateTime
+import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
 export default {
 	name: 'AssistenzComponent',
 	components: {
+		BsModal,
 		CoreBaseLayout,
 		CoreNavigationCmpt,
 		CoreFilterCmpt,
@@ -50,18 +50,17 @@ export default {
 					{title: this.$p.t('person/vorname'), field: 'vorname'},
 					{title: this.$p.t('person/nachname'), field: 'nachname'} ,
 					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate, sorter: "datetime",
-						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate, sorter: "datetime",
-						sorterParams: {format:"yyyy-MM-dd HH:mm:ss"}
-					},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 150},
-
+					{title: this.$p.t('global/notiz'), field: 'notiz', tooltip:false, minWidth: 150}
 				],
 				persistence:true,
 				persistenceID: "assistenzTable"
 			},
+			notiz: '',
+			entschuldigung_id: null,
 			studiengang: null,
 			titleText: ''
 		};
@@ -70,16 +69,17 @@ export default {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
 		},
-		updateEntschuldigung: function(cell, status)
+		updateEntschuldigung: function(cell, status, notizParam = '')
 		{
-			let entschuldigung_id = cell.getData().entschuldigung_id;
 
-			this.$fhcApi.factory.Administration.updateEntschuldigung(entschuldigung_id, status).then(res => {
+			const entschuldigung_id = cell.getData().entschuldigung_id
+			const notiz = notizParam !== '' ? notizParam :cell.getData().notiz
+			this.$fhcApi.factory.Administration.updateEntschuldigung(entschuldigung_id, status, notiz).then(res => {
 				console.log('updateEntschuldigung', res)
 
 				if (res.meta.status === "success")
 				{
-					cell.getRow().update({'akzeptiert': status});
+					cell.getRow().update({'akzeptiert': status, 'notiz': notiz});
 					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
 				}
 			});
@@ -112,7 +112,7 @@ export default {
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
 			button.title = this.$p.t('global/entschuldigungAblehnen');
-			button.addEventListener('click', () => this.updateEntschuldigung(cell, false));
+			button.addEventListener('click', () => this.openRejectionModal(cell));
 			download.append(button);
 
 			return download;
@@ -133,6 +133,22 @@ export default {
 			if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
 			if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
 			if (this.studiengang) this.$refs.assistenzTable.tabulator.addFilter(this.studiengangFilter, {studiengang: this.studiengang})
+		},
+		handleInputNotiz(e) {
+			this.notiz = e.target.value;
+		},
+		rejectEntschuldigung() {
+			this.updateEntschuldigung(this.rejectCell, false, this.notiz)
+			this.rejectCell = null
+			this.notiz = ''
+
+			this.$refs.modalContainerRejectionReason.hide()
+		},
+		openRejectionModal(cell) {
+			this.rejectCell = cell
+
+			this.notiz = cell.getData().notiz
+			this.$refs.modalContainerRejectionReason.show()
 		},
 		sgChangedHandler: function(e) {
 			console.log('sgChangedHandler', e)
@@ -160,8 +176,23 @@ export default {
 	</row>
 
 	<core-base-layout
-		:title="$p.t('global/entschuldigungsmanagementStudiengangsassistenz')">
+		:title="$p.t('global/entschuldigungsmanagement')">
 		<template #main>
+			<bs-modal ref="modalContainerRejectionReason" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>{{ $p.t('global/entschuldigungNotizAblehnen') }}</template>
+				<template v-slot:default>
+					<div>
+						<div class="mt-2">
+							<input maxlength=255 class="form-control" :value="notiz" @input="handleInputNotiz" :placeholder="$p.t('global/begruendungAnw')">
+						</div>
+					</div>
+					
+				</template>
+				<template v-slot:footer>
+					<button type="button" class="btn btn-primary" :disabled="!notiz" @click="rejectEntschuldigung">{{ $p.t('global/reject') }}</button>
+				</template>
+			</bs-modal>
+		
 			<div class="row">
 				<div class="col-5">
 					<div class="row mb-3 align-items-center">

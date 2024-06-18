@@ -45,9 +45,10 @@ export default {
 	},
 	async deleteEntschuldigung(entschuldigung_id) {
 		try {
+			const payload = {entschuldigung_id}
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/deleteEntschuldigung';
 			const headers = {Headers: { "Content-Type": "multipart/form-data" }}
-			return this.$fhcApi.post(url, formData, headers)
+			return this.$fhcApi.post(url, payload, headers)
 		} catch (error) {
 			throw error;
 		}

@@ -1,7 +1,6 @@
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import ChartComponent from '../LandingPage/ChartComponent.js'
 
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
@@ -14,7 +13,6 @@ export default {
 		CoreBaseLayout,
 		CoreNavigationCmpt,
 		CoreRESTClient,
-		ChartComponent,
 		BsModal,
 		LehreinheitenDropdown,
 		MaUIDDropdown,
@@ -223,7 +221,7 @@ export default {
 
 
 					res.data?.retval?.forEach(lektor => {
-						const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre : '')
+						const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 							+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 							+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
 
@@ -391,7 +389,6 @@ export default {
 				
 				
 			</div>
-			<ChartComponent></ChartComponent>
 			
 		</template>
 	</core-base-layout>

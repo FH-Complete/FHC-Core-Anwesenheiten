@@ -9,9 +9,9 @@ export default {
 			throw error;
 		}
 	},
-	async updateEntschuldigung(entschuldigung_id, status) {
+	async updateEntschuldigung(entschuldigung_id, status, notiz) {
 		try {
-			const payload = {entschuldigung_id, status}
+			const payload = {entschuldigung_id, status, notiz}
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/updateEntschuldigung';
 			return this.$fhcApi.post(url, payload, null)
 		} catch (error) {

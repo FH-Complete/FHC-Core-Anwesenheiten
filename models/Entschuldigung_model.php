@@ -15,7 +15,7 @@ class Entschuldigung_model extends \DB_Model
 
 	public function getEntschuldigungenByPerson($person_id)
 	{
-		$query = 'SELECT dms_id, von, bis, akzeptiert, entschuldigung_id
+		$query = 'SELECT dms_id, von, bis, akzeptiert, entschuldigung_id, notiz
 					FROM extension.tbl_anwesenheit_entschuldigung
 					WHERE person_id = ?
 					ORDER by von DESC, akzeptiert DESC NULLS LAST';
@@ -32,6 +32,7 @@ class Entschuldigung_model extends \DB_Model
 						vorname,
 						nachname,
 						akzeptiert,
+						notiz,
 						studiengang_kz,
 						bezeichnung,
 						kurzbzlang,
@@ -63,6 +64,7 @@ class Entschuldigung_model extends \DB_Model
 						bis,
 						public.tbl_person.person_id,
 						tbl_anwesenheit_entschuldigung.entschuldigung_id,
+						notiz,
 						vorname,
 						nachname,
 						akzeptiert,

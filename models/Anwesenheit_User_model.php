@@ -133,7 +133,7 @@ class Anwesenheit_User_model extends \DB_Model
 	{
 		$query = "
 			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status,
-			       extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis
+			       extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis, extension.tbl_anwesenheit_user.notiz
 			FROM extension.tbl_anwesenheit
 				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)

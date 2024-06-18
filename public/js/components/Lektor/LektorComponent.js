@@ -48,7 +48,6 @@ export default {
 				layout: 'fitColumns',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					// TODO: debug foto column selection/visibility logic
 					{title: this.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
 					{title: this.$p.t('person/student'), field: 'prestudent_id', visible: false,tooltip:false, minWidth: 150},
 					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},

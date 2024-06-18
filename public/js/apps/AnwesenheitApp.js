@@ -17,33 +17,28 @@ const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
 	routes: [
 		{
-			path: `/Lektor/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
+			path: `/Kontrolle/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
 			name: 'StudentByLva',
 			component: StudentByLvaComponent,
 			props: true
 		},
 		{
-			path: `/Lektor`,
+			path: `/Kontrolle`,
 			name: 'Lektor',
 			component: LektorComponent,
 		},
 		{
-			path: `/Student`,
+			path: `/Profil`,
 			name: 'Student',
 			component: StudentComponent
 		},
 		{
-			path: '/Setup',
-			name: 'Setup',
-			component: SetupComponent
-		},
-		{
-			path: `/Assistenz`,
+			path: `/Administration`,
 			name: 'Assistenz',
 			component: AssistenzComponent
 		},
 		{
-			path: '/Student/Scan/:zugangscode?',
+			path: '/Profil/Scan/:zugangscode?',
 			name: 'Scan',
 			component: ScanComponent,
 			props: true
@@ -54,20 +49,16 @@ const router = VueRouter.createRouter({
 			component: LandingPageComponent
 		},
 		{
-			path: '/Student/:catchAll(.*)',
-			redirect: { name: 'Student'}
+			path: '/Profil/:catchAll(.*)',
+			redirect: { name: 'Profil'}
 		},
 		{
-			path: '/Lektor/:catchAll(.*)',
-			redirect: { name: 'Lektor'}
+			path: '/Kontrolle/:catchAll(.*)',
+			redirect: { name: 'Kontrolle'}
 		},
 		{
-			path: '/Assistenz/:catchAll(.*)',
-			redirect: { name: 'Assistenz'}
-		},
-		{
-			path: '/Setup/:catchAll(.*)',
-			redirect: { name: 'Setup'}
+			path: '/Administration/:catchAll(.*)',
+			redirect: { name: 'Administration'}
 		},
 		{
 			path: '/:catchAll(.*)',
