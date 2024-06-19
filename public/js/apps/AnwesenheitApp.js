@@ -110,15 +110,3 @@ anwesenheitApp
 	.use(Phrasen)
 	.mount("#main");
 
-// router.beforeEach((to, from) => {
-// 		const eP = anwesenheitApp.config.globalProperties.$entryParams
-//
-// 		// skip landing page for assistenz since they got no content there
-// 		if(eP.permissions.assistenz && to.name === "LandingPage") {
-// 			return eP.phrasenPromise.then( () =>{
-// 				return {name: "Assistenz"}
-// 			})
-// 		}
-//
-// 		return true
-// })

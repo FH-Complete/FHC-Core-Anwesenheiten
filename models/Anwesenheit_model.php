@@ -25,7 +25,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root) {
 		$query = "SELECT
-				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, 
+				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id,
 				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
@@ -63,7 +63,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStudentsForLvaInSemester($lv_id, $sem_kurzbz) {
 		$query = "SELECT
-				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id, uid
+				distinct on(semester, verband, gruppe, nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id, uid
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe
@@ -77,7 +77,8 @@ class Anwesenheit_model extends \DB_Model
 					 LEFT JOIN public.tbl_studentlehrverband USING(student_uid,studiensemester_kurzbz)
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id=?	AND
-				 vw_student_lehrveranstaltung.studiensemester_kurzbz=?;";
+				 vw_student_lehrveranstaltung.studiensemester_kurzbz=?
+			ORDER BY semester, verband, gruppe, nachname;";
 
 		return $this->execReadOnlyQuery($query, [$lv_id, $sem_kurzbz]);
 	}

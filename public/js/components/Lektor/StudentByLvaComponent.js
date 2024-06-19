@@ -50,6 +50,7 @@ export default {
 					{title: this.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
+					{title: this.$p.t('global/notiz'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence:true,
 				persistenceID: "lektorDetailViewStudentByLva"
@@ -67,6 +68,13 @@ export default {
 				handler: (row) => {
 					console.log("rowDeselected", row)
 					this.selected--
+				}
+			},
+			{
+				event: "cellEdited",
+				handler: (cell) => {
+					const data = cell.getData()
+					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, [data])
 				}
 			}
 			],
@@ -172,7 +180,7 @@ export default {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-
+			console.log(changedData)
 			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
 				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {
@@ -204,7 +212,8 @@ export default {
 					const newData = {
 						anwesenheit_user_id: data.anwesenheit_user_id,
 						datum: data.datum,
-						status: "anwesend"
+						status: "anwesend",
+						notiz: data.notiz
 					}
 					selectedRows[i].update(newData)
 					changedData.push(newData)

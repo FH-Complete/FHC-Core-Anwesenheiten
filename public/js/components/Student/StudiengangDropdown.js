@@ -17,13 +17,14 @@ export const StudiengangDropdown = {
 		this.loadDropdown();
 	},
 	props: {
-		allowedStg: []
+		allowedStg: [],
+		isAdmin: false,
 	},
 	methods: {
 		loadDropdown() {
 			console.log('loadDropdown', this.allowedStg)
-			const admin = this.$entryParams.permissions.admin
-			this.$fhcApi.factory.Info.getStudiengaenge(this.allowedStg, admin).then(res => {
+
+			this.$fhcApi.factory.Info.getStudiengaenge(this.allowedStg).then(res => {
 				console.log('getStudiengänge', res)
 
 				if(res.meta.status !== "success") return

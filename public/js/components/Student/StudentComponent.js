@@ -20,6 +20,9 @@ export default {
 			viewDataStudent: {}
 		};
 	},
+	props: {
+		permissions: []
+	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
@@ -35,10 +38,16 @@ export default {
 				name: 'LandingPage'
 			})
 
+		},
+		checkEntryParamPermissions() {
+			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
+				this.$entryParams.permissions = JSON.parse(this.permissions)
+			}
 		}
 
 	},
 	mounted() {
+		this.checkEntryParamPermissions()
 
 		// if student is logged in as himself load his own viewData
 		if(!this.$entryParams.selected_student_info) {
@@ -79,16 +88,13 @@ export default {
 		leftNavCssClasses="">
 	</core-navigation-cmpt>
 
-	<row>
-		<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
-	</row>
-
 	<div class="row-cols">
 		<core-base-layout>	
 			<template #main>
 				<div class="row">
+				<span class="fhc-subtitle">{{ subtitle }}</span>
 					<div class="col-8">
-						<h1 class="h2 mb-5">{{ $p.t('global/anwesenheitenverwaltung') }} - {{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} {{viewDataStudent.semester }} {{viewDataStudent.verband }} {{viewDataStudent.gruppe }}</h1>
+						<h1 class="h2 mb-5">{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} <span class="fhc-subtitle">{{viewDataStudent.semester }} {{viewDataStudent.verband }} {{viewDataStudent.gruppe }}</span></h1>
 					</div>
 					<div class="col-4 text-center">
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>

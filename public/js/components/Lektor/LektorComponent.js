@@ -8,6 +8,8 @@ import {TermineDropdown} from "../Setup/TermineDropdown";
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
+import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
+import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
 
 export default {
 	name: 'LektorComponent',
@@ -17,6 +19,8 @@ export default {
 		CoreNavigationCmpt,
 		BsModal,
 		TermineDropdown,
+		LehreinheitenDropdown,
+		MaUIDDropdown,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -26,23 +30,8 @@ export default {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByLvaAssigned`,
-				ajaxResponse: (url, params, response) => {
-					console.log('getAllAnwesenheitenByLva', response)
-					return this.setupData(response.data, true)
-				},
-				ajaxConfig: "POST",
-				ajaxContentType:{
-					headers:{
-						'Content-Type': 'application/json'
-					},
-					body:(url,config,params)=>{
-						return JSON.stringify({
-							lv_id: this.lv_id, le_id: this.$entryParams.selected_le_id, sem_kurzbz: this.sem_kurzbz
-						})
-					}
-				},
 				rowHeight: 88, // foto max-height + 2x padding
+				rowFormatter: lektorFormatters.enschuldigtColoring,
 				height: false,
 				index: 'prestudent_id',
 				layout: 'fitColumns',
@@ -113,6 +102,7 @@ export default {
 		}
 	},
 	props: {
+		permissions: []
 	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
@@ -503,6 +493,7 @@ export default {
 			this.students = data[0] ?? []
 			const anwEntries = data[1] ?? []
 			const stsem = data[2][0] ?? []
+			this.entschuldigtStati = data[3]
 
 			this.studentsData = new Map()
 
@@ -529,12 +520,19 @@ export default {
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
+				const isEntschuldigt = !!this.entschuldigtStati.find(status => {
+					const vonDate = new Date(status.von)
+					const bisDate = new Date(status.bis)
+					return status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate
+				})
+
 				const nachname = student.nachname + student.zusatz
 				this.tableStudentData.push({prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
 					nachname: nachname,
 					gruppe: student.semester + student.verband + student.gruppe,
+					entschuldigt: isEntschuldigt,
 					status: status ?? '-',
 					sum: student.sum});
 			})
@@ -547,6 +545,9 @@ export default {
 			} else {
 				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 			}
+		},
+		maUIDchangedHandler(e) {
+			this.$refs.LEDropdown.resetData()
 		},
 		openNewAnwesenheitskontrolleModal(){
 			this.$refs.modalContainerNewKontrolle.show()
@@ -605,6 +606,35 @@ export default {
 			this.$router.push({
 				name: 'LandingPage'
 			})
+		},
+		async setupMounted(){
+			console.log('setup mounted lektor component')
+			await this.$entryParams.setupPromise
+			const now = new Date(Date.now())
+			this.beginn = {hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds()}
+			this.ende = {hours: now.getHours() + 2, minutes: now.getMinutes(), seconds: now.getSeconds()}
+
+			this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
+			this.boundRegenerateQR = this.regenerateQR.bind(this)
+			this.boundProgressCounter = this.progressCounter.bind(this)
+
+			// ceiling to check for inside progress calc
+			this.progressMax = this.$entryParams.permissions.regenerateQRTimer / 10
+			// which is called in an interval
+			this.progressTimerInterval = 10
+
+			// see if test is still running
+			this.getExistingQRCode()
+
+			// fetch LE data
+			const date = formatDateToDbString(this.selectedDate)
+			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			this.$fhcApi.factory.Info.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
+				.then(res => this.setupLehreinheitAndLektorData(res));
+
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
+				this.setupData(res.data)
+			})
 		}
 	},
 	created(){
@@ -620,27 +650,7 @@ export default {
 		found.title = selectedDateFrontendFormatted
 	},
 	mounted() {
-		const now = new Date(Date.now())
-		this.beginn = {hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds()}
-		this.ende = {hours: now.getHours() + 2, minutes: now.getMinutes(), seconds: now.getSeconds()}
-
-		this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
-		this.boundRegenerateQR = this.regenerateQR.bind(this)
-		this.boundProgressCounter = this.progressCounter.bind(this)
-
-		// ceiling to check for inside progress calc
-		this.progressMax = this.$entryParams.permissions.regenerateQRTimer / 10
-		// which is called in an interval
-		this.progressTimerInterval = 10
-
-		// see if test is still running
-		this.getExistingQRCode()
-
-		// fetch LE data
-		const date = formatDateToDbString(this.selectedDate)
-		const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
-		this.$fhcApi.factory.Info.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
-			.then(res => this.setupLehreinheitAndLektorData(res));
+		this.setupMounted()
 
 	},
 	unmounted(){
@@ -665,9 +675,6 @@ export default {
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
 			this.$fhcApi.factory.Info.getStundenPlanEntriesForLEandLektorOnDate(this.$entryParams.selected_le_id, ma_uid, date)
 				.then(res => {
-				console.log(res)
-
-				// TODO: FIND SOMETHING IN STUNDEPLAN TO TEST WITH AND SET KONTROLLE BEGINN END LIKE IN MOUNTED LE INFO METHOD
 
 				if(res?.data?.retval && res?.data?.retval?.length) this.setTimespanForKontrolle(res.data.retval)
 
@@ -695,9 +702,9 @@ export default {
 			leftNavCssClasses="">	
 		</core-navigation-cmpt>
 					
-		<row>
-			<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
-		</row>
+<!--		<row>-->
+<!--			<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>-->
+<!--		</row>-->
 					
 		<core-base-layout
 			:title="filterTitle">			
@@ -795,7 +802,6 @@ export default {
 							<div class="col-6">
 								<div class="row justify-content-end">
 									<button @click="showAll" role="button" class="btn btn-secondary ml-2">
-										{{showAllVar ? 'Einen Termin anzeigen' : 'Alle Termine anzeigen'}}
 									</button>
 								</div>
 							</div>
@@ -805,6 +811,15 @@ export default {
 										Änderungen speichern
 									</button>
 								</div>
+							</div>
+							
+							<div>
+								<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
+								 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
+								</MaUIDDropdown>
+							
+								<LehreinheitenDropdown id="lehreinheit" ref="LEDropdown">
+								</LehreinheitenDropdown>
 							</div>
 							
 							

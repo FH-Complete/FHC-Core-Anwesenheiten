@@ -24,19 +24,17 @@ $includesArray = array(
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',
 		'public/css/components/searchbar.css',
-		'vendor/vuejs/vuedatepicker_css/main.css'
+		'vendor/vuejs/vuedatepicker_css/main.css',
+		'public/css/Fhc.css'
 	),
 	'customJSs' => array(
-		'public/extensions/FHC-Core-Anwesenheiten/js/highcharts.src.js',
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
 		'vendor/npm-asset/primevue/dropdown/dropdown.js'
-
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
-		'public/extensions/FHC-Core-Anwesenheiten/js/mixins/formatters.js',
-		'public/extensions/FHC-Core-Anwesenheiten/js/luxon.js'
+		'public/extensions/FHC-Core-Anwesenheiten/js/mixins/formatters.js'
 	)
 );
 
@@ -48,7 +46,7 @@ $this->load->view('templates/FHC-Header', $includesArray);
 
 <body>
 <div id="main" permissions='<?php echo json_encode($permissions) ?>'>
-	<router-view>
+	<router-view permissions='<?php echo json_encode($permissions) ?>'>
 	
 	</router-view>
 </div>

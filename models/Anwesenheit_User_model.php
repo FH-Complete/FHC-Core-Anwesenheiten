@@ -23,7 +23,8 @@ class Anwesenheit_User_model extends \DB_Model
 
 		foreach ($changedAnwesenheiten as $entry) {
 			$result = $this->update($entry->anwesenheit_user_id, array(
-				'status' => $entry->status
+				'status' => $entry->status,
+				'notiz' => $entry->notiz
 			));
 
 			if (isError($result)) {
@@ -42,6 +43,17 @@ class Anwesenheit_User_model extends \DB_Model
 			$this->db->trans_commit();
 			return success('Anwesenheiten successfully updated.');
 		}
+
+	}
+
+	public function getEntschuldigungsstatusForPersonIdsOnDate($personIds) {
+
+
+		$query ='SELECT person_id, von, bis
+			FROM extension.tbl_anwesenheit_entschuldigung
+			WHERE person_id IN ? AND akzeptiert = true;';
+
+		return $this->execReadOnlyQuery($query, array($personIds));
 
 	}
 

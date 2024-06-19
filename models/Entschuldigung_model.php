@@ -24,7 +24,15 @@ class Entschuldigung_model extends \DB_Model
 	}
 	public function getAllEntschuldigungen()
 	{
-		$query = 'SELECT dms_id,
+		$query = 'SELECT DISTINCT ON (dms_id,
+							von,
+							bis,
+							public.tbl_person.person_id,
+							tbl_anwesenheit_entschuldigung.entschuldigung_id,
+							vorname,
+							nachname,
+							akzeptiert)
+						dms_id,
 						von,
 						bis,
 						public.tbl_person.person_id,

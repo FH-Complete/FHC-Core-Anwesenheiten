@@ -1,10 +1,9 @@
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
+import CoreTabs from '../../../../../js/components/Tabs.js';
 
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
-import {MaUIDDropdown} from "../Setup/MaUIDDropdown"
 import {StudentDropdown} from "../Setup/StudentDropdown"
 
 export default {
@@ -13,22 +12,44 @@ export default {
 		CoreBaseLayout,
 		CoreNavigationCmpt,
 		CoreRESTClient,
+		CoreTabs,
 		BsModal,
-		LehreinheitenDropdown,
-		MaUIDDropdown,
 		StudentDropdown
 	},
 	data: function() {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
+			tabs: this.initTabs(),
 			loaded: false
 		};
 	},
 	props: {
-
+		permissions: []
 	},
 	methods: {
+		initTabs() {
+			const tabs = []
+			const permissions = JSON.parse(this.permissions)
+			if(permissions.lektor || permissions.admin || permissions.assistenz) {
+				tabs.push({ title: 'Kontrolle', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+			}
+
+			if(permissions.student || permissions.admin || permissions.assistenz) {
+				tabs.push({ title: 'Profil', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+			}
+
+			if(permissions.admin || permissions.assistenz) {
+				tabs.push({ title: 'Admin', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+			}
+
+			const ret = {}
+			tabs.forEach((tab, i) => {
+				ret['tab'+i] = tab
+			})
+
+			return ret
+		},
 		async createdSetup () {
 			await new Promise (resolve => {
 				const queryString = window.location.search;
@@ -189,7 +210,7 @@ export default {
 					this.$entryParams.availableStudents = []
 
 					res?.data?.retval?.forEach(e => {
-						const infoString = e.vorname + ' ' + e.nachname + ' ' + e.semester + e.verband + e.gruppe
+						const infoString = e.semester + e.verband + e.gruppe + ' ' + e.vorname + ' ' + e.nachname
 						this.$entryParams.availableStudents.push({
 							vorname: e.vorname, nachname: e.nachname,
 							prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
@@ -231,7 +252,7 @@ export default {
 						})
 					})
 
-					this.$refs.MADropdown.resetData()
+					// this.$refs.MADropdown.resetData()
 
 				}).finally(()=> {
 					console.log('handleMaSetup finally')
@@ -285,7 +306,7 @@ export default {
 					this.$entryParams.selected_le_id = le_ids.length ? le_ids[0] : null
 					this.$entryParams.available_le_ids = [...le_ids]
 
-					this.$refs.LEDropdown.resetData()
+					// this.$refs.LEDropdown.resetData()
 
 					resolve()
 				}).finally(() => {
@@ -300,9 +321,6 @@ export default {
 				})
 			})
 		},
-		maUIDchangedHandler(e) {
-			this.$refs.LEDropdown.resetData()
-		},
 		setLvViewData(data) {
 			this.$entryParams.viewDataLv.benotung = data.benotung
 			this.$entryParams.viewDataLv.bezeichnung = data.bezeichnung
@@ -312,8 +330,8 @@ export default {
 			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
 		},
-		studentUIDchangedHandler(e) {
-			console.log('studentUIDchangedHandler', e)
+		studentChangedHandler(e) {
+			console.log('studentChangedHandler', e)
 		}
 	},
 	created(){
@@ -342,14 +360,7 @@ export default {
 			<bs-modal ref="modalContainerKontrolleSetup" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>
 				<template v-slot:default>
-					<div>
-						<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
-						 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
-						</MaUIDDropdown>
 					
-						<LehreinheitenDropdown id="lehreinheit" ref="LEDropdown">
-						</LehreinheitenDropdown>
-					</div>
 					
 				</template>
 				<template v-slot:footer>
@@ -362,7 +373,7 @@ export default {
 				<template v-slot:default>
 					<div>
 						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
-						 id="studentUID" ref="studentDropdown" @studentUIDchanged="studentUIDchangedHandler">
+						 id="studentUID" ref="studentDropdown" @studentUIDchanged="studentChangedHandler">
 						</StudentDropdown>
 					</div>
 				</template>
@@ -371,24 +382,7 @@ export default {
 				</template>
 			</bs-modal>
 		
-			<div id="visibilityWrapper" v-if="loaded">
-				<div style="margin-bottom: 12px;">
-					<div class="col-sm-10 col-10 mx-auto">
-						<div class="row mt-4" v-if="$entryParams.permissions?.lektor || $entryParams.permissions?.admin">
-							<button  class="btn btn-primary btn-block btn-lg" @click="routeToLektor">Anwesenheiten verwalten Lektor</button>
-						</div>
-						<div class="row mt-4" v-if="$entryParams.permissions?.student || $entryParams.permissions?.admin">
-							<button  class="btn btn-primary btn-block btn-lg" @click="routeToStudent">Anwesenheiten verwalten Student</button>
-						</div>
-						<div class="row mt-4" v-if="$entryParams.permissions?.assistenz || $entryParams.permissions?.admin">
-							<button  class="btn btn-primary btn-block btn-lg" @click="routeToAssistenz">Anwesenheiten verwalten Assistenz</button>
-						</div>
-					</div>
-				</div>
-				
-				
-				
-			</div>
+			<core-tabs class="mb-5" :config="tabs"></core-tabs>
 			
 		</template>
 	</core-base-layout>

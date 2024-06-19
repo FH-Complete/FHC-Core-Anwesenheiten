@@ -1,4 +1,11 @@
 export const lektorFormatters = {
+	enschuldigtColoring: function (row) {
+		const data = row.getData()
+
+		if(data.entschuldigt) {
+			row.getElement().style.color = "#0335f5";
+		}
+	},
 	anwesenheitFormatter: function (cell) {
 		const data = cell.getData().status
 		if (data === "anwesend") {

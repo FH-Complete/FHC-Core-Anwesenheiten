@@ -7,6 +7,7 @@ import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
+
 export default {
 	name: 'AssistenzComponent',
 	components: {
@@ -26,6 +27,7 @@ export default {
 				von: null,
 				bis: null
 			},
+			permissionsLoaded: false,
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
@@ -65,6 +67,9 @@ export default {
 			titleText: ''
 		};
 	},
+	props: {
+		permissions: []
+	},
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
@@ -73,8 +78,9 @@ export default {
 		{
 
 			const entschuldigung_id = cell.getData().entschuldigung_id
-			const notiz = notizParam !== '' ? notizParam :cell.getData().notiz
-			this.$fhcApi.factory.Administration.updateEntschuldigung(entschuldigung_id, status, notiz).then(res => {
+			const existingNotiz = cell.getData().notiz
+			const notiz = notizParam !== '' ? notizParam : (existingNotiz !== null && existingNotiz !== undefined) ? existingNotiz : ''
+			this.$fhcApi.factory.Administration.updateEntschuldigung(String(entschuldigung_id), status, notiz).then(res => {
 				console.log('updateEntschuldigung', res)
 
 				if (res.meta.status === "success")
@@ -158,10 +164,28 @@ export default {
 			this.$router.push({
 				name: 'LandingPage'
 			})
+		},
+		checkEntryParamPermissions() {
+			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
+				this.$entryParams.permissions = JSON.parse(this.permissions)
+			}
+
+			this.permissionsLoaded = true
 		}
 	},
 	mounted() {
-
+		this.checkEntryParamPermissions()
+	},
+	watch: {
+		'zeitraum.von'() {
+			this.filtern()
+		},
+		'zeitraum.bis'() {
+			this.filtern()
+		},
+		studiengang() {
+			this.filtern()
+		}
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -171,12 +195,8 @@ export default {
 		leftNavCssClasses="">
 	</core-navigation-cmpt>
 
-	<row>
-		<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
-	</row>
 
-	<core-base-layout
-		:title="$p.t('global/entschuldigungsmanagement')">
+	<core-base-layout>
 		<template #main>
 			<bs-modal ref="modalContainerRejectionReason" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ $p.t('global/entschuldigungNotizAblehnen') }}</template>
@@ -194,45 +214,39 @@ export default {
 			</bs-modal>
 		
 			<div class="row">
-				<div class="col-5">
+				<div class="col-6"></div>
+				<div class="col-2">
 					<div class="row mb-3 align-items-center">
 						<StudiengangDropdown
-							:allowedStg="$entryParams.permissions.studiengaengeAssistenz" @sgChanged="sgChangedHandler">
+							:allowedStg="$entryParams?.permissions?.studiengaengeAssistenz" @sgChanged="sgChangedHandler">
 						</StudiengangDropdown>
 					</div>
+				</div>
+				<div class="col-2">
 					<div class="row mb-3 align-items-center">
-						
-						<div class="col-2"><label for="von">{{ $capitalize($p.t('ui/von')) }}</label></div>
-						<div class="col-10">
-							<datepicker
-								v-model="zeitraum.von"
-								clearable="false"
-								auto-apply
-								:enable-time-picker="false"
-								format="dd.MM.yyyy"
-								model-type="yyyy-MM-dd"
-							></datepicker>
-						</div>
+						<datepicker
+							v-model="zeitraum.von"
+							:placeholder="$capitalize($p.t('ui/von'))"
+							clearable="false"
+							auto-apply
+							:enable-time-picker="false"
+							format="dd.MM.yyyy"
+							model-type="yyyy-MM-dd"
+						></datepicker>
 					</div>
+				</div>
+				<div class="col-2 mr-4">
 					<div class="row mb-3 align-items-center">
-						
-						<div class="col-2"><label for="von" class="form-label col-sm-1">{{ $capitalize($p.t('global/bis')) }}</label></div>
-						<div class="col-10">
-							<datepicker
-								v-model="zeitraum.bis"
-								clearable="false"
-								auto-apply
-								:enable-time-picker="false"
-								format="dd.MM.yyyy"
-								model-type="yyyy-MM-dd"
-							></datepicker>
-						</div>
+						<datepicker
+							v-model="zeitraum.bis"
+							:placeholder="$capitalize($p.t('global/bis'))"
+							clearable="false"
+							auto-apply
+							:enable-time-picker="false"
+							format="dd.MM.yyyy"
+							model-type="yyyy-MM-dd"
+						></datepicker>
 					</div>
-					<div class="row mb-3 align-content-center">
-						<div class="col-12 d-flex justify-content-end">
-							<button class="btn btn-secondary" @click="filtern">{{ $p.t('filter/filterApply') }}</button>
-						</div>
-					</div>		
 				</div>
 				
 				
@@ -240,6 +254,7 @@ export default {
 			<core-filter-cmpt
 				ref="assistenzTable"
 				:tabulator-options="assistenzViewTabulatorOptions"
+				:tabulator-events="assistenzViewTabulatorEvents"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false

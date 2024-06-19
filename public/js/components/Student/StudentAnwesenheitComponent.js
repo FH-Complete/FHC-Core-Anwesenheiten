@@ -44,7 +44,7 @@ export default {
 			console.log('this.$entryParams.selected_student', this.$entryParams.selected_student)
 
 			// toggle anwesenheiten loading procedure based on admin or student login
-			const uid = this.$entryParams.selected_student ? this.$entryParams?.selected_student.uid : this.$entryParams.viewDataStudent.student_uid
+			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
 
 			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
 				console.log('Student.getAllByUID(this.studiensemester, uid)', res)
@@ -67,7 +67,8 @@ export default {
 		:title="filterTitle">
 		<template #main>
 			<div class="row">
-				<div class="col-8"><StudiensemesterDropdown @ssChanged="ssChangedHandler"></StudiensemesterDropdown></div>
+				<div class="col-9"></div>
+				<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler"></StudiensemesterDropdown></div>
 			</div>
 			<core-filter-cmpt
 				ref="uebersichtTable"

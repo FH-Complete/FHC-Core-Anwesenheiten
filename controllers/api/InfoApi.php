@@ -105,8 +105,8 @@ class InfoApi extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 		$allowed_stg = $result->allowed_stg;
-		$admin = $result->admin; // TODO: find better solution
-		// TODO: default allowed_stg ? or just save error throw when none assigned
+
+		$admin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 
 		if($admin) {
 			$result = $this->_ci->AnwesenheitModel->getStudiengaenge();

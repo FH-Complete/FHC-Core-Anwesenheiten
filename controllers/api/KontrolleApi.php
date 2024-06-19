@@ -64,7 +64,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->getPostJSON();
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
-		$le_id = $result->le_id ;
+		$le_id = $result->le_id;
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
@@ -80,10 +80,18 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudents($prestudentIds, $le_id);
 		$anwesenheiten = getData($result);
 
+		$funcPID = function($value) {
+			return $value->person_id;
+		};
+
+		$personIds = array_map($funcPID, $students);
+		$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIdsOnDate($personIds);
+		$entschuldigungsstatus = getData($result);
+
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester));
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus));
 	}
 
 	public function getAllAnwesenheitenByStudentByLva()

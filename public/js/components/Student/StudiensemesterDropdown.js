@@ -35,8 +35,7 @@ export const StudiensemesterDropdown = {
 	},
 
 	template: `
-		<div class="col-3"><label for="studiensemester">{{ $p.t('lehre/studiensemester') }}</label></div>
-		<div class="col-3">
+		<div>
 			<select v-model="selectedOption" @change="ssChanged" class="form-control" id="studiensemester">
 				<option v-for="option in options" :value="option.studiensemester_kurzbz">
 					{{ option.studiensemester_kurzbz }}

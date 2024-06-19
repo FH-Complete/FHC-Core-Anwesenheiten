@@ -18,7 +18,9 @@ export const StudentDropdown = {
 			// console.log('studentChanged', e)
 			const selected = e.target.selectedOptions
 			this.$entryParams.selected_student = selected[0]._value
+			this.$entryParams.selected_student_info = this.$entryParams.availableStudents.find(s => s.prestudent_id === this.$entryParams.selected_student.prestudent_id)
 			console.log('this.$entryParams.selected_student', this.$entryParams.selected_student)
+			this.$emit('studentChanged', e)
 		},
 		async setupData() {
 			console.log('student dropdown setup data')
@@ -28,7 +30,6 @@ export const StudentDropdown = {
 			}
 			await this.$entryParams.setupPromise.then(() => {
 				console.log('student dropdown setupPromise then')
-				// this.internal_available_student_info = this.$entryParams.available_student_info
 				this.internal_available_student_info =  this.$entryParams.availableStudents
 				console.log('this.internal_selected_student_info', this.internal_selected_student_info)
 			})
