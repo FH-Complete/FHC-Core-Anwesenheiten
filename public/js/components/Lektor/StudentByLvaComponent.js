@@ -307,6 +307,14 @@ export default {
 			this.$router.push({
 				name: 'Lektor'
 			})
+		},
+		routeToLandingPage() {
+
+			// TODO: avoid refetch when going this route
+
+			this.$router.push({
+				name: 'LandingPage'
+			})
 		}
 	},
 	created(){
@@ -352,7 +360,7 @@ export default {
 		</core-navigation-cmpt>
 
 		<row>
-			<button class="btn btn-outline-secondary" @click="routeToLektor"><a><i class="fa fa-chevron-left"></i></a></button>
+			<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
 		</row>
 		<core-base-layout
 			:title="filterTitle"

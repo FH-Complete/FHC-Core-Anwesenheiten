@@ -175,6 +175,10 @@ export default {
 				files: []
 			};
 		},
+		reload(){
+			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
+			this.$fhcApi.factory.Profil.getEntschuldigungenByPersonID(id)
+		}
 	},
 	mounted() {
 

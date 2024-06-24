@@ -42,9 +42,12 @@ export default {
 			this.studiensemester = studiensemester
 
 			console.log('this.$entryParams.selected_student', this.$entryParams.selected_student)
+			console.log('this.$entryParams.selected_student_info', this.$entryParams.selected_student_info)
 
 			// toggle anwesenheiten loading procedure based on admin or student login
 			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
+
+			// return on startup as admin
 
 			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
 				console.log('Student.getAllByUID(this.studiensemester, uid)', res)
@@ -57,9 +60,27 @@ export default {
 
 			});
 		},
+		reload() {
+			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
+
+			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
+				console.log('Student.getAllByUID(this.studiensemester, uid)', res)
+				if(res.meta.status !== "success") {
+					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
+				} else {
+					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
+				}
+
+			});
+		},
+		async setup(){
+			await this.$entryParams.setupPromise
+			await this.$entryParams.phrasenPromise
+			this.studiensemester = this.$entryParams.sem_kurzbz
+		}
 	},
 	mounted() {
-		this.studiensemester = this.$entryParams.sem_kurzbz
+		this.setup()
 	},
 	template: `
 

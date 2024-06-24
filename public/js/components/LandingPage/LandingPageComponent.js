@@ -4,7 +4,8 @@ import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
 
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import {StudentDropdown} from "../Setup/StudentDropdown"
+import StudentComponent from "../Student/StudentComponent.js"
+import LektorComponent from "../Lektor/LektorComponent.js"
 
 export default {
 	name: 'LandingPageComponent',
@@ -14,14 +15,17 @@ export default {
 		CoreRESTClient,
 		CoreTabs,
 		BsModal,
-		StudentDropdown
+
+		StudentComponent,
+		LektorComponent
 	},
 	data: function() {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			tabs: this.initTabs(),
-			loaded: false
+			loaded: false,
+			permissioncount: Vue.ref(0)
 		};
 	},
 	props: {
@@ -310,11 +314,6 @@ export default {
 
 					resolve()
 				}).finally(() => {
-					console.log('handleLeSetup finally')
-
-					// TODO: le promise never enters then case... set properties somewhere
-					// this.$entryParams.selected_le_id = le_ids.length ? Vue.ref(le_ids[0]) : null
-					// this.$entryParams.available_le_ids = Vue.ref([...le_ids])
 
 					console.log('globalProps', this._.appContext.config.globalProperties)
 					// resolve()
@@ -336,12 +335,17 @@ export default {
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
+
+	},
+	mounted() {
 		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
 			this.loaded = true
 		})
-	},
-	mounted() {
-
+		if(this.$entryParams.permissions.lektor) this.permissioncount++
+		if(this.$entryParams.permissions.student) this.permissioncount++
+		if(this.$entryParams.permissions.assistenz) this.permissioncount = 3
+		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
+		console.log(this.permissioncount)
 	},
 	watch: {
 
@@ -367,22 +371,19 @@ export default {
 					<button type="button" class="btn btn-primary" :disabled="$entryParams?.selected_le_id === null" @click="loadLE">{{ $p.t('global/leLaden') }}</button>
 				</template>
 			</bs-modal>
-			
-			<bs-modal ref="modalContainerStudentSetup" class="bootstrap-prompt" dialogClass="modal-lg">
-				<template v-slot:title>{{ $p.t('global/studentConfig') }}</template>
-				<template v-slot:default>
-					<div>
-						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
-						 id="studentUID" ref="studentDropdown" @studentUIDchanged="studentChangedHandler">
-						</StudentDropdown>
-					</div>
-				</template>
-				<template v-slot:footer>
-					<button type="button" class="btn btn-primary" @click="loadStudentPage">{{ $p.t('global/studentLaden') }}</button>
-				</template>
-			</bs-modal>
 		
-			<core-tabs class="mb-5" :config="tabs"></core-tabs>
+			<div>
+				<template  v-if="permissioncount > 1">
+					<core-tabs class="mb-5" :config="tabs"></core-tabs>
+					
+				</template>
+				<template v-else-if="permissioncount === 1">
+					<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>
+					<StudentComponent v-if="$entryParams?.permissions?.student"></StudentComponent>
+				</template>
+			</div>
+			
+			
 			
 		</template>
 	</core-base-layout>

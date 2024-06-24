@@ -30,6 +30,7 @@ export const StudentDropdown = {
 			}
 			await this.$entryParams.setupPromise.then(() => {
 				console.log('student dropdown setupPromise then')
+
 				this.internal_available_student_info =  this.$entryParams.availableStudents
 				console.log('this.internal_selected_student_info', this.internal_selected_student_info)
 			})
@@ -45,13 +46,15 @@ export const StudentDropdown = {
 		this.setupData()
 	},
 	template: `
-		<div class="mt-2">
-			<label for="leSelect">{{ $p.t('global/students') }}</label>
-			<select id="leSelect" @change="studentChanged" class="form-control">
+		<div class="row">
+			<div class="col-2"><label for="leSelect">{{ $p.t('global/students') }}</label></div>
+			<div class="col-8"><select id="leSelect" @change="studentChanged" class="form-control">
 				<option v-for="option in internal_available_student_info" :value="option" >
 					<a> {{option.infoString}} </a>
 				</option>
-			</select>
+			</select></div>
+			
+			
 
 		</div>
 	`

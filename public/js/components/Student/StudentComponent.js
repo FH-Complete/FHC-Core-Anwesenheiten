@@ -1,21 +1,25 @@
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
+import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
+import {StudentDropdown} from "../Setup/StudentDropdown"
 
-export default {
+export const StudentComponent = {
 	name: 'StudentComponent',
 	components: {
 		CoreNavigationCmpt,
 		CoreBaseLayout,
-		CoreTabs
+		CoreTabs,
+		BsModal,
+		StudentDropdown
 	},
 	data: function() {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
-			tabs: {
-				tab1: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-				tab2: { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+			tabsStudent: {
+				tab1: { title: Vue.ref(this.$p.t('global/anwesenheiten')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				tab2: { title: Vue.ref(this.$p.t('global/entschuldigungen')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
 			},
 			viewDataStudent: {}
 		};
@@ -39,20 +43,73 @@ export default {
 			})
 
 		},
-		checkEntryParamPermissions() {
+		async checkEntryParamPermissions() {
 			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
+
+
 				this.$entryParams.permissions = JSON.parse(this.permissions)
 			}
-		}
 
-	},
-	mounted() {
-		this.checkEntryParamPermissions()
+			if(this.$entryParams.phrasenPromise === undefined) {
+				this.$entryParams.phrasenPromise = this.$p.loadCategory(['global', 'person', 'lehre', 'table', 'filter', 'ui'])
+			}
+		},
+		async setup() {
+			await this.$entryParams.setupPromise
+			await this.$entryParams.phrasenPromise
 
-		// if student is logged in as himself load his own viewData
-		if(!this.$entryParams.selected_student_info) {
+			// if student is logged in as himself load his own viewData
+			if(!this.$entryParams.selected_student_info) {
 
-			this.$fhcApi.factory.Profil.getProfileViewData(null).then(res => {
+				this.$fhcApi.factory.Profil.getProfileViewData(null).then(res => {
+					console.log('studentGetViewData', res)
+
+					const data = res.data.retval[0]
+					this.viewDataStudent.vorname = data.vorname
+					this.viewDataStudent.nachname = data.nachname
+					this.viewDataStudent.student_uid = data.student_uid
+					this.viewDataStudent.person_id = data.person_id
+					this.viewDataStudent.prestudent_id = data.prestudent_id
+					this.viewDataStudent.gruppe = data.gruppe
+					this.viewDataStudent.verband = data.verband
+					this.viewDataStudent.semester = data.semester
+
+					this.$entryParams.viewDataStudent = data
+				});
+
+			} else { // admin or assistenz check student data - set viewdata from selected student
+				debugger
+				const data = this.$entryParams.selected_student_info
+				this.viewDataStudent.vorname = data.vorname
+				this.viewDataStudent.nachname = data.nachname
+				this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid
+				this.viewDataStudent.person_id = data.person_id
+				this.viewDataStudent.prestudent_id = data.prestudent_id
+				this.viewDataStudent.gruppe = data.gruppe
+				this.viewDataStudent.verband = data.verband
+				this.viewDataStudent.semester = data.semester
+			}
+
+			console.log('this.$refs.tabsStudent._.refs', this.$refs.tabsStudent._.refs)
+			console.log('this.$refs.tabsStudent', this.$refs.tabsStudent)
+
+			debugger
+			this.$refs.tabsStudent._.data.tabs.tab1.title = this.$p.t('global/anwesenheiten')
+			this.$refs.tabsStudent._.data.tabs.tab2.title = this.$p.t('global/entschuldigungen')
+		},
+		openModalStudentInit() {
+			this.$refs.modalContainerStudentSetup.show()
+		},
+		loadStudentPage() {
+			this.setup()
+			this.$refs.modalContainerStudentSetup.hide()
+		},
+		studentChangedHandler() {
+
+			this.$refs.tabsStudent._.refs.current.reload()
+
+			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
+			this.$fhcApi.factory.Profil.getProfileViewData(uid).then(res => {
 				console.log('studentGetViewData', res)
 
 				const data = res.data.retval[0]
@@ -68,17 +125,24 @@ export default {
 				this.$entryParams.viewDataStudent = data
 			});
 
-		} else { // admin or assistenz check student data - set viewdata from selected student
-			const data = this.$entryParams.selected_student_info
-			this.viewDataStudent.vorname = data.vorname
-			this.viewDataStudent.nachname = data.nachname
-			this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid
-			this.viewDataStudent.person_id = data.person_id
-			this.viewDataStudent.prestudent_id = data.prestudent_id
-			this.viewDataStudent.gruppe = data.gruppe
-			this.viewDataStudent.verband = data.verband
-			this.viewDataStudent.semester = data.semester
+		},
+		async awaitPhrasen() {
+			await this.$entryParams.phrasenPromise
 		}
+
+	},
+	created() {
+		// this.checkEntryParamPermissions()
+		// this.awaitPhrasen()
+	},
+	mounted() {
+		this.checkEntryParamPermissions()
+
+		// if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+		// 	this.openModalStudentInit()
+		// } else {
+			this.setup()
+		// }
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -90,17 +154,21 @@ export default {
 
 	<div class="row-cols">
 		<core-base-layout>	
-			<template #main>
+			<template #main>	
 				<div class="row">
-				<span class="fhc-subtitle">{{ subtitle }}</span>
-					<div class="col-8">
-						<h1 class="h2 mb-5">{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} <span class="fhc-subtitle">{{viewDataStudent.semester }} {{viewDataStudent.verband }} {{viewDataStudent.gruppe }}</span></h1>
+					<div class="col-4">
+						<h1 class="h4 mb-5">{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} <span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span></h1>
+					</div>
+					<div class="col-4">
+						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
+							 id="studentUID" ref="studentDropdown" @studentChanged="studentChangedHandler">
+						</StudentDropdown>
 					</div>
 					<div class="col-4 text-center">
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
 					</div>
 				</div>
-				<core-tabs class="mb-5" :config="tabs"></core-tabs>
+				<core-tabs class="mb-5" :config="tabsStudent" ref="tabsStudent"></core-tabs>
 			</template>
 		</core-base-layout>
 		
@@ -108,5 +176,7 @@ export default {
 		
 `
 };
+
+export default StudentComponent
 
 

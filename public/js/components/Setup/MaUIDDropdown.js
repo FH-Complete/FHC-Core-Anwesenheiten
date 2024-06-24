@@ -7,7 +7,8 @@ export const MaUIDDropdown = {
 		return {
 			errors: null,
 			internal_available_maUID: [],
-			internal_selected_maUID: null
+			internal_selected_maUID: null,
+			oldLeIds: []
 		};
 	},
 	props: {
@@ -19,6 +20,8 @@ export const MaUIDDropdown = {
 			const sem_kurzbz = this.$entryParams.sem_kurzbz
 			const lv_id = this.$entryParams.lv_id
 			const le_ids = []
+
+			this.oldLeIds = this.$entryParams.available_le_ids
 
 			return new Promise(resolve => {
 
@@ -74,7 +77,7 @@ export const MaUIDDropdown = {
 			// reload LEs
 			this.$entryParams.selected_maUID = selected[0]._value
 			this.reloadAvailableLE().then(() => {
-				this.$emit('maUIDchanged')
+				this.$emit('maUIDchanged', this.oldLeIds)
 			})
 		},
 		async setupData() {

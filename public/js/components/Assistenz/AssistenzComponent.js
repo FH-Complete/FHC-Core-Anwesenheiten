@@ -7,8 +7,7 @@ import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
-
-export default {
+export const AssistenzComponent = {
 	name: 'AssistenzComponent',
 	components: {
 		BsModal,
@@ -56,11 +55,28 @@ export default {
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 150},
-					{title: this.$p.t('global/notiz'), field: 'notiz', tooltip:false, minWidth: 150}
+					{title: this.$p.t('global/notiz'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence:true,
 				persistenceID: "assistenzTable"
 			},
+			assistenzViewTabulatorEventHandlers: [
+				{
+					event: "cellEdited",
+					handler: (cell) => {
+						const data = cell.getData()
+
+						this.$fhcApi.factory.Administration.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz).then(res => {
+							console.log('updateEntschuldigung', res)
+
+							if (res.meta.status === "success")
+							{
+								this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
+							}
+						});
+					}
+				}
+			],
 			notiz: '',
 			entschuldigung_id: null,
 			studiengang: null,
@@ -214,7 +230,9 @@ export default {
 			</bs-modal>
 		
 			<div class="row">
-				<div class="col-6"></div>
+				<div class="col-6">
+					<h1 class="h4 mb-5">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+				</div>
 				<div class="col-2">
 					<div class="row mb-3 align-items-center">
 						<StudiengangDropdown
@@ -254,7 +272,7 @@ export default {
 			<core-filter-cmpt
 				ref="assistenzTable"
 				:tabulator-options="assistenzViewTabulatorOptions"
-				:tabulator-events="assistenzViewTabulatorEvents"
+				:tabulator-events="assistenzViewTabulatorEventHandlers"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false
@@ -264,4 +282,5 @@ export default {
 `
 };
 
+export default AssistenzComponent
 

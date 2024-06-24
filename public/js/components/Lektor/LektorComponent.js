@@ -11,7 +11,7 @@ import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
 
-export default {
+export const LektorComponent = {
 	name: 'LektorComponent',
 	components: {
 		CoreBaseLayout,
@@ -75,11 +75,12 @@ export default {
 			boundProgressCounter: null,
 			beginn: null,
 			changedData: [],
+			entschuldigtStati: [],
 			ma_uid: null,
 			sem_kurzbz: null,
 			lv_id: null,
 			dates: [],
-			filterTitle: "",
+			filterTitle: Vue.ref(""),
 			ende: null,
 			selectedDate: new Date(Date.now()),
 			showAllVar: false,
@@ -130,6 +131,9 @@ export default {
 		stopPollingAnwesenheiten() {
 			clearInterval(this.timerIDPolling)
 			this.timerIDPolling = null
+		},
+		handleShowAllToggle() {
+			this.showAll()
 		},
 		showAll() {
 			// set tabulator column definition to show every distinct date fetched
@@ -331,12 +335,14 @@ export default {
 		},
 		setupLehreinheitAndLektorData(res) {
 			console.log('setupLehreinheitAndLektorData', res)
-			// TODO: do smth with raum or lektorinfo?
 
 			if(res.meta.status === 'success' && res.data) {
 				const viewData = res.data[0]
 				// find out von & bis times for lehreinheit
+				console.log('viewData', res.data[0])
+
 				this.filterTitle = this.$entryParams.selected_le_info.infoString
+				console.log('this.filterTitle', this.filterTitle)
 
 				// todo filter termine in future/past
 
@@ -344,8 +350,10 @@ export default {
 					const dateParts = termin.datum.split( "-")
 					termin.datumFrontend = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 				})
-				this.termine = res.data[1]
-				this.$refs.termineDropdown.setTermine(res.data[1])
+
+				this.termine = res.data[1] ?? []
+				this.$refs.termineDropdown.setTermine(this.termine)
+
 				if(this.termine.length) {
 					const termin = this.findClosestTermin();
 					console.log('findClosestTermin', termin)
@@ -430,6 +438,9 @@ export default {
 
 			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 		},
+		openDeleteModal () {
+			this.$refs.modalContainerDeleteKontrolle.show()
+		},
 		async deleteAnwesenheitskontrolle () {
 			if (await this.$fhcAlert.confirmDelete() === false)
 				return;
@@ -451,6 +462,8 @@ export default {
 					this.$fhcAlert.alertWarning(this.$p.t('global/noAnwKontrolleFoundToDelete'))
 				}
 			})
+
+			this.$refs.modalContainerDeleteKontrolle.hide()
 
 		},
 		formatZusatz(entry, stsem) {
@@ -493,7 +506,7 @@ export default {
 			this.students = data[0] ?? []
 			const anwEntries = data[1] ?? []
 			const stsem = data[2][0] ?? []
-			this.entschuldigtStati = data[3]
+			this.entschuldigtStati = data[3] ?? []
 
 			this.studentsData = new Map()
 
@@ -546,8 +559,13 @@ export default {
 				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
 			}
 		},
-		maUIDchangedHandler(e) {
+		maUIDchangedHandler(oldIds) {
+
+			console.log('oldIds', oldIds)
+			console.log('newIds', this.$entryParams.available_le_ids)
+
 			this.$refs.LEDropdown.resetData()
+			this.handleLEChanged()
 		},
 		openNewAnwesenheitskontrolleModal(){
 			this.$refs.modalContainerNewKontrolle.show()
@@ -635,6 +653,20 @@ export default {
 			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
 				this.setupData(res.data)
 			})
+
+		},
+		handleLEChanged () {
+			const date = formatDateToDbString(this.selectedDate)
+			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			this.$fhcApi.factory.Info.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
+				.then(res => this.setupLehreinheitAndLektorData(res));
+
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
+				this.setupData(res.data)
+
+			})
+
+			this.getExistingQRCode()
 		}
 	},
 	created(){
@@ -702,12 +734,7 @@ export default {
 			leftNavCssClasses="">	
 		</core-navigation-cmpt>
 					
-<!--		<row>-->
-<!--			<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>-->
-<!--		</row>-->
-					
-		<core-base-layout
-			:title="filterTitle">			
+		<core-base-layout>			
 			<template #main>
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
 					<template v-slot:title>{{ $p.t('global/neueAnwKontrolle') }}</template>
@@ -743,8 +770,21 @@ export default {
 					</template>
 				</bs-modal>
 				
-				<bs-modal ref="modalContainerQR" class="bootstrap-prompt" backdrop="static" 
-				dialogClass="modal-lg" :keyboard=false noCloseBtn=true>
+				<bs-modal ref="modalContainerDeleteKontrolle" class="bootstrap-prompt"
+				dialogClass="modal-lg">
+					<template v-slot:title>{{ $p.t('global/zugangscode') }}</template>
+					<template v-slot:default>
+						
+						//todo delete stuff
+						
+					</template>
+					<template v-slot:footer>
+						<button type="button" class="btn btn-primary" @click="deleteAnwesenheitskontrolle">{{ $p.t('global/deleteAnwKontrolle') }}</button>
+					</template>
+				</bs-modal>				
+				
+				<bs-modal ref="modalContainerQR" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
+				 :keyboard=false noCloseBtn=true>
 					<template v-slot:title>{{ $p.t('global/zugangscode') }}</template>
 					<template v-slot:default>
 						<h1 class="text-center">Code: {{code}}</h1>
@@ -763,7 +803,47 @@ export default {
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">{{ $p.t('global/endAnwKontrolle') }}</button>
 					</template>
-				</bs-modal>				
+				</bs-modal>
+				
+				<div class="row">
+					<div class="col-6"></div>
+					<div class="col-3">
+						<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
+						 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
+						</MaUIDDropdown>
+					</div>
+					<div class="col-3">
+						<LehreinheitenDropdown id="lehreinheit" ref="LEDropdown" @leChanged="handleLEChanged">
+						</LehreinheitenDropdown>
+					</div>
+				</div>
+				
+				<div class="row mt-4" style="height: 70px">
+					<div class="col-6" style="transform: translateY(-70px)">
+						<h1 class="h4 mb-5">{{ filterTitle }}</h1>
+					</div>
+					
+
+					<div class="col-1 d-flex" style="height: 40px; align-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
+					<div class="col-3" style="height: 40px">
+						<datepicker
+							v-model="selectedDate"
+							locale="de"
+							format="dd.MM.yyyy"
+							text-input="true"
+							auto-apply="true">
+						</datepicker>
+					</div>
+					<div class="col-2 d-flex " style="height: 40px; align-items: center;">
+						<input type="checkbox" @change="handleShowAllToggle" id="all" >
+						<label for="all" style="margin-left: 12px;">Show All</label>
+					</div>
+
+					
+				</div>
+				
+
+				
 				
 				<core-filter-cmpt
 					title=""
@@ -780,53 +860,18 @@ export default {
 					:sideMenu="false"
 					noColumnFilter>
 						<template #actions>
-							<div class="row">
-								<div class="col-2 d-flex align-items-center"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/datum') }}</label></div>
-								<div class="col-9">
-									<datepicker
-										v-model="selectedDate"
-										locale="de"
-										format="dd.MM.yyyy"
-										text-input="true"
-										auto-apply="true">
-									</datepicker>
-								</div>
-							</div>
-							<div class="col-6" v-if="$entryParams.permissions.admin || $entryParams.permissions.assistenz">
-								<div class="row justify-content-end">
-									<button @click="deleteAnwesenheitskontrolle" role="button" class="btn btn-danger ml-2">
-										{{ $p.t('global/deleteAnwKontrolle') }}
-									</button>
-								</div>
-							</div>
-							<div class="col-6">
-								<div class="row justify-content-end">
-									<button @click="showAll" role="button" class="btn btn-secondary ml-2">
-									</button>
-								</div>
-							</div>
-							<div class="col-6">
-								<div class="row justify-content-end">
-									<button @click="saveChanges" :disabled="!changedData.length" role="button" class="btn btn-secondary ml-2">
-										Änderungen speichern
-									</button>
-								</div>
-							</div>
+							<button @click="saveChanges" :disabled="!changedData.length" role="button" class="btn btn-secondary ml-2">
+								Änderungen speichern
+							</button>
 							
-							<div>
-								<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
-								 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
-								</MaUIDDropdown>
-							
-								<LehreinheitenDropdown id="lehreinheit" ref="LEDropdown">
-								</LehreinheitenDropdown>
-							</div>
-							
-							
+							<button @click="openDeleteModal" role="button" class="btn btn-danger ml-2">
+								{{ $p.t('global/deleteAnwKontrolle') }}
+							</button>
 						</template>
-					
 				</core-filter-cmpt>
 			</template>
 		</core-base-layout>
 	</div>`
 };
+
+export default LektorComponent

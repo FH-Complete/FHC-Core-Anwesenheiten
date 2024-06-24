@@ -18,6 +18,9 @@ export const LehreinheitenDropdown = {
 			console.log('leChanged', e)
 			const selected = e.target.selectedOptions
 			this.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
+			this.$entryParams.selected_le_info = selected[0]._value
+
+			this.$emit('leChanged')
 		},
 		async setupData() {
 			console.log('lehreinheiten dropdown setup data')
