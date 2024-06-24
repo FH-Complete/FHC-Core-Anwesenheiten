@@ -78,7 +78,6 @@ export const StudentComponent = {
 				});
 
 			} else { // admin or assistenz check student data - set viewdata from selected student
-				debugger
 				const data = this.$entryParams.selected_student_info
 				this.viewDataStudent.vorname = data.vorname
 				this.viewDataStudent.nachname = data.nachname
@@ -93,7 +92,6 @@ export const StudentComponent = {
 			console.log('this.$refs.tabsStudent._.refs', this.$refs.tabsStudent._.refs)
 			console.log('this.$refs.tabsStudent', this.$refs.tabsStudent)
 
-			debugger
 			this.$refs.tabsStudent._.data.tabs.tab1.title = this.$p.t('global/anwesenheiten')
 			this.$refs.tabsStudent._.data.tabs.tab2.title = this.$p.t('global/entschuldigungen')
 		},
@@ -132,17 +130,10 @@ export const StudentComponent = {
 
 	},
 	created() {
-		// this.checkEntryParamPermissions()
-		// this.awaitPhrasen()
 	},
 	mounted() {
 		this.checkEntryParamPermissions()
-
-		// if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-		// 	this.openModalStudentInit()
-		// } else {
-			this.setup()
-		// }
+		this.setup()
 	},
 	template: `
 	<core-navigation-cmpt 

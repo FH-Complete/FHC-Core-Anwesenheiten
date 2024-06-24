@@ -177,7 +177,9 @@ export default {
 		},
 		reload(){
 			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-			this.$fhcApi.factory.Profil.getEntschuldigungenByPersonID(id)
+			this.$fhcApi.factory.Profil.getEntschuldigungenByPersonID(id).then(res => {
+				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
+			})
 		}
 	},
 	mounted() {

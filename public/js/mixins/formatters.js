@@ -35,7 +35,7 @@ export const lektorFormatters = {
 		} else return '-'
 	},
 	percentFormatter: function (cell) {
-		return cell.getData().sum ? cell.getData().sum + ' %' : '';
+		return cell.getData().sum + ' %';
 	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();

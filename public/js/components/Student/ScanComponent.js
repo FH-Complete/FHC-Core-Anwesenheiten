@@ -52,9 +52,7 @@ export default {
 						this.internalZugangscode = ''
 					}
 				}
-			).catch(err => {
-				this.$fhcAlert.alertError(err.message)
-			})
+			)
 
 		},
 		checkValue(event) {

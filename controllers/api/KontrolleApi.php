@@ -91,7 +91,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus));
+		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeId($le_id);
+		$kontrollen = getData($result);
+
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen));
 	}
 
 	public function getAllAnwesenheitenByStudentByLva()
@@ -271,7 +274,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 			$shortHash = $resultQR->retval[0]->zugangscode;
 
-			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
+			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 
 
 			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
@@ -285,7 +288,7 @@ class KontrolleApi extends FHCAPI_Controller
 				$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
 				$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
 
-				$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Student/Scan/$shortHash";
+				$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 
 				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
 			} while(hasData($check));

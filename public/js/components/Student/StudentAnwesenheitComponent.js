@@ -21,7 +21,7 @@ export default {
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: 'Lehrveranstaltung', visible: false},
+					{title: 'Lehrveranstaltung', visible: false,},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
@@ -30,6 +30,7 @@ export default {
 				groupStartOpen:false,
 				rowFormatter: studentFormatters.anwesenheitRowFormatter,
 				groupHeader: studentFormatters.customGroupHeader,
+				groupToggleElement:"header",
 				persistence:true,
 				persistenceID: "studentAnwTable"
 			},

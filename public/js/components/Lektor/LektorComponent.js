@@ -1,15 +1,14 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-
 import { lektorFormatters } from "../../mixins/formatters";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import {TermineDropdown} from "../Setup/TermineDropdown";
-
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
+import {KontrollenDropdown} from "../Setup/KontrollenDropdown";
+import {TermineDropdown} from "../Setup/TermineDropdown";
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -21,6 +20,7 @@ export const LektorComponent = {
 		TermineDropdown,
 		LehreinheitenDropdown,
 		MaUIDDropdown,
+		KontrollenDropdown,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -76,15 +76,16 @@ export const LektorComponent = {
 			beginn: null,
 			changedData: [],
 			entschuldigtStati: [],
+			deleteData: null,
 			ma_uid: null,
 			sem_kurzbz: null,
 			lv_id: null,
 			dates: [],
+			kontrollen: [],
 			filterTitle: Vue.ref(""),
 			ende: null,
 			selectedDate: new Date(Date.now()),
 			showAllVar: false,
-			// selectedDate: new Date('2023-10-02'),
 			studentsData: null,
 			students: [],
 			tableStudentData: null,
@@ -132,6 +133,10 @@ export const LektorComponent = {
 			clearInterval(this.timerIDPolling)
 			this.timerIDPolling = null
 		},
+		handleKontrolleChanged(kontrolle) {
+			this.deleteData = kontrolle
+			console.log(this.deleteData)
+		},
 		handleShowAllToggle() {
 			this.showAll()
 		},
@@ -140,11 +145,15 @@ export const LektorComponent = {
 
 			if(!this.showAllVar) {
 				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 4)
-				this.dates.forEach(date => newCols.push({
-					title: date, field: date
-					, formatter: lektorFormatters.anwesenheitFormatterValue
-					, hozAlign:"center",widthGrow: 1, tooltip:false, minWidth: 150
-				}))
+				this.dates.forEach(date => {
+					const dateParts = date.split( "-")
+					const colTitle = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+					newCols.push({
+						title: colTitle, field: date
+						, formatter: lektorFormatters.anwesenheitFormatterValue
+						, hozAlign:"center",widthGrow: 1, tooltip:false, minWidth: 150
+					})
+				})
 				newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
 
 				const newData = this.setupAllData(newCols)
@@ -160,9 +169,6 @@ export const LektorComponent = {
 
 				this.showAllVar = false
 			}
-
-
-
 		},
 		setupAllData(cols){
 			const data = []
@@ -341,7 +347,7 @@ export const LektorComponent = {
 				// find out von & bis times for lehreinheit
 				console.log('viewData', res.data[0])
 
-				this.filterTitle = this.$entryParams.selected_le_info.infoString
+				this.filterTitle = this.$entryParams.selected_le_info?.infoString ?? ''
 				console.log('this.filterTitle', this.filterTitle)
 
 				// todo filter termine in future/past
@@ -362,7 +368,9 @@ export const LektorComponent = {
 
 					this.termine.forEach(t => this.dates.push(t.datum))
 
-				} else this.setTimespanForKontrolle(viewData)
+				} else if(viewData) {
+					this.setTimespanForKontrolle(viewData)
+				}
 
 			}
 		},
@@ -378,7 +386,6 @@ export const LektorComponent = {
 				}
 			})
 
-			console.log('nearestFutureTermin', nearestFutureTermin)
 			return nearestFutureTermin
 		},
 		startNewAnwesenheitskontrolle(){
@@ -445,7 +452,9 @@ export const LektorComponent = {
 			if (await this.$fhcAlert.confirmDelete() === false)
 				return;
 
-			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
+			// const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
+			const dateobj = new Date(this.deleteData.datum)
+			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth() + 1, day: dateobj.getDate()}
 
 			this.$fhcApi.factory.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id, date).then(res => {
 				console.log('deleteAnwesenheitskontrolle', res)
@@ -493,6 +502,7 @@ export const LektorComponent = {
 
 			// from anw entries
 			anwEntries.forEach(entry => {
+				// search for distinct kontrolle dates to use for show all columns
 				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status, anwesenheit_user_id: entry.anwesenheit_user_id})
 
 				const datum = entry.datum
@@ -507,6 +517,7 @@ export const LektorComponent = {
 			const anwEntries = data[1] ?? []
 			const stsem = data[2][0] ?? []
 			this.entschuldigtStati = data[3] ?? []
+			this.kontrollen = data[4] ?? []
 
 			this.studentsData = new Map()
 
@@ -517,6 +528,7 @@ export const LektorComponent = {
 			this.dates = []
 
 			this.setDates(anwEntries)
+			this.$refs.kontrolleDropdown.setKontrollen(this.kontrollen)
 
 
 			// date string formatting
@@ -583,7 +595,7 @@ export const LektorComponent = {
 			const arr = JSON.parse(JSON.stringify(arrWrapped))
 			const found = arr.find(e => e.datum === date)
 
-			const anwesenheit_user_id = found.anwesenheit_user_id
+			const anwesenheit_user_id = found?.anwesenheit_user_id
 
 			if(value === "abwesend") {
 
@@ -724,6 +736,8 @@ export const LektorComponent = {
 			})
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData([...this.tableStudentData]);
+			this.$refs.showAllTickbox.checked = false
+
 		}
 	},
 	template:`
@@ -772,14 +786,14 @@ export const LektorComponent = {
 				
 				<bs-modal ref="modalContainerDeleteKontrolle" class="bootstrap-prompt"
 				dialogClass="modal-lg">
-					<template v-slot:title>{{ $p.t('global/zugangscode') }}</template>
+					<template v-slot:title>{{ $p.t('global/deleteAnwKontrolle') }}</template>
 					<template v-slot:default>
 						
-						//todo delete stuff
+						<KontrollenDropdown ref="kontrolleDropdown" @kontrolleChanged="handleKontrolleChanged"></KontrollenDropdown>
 						
 					</template>
 					<template v-slot:footer>
-						<button type="button" class="btn btn-primary" @click="deleteAnwesenheitskontrolle">{{ $p.t('global/deleteAnwKontrolle') }}</button>
+						<button type="button" class="btn btn-primary" :disabled="deleteData === null" @click="deleteAnwesenheitskontrolle">{{ $p.t('global/deleteAnwKontrolle') }}</button>
 					</template>
 				</bs-modal>				
 				
@@ -819,11 +833,10 @@ export const LektorComponent = {
 				</div>
 				
 				<div class="row mt-4" style="height: 70px">
-					<div class="col-6" style="transform: translateY(-70px)">
+					<div class="col-6" style="transform: translateY(-90px)">
 						<h1 class="h4 mb-5">{{ filterTitle }}</h1>
 					</div>
 					
-
 					<div class="col-1 d-flex" style="height: 40px; align-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
 					<div class="col-3" style="height: 40px">
 						<datepicker
@@ -835,40 +848,38 @@ export const LektorComponent = {
 						</datepicker>
 					</div>
 					<div class="col-2 d-flex " style="height: 40px; align-items: center;">
-						<input type="checkbox" @change="handleShowAllToggle" id="all" >
-						<label for="all" style="margin-left: 12px;">Show All</label>
+						<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
+						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllDates') }}</label>
 					</div>
-
-					
 				</div>
-				
-
-				
-				
-				<core-filter-cmpt
-					title=""
-					ref="anwesenheitenTable"
-					:tabulator-options="anwesenheitenTabulatorOptions"
-					:tabulator-events="anwesenheitenTabulatorEventHandlers"
-					:id-field="'anwesenheiten_id'"
-					@nw-new-entry="newSideMenuEntryHandler"
-					:tableOnly
-					newBtnShow=true
-					:newBtnLabel="$p.t('global/neueAnwKontrolle')"
-					:newBtnDisabled=false
-					@click:new=openNewAnwesenheitskontrolleModal
-					:sideMenu="false"
-					noColumnFilter>
-						<template #actions>
-							<button @click="saveChanges" :disabled="!changedData.length" role="button" class="btn btn-secondary ml-2">
-								Änderungen speichern
-							</button>
-							
-							<button @click="openDeleteModal" role="button" class="btn btn-danger ml-2">
-								{{ $p.t('global/deleteAnwKontrolle') }}
-							</button>
-						</template>
-				</core-filter-cmpt>
+				<div style="transform: translateY(-30px)">
+					<core-filter-cmpt
+						title=""
+						ref="anwesenheitenTable"
+						:tabulator-options="anwesenheitenTabulatorOptions"
+						:tabulator-events="anwesenheitenTabulatorEventHandlers"
+						:id-field="'anwesenheiten_id'"
+						@nw-new-entry="newSideMenuEntryHandler"
+						:tableOnly
+						newBtnShow=true
+						:newBtnLabel="$p.t('global/neueAnwKontrolle')"
+						:newBtnDisabled=false
+						@click:new=openNewAnwesenheitskontrolleModal
+						:sideMenu="false"
+						noColumnFilter>
+							<template #actions>
+								<button @click="saveChanges" :disabled="!changedData.length" role="button" class="btn btn-secondary ml-2">
+	<!--								{{ $p.t('ui/save') }}-->
+									<i class="fa fa-save"></i>
+								</button>
+								
+								<button @click="openDeleteModal" role="button" class="btn btn-danger ml-2">
+	<!--								{{ $p.t('global/deleteAnwKontrolle') }}-->
+									<i class="fa fa-trash"></i>
+								</button>
+							</template>
+					</core-filter-cmpt>
+				</div>
 			</template>
 		</core-base-layout>
 	</div>`
