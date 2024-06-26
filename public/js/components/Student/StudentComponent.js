@@ -62,7 +62,6 @@ export const StudentComponent = {
 			if(!this.$entryParams.selected_student_info) {
 
 				this.$fhcApi.factory.Profil.getProfileViewData(null).then(res => {
-					console.log('studentGetViewData', res)
 
 					const data = res.data.retval[0]
 					this.viewDataStudent.vorname = data.vorname
@@ -89,9 +88,6 @@ export const StudentComponent = {
 				this.viewDataStudent.semester = data.semester
 			}
 
-			console.log('this.$refs.tabsStudent._.refs', this.$refs.tabsStudent._.refs)
-			console.log('this.$refs.tabsStudent', this.$refs.tabsStudent)
-
 			this.$refs.tabsStudent._.data.tabs.tab1.title = this.$p.t('global/anwesenheiten')
 			this.$refs.tabsStudent._.data.tabs.tab2.title = this.$p.t('global/entschuldigungen')
 		},
@@ -108,7 +104,6 @@ export const StudentComponent = {
 
 			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
 			this.$fhcApi.factory.Profil.getProfileViewData(uid).then(res => {
-				console.log('studentGetViewData', res)
 
 				const data = res.data.retval[0]
 				this.viewDataStudent.vorname = data.vorname

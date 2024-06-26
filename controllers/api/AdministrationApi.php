@@ -81,29 +81,28 @@ class AdministrationApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$entschuldigung = getData($entschuldigung)[0];
-		if ($entschuldigung->akzeptiert !== $status)
-		{
-			$updateStatus = $status ? 'entschuldigt' : 'abwesend';
 
-			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheitenByDatesStudent($entschuldigung->von, $entschuldigung->bis, $entschuldigung->person_id, $updateStatus);
-			if (isError($updateAnwesenheit))
-				$this->terminateWithError($updateAnwesenheit);
+		$updateStatus = $status ? 'entschuldigt' : 'abwesend';
 
-			$update = $this->_ci->EntschuldigungModel->update(
-				$entschuldigung->entschuldigung_id,
-				array(
-					'updatevon' => $this->_uid,
-					'updateamum' => date('Y-m-d H:i:s'),
-					'statussetvon' => $this->_uid,
-					'statussetamum' => date('Y-m-d H:i:s'),
-					'akzeptiert' => $status,
-					'notiz' => $notiz
-				)
-			);
+		$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheitenByDatesStudent($entschuldigung->von, $entschuldigung->bis, $entschuldigung->person_id, $updateStatus);
+		if (isError($updateAnwesenheit))
+			$this->terminateWithError($updateAnwesenheit);
 
-			if (isError($update))
-				$this->terminateWithError($this->p->t('global', 'errorUpdateEntschuldigung'), 'general');
-		}
+		$update = $this->_ci->EntschuldigungModel->update(
+			$entschuldigung->entschuldigung_id,
+			array(
+				'updatevon' => $this->_uid,
+				'updateamum' => date('Y-m-d H:i:s'),
+				'statussetvon' => $this->_uid,
+				'statussetamum' => date('Y-m-d H:i:s'),
+				'akzeptiert' => $status,
+				'notiz' => $notiz
+			)
+		);
+
+		if (isError($update))
+			$this->terminateWithError($this->p->t('global', 'errorUpdateEntschuldigung'), 'general');
+
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
 	}

@@ -29,8 +29,8 @@ $includesArray = array(
 	),
 	'customJSs' => array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
-		'public/extensions/FHC-Core-Anwesenheiten/js/anwesenheiten.js',
-		'vendor/npm-asset/primevue/dropdown/dropdown.js'
+		'vendor/npm-asset/primevue/dropdown/dropdown.js',
+		'vendor/npm-asset/primevue/divider/divider.js'
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
@@ -39,12 +39,12 @@ $includesArray = array(
 );
 
 $this->load->view('templates/FHC-Header', $includesArray);
-
 ?>
 
 
 
 <body>
+
 <div id="main" permissions='<?php echo json_encode($permissions) ?>' style="margin-right: 18px;">
 	<router-view permissions='<?php echo json_encode($permissions) ?>'>
 	

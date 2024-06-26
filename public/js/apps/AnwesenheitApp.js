@@ -6,7 +6,6 @@ import StudentComponent from "../components/Student/StudentComponent";
 import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent";
 import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent";
 import ScanComponent from "../components/Student/ScanComponent";
-import SetupComponent from "../components/Setup/SetupComponent";
 import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent";
 import fhcapifactory from "../api/fhcapifactory";
@@ -80,17 +79,18 @@ const anwesenheitApp = Vue.createApp({
 		return {
 			title: "AnwesenheitApp",
 			isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
-
 		}
 	},
 	props: {
 
 	},
 	methods: {
+		setupPermissions() {
 
+		}
 	},
 	created(){
-
+		this.setupPermissions()
 	},
 	mounted() {
 
@@ -109,4 +109,3 @@ anwesenheitApp
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
 	.mount("#main");
-

@@ -151,38 +151,8 @@ export default {
 
 			const wrapperDiv = document.getElementById('highchartWrapper')
 			if(!wrapperDiv) return
-			// this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
-			// 	console.log('lektorGetAllAnwesenheitenByLvaAssigned', res)
-			// 	if(!res.data) return
-			// 	const anwesenheitenData = this.countAnwesenheitDataPie(res.data[1])
-			//
-			// 	const containerByLvaLektor = document.createElement('div')
-			// 	const id = 'containerByLvaLektor'
-			// 	containerByLvaLektor.id = id
-			// 	wrapperDiv.appendChild(containerByLvaLektor)
-			//
-			// 	this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByLe', {le: this.$entryParams.selected_le_info.infoString}))
-			// })
-			//
-			//
-
-
-			// this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByStudiengang(this.$entryParams.stg_kz, this.$entryParams.sem_kurzbz).then(res => {
-			// 	console.log('lektorGetAllAnwesenheitenByStudiengang', res)
-			//
-			// 	if(!res.data) return
-			// 	const anwesenheitenData = this.countAnwesenheitDataPie(res.data)
-			//
-			// 	const containerByStg = document.createElement('div')
-			// 	const id = 'containerByStg'
-			// 	containerByStg.id = id
-			// 	wrapperDiv.appendChild(containerByStg)
-			//
-			// 	this.addPieChartToWrapper(anwesenheitenData, id, this.$p.t('global/anwByStg', {stg: this.$entryParams.selected_le_info.kurzbzlang}))
-			// })
 
 			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLva(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz).then(res => {
-					console.log('lektorGetAllAnwesenheitenByLva', res)
 
 					if(!res.data) return
 					const anwesenheitenData = this.countAnwesenheitDataPie(res.data.retval)
@@ -197,15 +167,12 @@ export default {
 
 		},
 		async setupStudentGraphs() {
-			console.log(this.$entryParams)
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
-			// TODO: maybe dont fetch/show all anwesenheiten and only for lva of current context?
 			const wrapperDiv = document.getElementById('highchartWrapper')
 			if(!wrapperDiv) return
 
 			this.$fhcApi.factory.Profil.getAllAnw(this.$entryParams.sem_kurzbz).then(res => {
-				console.log('extensions/FHC-Core-Anwesenheiten/Api/studentGetAll',res)
 
 				if(!res.data.retval) return
 
@@ -229,8 +196,6 @@ export default {
 
 					containerCategoryByTime.style.flex = '1 0 300px';
 					containerCategoryByTime.style.margin = '10px';
-					// containerCategory.style.maxWidth = '250px';
-					// containerCategory.style.maxHeight = '250px';
 					wrapperDiv.appendChild(containerCategoryByTime)
 
 					this.addPieChartToWrapper(anwesenheitenDataByTime, idByTime, category.bezeichnung)

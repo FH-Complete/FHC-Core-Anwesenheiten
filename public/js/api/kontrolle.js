@@ -1,7 +1,7 @@
 export default {
-	async getAllAnwesenheitenByLvaAssigned(lv_id, sem_kurzbz, le_id) {
+	async getAllAnwesenheitenByLvaAssigned(lv_id, sem_kurzbz, le_id, ma_uid, date) {
 		try {
-			const payload = {lv_id, sem_kurzbz, le_id}
+			const payload = {lv_id, sem_kurzbz, le_id, ma_uid, date}
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByLvaAssigned';
 			return this.$fhcApi.post(url, payload, null)
 		} catch (error) {

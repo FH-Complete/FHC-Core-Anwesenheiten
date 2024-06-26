@@ -35,7 +35,6 @@ export default {
 
 			this.$fhcApi.factory.Profil.checkInAnwesenheit(this.internalZugangscode).then(
 				res => {
-					console.log('checkInAnwesenheit', res)
 					if(res.meta.status === "success" && res.data) {
 
 						this.$fhcAlert.alertSuccess(this.$p.t('global/eintragErfolgreich'))
@@ -58,8 +57,6 @@ export default {
 		checkValue(event) {
 			this.internalZugangscode = event.target.value
 			this.codeButtonDisabled = !(this.internalZugangscode && this.internalZugangscode.length === this.codeMaxlength)
-
-			console.log('checkValue', this.codeButtonDisabled)
 		}
 	},
 	mounted() {

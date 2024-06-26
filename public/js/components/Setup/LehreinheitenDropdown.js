@@ -10,33 +10,23 @@ export const LehreinheitenDropdown = {
 			internal_selected_le_info: null
 		};
 	},
-	props: {
-
-	},
 	methods: {
 		leChanged(e) {
-			console.log('leChanged', e)
 			const selected = e.target.selectedOptions
 			this.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
 			this.$entryParams.selected_le_info = selected[0]._value
-
 			this.$emit('leChanged')
 		},
 		async setupData() {
-			console.log('lehreinheiten dropdown setup data')
-			if(!(this.$entryParams.permissions.lektor
-				|| this.$entryParams.permissions.admin)) {
+			if(!(this.$entryParams.permissions.lektor || this.$entryParams.permissions.admin)) {
 				return
 			}
 			await this.$entryParams.setupPromise.then(() => {
-				console.log('lehreinheiten dropdown setupPromise then')
 				this.internal_available_le_info = this.$entryParams.available_le_info
 				this.internal_selected_le_info =  this.$entryParams.selected_le_info
-				console.log('this.internal_selected_le_info', this.internal_selected_le_info)
 			})
 		},
 		resetData() {
-			console.log('leidDD resetData')
 			this.internal_available_le_info = this.$entryParams.available_le_info
 			this.internal_selected_le_info =  this.$entryParams.selected_le_info
 		}
@@ -52,7 +42,6 @@ export const LehreinheitenDropdown = {
 					<a> {{option.infoString}} </a>
 				</option>
 			</select>
-
 		</div>
 	`
 }

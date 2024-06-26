@@ -15,12 +15,9 @@ export const TermineDropdown = {
 	},
 	methods: {
 		setTermine(data){
-			console.log('setTermine dropdown', data)
 			this.internal_available_termine = data
-			this.internal_selected_termin = data[0]
 		},
 		terminChanged(e) {
-			console.log('terminChanged', e)
 			const selected = e.target.selectedOptions
 
 			this.internal_selected_termin = selected[0]._value

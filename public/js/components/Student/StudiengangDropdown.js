@@ -22,18 +22,11 @@ export const StudiengangDropdown = {
 	},
 	methods: {
 		loadDropdown() {
-			console.log('loadDropdown', this.allowedStg)
-
 			this.$fhcApi.factory.Info.getStudiengaenge(this.allowedStg).then(res => {
-				console.log('getStudiengänge', res)
-
 				if(res.meta.status !== "success") return
 				this.options = res.data.retval ?? [];
 
 				this.$entryParams.studiengaengeAdmin = res.data.retval.map(e => e.studiengang_kz)
-				console.log(this.$entryParams.studiengaengeAdmin)
-				// this.selectedOption = this.$entryParams.stg_kz
-
 			});
 		},
 		sgChanged(e) {
@@ -45,13 +38,7 @@ export const StudiengangDropdown = {
 	},
 
 	template: `
-<!--		<div class="col-3"><label for="sgSelect">{{ $p.t('lehre/studiengang') }}</label></div>-->
 		<div class="col-12">
-<!--			<select id="sgSelect" v-model="selectedOption" @change="sgChanged" class="form-control">-->
-<!--				<option v-for="option in options" :value="option.studiengang_kz" >-->
-<!--					{{ option.kurzbzlang }} {{ option.bezeichnung }}-->
-<!--				</option>-->
-<!--			</select>-->
 			<Dropdown @change="sgChanged" :placeholder="$p.t('lehre/studiengang')" :style="{'width': '100%'}" :optionLabel="getOptionLabel" v-model="selectedOption" :options="options" showClear>
 				<template #optionsgroup="slotProps">
 					<div> {{ option.kurzbzlang }} {{ option.bezeichnung }} </div>

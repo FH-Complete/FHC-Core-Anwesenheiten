@@ -10,19 +10,14 @@ export const KontrollenDropdown = {
 			internal_selected_kontrolle: null
 		};
 	},
-	props: {
-
-	},
 	methods: {
 		setKontrollen(data){
-			console.log('setKontrollen dropdown', data)
 			this.internal_available_kontrolle = data
 			this.internal_selected_kontrolle = data[0]
 
 			this.$emit('kontrolleChanged', this.internal_selected_kontrolle)
 		},
 		kontrolleChanged(e) {
-			console.log('kontrolleChanged', e)
 			const selected = e.target.selectedOptions
 
 			this.internal_selected_kontrolle = selected[0]._value

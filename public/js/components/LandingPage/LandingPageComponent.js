@@ -15,7 +15,6 @@ export default {
 		CoreRESTClient,
 		CoreTabs,
 		BsModal,
-
 		StudentComponent,
 		LektorComponent
 	},
@@ -74,16 +73,12 @@ export default {
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
-				console.log('permissions', this.$entryParams.permissions)
 
 				el.removeAttribute('permissions')
 
 
 				resolve()
 			})
-		},
-		newSideMenuEntryHandler: function(payload) {
-			this.sideMenuEntries = payload;
 		},
 		setupViewDataRefs(){
 			this.$entryParams.viewDataLv = {}
@@ -181,9 +176,7 @@ export default {
 
 					maProm.then(()=> {
 						ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
-						console.log('add le setup promise')
 						promises.push(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids))
-						console.log('add student setup promise')
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
 
 						resolve(Promise.all(promises))
@@ -210,7 +203,6 @@ export default {
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
 				this.$fhcApi.factory.Info.getStudentsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
-					console.log('infoGetStudentsForLvaInSemester', res)
 					this.$entryParams.availableStudents = []
 
 					res?.data?.retval?.forEach(e => {
@@ -232,11 +224,8 @@ export default {
 			})
 		},
 		handleMaSetup(lv_id, sem_kurzbz) {
-			console.log('handleMaSetup start')
-			// TODO: historic data access?
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
-					console.log('handleMaSetup then')
 					this.$entryParams.available_maUID = []
 					const lektor = res.data.retval[0]
 					const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
@@ -259,16 +248,13 @@ export default {
 					// this.$refs.MADropdown.resetData()
 
 				}).finally(()=> {
-					console.log('handleMaSetup finally')
 					resolve()
 				})
 			})
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
-			console.log('handleLeSetup start')
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
-					console.log('getLehreinheitenForLehrveranstaltung Res', res)
 
 					// merge entries with same LE
 					const data = []
@@ -303,7 +289,6 @@ export default {
 					})
 
 					this.$entryParams.selected_le_info = data.length ? data[0] : null
-					console.log('this.$entryParams.selected_le_info', this.$entryParams.selected_le_info)
 					this.$entryParams.available_le_info = [...data]
 					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 
@@ -314,9 +299,7 @@ export default {
 
 					resolve()
 				}).finally(() => {
-
 					console.log('globalProps', this._.appContext.config.globalProperties)
-					// resolve()
 				})
 			})
 		},
@@ -329,9 +312,6 @@ export default {
 			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
 		},
-		studentChangedHandler(e) {
-			console.log('studentChangedHandler', e)
-		}
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
@@ -345,10 +325,17 @@ export default {
 		if(this.$entryParams.permissions.student) this.permissioncount++
 		if(this.$entryParams.permissions.assistenz) this.permissioncount = 3
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
-		console.log(this.permissioncount)
 	},
 	watch: {
 
+	},
+	computed: {
+		getSubtitle(){
+			if(this.$entryParams?.viewDataLv?.kurzbz?.value && this.$entryParams?.viewDataLv?.bezeichnung?.value) {
+				debugger
+				return this.$entryParams.viewDataLv.kurzbz.value +' - '+ this.$entryParams.viewDataLv.bezeichnung.value
+			} else return ''
+		}
 	},
 	template: `
 	<core-navigation-cmpt 
@@ -359,7 +346,8 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		:title="($p.t('global/digitalesAnwManagement'))+' '+$entryParams.viewDataLv.kurzbz +' - '+$entryParams.viewDataLv.bezeichnung">
+		:title="$p.t('global/digitalesAnwManagement')"
+		:subtitle="getSubtitle">
 		<template #main>
 			<bs-modal ref="modalContainerKontrolleSetup" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>

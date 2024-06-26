@@ -1,6 +1,6 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters, universalFormatter} from "../../mixins/formatters";
+import {studentFormatters, universalFormatter} from "../../formatters/formatters";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
@@ -28,7 +28,6 @@ export default {
 			entschuldigungsViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
 				ajaxResponse: (url, params, response) => {
-					console.log('getEntschuldigungenByPerson', response)
 					return response.data.retval
 				},
 				ajaxConfig: "POST",
@@ -44,13 +43,13 @@ export default {
 				},
 				selectable: false,
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
-				layout:"fitColumns",
+				layout:"fitDataStretch",
 				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
 					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, minWidth: 150, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
-					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false},
+					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 85, maxWidth: 85},
 					{title: this.$p.t('global/notiz'), field: 'notiz', tooltip:false, minWidth: 150}
 				],
 				persistence:true,
@@ -84,7 +83,6 @@ export default {
 
 			formData.append('person_id', person_id);
 			this.$fhcApi.factory.Profil.addEntschuldigung(formData).then(res => {
-				console.log('addEntschuldigung', res)
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
 					{
@@ -138,7 +136,6 @@ export default {
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
 			this.$fhcApi.factory.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
-				console.log('deleteEntschuldigung', response)
 
 				if (response.meta.status === "success")
 				{

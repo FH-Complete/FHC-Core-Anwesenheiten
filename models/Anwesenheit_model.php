@@ -34,6 +34,17 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query, [$le_id]);
 	}
 
+	public function getKontrollenForLeIdAndInterval($le_id, $days) {
+		$query = "
+			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis
+			FROM extension.tbl_anwesenheit
+			WHERE lehreinheit_id =  ? AND von > (NOW() - INTERVAL '{$days} days')
+			ORDER BY datum DESC
+		";
+
+		return $this->execQuery($query, [$le_id]);
+	}
+
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root) {
 		$query = "SELECT
 				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id,

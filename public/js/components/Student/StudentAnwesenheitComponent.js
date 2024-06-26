@@ -1,6 +1,6 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters} from "../../mixins/formatters";
+import {studentFormatters} from "../../formatters/formatters";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
@@ -17,11 +17,11 @@ export default {
 		return {
 			studiensemester: [],
 			studentViewTabulatorOptions: {
-				layout: 'fitColumns',
+				layout: 'fitDataStretch',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: 'Lehrveranstaltung', visible: false,},
+					{title: 'Lehrveranstaltung', visible: false},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
@@ -34,16 +34,25 @@ export default {
 				persistence:true,
 				persistenceID: "studentAnwTable"
 			},
+			studentViewTabulatorEventHandlers: {
+				event: "tableBuilt",
+				handler: async () => {
+					await this.$entryParams.phrasenPromise
+
+					const cols = this.$refs.uebersichtTable.tabulator.getColumns()
+
+					// cols[0].updateDefinition({title: this.$capitalize(this.$p.t('ui/von')) })
+					// cols[1].updateDefinition({title: this.$capitalize(this.$p.t('global/bis')) })
+					// cols[2].updateDefinition({title: this.$capitalize(this.$p.t('global/anwesend')) })
+
+				}
+			},
 			filterTitle: ""
 		};
 	},
 	methods: {
 		ssChangedHandler: function(studiensemester) {
-			console.log('ssChangedHandler')
 			this.studiensemester = studiensemester
-
-			console.log('this.$entryParams.selected_student', this.$entryParams.selected_student)
-			console.log('this.$entryParams.selected_student_info', this.$entryParams.selected_student_info)
 
 			// toggle anwesenheiten loading procedure based on admin or student login
 			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
@@ -51,7 +60,6 @@ export default {
 			// return on startup as admin
 
 			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
-				console.log('Student.getAllByUID(this.studiensemester, uid)', res)
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
@@ -65,7 +73,6 @@ export default {
 			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
 
 			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
-				console.log('Student.getAllByUID(this.studiensemester, uid)', res)
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
@@ -95,6 +102,7 @@ export default {
 			<core-filter-cmpt
 				ref="uebersichtTable"
 				:tabulator-options="studentViewTabulatorOptions"
+				:tabulator-events="studentViewTabulatorEventHandlers"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false

@@ -11,3 +11,5 @@ define('USE_REGENERATE_QR', true);
 define('QR_EXPIRATION_TIMER', 3600000); // 1 hour
 // frist welche entscheidet wie weit in die Vergangenheit eine neue Entschuldigung reichen darf
 define('ENTSCHULDIGUNG_MAX_REACH', 7); // 7 days
+// frist welche entscheidet wie weit in die Vergangenheit alte Kontrollen gelöscht werden dürfen
+define('KONTROLLE_DELETE_MAX_REACH', 1); // 1 day

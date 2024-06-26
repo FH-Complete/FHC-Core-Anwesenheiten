@@ -2,7 +2,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
-import {lektorFormatters, studentFormatters} from "../../mixins/formatters";
+import {lektorFormatters, studentFormatters} from "../../formatters/formatters";
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
@@ -24,7 +24,6 @@ export default {
 			anwesenheitenByStudentByLvaTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
 				ajaxResponse: (url, params, response) => {
-					console.log('getAllAnwesenheitenByStudentByLva', response)
 					if(response.meta.status !== "success") return []
 
 					this.tableData = response.data.retval
@@ -33,7 +32,7 @@ export default {
 				},
 				height: false,
 				index: 'datum',
-				layout: 'fitColumns',
+				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{
@@ -59,14 +58,12 @@ export default {
 			{
 				event: "rowSelected",
 				handler: (row) => {
-					console.log("rowSelected", row)
 					this.selected++
 				}
 			},
 			{
 				event: "rowDeselected",
 				handler: (row) => {
-					console.log("rowDeselected", row)
 					this.selected--
 				}
 			},
@@ -115,14 +112,11 @@ export default {
 
 			this.$fhcApi.factory.Profil.deleteUserAnwesenheitById(anwesenheit_user_id).then(
 				res => {
-					console.log('deleteUserAnwesenheitById', res)
-
 					if(res.meta.status === "success" && res.data.anwesenheit_user_id) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
 						cell.getRow().delete()
 
 						this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
-							console.log('getAnwesenheitSumByLva', res)
 							if(res.meta.status === "success" && res.data)
 							{
 								this.sum = result.data[0].sum
@@ -180,9 +174,7 @@ export default {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			console.log(changedData)
 			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
-				console.log('saveChangedAnwesenheiten', res)
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
 				} else {
@@ -190,7 +182,6 @@ export default {
 				}
 
 				this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
-					console.log('getAnwesenheitSumByLva', res)
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
@@ -264,8 +255,6 @@ export default {
 
 			this.$fhcApi.factory.Profil.deleteUserAnwesenheitByIds(ids).then(
 				res => {
-					console.log('deleteUserAnwesenheitByIds', res)
-
 					if(res.meta.status === "success") {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
 						selectedRows.forEach(row => {
@@ -280,7 +269,6 @@ export default {
 						})
 
 						this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
-							console.log('getAnwesenheitSumByLva', res)
 							if(res.meta.status === "success" && res.data)
 							{
 								this.sum = res.data[0].sum
@@ -322,7 +310,6 @@ export default {
 	},
 	mounted() {
 		this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
-			console.log('getStudentInfo', res);
 			if (res.meta.status !== "success" || !res.data) return
 
 			this.vorname = res.data[0].vorname
@@ -334,11 +321,9 @@ export default {
 			this.foto = res.data[0].foto
 
 			this.setFilterTitle()
-
 		})
 		
 	},
-
 	updated(){
 
 	},
@@ -359,9 +344,6 @@ export default {
 			leftNavCssClasses="">	
 		</core-navigation-cmpt>
 
-		<row>
-			<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
-		</row>
 		<core-base-layout
 			:title="filterTitle"
 			:subtitle="filterSubtitle"
@@ -369,7 +351,9 @@ export default {
 			:aside-cols=[2]
 			>
 			<template #main>
-					
+				<row>
+					<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
+				</row>
 				<core-filter-cmpt
 					title=""
 					ref="anwesenheitenByStudentByLvaTable"

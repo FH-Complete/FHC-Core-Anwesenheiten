@@ -22,10 +22,17 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->db->trans_start(false);
 
 		foreach ($changedAnwesenheiten as $entry) {
-			$result = $this->update($entry->anwesenheit_user_id, array(
-				'status' => $entry->status,
-				'notiz' => $entry->notiz
-			));
+			if(property_exists($entry, 'notiz')) {
+				$result = $this->update($entry->anwesenheit_user_id, array(
+					'status' => $entry->status,
+					'notiz' => $entry->notiz
+				));
+			} else {
+				$result = $this->update($entry->anwesenheit_user_id, array(
+					'status' => $entry->status
+				));
+			}
+
 
 			if (isError($result)) {
 				$this->db->trans_rollback();

@@ -56,6 +56,7 @@ class Anw extends Auth_Controller
 				'regenerateQRTimer' => REGENERATE_QR_TIMER,
 				'useRegenerateQR' => USE_REGENERATE_QR,
 				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
+				'kontrolleDeleteMaxReach' => KONTROLLE_DELETE_MAX_REACH,
 				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz'),
 				'controller' => "Anw"
 			]

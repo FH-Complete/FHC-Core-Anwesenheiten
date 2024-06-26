@@ -20,7 +20,7 @@ class KontrolleApi extends FHCAPI_Controller
 				'getNewQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getExistingQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'deleteQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
+				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByStudiengang' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
@@ -66,6 +66,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kurzbz;
 		$le_id = $result->le_id;
 
+		$ma_uid = $result->ma_uid;
+		$date = $result->date;
+
+
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
 		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
@@ -91,10 +95,26 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
 
-		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeId($le_id);
-		$kontrollen = getData($result);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen));
+		// get kontrollen for le_id and newer than age constant if permission is lektor
+
+		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
+		$kontrollen = null;
+		if($isLektor) {
+			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndInterval($le_id, KONTROLLE_DELETE_MAX_REACH);
+			$kontrollen = getData($result);
+		} else {
+			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeId($le_id);
+			$kontrollen = getData($result);
+		}
+
+		$result = $this->_ci->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $date);
+		$lektorLehreinheitData = getData($result);
+
+		$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
+		$leTermine = getData($result);
+
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine));
 	}
 
 	public function getAllAnwesenheitenByStudentByLva()

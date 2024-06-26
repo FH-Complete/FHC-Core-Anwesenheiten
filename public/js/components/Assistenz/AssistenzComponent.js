@@ -2,7 +2,7 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters, universalFormatter} from "../../mixins/formatters";
+import {studentFormatters, universalFormatter} from "../../formatters/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
@@ -22,6 +22,7 @@ export const AssistenzComponent = {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
+			editCellValue: '',
 			zeitraum: {
 				von: null,
 				bis: null
@@ -30,7 +31,6 @@ export const AssistenzComponent = {
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
-					console.log('getEntschuldigungen', response)
 					return response.data.retval
 				},
 				ajaxConfig: "POST",
@@ -44,7 +44,7 @@ export const AssistenzComponent = {
 						})
 					}
 				},
-				layout: 'fitColumns',
+				layout: 'fitDataStretch',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
@@ -54,7 +54,7 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
-					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 150},
+					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
 					{title: this.$p.t('global/notiz'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence:true,
@@ -62,13 +62,18 @@ export const AssistenzComponent = {
 			},
 			assistenzViewTabulatorEventHandlers: [
 				{
+					event: "cellEditing",
+					handler: (cell) => {
+						this.editCellValue = cell.getData().notiz
+					}
+				},
+				{
 					event: "cellEdited",
 					handler: (cell) => {
 						const data = cell.getData()
+						if((data.notiz === '' || data.notiz === null) && (this.editCellValue === '' || this.editCellValue === null)) return
 
 						this.$fhcApi.factory.Administration.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz).then(res => {
-							console.log('updateEntschuldigung', res)
-
 							if (res.meta.status === "success")
 							{
 								this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
@@ -97,7 +102,6 @@ export const AssistenzComponent = {
 			const existingNotiz = cell.getData().notiz
 			const notiz = notizParam !== '' ? notizParam : (existingNotiz !== null && existingNotiz !== undefined) ? existingNotiz : ''
 			this.$fhcApi.factory.Administration.updateEntschuldigung(String(entschuldigung_id), status, notiz).then(res => {
-				console.log('updateEntschuldigung', res)
 
 				if (res.meta.status === "success")
 				{
@@ -173,7 +177,6 @@ export const AssistenzComponent = {
 			this.$refs.modalContainerRejectionReason.show()
 		},
 		sgChangedHandler: function(e) {
-			console.log('sgChangedHandler', e)
 			this.studiengang = e.value ? e.value.studiengang_kz : null
 		},
 		routeToLandingPage(){

@@ -50,6 +50,8 @@ class Entschuldigung_model extends \DB_Model
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
+					JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+					WHERE tbl_benutzer.aktiv = TRUE
 					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
 					';
 
@@ -85,7 +87,8 @@ class Entschuldigung_model extends \DB_Model
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
-					WHERE tbl_studiengang.aktiv = true AND (';
+						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND (';
 
 		foreach($stg_kz_arr as $index => $stg_kz) {
 			if($index > 0) $query .= " OR ";
