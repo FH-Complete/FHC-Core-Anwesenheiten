@@ -30,7 +30,8 @@ $includesArray = array(
 	'customJSs' => array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'vendor/npm-asset/primevue/dropdown/dropdown.js',
-		'vendor/npm-asset/primevue/divider/divider.js'
+		'vendor/npm-asset/primevue/divider/divider.js',
+		'vendor/npm-asset/primevue/progressspinner/progressspinner.js'
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',

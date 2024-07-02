@@ -62,6 +62,13 @@ class KontrolleApi extends FHCAPI_Controller
 	public function getAllAnwesenheitenByLvaAssigned()
 	{
 		$result = $this->getPostJSON();
+
+		if(!property_exists($result, 'le_id') || !property_exists($result, 'le_id')
+			|| !property_exists($result, 'sem_kurzbz') || !property_exists($result, 'ma_uid')
+			|| !property_exists($result, 'date')) {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
 		$le_id = $result->le_id;
@@ -146,8 +153,13 @@ class KontrolleApi extends FHCAPI_Controller
 	}
 
 	public function getExistingQRCode(){
-		$resultPost= $this->getPostJSON();
-		$le_id = $resultPost->le_id;
+		$result = $this->getPostJSON();
+
+		if(!property_exists($result, 'le_id')) {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
+		$le_id = $result->le_id;
 
 		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id);
 
@@ -232,6 +244,12 @@ class KontrolleApi extends FHCAPI_Controller
 	public function getNewQRCode()
 	{
 		$result = $this->getPostJSON();
+
+		if(!property_exists($result, 'le_id') || !property_exists($result, 'datum')
+			|| !property_exists($result, 'von') || !property_exists($result, 'bis')) {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
 		$le_id = $result->le_id;
 
 		$date = $result->datum;
@@ -241,6 +259,11 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$ende = $result->ende;
 		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
+
+		if(isEmptyString($le_id) || $le_id === 'null'
+			|| $date === 'null' || $bis === 'null' || $bis === 'null') {
+			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+		}
 
 		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $date);
 

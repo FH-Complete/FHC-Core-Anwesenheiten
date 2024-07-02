@@ -88,6 +88,10 @@ class AdministrationApi extends FHCAPI_Controller
 		if (isError($updateAnwesenheit))
 			$this->terminateWithError($updateAnwesenheit);
 
+		// check notiz size and trim to char varying 255 if it is too big
+
+		$notiz = substr($notiz, 0, 255);
+
 		$update = $this->_ci->EntschuldigungModel->update(
 			$entschuldigung->entschuldigung_id,
 			array(

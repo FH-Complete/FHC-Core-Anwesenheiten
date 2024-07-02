@@ -38,6 +38,13 @@ class InfoApi extends FHCAPI_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 
+		$this->loadPhrases(
+			array(
+				'global',
+				'ui'
+			)
+		);
+
 		$this->_setAuthUID(); // sets property uid
 	}
 
@@ -46,8 +53,13 @@ class InfoApi extends FHCAPI_Controller
 	public function getStudiensemester()
 	{
 		$this->_ci->StudiensemesterModel->addOrder("start", "DESC");
-		$studiensemester = $this->_ci->StudiensemesterModel->load();
-		$this->terminateWithSuccess(getData($studiensemester));
+		$result = $this->_ci->StudiensemesterModel->load();
+
+		$studiensemester = getData($result);
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		$aktuell = getData($result);
+
+		$this->terminateWithSuccess(array($studiensemester, $aktuell));
 	}
 
 	public function getAktStudiensemester()
@@ -84,7 +96,19 @@ class InfoApi extends FHCAPI_Controller
 		$lva_id = $this->input->get('lva_id');
 		$ma_uid = $this->input->get('ma_uid');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		if($lva_id === 'null' || $ma_uid === 'null' || $sem_kurzbz === 'null') {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
+		if(isEmptyString($lva_id) ||
+			isEmptyString($ma_uid)  ||
+			isEmptyString($sem_kurzbz) ) {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
+
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
+
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
 		else $this->terminateWithSuccess(getData($result));
 
@@ -94,6 +118,11 @@ class InfoApi extends FHCAPI_Controller
 	{
 		$lva_id = $this->input->get('lva_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		if(isEmptyString($lva_id) || $lva_id === 'null' ||
+			isEmptyString($sem_kurzbz) || $sem_kurzbz === 'null') {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
 
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
@@ -125,6 +154,15 @@ class InfoApi extends FHCAPI_Controller
 	public function getLektorsForLvaInSemester() {
 		$lva_id = $this->input->get('lva_id');
 		$sem = $this->input->get('sem');
+
+		if($lva_id === 'null'  || $sem === 'null') {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
+		if(isEmptyString($lva_id) || isEmptyString($sem)) {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
+
 		$result = $this->_ci->AnwesenheitModel->getLektorenForLvaInSemester($lva_id, $sem);
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
@@ -134,6 +172,14 @@ class InfoApi extends FHCAPI_Controller
 	public function getStudentsForLvaInSemester() {
 		$lv_id = $this->input->get('lva_id');
 		$sem_kurzbz = $this->input->get('sem');
+
+		if($lv_id === 'null'  || $sem_kurzbz === 'null') {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
+		if(isEmptyString($lv_id) || isEmptyString($sem_kurzbz)) {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLvaInSemester($lv_id, $sem_kurzbz);
 		if(!isSuccess($result)) $this->terminateWithError($result);
@@ -145,6 +191,11 @@ class InfoApi extends FHCAPI_Controller
 		$le_id = $result->le_id;
 		$ma_uid = $result->ma_uid;
 		$date = $result->date;
+
+		if(isEmptyString($le_id) || $le_id === 'null' || isEmptyString($ma_uid) || $ma_uid === 'null'
+			|| isEmptyString($date) || $date === 'null' ) {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
 
 		$result = $this->_ci->AnwesenheitModel->getStundenPlanEntriesForLEandLektorOnDate($le_id, $ma_uid, $date);
 		if(!isSuccess($result)) $this->terminateWithError($result);

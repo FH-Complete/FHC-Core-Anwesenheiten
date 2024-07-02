@@ -93,6 +93,10 @@ class ProfilApi extends FHCAPI_Controller
 		$studiensemester = $this->_ci->input->get('studiensemester');
 		$uid = $this->_ci->input->get('uid');
 
+		if($studiensemester === null || $studiensemester === 'null') {
+			$studiensemester = getData($this->_ci->StudiensemesterModel->getAkt());
+		}
+
 		if (!isEmptyString($studiensemester))
 		{
 			$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
@@ -218,8 +222,11 @@ class ProfilApi extends FHCAPI_Controller
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
+		// TODO: check if person_id is getAuthPersonId or if admin/assistenz berechtigt
+
 		$vonTimestamp = strtotime($_POST['von']);
 		$bisTimestamp = strtotime($_POST['bis']);
+		$person_id = $_POST['person_id'];
 
 		if ($vonTimestamp === false || $bisTimestamp === false)
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
@@ -242,7 +249,7 @@ class ProfilApi extends FHCAPI_Controller
 		$bis = date('Y-m-d H:i:s', $bisTimestamp);
 		$result = $this->_ci->EntschuldigungModel->insert(
 			array(
-				'person_id' => $_POST['person_id'],
+				'person_id' => $person_id,
 				'von' => $von,
 				'bis' => $bis,
 				'dms_id' => $dmsId,
@@ -250,20 +257,27 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		if (isError($result))
-			$this->terminateWithError(getError($result));
-
-//		$this->sendEmailToAssistenz();
+		$this->sendEmailToAssistenz($person_id);
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
 
-	public function sendEmailToAssistenz () {
+	public function sendEmailToAssistenz ($person_id_param) {
 
 		// TODO: some error handling if non student manages to upload entschuldigung
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz');
+		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
+
+		$result = null;
+		if($isStudent) {
+			$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
+		} else if ($isAdmin || $isAssistenz) {
+			$result = $this->EntschuldigungModel->getMailInfoForStudent($person_id_param);
+		}
 
 		// Get STG mail address for the uploading student
-		$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
+//		$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
 
 		if (isError($result))
 			$this->terminateWithError(getError($result));
@@ -274,7 +288,7 @@ class ProfilApi extends FHCAPI_Controller
 		$emails = explode(', ', $data->email);
 
 		// Link to Entschuldigungsmanagement
-		$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Assistenz';
+		$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
 		$studentname = $data->vorname.' '.$data->nachname;
 		$student_uid = $data->student_uid;
 		$stg = $data->kurzbzlang.' - '.$data->bezeichnung;
@@ -341,7 +355,18 @@ class ProfilApi extends FHCAPI_Controller
 
 	public function getEntschuldigungenByPersonID() {
 		$result = $this->getPostJSON();
+
+		if(!property_exists($result, 'person_id')) {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
+
+
 		$person_id = $result->person_id;
+
+		if(is_object($person_id) || isEmptyString($person_id)) {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
 
 		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id));
 	}

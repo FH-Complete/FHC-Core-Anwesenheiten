@@ -75,13 +75,6 @@ export default {
 		}
 	},
 	template: `
-	<core-navigation-cmpt 
-		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=true
-		leftNavCssClasses="">
-	</core-navigation-cmpt>
-
 	<div class="row-cols">
 		<div class="row-col-4 mt-3 text-center">
 			<core-base-layout

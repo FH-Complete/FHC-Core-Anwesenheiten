@@ -39,7 +39,7 @@ export const StudentDropdown = {
 	},
 	template: `
 		<div class="row">
-			<div class="col-2"><label for="leSelect">{{ $p.t('global/students') }}</label></div>
+			<div class="col-3 d-flex align-items-center"><label for="leSelect">{{ $p.t('global/students') }}</label></div>
 			<div class="col-8">
 				<select id="leSelect" @change="studentChanged" class="form-control">
 					<option v-for="option in internal_available_student_info" :value="option" >

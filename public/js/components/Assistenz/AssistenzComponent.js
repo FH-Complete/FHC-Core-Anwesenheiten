@@ -28,6 +28,7 @@ export const AssistenzComponent = {
 				bis: null
 			},
 			permissionsLoaded: false,
+			tableBuiltPromise: null,
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
@@ -55,7 +56,7 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
-					{title: this.$p.t('global/notiz'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
+					{title: this.$p.t('global/begruendungAnw'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence:true,
 				persistenceID: "assistenzTable"
@@ -79,6 +80,15 @@ export const AssistenzComponent = {
 								this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
 							}
 						});
+					}
+				},
+				{
+					event: "tableBuilt",
+					handler: async () => {
+						await this.$entryParams.phrasenPromise
+						console.log('tableBuilt')
+						this.tableBuiltResolve()
+
 					}
 				}
 			],
@@ -154,7 +164,7 @@ export const AssistenzComponent = {
 		},
 		filtern: function()
 		{
-			this.$refs.assistenzTable.tabulator.clearFilter()
+			this.$refs.assistenzTable.tabulator.clearFilter(true)
 
 			if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
 			if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
@@ -190,10 +200,53 @@ export const AssistenzComponent = {
 			}
 
 			this.permissionsLoaded = true
-		}
+
+			if(this.$entryParams.phrasenPromise === undefined) {
+				this.$entryParams.phrasenPromise = this.$p.loadCategory(['global', 'person', 'lehre', 'table', 'filter', 'ui'])
+			}
+		},
+		sleep(ms) {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		},
+		async setup() {
+			await this.$entryParams.phrasenPromise
+			await this.tableBuiltPromise
+
+			// TODO: avoid this race condition workaround -> find reliable table built event?
+			await this.sleep(1000)
+
+			const cols = this.$refs.assistenzTable.tabulator.getColumns()
+
+			// phrasen bandaid
+			cols.find(e => e.getField() === 'vorname').updateDefinition({title: this.$p.t('person/vorname')})
+			cols.find(e => e.getField() === 'nachname').updateDefinition({title: this.$p.t('person/nachname')})
+			cols.find(e => e.getField() === 'akzeptiert').updateDefinition({title: this.$p.t('global/status')})
+			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
+			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
+			cols.find(e => e.getField() === 'studiengang_kz').updateDefinition({title: this.$p.t('lehre/studiengang')})
+			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$p.t('ui/aktion')})
+			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$p.t('global/begruendungAnw')})
+
+
+			this.assistenzViewTabulatorOptions.columns[0].title = this.$p.t('person/vorname')
+			this.assistenzViewTabulatorOptions.columns[1].title = this.$p.t('person/nachname')
+			this.assistenzViewTabulatorOptions.columns[2].title = this.$p.t('global/status')
+			this.assistenzViewTabulatorOptions.columns[3].title = this.$capitalize(this.$p.t('ui/von'))
+			this.assistenzViewTabulatorOptions.columns[4].title = this.$capitalize(this.$p.t('global/bis'))
+			this.assistenzViewTabulatorOptions.columns[5].title = this.$p.t('lehre/studiengang')
+			this.assistenzViewTabulatorOptions.columns[6].title = this.$p.t('ui/aktion')
+			this.assistenzViewTabulatorOptions.columns[7].title = this.$p.t('global/begruendungAnw')
+			console.log('setup end')
+		},
+		tableResolve(resolve) {
+			this.tableBuiltResolve = resolve
+		},
 	},
 	mounted() {
+		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.checkEntryParamPermissions()
+		this.setup()
+		console.log('assistenz page mounted')
 	},
 	watch: {
 		'zeitraum.von'() {
@@ -207,13 +260,6 @@ export const AssistenzComponent = {
 		}
 	},
 	template: `
-	<core-navigation-cmpt 
-		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=true
-		leftNavCssClasses="">
-	</core-navigation-cmpt>
-
 
 	<core-base-layout>
 		<template #main>

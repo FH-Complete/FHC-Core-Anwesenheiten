@@ -17,10 +17,10 @@ class Anwesenheit_model extends \DB_Model
 		$query = "
 			SELECT * FROM extension.tbl_anwesenheit
 			WHERE DATE(von) = '{$date->year}-{$date->month}-{$date->day}'
-			AND lehreinheit_id = {$le_id}
+			AND lehreinheit_id = ?
 		";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$le_id]);
 	}
 
 	public function getKontrollenForLeId($le_id) {

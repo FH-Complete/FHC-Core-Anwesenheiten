@@ -58,35 +58,42 @@ export const StudentComponent = {
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
 
+			this.$entryParams.profileViewDataPromise = new Promise((resolve) => {
 			// if student is logged in as himself load his own viewData
 			if(!this.$entryParams.selected_student_info) {
 
-				this.$fhcApi.factory.Profil.getProfileViewData(null).then(res => {
+					this.$fhcApi.factory.Profil.getProfileViewData(null).then(res => {
 
-					const data = res.data.retval[0]
+						const data = res.data.retval[0]
+						this.viewDataStudent.vorname = data.vorname
+						this.viewDataStudent.nachname = data.nachname
+						this.viewDataStudent.student_uid = data.student_uid
+						this.viewDataStudent.person_id = data.person_id
+						this.viewDataStudent.prestudent_id = data.prestudent_id
+						this.viewDataStudent.gruppe = data.gruppe
+						this.viewDataStudent.verband = data.verband
+						this.viewDataStudent.semester = data.semester
+
+						this.$entryParams.viewDataStudent = data
+						resolve()
+					});
+
+				} else { // admin or assistenz check student data - set viewdata from selected student
+					const data = this.$entryParams.selected_student_info
 					this.viewDataStudent.vorname = data.vorname
 					this.viewDataStudent.nachname = data.nachname
-					this.viewDataStudent.student_uid = data.student_uid
+					this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid
 					this.viewDataStudent.person_id = data.person_id
 					this.viewDataStudent.prestudent_id = data.prestudent_id
 					this.viewDataStudent.gruppe = data.gruppe
 					this.viewDataStudent.verband = data.verband
 					this.viewDataStudent.semester = data.semester
 
-					this.$entryParams.viewDataStudent = data
-				});
+					resolve()
+				}
 
-			} else { // admin or assistenz check student data - set viewdata from selected student
-				const data = this.$entryParams.selected_student_info
-				this.viewDataStudent.vorname = data.vorname
-				this.viewDataStudent.nachname = data.nachname
-				this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid
-				this.viewDataStudent.person_id = data.person_id
-				this.viewDataStudent.prestudent_id = data.prestudent_id
-				this.viewDataStudent.gruppe = data.gruppe
-				this.viewDataStudent.verband = data.verband
-				this.viewDataStudent.semester = data.semester
-			}
+
+			})
 
 			this.$refs.tabsStudent._.data.tabs.tab1.title = this.$p.t('global/anwesenheiten')
 			this.$refs.tabsStudent._.data.tabs.tab2.title = this.$p.t('global/entschuldigungen')
@@ -105,6 +112,7 @@ export const StudentComponent = {
 			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
 			this.$fhcApi.factory.Profil.getProfileViewData(uid).then(res => {
 
+				if(!res?.data?.retval?.[0]) return
 				const data = res.data.retval[0]
 				this.viewDataStudent.vorname = data.vorname
 				this.viewDataStudent.nachname = data.nachname
@@ -131,13 +139,6 @@ export const StudentComponent = {
 		this.setup()
 	},
 	template: `
-	<core-navigation-cmpt 
-		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=true
-		leftNavCssClasses="">
-	</core-navigation-cmpt>
-
 	<div class="row-cols">
 		<core-base-layout>	
 			<template #main>	

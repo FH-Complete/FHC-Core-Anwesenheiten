@@ -65,6 +65,7 @@ export const MaUIDDropdown = {
 					this.$entryParams.selected_le_id = le_ids.length ? le_ids[0] : null
 					this.$entryParams.available_le_ids = [...le_ids]
 
+				}).finally(() => {
 					resolve()
 				})
 			})
@@ -98,7 +99,7 @@ export const MaUIDDropdown = {
 		this.setupData()
 	},
 	template: `
-		<div class="mt-2">
+		<div>
 			<label for="maSelect">{{ $p.t('lehre/lektor') }}</label>
 			<select id="maSelect" @change="maUIDChanged" class="form-control">
 				<option v-for="option in internal_available_maUID" :value="option" >

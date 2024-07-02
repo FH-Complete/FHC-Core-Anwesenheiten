@@ -16,6 +16,7 @@ export default {
 	data: function() {
 		return {
 			studiensemester: [],
+			tableBuiltPromise: null,
 			studentViewTabulatorOptions: {
 				layout: 'fitDataStretch',
 				selectable: false,
@@ -34,64 +35,74 @@ export default {
 				persistence:true,
 				persistenceID: "studentAnwTable"
 			},
-			studentViewTabulatorEventHandlers: {
+			studentViewTabulatorEventHandlers: [{
 				event: "tableBuilt",
 				handler: async () => {
 					await this.$entryParams.phrasenPromise
 
-					const cols = this.$refs.uebersichtTable.tabulator.getColumns()
-
-					// cols[0].updateDefinition({title: this.$capitalize(this.$p.t('ui/von')) })
-					// cols[1].updateDefinition({title: this.$capitalize(this.$p.t('global/bis')) })
-					// cols[2].updateDefinition({title: this.$capitalize(this.$p.t('global/anwesend')) })
-
+					this.tableBuiltResolve()
 				}
-			},
+			}],
 			filterTitle: ""
 		};
 	},
 	methods: {
-		ssChangedHandler: function(studiensemester) {
+		ssChangedHandler: async function(studiensemester) {
 			this.studiensemester = studiensemester
+			console.log('ssChangedHandler')
+			this.loadAnwesenheitenByUID()
+		},
+		async loadAnwesenheitenByUID() {
+			await this.$entryParams.profileViewDataPromise
 
 			// toggle anwesenheiten loading procedure based on admin or student login
 			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
 
-			// return on startup as admin
-
+			if(!uid) return
 			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
 					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
 				}
-
-
 			});
 		},
-		reload() {
-			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
-
-			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
-				if(res.meta.status !== "success") {
-					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
-				} else {
-					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
-				}
-
-			});
+		async reload() {
+			console.log('reload')
+			this.loadAnwesenheitenByUID()
 		},
 		async setup(){
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
+			await this.tableBuiltPromise
+
+			console.log('setup')
+			this.loadAnwesenheitenByUID()
+
 			this.studiensemester = this.$entryParams.sem_kurzbz
-		}
+
+			const cols = this.$refs.uebersichtTable.tabulator.getColumns()
+
+			// phrasen bandaid
+
+			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
+			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
+			cols.find(e => e.getField() === 'student_status').updateDefinition({title: this.$capitalize(this.$p.t('global/anwesend'))})
+
+			this.studentViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('ui/von'))
+			this.studentViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('global/bis'))
+			this.studentViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/anwesend'))
+
+		},
+		tableResolve(resolve) {
+			this.tableBuiltResolve = resolve
+		},
 	},
 	mounted() {
+		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 	},
 	template: `
-
 	<core-base-layout
 		:title="filterTitle">
 		<template #main>

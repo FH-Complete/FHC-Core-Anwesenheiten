@@ -21,20 +21,20 @@ const router = VueRouter.createRouter({
 			component: StudentByLvaComponent,
 			props: true
 		},
-		{
-			path: `/Kontrolle`,
-			name: 'Lektor',
-			component: LektorComponent,
-		},
-		{
-			path: `/Profil`,
-			name: 'Student',
-			component: StudentComponent
-		},
+		// {
+		// 	path: `/Kontrolle`,
+		// 	name: 'Lektor',
+		// 	component: LektorComponent,
+		// },
+		// {
+		// 	path: `/Profil`,
+		// 	name: 'Student',
+		// 	component: StudentComponent
+		// },
 		{
 			path: `/Administration`,
-			name: 'Assistenz',
-			component: AssistenzComponent
+			name: 'LandingPage',
+			component: LandingPageComponent,
 		},
 		{
 			path: '/Profil/Scan/:zugangscode?',
@@ -47,18 +47,18 @@ const router = VueRouter.createRouter({
 			name: 'LandingPage',
 			component: LandingPageComponent
 		},
-		{
-			path: '/Profil/:catchAll(.*)',
-			redirect: { name: 'Profil'}
-		},
-		{
-			path: '/Kontrolle/:catchAll(.*)',
-			redirect: { name: 'Kontrolle'}
-		},
-		{
-			path: '/Administration/:catchAll(.*)',
-			redirect: { name: 'Administration'}
-		},
+		// {
+		// 	path: '/Profil/:catchAll(.*)',
+		// 	redirect: { name: 'Profil'}
+		// },
+		// {
+		// 	path: '/Kontrolle/:catchAll(.*)',
+		// 	redirect: { name: 'Kontrolle'}
+		// },
+		// {
+		// 	path: '/Administration/:catchAll(.*)',
+		// 	redirect: { name: 'Administration'}
+		// },
 		{
 			path: '/:catchAll(.*)',
 			redirect: { name: 'LandingPage'},
@@ -85,12 +85,12 @@ const anwesenheitApp = Vue.createApp({
 
 	},
 	methods: {
-		setupPermissions() {
 
-		}
+
+
 	},
 	created(){
-		this.setupPermissions()
+
 	},
 	mounted() {
 
@@ -109,3 +109,4 @@ anwesenheitApp
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
 	.mount("#main");
+

@@ -24,7 +24,7 @@ export default {
 				files: []
 			},
 			minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.entschuldigungMaxReach + 1))),
-			yearRange: [new Date(Date.now()).getFullYear() - 1, new Date(Date.now()).getFullYear() + 1],
+			tableBuiltPromise: null,
 			entschuldigungsViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
 				ajaxResponse: (url, params, response) => {
@@ -41,7 +41,6 @@ export default {
 						})
 					}
 				},
-				selectable: false,
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
 				layout:"fitDataStretch",
 				rowFormatter: universalFormatter.entschuldigungRowFormatter,
@@ -50,11 +49,19 @@ export default {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 85, maxWidth: 85},
-					{title: this.$p.t('global/notiz'), field: 'notiz', tooltip:false, minWidth: 150}
+					{title: this.$p.t('global/begruendungAnw'), field: 'notiz', tooltip:false, minWidth: 150}
 				],
 				persistence:true,
 				persistenceID: "studentEntschuldigungenTable"
 			},
+			entschuldigungsViewTabulatorEventHandlers: [{
+				event: "tableBuilt",
+				handler: async () => {
+					await this.$entryParams.phrasenPromise
+
+					this.tableBuiltResolve()
+				}
+			}],
 			filterTitle: ""
 		};
 	},
@@ -96,9 +103,7 @@ export default {
 				this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
 				this.resetFormData();
 
-			}).catch(err => {
-				this.$fhcAlert.alertError(this.$p.t('global/errorEntschuldigungUpload'));
-			});
+			})
 
 			this.$refs.modalContainerEntschuldigungUpload.hide()
 		},
@@ -177,10 +182,36 @@ export default {
 			this.$fhcApi.factory.Profil.getEntschuldigungenByPersonID(id).then(res => {
 				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
 			})
+		},
+		tableResolve(resolve) {
+			this.tableBuiltResolve = resolve
+		},
+		async setup() {
+			await this.$entryParams.setupPromise
+			await this.$entryParams.phrasenPromise
+			await this.tableBuiltPromise
+
+			const cols = this.$refs.entschuldigungsTable.tabulator.getColumns()
+
+			// phrasen bandaid
+
+			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('global/status')})
+			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
+			cols.find(e => e.getField() === 'student_status').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
+			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('ui/aktion')})
+			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$p.t('global/notiz')})
+
+
+			this.entschuldigungsViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('global/status'))
+			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/von'))
+			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/bis'))
+			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/aktion'))
+			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/notiz'))
 		}
 	},
 	mounted() {
-
+		this.tableBuiltPromise = new Promise(this.tableResolve)
+		this.setup()
 	},
 	template: `
 

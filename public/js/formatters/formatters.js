@@ -1,5 +1,5 @@
 export const lektorFormatters = {
-	enschuldigtColoring: function (row) {
+	entschuldigtColoring: function (row) {
 		const data = row.getData()
 
 		if(data.entschuldigt) {

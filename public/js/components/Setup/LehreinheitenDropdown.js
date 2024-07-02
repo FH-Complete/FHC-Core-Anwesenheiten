@@ -35,7 +35,7 @@ export const LehreinheitenDropdown = {
 		this.setupData()
 	},
 	template: `
-		<div class="mt-2">
+		<div>
 			<label for="leSelect">{{ $p.t('lehre/lehreinheit') }}</label>
 			<select id="leSelect" @change="leChanged" class="form-control">
 				<option v-for="option in internal_available_le_info" :value="option" >

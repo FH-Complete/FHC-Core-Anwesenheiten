@@ -71,7 +71,11 @@ export default {
 				event: "cellEdited",
 				handler: (cell) => {
 					const data = cell.getData()
-					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, [data])
+					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, [data]).then(res => {
+						if(res.meta.status === "success") {
+							this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
+						}
+					})
 				}
 			}
 			],
@@ -335,8 +339,7 @@ export default {
 			return this.changedData.length
 		}
 	},
-	template:`
-	
+	template:`	
 		<core-navigation-cmpt 
 			v-bind:add-side-menu-entries="appSideMenuEntries"
 			v-bind:add-header-menu-entries="headerMenuEntries"

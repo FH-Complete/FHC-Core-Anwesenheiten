@@ -22,10 +22,10 @@ export const StudiensemesterDropdown = {
 			this.$fhcApi.factory.Info.getStudiensemester().then(res => {
 
 				if(res.meta.status !== "success") return
-				this.options = res.data ?? [];
+				this.options = res.data?.[0] ?? [];
+				const aktuell = res.data?.[1]?.[0].studiensemester_kurzbz
 
-				this.selectedOption = this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
-				this.$emit("ssChanged", this.selectedOption);
+				this.selectedOption = aktuell ?? this._.root.appContext.config.globalProperties.$entryParams.sem_kurzbz
 			});
 		},
 		ssChanged(e) {

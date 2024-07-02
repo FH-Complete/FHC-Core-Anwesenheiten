@@ -22,6 +22,7 @@ export const LektorComponent = {
 		LehreinheitenDropdown,
 		MaUIDDropdown,
 		KontrollenDropdown,
+		ProgressSpinner: primevue.progressspinner,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -30,15 +31,34 @@ export const LektorComponent = {
 		return {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
+			loading: false,
+			tableBuiltResolve: null,
+			tableBuiltPromise: null,
+			lektorState: { // pretty much everything that is being set in setupData()
+				students: [],
+				studentsData: null,
+				anwEntries: [],
+				stsem: [],
+				entschuldigtStati: [],
+				kontrollen: [],
+				viewData: [],
+				dates: [], // all
+				termine: [], // stundenplan
+				showAllVar: false,
+				tableStudentsData: [],
+				beginn: null,
+				ende: null,
+				tabulatorCols: null
+			},
 			anwesenheitenTabulatorOptions: {
 				rowHeight: 88, // foto max-height + 2x padding
-				rowFormatter: lektorFormatters.enschuldigtColoring,
+				rowFormatter: lektorFormatters.entschuldigtColoring,
 				height: false,
 				index: 'prestudent_id',
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: Vue.ref(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
+					{title: this.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
 					{title: this.$p.t('person/student'), field: 'prestudent_id', visible: false,tooltip:false, minWidth: 150},
 					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
@@ -63,6 +83,10 @@ export const LektorComponent = {
 						field === "vorname" || field === "nachname" || field === "sum") {
 
 
+						// TODO: maybe incorporate more changes to dataState to avoid reloads
+						//  in the future when performance is an issue
+						if(!this.changes) this.$entryParams.lektorState = this.lektorState
+
 						this.$router.push({
 							name: 'StudentByLva',
 							params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
@@ -77,47 +101,27 @@ export const LektorComponent = {
 				handler: async () => {
 					await this.$entryParams.phrasenPromise
 
-					const cols = this.$refs.anwesenheitenTable.tabulator.getColumns()
-					// cols[0].updateDefinition({title: await this.$p.t('global/foto')})
-					// cols[1].updateDefinition({title: await this.$p.t('person/student')})
-					// cols[2].updateDefinition({title: await this.$p.t('person/vorname')})
-					// cols[3].updateDefinition({title: await this.$p.t('person/nachname')})
-					// cols[4].updateDefinition({title: await this.$p.t('lehre/gruppe')})
-					// cols[5].updateDefinition({title: this.$p.t('global/datum')})
-					// cols[6].updateDefinition({title: await this.$p.t('global/summe')})
+					this.tableBuiltResolve()
 
 				}
 			}],
 			boundRegenerateQR: null,
 			boundProgressCounter: null,
-			beginn: null,
 			changedData: [],
-			entschuldigtStati: [],
 			deleteData: null,
-			ma_uid: null,
-			sem_kurzbz: null,
-			lv_id: null,
-			dates: [], // all
-			termine: [], // stundenplan
-			kontrollen: [],
 			filterTitle: Vue.ref(""),
-			ende: null,
 			selectedDate: new Date(Date.now()),
-			showAllVar: false,
-			studentsData: null,
-			students: [],
-			tableStudentData: null,
 			qr: null,
 			url: null,
 			code: null,
 			timerIDPolling: null,
 			progressTimerID: null,
-			setupPromise: null,
 			regenerateProgress: 0,
 			progressMax: 0,
 			polling: false,
 			checkInCount: 0,
 			studentCount: 0,
+			changes: false, // if something could have happened to dataset -> reload on mounted
 			isAllowedToStartKontrolle: true
 		}
 	},
@@ -129,8 +133,6 @@ export const LektorComponent = {
 			this.appSideMenuEntries = payload;
 		},
 		getExistingQRCode(){
-
-			// TODO: get information of already checked in students as a count
 			this.$fhcApi.factory.Kontrolle.getExistingQRCode(this.$entryParams.selected_le_id)
 				.then(res => {
 				if(res.data.svg) {
@@ -145,7 +147,6 @@ export const LektorComponent = {
 		},
 		startPollingAnwesenheiten() {
 			this.timerIDPolling = setInterval(this.boundPollAnwesenheit, 3000)
-
 		},
 		stopPollingAnwesenheiten() {
 			clearInterval(this.timerIDPolling)
@@ -155,14 +156,18 @@ export const LektorComponent = {
 			this.deleteData = kontrolle
 		},
 		handleShowAllToggle() {
+			if(!this.lektorState.dates.length) {
+				this.$fhcAlert.alertInfo(this.$p.t('global/anwInfoKeineTermineGefunden'))
+				return
+			}
 			this.showAll()
 		},
 		showAll() {
 			// set tabulator column definition to show every distinct date fetched
 
-			if(!this.showAllVar) {
+			if(!this.lektorState.showAllVar) {
 				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 4)
-				this.dates.forEach(date => {
+				this.lektorState.dates.forEach(date => {
 					const dateParts = date.split( "-")
 					const colTitle = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 					newCols.push({
@@ -173,23 +178,23 @@ export const LektorComponent = {
 				})
 				newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
 
-				this.tableStudentData = this.setupAllData(newCols)
-
-				this.$refs.anwesenheitenTable.tabulator.setColumns(newCols)
-				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData)
-				this.showAllVar = true
+				this.lektorState.tableStudentData = this.setupAllData(newCols)
+				this.lektorState.tabulatorCols = newCols
+				this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
+				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
+				this.lektorState.showAllVar = true
 			} else {
 
 				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns);
-				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 
-				this.showAllVar = false
+				this.lektorState.showAllVar = false
 			}
 		},
 		setupAllData(cols){
 			const data = []
 
-			this.students.forEach(student => {
+			this.lektorState.students.forEach(student => {
 
 				const nachname = student.nachname + student.zusatz
 				const row = {
@@ -200,7 +205,7 @@ export const LektorComponent = {
 					gruppe: student.semester + student.verband + student.gruppe,
 					sum: student.sum
 				}
-				const studentDataEntry = this.studentsData.get(student.prestudent_id)
+				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				studentDataEntry.forEach(entry => {
 					row[entry.datum] = entry.status
 				})
@@ -239,16 +244,13 @@ export const LektorComponent = {
 			// js months 0-11, php months 1-12
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			this.$fhcApi.factory.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id, date, this.beginn, this.ende, date).then(res => {
+			this.$fhcApi.factory.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id, date, this.lektorState.beginn, this.lektorState.ende, date).then(res => {
 				if(res.data) {
+					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
-			}).catch(err => {
-				this.$fhcAlert.alertError(this.$p.t('global/errorStartAnwKontrolle'))
-				this.$refs.modalContainerNewKontrolle.hide()
 			})
-
 		},
 		handleTerminChanged(termin) {
 			this.setTimespanForKontrolleTermin(termin)
@@ -286,6 +288,7 @@ export const LektorComponent = {
 				this.$fhcApi.factory.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
 					.then(res => {
 						this.updateSumData(res.data.retval)
+						this.changes = true
 				})
 			})
 
@@ -314,13 +317,13 @@ export const LektorComponent = {
 			const beginn = new Date('1995-10-16 ' + termin.beginn)
 			const ende = new Date('1995-10-16 ' + termin.ende)
 
-			this.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
-			this.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
+			this.lektorState.beginn = {hours: beginn.getHours(), minutes: beginn.getMinutes(), seconds: beginn.getSeconds()}
+			this.lektorState.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
 		},
 		findClosestTermin() {
 			const todayTime = new Date(Date.now()).getTime()
 			let nearestFutureTermin = null
-			this.termine.forEach((termin, i) => {
+			this.lektorState.termine.forEach((termin, i) => {
 				termin.timeDiff = new Date(termin.datum).getTime() - todayTime
 				if (i === 0) {
 					nearestFutureTermin = termin
@@ -332,7 +335,7 @@ export const LektorComponent = {
 			return nearestFutureTermin
 		},
 		startNewAnwesenheitskontrolle(){
-			if(!this.beginn || !this.ende) {
+			if(!this.lektorState.beginn || !this.lektorState.ende) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorAnwStartAndEndSet'))
 				return
 			}
@@ -359,10 +362,14 @@ export const LektorComponent = {
 			this.code = null
 
 			// TODO: maybe only fetch new entries and merge
-			// fetch table data
-			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
+			const date = this.formatDateToDbString(this.selectedDate)
+			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			this.loading = true
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
 				if(res.meta.status !== "success") return
 				this.setupData(res.data)
+			}).finally(() => {
+				this.loading = false
 			})
 
 			this.$fhcApi.factory.Kontrolle.deleteQRCode(this.anwesenheit_id).then(
@@ -379,14 +386,14 @@ export const LektorComponent = {
 		},
 		updateSumData (data) {
 			data.forEach(e => {
-				const student = this.students.find(s => s.prestudent_id === e.prestudent_id)
+				const student = this.lektorState.students.find(s => s.prestudent_id === e.prestudent_id)
 				student.sum = e.sum
-				const studentTable = this.tableStudentData.find(s => s.prestudent_id === e.prestudent_id)
+				const studentTable = this.lektorState.tableStudentData.find(s => s.prestudent_id === e.prestudent_id)
 				studentTable.sum = e.sum
 			})
 
 			// TODO: consider show all toggle
-			this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 		},
 		openDeleteModal () {
 			this.$refs.modalContainerDeleteKontrolle.show()
@@ -395,17 +402,25 @@ export const LektorComponent = {
 			if (await this.$fhcAlert.confirmDelete() === false)
 				return;
 
-			// const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
-			const dateobj = new Date(this.deleteData.datum)
-			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth() + 1, day: dateobj.getDate()}
+			const dataparts = this.deleteData.datum.split('.')
+			const dateobj = new Date(dataparts[2], dataparts[1], dataparts[0])
+			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth(), day: dateobj.getDate()}
+			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
 			this.$fhcApi.factory.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id, date).then(res => {
 				if(res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
-					this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id).then((res)=>{
+
+					// TODO ma_uid/date or refetch
+
+					this.loading = true
+					this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, dateAnwFormat).then((res)=>{
 						if(res.meta.status !== "success") return
 						this.setupData(res.data)
+					}).finally(()=> {
+						this.loading = false
 					})
 				} else if(res.meta.status === "success" && !res.data){
 					this.$fhcAlert.alertWarning(this.$p.t('global/noAnwKontrolleFoundToDelete'))
@@ -448,80 +463,71 @@ export const LektorComponent = {
 			// from anw entries
 			anwEntries.forEach(entry => {
 				// search for distinct kontrolle dates to use for show all columns
-				this.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status, anwesenheit_user_id: entry.anwesenheit_user_id})
+				this.lektorState.studentsData.get(entry.prestudent_id).push({datum: entry.datum, status: entry.status, anwesenheit_user_id: entry.anwesenheit_user_id})
 
 				const datum = entry.datum
-				if(this.dates.indexOf(datum) < 0) {
-					this.dates.push(datum)
+				if(this.lektorState.dates.indexOf(datum) < 0) {
+					this.lektorState.dates.push(datum)
 				}
 			})
 
 			// sort dates and termine
-			this.dates.sort((a, b) => {
+			this.lektorState.dates.sort((a, b) => {
 				const as = a.split('-')
 				const bs = b.split('-')
 				return as > bs ? 1 : a < b ? -1 : 0
 			})
 		},
-		setupData(data) {
-			this.students = data[0] ?? []
-			const anwEntries = data[1] ?? []
-			const stsem = data[2][0] ?? []
-			this.entschuldigtStati = data[3] ?? []
-			this.kontrollen = data[4] ?? []
-			const viewData = data[5] ?? []
-			this.termine = data[6] ?? []
-
-			this.filterTitle = this.$entryParams.selected_le_info?.infoString ?? ''
-
-			this.termine.forEach(termin => {
+		setup() {
+			this.lektorState.termine.forEach(termin => {
 				const dateParts = termin.datum.split( "-")
 				termin.datumFrontend = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 			})
 
-			this.$refs.termineDropdown.setTermine(this.termine)
+			this.$refs.termineDropdown.setTermine(this.lektorState.termine)
 
-			if(this.termine.length) {
+			if(this.lektorState.termine.length) {
 				const termin = this.findClosestTermin();
 
 				this.setTimespanForKontrolleTermin(termin, false)
 
-				this.termine.forEach(t => this.dates.push(t.datum))
+				this.lektorState.termine.forEach(t => this.lektorState.dates.push(t.datum))
 			}
 
-			this.studentsData = new Map()
+			this.lektorState.studentsData = new Map()
 
-			this.students.forEach(entry => {
-				entry.zusatz = this.formatZusatz(entry, stsem)
-				this.studentsData.set(entry.prestudent_id, [])
+			this.lektorState.students.forEach(entry => {
+				entry.zusatz = this.formatZusatz(entry, this.lektorState.stsem)
+				this.lektorState.studentsData.set(entry.prestudent_id, [])
 			})
-			this.dates = []
+			this.lektorState.dates = []
 
-			this.setDates(anwEntries)
-			this.$refs.kontrolleDropdown.setKontrollen(this.kontrollen)
+			this.setDates(this.lektorState.anwEntries)
+			this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
 
 			// date string formatting
 			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+
 			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
 
-			this.tableStudentData = []
-			this.studentCount = this.students.length
-			this.students.forEach(student => {
+			this.lektorState.tableStudentData = []
+			this.studentCount = this.lektorState.students.length
+			this.lektorState.students.forEach(student => {
 
-				const studentDataEntry = this.studentsData.get(student.prestudent_id)
+				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
-				const isEntschuldigt = !!this.entschuldigtStati.find(status => {
+				const isEntschuldigt = !!this.lektorState.entschuldigtStati.find(status => {
 					const vonDate = new Date(status.von)
 					const bisDate = new Date(status.bis)
 					return status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate
 				})
 
 				const nachname = student.nachname + student.zusatz
-				this.tableStudentData.push({prestudent_id: student.prestudent_id,
+				this.lektorState.tableStudentData.push({prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
 					nachname: nachname,
@@ -531,11 +537,10 @@ export const LektorComponent = {
 					sum: student.sum});
 			})
 
-			if(this.showAllVar) {
+			if(this.lektorState.showAllVar) {
 				this.showAll()
 			} else {
 				const cols = this.$refs.anwesenheitenTable.tabulator.getColumns()
-
 
 				// phrasen bandaid
 				cols.find(e => e.getField() === 'foto').updateDefinition({title: this.$p.t('global/foto')})
@@ -551,9 +556,32 @@ export const LektorComponent = {
 				this.anwesenheitenTabulatorOptions.columns[4].title = this.$p.t('lehre/gruppe')
 				this.anwesenheitenTabulatorOptions.columns[6].title = this.$p.t('global/summe')
 
-				this.$refs.anwesenheitenTable.tabulator.setData(this.tableStudentData);
+				this.lektorState.tabulatorCols = cols
+				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			}
+		},
+		setupLektorState(){
+			this.lektorState.students = this.$entryParams.lektorState.students
+			this.lektorState.anwEntries = this.$entryParams.lektorState.anwEntries
+			this.lektorState.stsem = this.$entryParams.lektorState.stsem
+			this.lektorState.entschuldigtStati = this.$entryParams.lektorState.entschuldigtStati
+			this.lektorState.kontrollen = this.$entryParams.lektorState.kontrollen
+			this.lektorState.viewData = this.$entryParams.lektorState.viewData
+			this.lektorState.termine = this.$entryParams.lektorState.termine
 
+			this.$entryParams.lektorState = null
+			this.setup()
+		},
+		setupData(data) {
+			this.lektorState.students = data[0] ?? []
+			this.lektorState.anwEntries = data[1] ?? []
+			this.lektorState.stsem = data[2][0] ?? []
+			this.lektorState.entschuldigtStati = data[3] ?? []
+			this.lektorState.kontrollen = data[4] ?? []
+			this.lektorState.viewData = data[5] ?? []
+			this.lektorState.termine = data[6] ?? []
+
+			this.setup()
 		},
 		maUIDchangedHandler(oldIds) {
 			this.$refs.LEDropdown.resetData()
@@ -571,7 +599,7 @@ export const LektorComponent = {
 				date = this.formatDateToDbString(this.selectedDate)
 			}
 
-			const arrWrapped = this.studentsData.get(prestudent_id)
+			const arrWrapped = this.lektorState.studentsData.get(prestudent_id)
 			const arr = JSON.parse(JSON.stringify(arrWrapped))
 			const found = arr.find(e => e.datum === date)
 
@@ -601,8 +629,8 @@ export const LektorComponent = {
 
 		},
 		validateTimespan () {
-			const vonDate = new Date(1995, 10, 16, this.beginn.hours, this.beginn.minutes, this.beginn.seconds)
-			const bisDate = new Date(1995, 10, 16, this.ende.hours, this.ende.minutes, this.ende.seconds)
+			const vonDate = new Date(1995, 10, 16, this.lektorState.beginn.hours, this.lektorState.beginn.minutes, this.lektorState.beginn.seconds)
+			const bisDate = new Date(1995, 10, 16, this.lektorState.ende.hours, this.lektorState.ende.minutes, this.lektorState.ende.seconds)
 
 			if (bisDate < vonDate)
 			{
@@ -612,18 +640,26 @@ export const LektorComponent = {
 
 			return true;
 		},
-		routeToLandingPage() {
-			this.$router.push({
-				name: 'LandingPage'
-			})
+		tableResolve(resolve) {
+			this.tableBuiltResolve = resolve
 		},
 		async setupMounted(){
+			this.tableBuiltPromise = new Promise(this.tableResolve)
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
+			await this.tableBuiltPromise
+
+			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
+			const dateParts = selectedDateDBFormatted.split( "-")
+			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+			const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
+			found.title = selectedDateFrontendFormatted
+
+			this.filterTitle = this.$entryParams.selected_le_info?.infoString ?? ''
 
 			const now = new Date(Date.now())
-			this.beginn = {hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds()}
-			this.ende = {hours: now.getHours() + 2, minutes: now.getMinutes(), seconds: now.getSeconds()}
+			this.lektorState.beginn = {hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds()}
+			this.lektorState.ende = {hours: now.getHours() + 2, minutes: now.getMinutes(), seconds: now.getSeconds()}
 
 			this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 			this.boundRegenerateQR = this.regenerateQR.bind(this)
@@ -640,22 +676,30 @@ export const LektorComponent = {
 			// fetch LE data
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
-			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
-				this.setupData(res.data)
-			})
+
+			if(this.$entryParams.lektorState) {
+				this.setupLektorState()
+			} else {
+				this.loading = true
+				this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
+					this.setupData(res.data)
+				}).finally(() => {
+					this.loading = false
+				})
+			}
 
 		},
 		handleLEChanged () {
+
+			this.filterTitle = this.$entryParams.selected_le_info?.infoString ?? ''
+
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
-			this.$fhcApi.factory.Info.getLehreinheitAndLektorInfo(this.$entryParams.selected_le_id, ma_uid, date)
-				.then(res => this.setupLehreinheitAndLektorData(res));
-
-			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id).then(res => {
-
-
+			this.loading = true
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
 				this.setupData(res.data)
-
+			}).finally(() => {
+				this.loading = false
 			})
 
 			this.getExistingQRCode()
@@ -665,13 +709,6 @@ export const LektorComponent = {
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.$entryParams.permissions.authID
-
-		const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
-		const dateParts = selectedDateDBFormatted.split( "-")
-		const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
-
-		const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
-		found.title = selectedDateFrontendFormatted
 	},
 	mounted() {
 		this.setupMounted()
@@ -685,7 +722,7 @@ export const LektorComponent = {
 	},
 	watch: {
 		selectedDate(newVal) {
-			this.showAllVar = false
+			this.lektorState.showAllVar = false
 			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
@@ -694,36 +731,36 @@ export const LektorComponent = {
 			const today = new Date(Date.now())
 			this.isAllowedToStartKontrolle = this.areDatesSame(newVal, today)
 
-			// load stundenplan hours for ma_uid, le_id and selected date
-			const date = this.formatDateToDbString(this.selectedDate)
-			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
 
 			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
 
-			this.students.forEach((student, index) => {
-				const studentDataEntry = this.studentsData.get(student.prestudent_id)
+			this.lektorState.students.forEach((student, index) => {
+				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
-				const foundEntry = this.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
+				const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
 				foundEntry.status = status
 			})
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
-			this.$refs.anwesenheitenTable.tabulator.setData([...this.tableStudentData]);
+			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			this.$refs.showAllTickbox.checked = false
 
 		}
 	},
+	computed: {
+		getSaveBtnClass() {
+			return !this.changedData.length ? "btn btn-secondary ml-2" : "btn btn-primary ml-2"
+		},
+		getDeleteBtnClass() {
+			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-danger ml-2"
+		}
+	},
 	template:`
-		<core-navigation-cmpt 
-			v-bind:add-side-menu-entries="appSideMenuEntries"
-			v-bind:add-header-menu-entries="headerMenuEntries"
-			:hideTopMenu="true"
-			leftNavCssClasses="">	
-		</core-navigation-cmpt>
-					
 		<core-base-layout>			
 			<template #main>
+				<ProgressSpinner v-show="true"/>
+				
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
 					<template v-slot:title>{{ $p.t('global/neueAnwKontrolle') }}</template>
 					<template v-slot:default>
@@ -731,7 +768,7 @@ export const LektorComponent = {
 							<div class="col-2" style="align-items: center; justify-items: center;"><label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label></div>
 							<div class="col-10">
 								<datepicker
-									v-model="beginn"
+									v-model="lektorState.beginn"
 									time-picker="true"
 									text-input="true"
 									auto-apply="true">
@@ -742,7 +779,7 @@ export const LektorComponent = {
 							<div class="col-2" style="align-items: center; justify-items: center;"><label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label></div>
 							<div class="col-10">
 								<datepicker
-									v-model="ende"
+									v-model="lektorState.ende"
 									time-picker="true"
 									text-input="true"
 									auto-apply="true">
@@ -826,7 +863,7 @@ export const LektorComponent = {
 					</div>
 					
 					<div class="col-1 d-flex" style="height: 40px; align-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
-					<div class="col-3" style="height: 40px">
+					<div class="col-2" style="height: 40px">
 						<datepicker
 							v-model="selectedDate"
 							locale="de"
@@ -835,12 +872,13 @@ export const LektorComponent = {
 							auto-apply="true">
 						</datepicker>
 					</div>
-					<div class="col-2 d-flex " style="height: 40px; align-items: center;">
+					<div class="col-3 d-flex " style="height: 40px; align-items: center;">
 						<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
 						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllDates') }}</label>
 					</div>
 				</div>
-				<div style="transform: translateY(-30px)">
+				
+				<div style="transform: translateY(-40px)">
 					<core-filter-cmpt
 						title=""
 						ref="anwesenheitenTable"
@@ -856,13 +894,11 @@ export const LektorComponent = {
 						:sideMenu="false"
 						noColumnFilter>
 							<template #actions>
-								<button @click="saveChanges" :disabled="!changedData.length" role="button" class="btn btn-secondary ml-2">
-	<!--								{{ $p.t('ui/save') }}-->
+								<button @click="saveChanges" :disabled="!changedData.length" role="button" :class="getSaveBtnClass">
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openDeleteModal" :disabled="!kontrollen.length" role="button" class="btn btn-danger ml-2">
-	<!--								{{ $p.t('global/deleteAnwKontrolle') }}-->
+								<button @click="openDeleteModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getDeleteBtnClass">
 									<i class="fa fa-trash"></i>
 								</button>
 							</template>

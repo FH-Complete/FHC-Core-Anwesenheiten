@@ -6,6 +6,7 @@ import CoreTabs from '../../../../../js/components/Tabs.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
+import AssistenzComponent from "../Assistenz/AssistenzComponent";
 
 export default {
 	name: 'LandingPageComponent',
@@ -16,34 +17,45 @@ export default {
 		CoreTabs,
 		BsModal,
 		StudentComponent,
-		LektorComponent
+		LektorComponent,
+		AssistenzComponent
 	},
 	data: function() {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
+			currentTab: 0,
 			tabs: this.initTabs(),
 			loaded: false,
 			permissioncount: Vue.ref(0)
 		};
 	},
 	props: {
-		permissions: []
+		permissions: [],
 	},
 	methods: {
 		initTabs() {
 			const tabs = []
 			const permissions = JSON.parse(this.permissions)
-			if(permissions.lektor || permissions.admin || permissions.assistenz) {
-				tabs.push({ title: 'Kontrolle', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+
+			// check for missing url params here and block Kontrolle & Profil Tabs if they are not useable
+			const queryString = window.location.search;
+			const searchParams = new URLSearchParams(queryString)
+			const lv_id = searchParams.get('lvid')
+			const stg_kz = searchParams.get('stg_kz')
+			const sem_kurzbz = searchParams.get('sem_kurzbz')
+			const notMissingParams = (lv_id && stg_kz && sem_kurzbz) || this.$entryParams.notMissingParams
+
+			if((permissions.lektor || permissions.admin || permissions.assistenz) && notMissingParams) {
+				tabs.push({key: 'Kontrolle', title: 'Kontrolle', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
 			}
 
-			if(permissions.student || permissions.admin || permissions.assistenz) {
-				tabs.push({ title: 'Profil', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+			if((permissions.student || permissions.admin || permissions.assistenz) && notMissingParams)  {
+				tabs.push({key: 'Profil', title: 'Profil', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 
 			if(permissions.admin || permissions.assistenz) {
-				tabs.push({ title: 'Admin', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+				tabs.push({key: 'Admin', title: 'Admin', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
 			}
 
 			const ret = {}
@@ -51,18 +63,38 @@ export default {
 				ret['tab'+i] = tab
 			})
 
+			this.setCurrentTab(permissions.controller, tabs)
+
 			return ret
+		},
+		setCurrentTab (controller, tabs) {
+
+			switch(controller) {
+				case 'Admin':
+					this.currentTab = tabs.findIndex(t => t.key === 'Admin')
+					break;
+				case 'Kontrolle':
+					this.currentTab = tabs.findIndex(t => t.key === 'Kontrolle')
+					break;
+				case 'Profil':
+					this.currentTab = tabs.findIndex(t => t.key === 'Profil')
+					break;
+				default:
+					this.currentTab = 0
+			}
 		},
 		async createdSetup () {
 			await new Promise (resolve => {
 				const queryString = window.location.search;
 				const searchParams = new URLSearchParams(queryString)
-
 				this.$entryParams.lv_id = searchParams.get('lvid')
 				this.$entryParams.stg_kz = searchParams.get('stg_kz')
 				this.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 				this.$entryParams.sem = searchParams.get('sem')
-				this.$entryParams.initRouted = false
+				this.$entryParams.isCis = searchParams.get('nav') === 'false' ? true : false
+
+
+				this.$entryParams.notMissingParams = !!(this.$entryParams.lv_id && this.$entryParams.stg_kz && this.$entryParams.sem_kurzbz)
 
 				this.setupViewDataRefs()
 
@@ -76,7 +108,6 @@ export default {
 
 				el.removeAttribute('permissions')
 
-
 				resolve()
 			})
 		},
@@ -89,6 +120,8 @@ export default {
 			this.$entryParams.viewDataLv.oe_kurzbz = Vue.ref('')
 			this.$entryParams.viewDataLv.orgform_kurzbz = Vue.ref('')
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = Vue.ref('')
+
+			console.log(this.$entryParams.viewDataLv)
 
 			this.$entryParams.viewDataStudent = {}
 			this.$entryParams.viewDataStudent.vorname = Vue.ref('')
@@ -169,8 +202,8 @@ export default {
 				// TODO: default select closest one from stundenplan AND SHOW THAT
 
 				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
-				if(this.$entryParams.permissions.admin ||
-					this.$entryParams.permissions.assistenz) {
+				if((this.$entryParams.permissions.admin ||
+					this.$entryParams.permissions.assistenz) && lv_id && sem_kurzbz && le_ids) {
 
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz)
 
@@ -183,18 +216,7 @@ export default {
 					})
 
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
-				} else if(this.$entryParams.permissions.lektor) {
-					resolve(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz,le_ids).then(()=>{
-						if(this.$entryParams.available_le_ids.length === 1 && !this.$entryParams.initRouted) {
-
-							// automagically skip landing page if there is no selection of LE necessary
-							this.$entryParams.initRouted = true
-							this.$router.push({
-								name: 'Lektor'
-							})
-						}
-					}))
-				} else if(this.$entryParams.permissions.student) {
+				} else {
 					resolve()
 				}
 
@@ -297,8 +319,9 @@ export default {
 
 					// this.$refs.LEDropdown.resetData()
 
-					resolve()
+
 				}).finally(() => {
+					resolve()
 					console.log('globalProps', this._.appContext.config.globalProperties)
 				})
 			})
@@ -315,7 +338,6 @@ export default {
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
-
 	},
 	mounted() {
 		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
@@ -325,6 +347,10 @@ export default {
 		if(this.$entryParams.permissions.student) this.permissioncount++
 		if(this.$entryParams.permissions.assistenz) this.permissioncount = 3
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
+
+		console.log(this.$entryParams)
+		if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
+
 	},
 	watch: {
 
@@ -332,17 +358,19 @@ export default {
 	computed: {
 		getSubtitle(){
 			if(this.$entryParams?.viewDataLv?.kurzbz?.value && this.$entryParams?.viewDataLv?.bezeichnung?.value) {
-				debugger
 				return this.$entryParams.viewDataLv.kurzbz.value +' - '+ this.$entryParams.viewDataLv.bezeichnung.value
 			} else return ''
+		},
+		getCurrentTab() {
+			return 'tab' + this.currentTab
 		}
 	},
 	template: `
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
 		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=true
-		leftNavCssClasses="">
+		:hideTopMenu=$entryParams.isCis
+		:leftNavCssClasses="$entryParams.isCis ? '' : 'navbar navbar-left-side'">
 	</core-navigation-cmpt>
 
 	<core-base-layout
@@ -362,12 +390,13 @@ export default {
 		
 			<div>
 				<template  v-if="permissioncount > 1">
-					<core-tabs class="mb-5" :config="tabs"></core-tabs>
+					<core-tabs :default="getCurrentTab" :modelValue="currentTab" class="mb-5" :config="tabs"></core-tabs>
 					
 				</template>
 				<template v-else-if="permissioncount === 1">
 					<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>
 					<StudentComponent v-if="$entryParams?.permissions?.student"></StudentComponent>
+					<AssistenzComponent v-if="$entryParams?.permissions?.assistenz || $entryParams?.permissions?.admin"></AssistenzComponent>
 				</template>
 			</div>
 			
