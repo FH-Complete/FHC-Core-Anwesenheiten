@@ -49,16 +49,23 @@ export const AssistenzComponent = {
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: this.$p.t('person/vorname'), field: 'vorname'},
-					{title: this.$p.t('person/nachname'), field: 'nachname'} ,
+					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true},
+					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true} ,
 					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
-					{title: this.$p.t('global/begruendungAnw'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
+					{title: this.$p.t('global/begruendungAnw'), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
 				],
-				persistence:true,
+				persistence: {
+					sort: false,
+					filter: true,
+					headerFilter: false,
+					group: true,
+					page: true,
+					columns: true,
+				},
 				persistenceID: "assistenzTable"
 			},
 			assistenzViewTabulatorEventHandlers: [
@@ -88,7 +95,6 @@ export const AssistenzComponent = {
 						await this.$entryParams.phrasenPromise
 						console.log('tableBuilt')
 						this.tableBuiltResolve()
-
 					}
 				}
 			],
@@ -164,7 +170,7 @@ export const AssistenzComponent = {
 		},
 		filtern: function()
 		{
-			this.$refs.assistenzTable.tabulator.clearFilter(true)
+			this.$refs.assistenzTable.tabulator.clearFilter()
 
 			if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
 			if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
@@ -213,7 +219,7 @@ export const AssistenzComponent = {
 			await this.tableBuiltPromise
 
 			// TODO: avoid this race condition workaround -> find reliable table built event?
-			await this.sleep(1000)
+			// await this.sleep(1000)
 
 			const cols = this.$refs.assistenzTable.tabulator.getColumns()
 
@@ -255,7 +261,7 @@ export const AssistenzComponent = {
 		'zeitraum.bis'() {
 			this.filtern()
 		},
-		studiengang() {
+		studiengang(newVal, oldVal) {
 			this.filtern()
 		}
 	},

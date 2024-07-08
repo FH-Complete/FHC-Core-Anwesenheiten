@@ -22,7 +22,6 @@ export const LektorComponent = {
 		LehreinheitenDropdown,
 		MaUIDDropdown,
 		KontrollenDropdown,
-		ProgressSpinner: primevue.progressspinner,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -59,10 +58,10 @@ export const LektorComponent = {
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{title: this.$p.t('global/foto'), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
-					{title: this.$p.t('person/student'), field: 'prestudent_id', visible: false,tooltip:false, minWidth: 150},
-					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
-					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
-					{title: this.$p.t('lehre/gruppe'), field: 'gruppe', headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('person/student'), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false,tooltip:false, minWidth: 150},
+					{title: this.$p.t('person/vorname'), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('person/nachname'), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$p.t('lehre/gruppe'), field: 'gruppe', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$p.t('global/datum'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, hozAlign:"center",widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$p.t('global/summe'), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false, minWidth: 150},
 				],
@@ -166,7 +165,7 @@ export const LektorComponent = {
 			// set tabulator column definition to show every distinct date fetched
 
 			if(!this.lektorState.showAllVar) {
-				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 4)
+				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
 				this.lektorState.dates.forEach(date => {
 					const dateParts = date.split( "-")
 					const colTitle = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
@@ -180,13 +179,15 @@ export const LektorComponent = {
 
 				this.lektorState.tableStudentData = this.setupAllData(newCols)
 				this.lektorState.tabulatorCols = newCols
+				this.$refs.anwesenheitenTable.tabulator.clearSort()
 				this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
 				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
 				this.lektorState.showAllVar = true
 			} else {
 
-				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns);
-				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
+				this.$refs.anwesenheitenTable.tabulator.clearSort()
+				// use selectedDate watcher to retrieve single column table state
+				this.selectedDate = new Date(this.selectedDate)
 
 				this.lektorState.showAllVar = false
 			}
@@ -393,6 +394,7 @@ export const LektorComponent = {
 			})
 
 			// TODO: consider show all toggle
+			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 		},
 		openDeleteModal () {
@@ -478,7 +480,7 @@ export const LektorComponent = {
 				return as > bs ? 1 : a < b ? -1 : 0
 			})
 		},
-		setup() {
+		async setup() {
 			this.lektorState.termine.forEach(termin => {
 				const dateParts = termin.datum.split( "-")
 				termin.datumFrontend = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
@@ -542,23 +544,22 @@ export const LektorComponent = {
 			} else {
 				const cols = this.$refs.anwesenheitenTable.tabulator.getColumns()
 
-				// phrasen bandaid
-				cols.find(e => e.getField() === 'foto').updateDefinition({title: this.$p.t('global/foto')})
-				cols.find(e => e.getField() === 'prestudent_id').updateDefinition({title: this.$p.t('person/student')})
-				cols.find(e => e.getField() === 'vorname').updateDefinition({title: this.$p.t('person/vorname')})
-				cols.find(e => e.getField() === 'nachname').updateDefinition({title: this.$p.t('person/nachname')})
-				cols.find(e => e.getField() === 'gruppe').updateDefinition({title: this.$p.t('lehre/gruppe')})
-				cols.find(e => e.getField() === 'sum').updateDefinition({title: this.$p.t('global/summe')})
-				this.anwesenheitenTabulatorOptions.columns[0].title = this.$p.t('global/foto')
-				this.anwesenheitenTabulatorOptions.columns[1].title = this.$p.t('person/student')
-				this.anwesenheitenTabulatorOptions.columns[2].title = this.$p.t('person/vorname')
-				this.anwesenheitenTabulatorOptions.columns[3].title = this.$p.t('person/nachname')
-				this.anwesenheitenTabulatorOptions.columns[4].title = this.$p.t('lehre/gruppe')
-				this.anwesenheitenTabulatorOptions.columns[6].title = this.$p.t('global/summe')
+				this.anwesenheitenTabulatorOptions.columns[0].title = await this.$p.t('global/foto')
+				this.anwesenheitenTabulatorOptions.columns[1].title = await this.$p.t('person/student')
+				this.anwesenheitenTabulatorOptions.columns[2].title = await this.$p.t('person/vorname')
+				this.anwesenheitenTabulatorOptions.columns[3].title = await this.$p.t('person/nachname')
+				this.anwesenheitenTabulatorOptions.columns[4].title = await this.$p.t('lehre/gruppe')
+				this.anwesenheitenTabulatorOptions.columns[6].title = await this.$p.t('global/summe')
+
+				this.anwesenheitenTabulatorOptions.columns.forEach(c => console.log(c.title))
 
 				this.lektorState.tabulatorCols = cols
+				this.$refs.anwesenheitenTable.tabulator.clearSort()
+				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			}
+
+			this.loading = false
 		},
 		setupLektorState(){
 			this.lektorState.students = this.$entryParams.lektorState.students
@@ -584,6 +585,7 @@ export const LektorComponent = {
 			this.setup()
 		},
 		maUIDchangedHandler(oldIds) {
+			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.LEDropdown.resetData()
 			this.handleLEChanged()
 		},
@@ -644,6 +646,7 @@ export const LektorComponent = {
 			this.tableBuiltResolve = resolve
 		},
 		async setupMounted(){
+			this.loading = true
 			this.tableBuiltPromise = new Promise(this.tableResolve)
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
@@ -680,7 +683,6 @@ export const LektorComponent = {
 			if(this.$entryParams.lektorState) {
 				this.setupLektorState()
 			} else {
-				this.loading = true
 				this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
 					this.setupData(res.data)
 				}).finally(() => {
@@ -703,9 +705,13 @@ export const LektorComponent = {
 			})
 
 			this.getExistingQRCode()
+		},
+		async awaitPhrasen() {
+			await this.$entryParams.phrasenPromise
 		}
 	},
 	created(){
+		this.awaitPhrasen()
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.$entryParams.permissions.authID
@@ -722,6 +728,11 @@ export const LektorComponent = {
 	},
 	watch: {
 		selectedDate(newVal) {
+			if(newVal === "") {
+				this.selectedDate = new Date(Date.now())
+				return
+			}
+
 			this.lektorState.showAllVar = false
 			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
 			const dateParts = selectedDateDBFormatted.split( "-")
@@ -742,6 +753,7 @@ export const LektorComponent = {
 				const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
 				foundEntry.status = status
 			})
+			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			this.$refs.showAllTickbox.checked = false
@@ -757,9 +769,13 @@ export const LektorComponent = {
 		}
 	},
 	template:`
+
+		<div v-show="loading" style="position: absolute; width: 100%; height: 100%; background: rgba(255,255,255,0.5); z-index: 9999998;">
+		</div>
+		
 		<core-base-layout>			
 			<template #main>
-				<ProgressSpinner v-show="true"/>
+				
 				
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
 					<template v-slot:title>{{ $p.t('global/neueAnwKontrolle') }}</template>
@@ -769,6 +785,7 @@ export const LektorComponent = {
 							<div class="col-10">
 								<datepicker
 									v-model="lektorState.beginn"
+									:clearable="false"
 									time-picker="true"
 									text-input="true"
 									auto-apply="true">
@@ -780,6 +797,7 @@ export const LektorComponent = {
 							<div class="col-10">
 								<datepicker
 									v-model="lektorState.ende"
+									:clearable="false"
 									time-picker="true"
 									text-input="true"
 									auto-apply="true">
@@ -791,6 +809,7 @@ export const LektorComponent = {
 							<div class="col-10" style="height: 40px">
 								<datepicker
 									v-model="selectedDate"
+									:clearable="false"
 									locale="de"
 									format="dd.MM.yyyy"
 									text-input="true"
@@ -866,6 +885,7 @@ export const LektorComponent = {
 					<div class="col-2" style="height: 40px">
 						<datepicker
 							v-model="selectedDate"
+							:clearable="false"
 							locale="de"
 							format="dd.MM.yyyy"
 							text-input="true"
@@ -907,6 +927,7 @@ export const LektorComponent = {
 			</template>
 		</core-base-layout>
 	</div>`
+
 };
 
 export default LektorComponent

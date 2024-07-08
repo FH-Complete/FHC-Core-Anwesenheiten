@@ -31,6 +31,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_History_model', 'AnwesenheitUserHistoryModel');
+
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
@@ -40,6 +42,15 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
+//		// Loads LogLib with different debug trace levels to get data of the job that extends this class
+//		// It also specify parameters to set database fields
+//		$this->load->library('LogLib', array(
+//			'classIndex' => 5,
+//			'functionIndex' => 5,
+//			'lineIndex' => 4,
+//			'dbLogType' => 'API', // required
+//			'dbExecuteUser' => 'RESTful API'
+//		));
 
 		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
 		require_once($qrsetting_filename);
@@ -146,7 +157,11 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
-		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten);
+
+//		$result = $this->_ci->AnwesenheitUserModel->load($changedAnwesenheiten[0]->anwesenheit_user_id);
+//		$this->terminateWithSuccess(getData($result));
+
+		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten, true);
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess(getData($result));
@@ -246,12 +261,11 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->getPostJSON();
 
 		if(!property_exists($result, 'le_id') || !property_exists($result, 'datum')
-			|| !property_exists($result, 'von') || !property_exists($result, 'bis')) {
+			|| !property_exists($result, 'beginn') || !property_exists($result, 'ende')) {
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
 		$le_id = $result->le_id;
-
 		$date = $result->datum;
 
 		$beginn = $result->beginn;
@@ -412,6 +426,14 @@ class KontrolleApi extends FHCAPI_Controller
 			]), 'general');
 		}
 		$anwesenheit_id = getData($resultKontrolle)[0]->anwesenheit_id;
+
+		// TODO: log delete
+//		$this->_ci->logInfo('Test Log KontrolleApi/deleteAnwesenheitskontrolle');
+
+
+		// delete history of user entries and write into log file
+		$this->_ci->AnwesenheitUserHistoryModel->deleteAllByAnwesenheitId($anwesenheit_id);
+
 
 		// delete user anwesenheiten by anwesenheit_id of kontrolle
 		$resultDelete = $this->_ci->AnwesenheitUserModel->deleteAllByAnwesenheitId($anwesenheit_id);

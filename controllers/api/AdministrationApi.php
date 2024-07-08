@@ -15,8 +15,10 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_History_model', 'AnwesenheitUserHistoryModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
@@ -89,8 +91,28 @@ class AdministrationApi extends FHCAPI_Controller
 			$this->terminateWithError($updateAnwesenheit);
 
 		// check notiz size and trim to char varying 255 if it is too big
-
 		$notiz = substr($notiz, 0, 255);
+		$version = $entschuldigung->version + 1;
+
+		// add old version to history table
+		$insert = $this->_ci->EntschuldigungHistoryModel->insert(
+			array(
+				'entschuldigung_id' => $entschuldigung->entschuldigung_id,
+				'person_id' => $entschuldigung->person_id,
+				'von' => $entschuldigung->von,
+				'bis' => $entschuldigung->bis,
+				'dms_id' => $entschuldigung->dms_id,
+				'insertvon' => $entschuldigung->insertvon,
+				'insertamum' => $entschuldigung->insertamum,
+				'updatevon' => $entschuldigung->updatevon,
+				'updateamum' => $entschuldigung->updateamum,
+				'statussetvon' => $entschuldigung->statussetvon,
+				'statussetamum' => $entschuldigung->statussetamum,
+				'akzeptiert' => $entschuldigung->akzeptiert,
+				'notiz' => $entschuldigung->notiz,
+				'version' => $entschuldigung->version
+			)
+		);
 
 		$update = $this->_ci->EntschuldigungModel->update(
 			$entschuldigung->entschuldigung_id,
@@ -100,7 +122,8 @@ class AdministrationApi extends FHCAPI_Controller
 				'statussetvon' => $this->_uid,
 				'statussetamum' => date('Y-m-d H:i:s'),
 				'akzeptiert' => $status,
-				'notiz' => $notiz
+				'notiz' => $notiz,
+				'version' => $version
 			)
 		);
 

@@ -13,8 +13,53 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->pk = 'anwesenheit_user_id';
 	}
 
+	public function addHistoryEntry($entry){
+		$query = "
+			INSERT INTO extension.tbl_anwesenheit_user_history (
+			    anwesenheit_user_id,
+			    anwesenheit_id, 
+			    prestudent_id, 
+			    status,
+			    statussetvon,
+			    statussetamum,
+			    notiz,
+			    version,
+			    insertamum,
+			    insertvon,
+			    updateamum,
+			    updatevon
+			) VALUES (
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?,
+			    ?
+			)
+		";
 
-	public function updateAnwesenheiten($changedAnwesenheiten)
+		$this->execQuery($query,[
+			$entry->anwesenheit_user_id,
+			$entry->anwesenheit_id,
+			$entry->prestudent_id,
+			$entry->status,
+			$entry->statussetvon,
+			$entry->statussetamum,
+			$entry->notiz,
+			$entry->version,
+			$entry->insertamum,
+			$entry->insertvon,
+			$entry->updateamum,
+			$entry->updatevon]);
+	}
+
+	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false)
 	{
 
 		// TODO (johann) maybe there is a better way to update a set of entries?
@@ -22,13 +67,28 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->db->trans_start(false);
 
 		foreach ($changedAnwesenheiten as $entry) {
+			$existingResult = $this->load($entry->anwesenheit_user_id);
+			if(isError($existingResult)) {
+				$this->db->trans_rollback();
+				return error($existingResult->msg, EXIT_ERROR);
+			}
+
+			$existing = getData($existingResult)[0];
+
+			if($manualUpdate === true){
+				$this->addHistoryEntry($existing);
+			}
+
 			if(property_exists($entry, 'notiz')) {
+
 				$result = $this->update($entry->anwesenheit_user_id, array(
+					'version' => $existing->version + 1,
 					'status' => $entry->status,
 					'notiz' => $entry->notiz
 				));
 			} else {
 				$result = $this->update($entry->anwesenheit_user_id, array(
+					'version' => $existing->version + 1,
 					'status' => $entry->status
 				));
 			}
@@ -122,6 +182,9 @@ class Anwesenheit_User_model extends \DB_Model
 					'anwesenheit_id' => $anwesenheit_id,
 					'prestudent_id' => $entry->prestudent_id,
 					'status' => $status,
+					'version' => 1,
+					'statussetvon' => getAuthUID(),
+					'statussetamum' => $this->escape('NOW()'),
 					'insertamum' => $this->escape('NOW()'),
 					'insertvon' => getAuthUID()
 				));

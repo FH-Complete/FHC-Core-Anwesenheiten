@@ -6,7 +6,6 @@ $includesArray = array(
 	'jquery3' => true,
 	'jqueryui1' => true,
 	'bootstrap5' => true,
-	'fontawesome4' => true,
 	'fontawesome6' => true,
 	'tabulator5' => true,
 	'tablesorter2' => true,

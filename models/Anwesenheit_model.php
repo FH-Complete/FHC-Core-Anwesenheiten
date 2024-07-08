@@ -278,7 +278,52 @@ class Anwesenheit_model extends \DB_Model
 
 	public function updateAnwesenheitenByDatesStudent($von, $bis, $person_id, $status)
 	{
-		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?
+
+		$query='INSERT INTO extension.tbl_anwesenheit_user_history (
+			anwesenheit_user_id,
+			anwesenheit_id,
+			prestudent_id,
+			status,
+			statussetvon,
+			statussetamum,
+			notiz,
+			version,
+			insertamum,
+			insertvon,
+			updateamum,
+			updatevon
+		) SELECT 
+		    anwesenheit_user_id,
+			anwesenheit_id,
+			prestudent_id,
+			status,
+			statussetvon,
+			statussetamum,
+			notiz,
+			version,
+			insertamum,
+			insertvon,
+			updateamum,
+			updatevon
+			FROM extension.tbl_anwesenheit_user
+			WHERE anwesenheit_user_id IN (
+				SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id
+				FROM extension.tbl_anwesenheit_user
+				JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id
+				WHERE von >= ?
+					AND bis <= ?
+					AND prestudent_id IN (
+						SELECT prestudent_id
+						FROM tbl_prestudent
+						WHERE person_id = ?
+					)
+			)
+			AND status != ?';
+
+		$resultHistory = $this->execQuery($query, [$von, $bis, $person_id, 'anwesend']);
+
+
+		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1
 					WHERE anwesenheit_user_id IN (
 						SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id
 						FROM extension.tbl_anwesenheit_user
@@ -292,8 +337,9 @@ class Anwesenheit_model extends \DB_Model
 							)
 					)
 					AND status != ?';
+		$resultUpdate = $this->execQuery($query, [$status, $von, $bis, $person_id, 'anwesend']);
 
-		return $this->execQuery($query, [$status, $von, $bis, $person_id, 'anwesend']);
+		return $resultUpdate;
 	}
 
 	public function getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz) {

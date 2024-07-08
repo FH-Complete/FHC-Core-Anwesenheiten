@@ -67,14 +67,6 @@ export default {
 	},
 	methods: {
 		triggerUpload() {
-			if(!this.entschuldigung.von) this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
-			if(!this.entschuldigung.bis) this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
-			if(!this.entschuldigung.files.length) this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
-
-			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
-			{
-				return
-			}
 			if (!this.validate())
 			{
 				return false;
@@ -89,6 +81,9 @@ export default {
 			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
 			formData.append('person_id', person_id);
+
+
+
 			this.$fhcApi.factory.Profil.addEntschuldigung(formData).then(res => {
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
@@ -153,6 +148,24 @@ export default {
 			this.$refs.modalContainerEntschuldigungUpload.show()
 		},
 		validate: function() {
+			if(!this.entschuldigung.von) {
+				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
+				return false
+			}
+			if(!this.entschuldigung.bis) {
+				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
+				return false
+			}
+			if(!this.entschuldigung.files.length) {
+				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
+				return false
+			}
+			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
+			{
+				return false
+			}
+
+
 			// javaScript Date objects are 0-indexed, subtract 1 from the month
 
 			const vonParts = this.entschuldigung.von.split(/[ .:]/); // Split by dot, space, or colon
@@ -163,7 +176,7 @@ export default {
 
 			if (bisDate < vonDate)
 			{
-				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
+				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateTimes'));
 				return false
 			}
 
@@ -212,6 +225,31 @@ export default {
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
+	},
+	watch: {
+		'entschuldigung.files'(newVal) {
+			console.log(newVal)
+			if(newVal === [] || newVal === null || newVal === undefined) return
+
+			// check filetype on input change
+			const file = newVal[0]
+			if(!file) return
+
+			console.log(file)
+			if(file.type && (
+				file.type.includes('jpg')
+				|| file.type.includes('jpeg')
+				|| file.type.includes('pdf')
+				|| file.type.includes('png'))
+			) {
+				// all fine
+			} else {
+				// clear and alert for filetypes
+				this.$fhcAlert.alertInfo(this.$p.t('global/allowedEntschuldigungFileTypes'))
+				this.entschuldigung.files = []
+			}
+
+		}
 	},
 	template: `
 

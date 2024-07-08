@@ -106,7 +106,9 @@ anwesenheitApp.config.globalProperties.$capitalize = (string) => {
 anwesenheitApp
 	.use(router)
 	.use(FhcApi, fhcapifactory)
-	.use(primevue.config.default, {zIndex: {overlay: 9999}})
+	.use(primevue.config.default, {
+		zIndex: {overlay: 9999},
+	})
 	.use(Phrasen)
 	.mount("#main");
 

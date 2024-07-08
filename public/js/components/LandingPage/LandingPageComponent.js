@@ -216,6 +216,10 @@ export default {
 					})
 
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
+				} else if(lv_id && sem_kurzbz && le_ids) {
+					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(()=>{
+						resolve()
+					})
 				} else {
 					resolve()
 				}
@@ -335,6 +339,9 @@ export default {
 			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
 		},
+		async awaitPhrasen(){
+			await this.$entryParams.phrasenPromise
+		}
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
@@ -350,7 +357,7 @@ export default {
 
 		console.log(this.$entryParams)
 		if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
-
+		this.awaitPhrasen();
 	},
 	watch: {
 
@@ -388,10 +395,9 @@ export default {
 				</template>
 			</bs-modal>
 		
-			<div>
+			<div style="position: relative">
 				<template  v-if="permissioncount > 1">
 					<core-tabs :default="getCurrentTab" :modelValue="currentTab" class="mb-5" :config="tabs"></core-tabs>
-					
 				</template>
 				<template v-else-if="permissioncount === 1">
 					<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>

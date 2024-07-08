@@ -105,8 +105,7 @@ export default {
 			this.appSideMenuEntries = payload;
 		},
 		anwCalc(values, data, calcParams){
-			// TODO: might not exist in time when network is slow
-			return (this.sum ? this.sum : '-') + ' %'
+			return this.sum + ' %'
 		},
 		async deleteAnwesenheit(cell) {
 			if (await this.$fhcAlert.confirmDelete() === false)

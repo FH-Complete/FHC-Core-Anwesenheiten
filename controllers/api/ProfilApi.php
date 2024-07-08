@@ -237,7 +237,7 @@ class ProfilApi extends FHCAPI_Controller
 			'name' => $_FILES['files']['name'],
 			'mimetype' => $_FILES['files']['type'],
 			'insertamum' => date('Y-m-d H:i:s'),
-			'insertvon' => $this->_uid
+			'insertvon' => $this->_uid,
 		);
 
 		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
@@ -253,7 +253,8 @@ class ProfilApi extends FHCAPI_Controller
 				'von' => $von,
 				'bis' => $bis,
 				'dms_id' => $dmsId,
-				'insertvon' => $this->_uid
+				'insertvon' => $this->_uid,
+				'version' => 1
 			)
 		);
 
@@ -324,8 +325,8 @@ class ProfilApi extends FHCAPI_Controller
 		$data = json_decode($this->input->raw_input_stream, true);
 		$entschuldigung_id = $data['entschuldigung_id'];
 
-//		if (isEmptyString($entschuldigung_id))
-//			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		if (isEmptyString($entschuldigung_id))
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
 
@@ -333,7 +334,11 @@ class ProfilApi extends FHCAPI_Controller
 		{
 			$entschuldigung = getData($zuordnung)[0];
 
-			// terminate with error if entschuldigung is already accepted/declined
+			$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
+			$person_id = $entschuldigung->person_id;
+
+			// students are only allowed to fetch their own entschuldigungen
+			if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
 
@@ -360,9 +365,11 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
-
-
+		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
 		$person_id = $result->person_id;
+
+		// students are only allowed to fetch their own entschuldigungen
+		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		if(is_object($person_id) || isEmptyString($person_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');

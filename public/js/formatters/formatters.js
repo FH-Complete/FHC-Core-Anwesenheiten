@@ -1,4 +1,8 @@
 export const lektorFormatters = {
+	centeredFormatter: function(cell) {
+		const val = cell.getValue()
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+val+'</div>'
+	},
 	entschuldigtColoring: function (row) {
 		const data = row.getData()
 
@@ -10,32 +14,32 @@ export const lektorFormatters = {
 		const data = cell.getData().status
 		if (data === "anwesend") {
 			cell.getElement().style.color = "#28a745";
-			return '<i class="fa fa-check"></i>'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
 		} else if (data === "abwesend") {
 			cell.getElement().style.color = "#dc3545";
-			return '<i class="fa fa-xmark"></i>'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
 		} else if (data === "entschuldigt") {
-			cell.getElement().style.color = "#28a745";
+			cell.getElement().style.color = "#0335f5";
 			// return '<i class="fa fa-bed"></i>'
-			return '<i class="fa fa-check"></i>' + '(Entschuldigung akzeptiert)'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 		} else return '-'
 	},
 	anwesenheitFormatterValue: function (cell) {
 		const data = cell.getValue()
 		if (data === "anwesend") {
 			cell.getElement().style.color = "#28a745";
-			return '<i class="fa fa-check"></i>'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
 		} else if (data === "abwesend") {
 			cell.getElement().style.color = "#dc3545";
-			return '<i class="fa fa-xmark"></i>'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
 		} else if (data === "entschuldigt") {
-			cell.getElement().style.color = "#28a745";
+			cell.getElement().style.color = "#0335f5";
 			// return '<i class="fa fa-bed"></i>'
-			return '<i class="fa fa-check"></i>' + '(Entschuldigung akzeptiert)'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 		} else return '-'
 	},
 	percentFormatter: function (cell) {
-		return cell.getData().sum + ' %';
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ cell.getData().sum + ' %</div>'
 	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();
@@ -56,7 +60,7 @@ export const lektorFormatters = {
 		let value = cell.getValue();
 		if(value === undefined) return
 
-		return '<img src="'+value+'" style="max-height: 64px"></img>'
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><img src="'+value+'" style="max-height: 64px"></img></div>'
 	},
 	dateOnlyTimeFormatter: function (cell) {
 		const value = cell.getValue();
