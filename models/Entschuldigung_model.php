@@ -13,6 +13,49 @@ class Entschuldigung_model extends \DB_Model
         $this->pk = 'entschuldigung_id';
     }
 
+	public function getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $person_id, $von, $bis) {
+		$query = 'SELECT anwesenheit_user_id FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_user USING (anwesenheit_id)
+				WHERE von >= ?
+					AND bis <= ?
+					AND prestudent_id = (
+						SELECT tbl_prestudent.prestudent_id
+						FROM tbl_prestudent JOIN tbl_student USING (prestudent_id)
+						WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
+					  	AND person_id = ?
+						LIMIT 1
+				)
+				EXCEPT
+				SELECT anwesenheit_user_id
+				FROM
+					(SELECT anwesenheit_id, extension.tbl_anwesenheit.von as kVon,
+							extension.tbl_anwesenheit.bis as kBis,
+							andereEntsch.von as eVon,
+							andereEntsch.bis as eBis, pid
+					FROM extension.tbl_anwesenheit
+					JOIN
+			
+						(SELECT extension.tbl_anwesenheit_entschuldigung.*, person_id as pid, student_uid, prestudent_id
+						FROM extension.tbl_anwesenheit_entschuldigung
+							JOIN tbl_benutzer USING (person_id)
+							JOIN tbl_student ON (tbl_benutzer.uid = tbl_student.student_uid)
+						WHERE person_id = ?
+						AND (
+							von <= ?
+							OR bis >= ?)
+						AND akzeptiert = true
+						AND entschuldigung_id != ?) AS andereEntsch
+						ON (
+							andereEntsch.von <= extension.tbl_anwesenheit.von
+							  AND
+							andereEntsch.bis >= extension.tbl_anwesenheit.bis
+							)
+				
+					) AS gedeckteAnwesenheiten
+				JOIN extension.tbl_anwesenheit_user USING (anwesenheit_id)';
+
+		return $this->execReadOnlyQuery($query, array($von, $bis, $person_id, $person_id, $von, $bis, $entschuldigung_id));
+	}
+
 	public function getEntschuldigungenByPerson($person_id)
 	{
 		$query = 'SELECT dms_id, von, bis, akzeptiert, entschuldigung_id, notiz
@@ -88,16 +131,10 @@ class Entschuldigung_model extends \DB_Model
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND (';
+					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ?
+					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';
 
-		foreach($stg_kz_arr as $index => $stg_kz) {
-			if($index > 0) $query .= " OR ";
-			$query .= "tbl_studiengang.studiengang_kz = {$stg_kz}";
-		}
-
-		$query .= ') ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';
-
-		return $this->execReadOnlyQuery($query);
+		return $this->execReadOnlyQuery($query, [$stg_kz_arr]);
 	}
 	
 	public function checkZuordnungByDms($dms_id, $person_id = null)

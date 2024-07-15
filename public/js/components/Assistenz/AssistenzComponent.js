@@ -2,7 +2,7 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters, universalFormatter} from "../../formatters/formatters";
+import {studentFormatters} from "../../formatters/formatters";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
@@ -41,22 +41,25 @@ export const AssistenzComponent = {
 					},
 					body:(url,config,params)=>{
 						return JSON.stringify({
-							stg_kz_arr: this.$entryParams.permissions.studiengaengeAssistenz
+							stg_kz_arr: this.$entryParams.permissions.assistenz ?
+								this.$entryParams.permissions.studiengaengeAssistenz :
+								this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
 						})
 					}
 				},
 				layout: 'fitDataStretch',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
+				height: false,
 				columns: [
-					{title: this.$p.t('person/vorname'), field: 'vorname', headerFilter: true},
-					{title: this.$p.t('person/nachname'), field: 'nachname', headerFilter: true} ,
-					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, tooltip:false},
+					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', headerFilter: true},
+					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', headerFilter: true} ,
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip:false},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
-					{title: this.$p.t('lehre/studiengang'), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
-					{title: this.$p.t('ui/aktion'), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
-					{title: this.$p.t('global/begruendungAnw'), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
+					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
+					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
 				],
 				persistence: {
 					sort: false,
@@ -108,8 +111,18 @@ export const AssistenzComponent = {
 		permissions: []
 	},
 	methods: {
-		newSideMenuEntryHandler: function(payload) {
-			this.sideMenuEntries = payload;
+		entschuldigungstatusFormatter(cell) {
+			let data = cell.getValue()
+			if (data == null) {
+				cell.getElement().style.color = "#17a2b8"
+				return this.$p.t('global/hochgeladen')
+			} else if (data === true) {
+				cell.getElement().style.color = "#28a745";
+				return this.$p.t('global/akzeptiert')
+			} else if (data === false) {
+				cell.getElement().style.color = "#dc3545";
+				return this.$p.t('global/abgelehnt')
+			}
 		},
 		updateEntschuldigung: function(cell, status, notizParam = '')
 		{
@@ -195,11 +208,6 @@ export const AssistenzComponent = {
 		sgChangedHandler: function(e) {
 			this.studiengang = e.value ? e.value.studiengang_kz : null
 		},
-		routeToLandingPage(){
-			this.$router.push({
-				name: 'LandingPage'
-			})
-		},
 		checkEntryParamPermissions() {
 			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
 				this.$entryParams.permissions = JSON.parse(this.permissions)
@@ -211,38 +219,30 @@ export const AssistenzComponent = {
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['global', 'person', 'lehre', 'table', 'filter', 'ui'])
 			}
 		},
-		sleep(ms) {
-			return new Promise(resolve => setTimeout(resolve, ms));
-		},
 		async setup() {
 			await this.$entryParams.phrasenPromise
 			await this.tableBuiltPromise
 
-			// TODO: avoid this race condition workaround -> find reliable table built event?
-			// await this.sleep(1000)
-
 			const cols = this.$refs.assistenzTable.tabulator.getColumns()
 
 			// phrasen bandaid
-			cols.find(e => e.getField() === 'vorname').updateDefinition({title: this.$p.t('person/vorname')})
-			cols.find(e => e.getField() === 'nachname').updateDefinition({title: this.$p.t('person/nachname')})
-			cols.find(e => e.getField() === 'akzeptiert').updateDefinition({title: this.$p.t('global/status')})
+			cols.find(e => e.getField() === 'vorname').updateDefinition({title: this.$capitalize(this.$p.t('person/vorname'))})
+			cols.find(e => e.getField() === 'nachname').updateDefinition({title: this.$capitalize(this.$p.t('person/nachname'))})
+			cols.find(e => e.getField() === 'akzeptiert').updateDefinition({title: this.$capitalize(this.$p.t('global/status'))})
 			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
 			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
-			cols.find(e => e.getField() === 'studiengang_kz').updateDefinition({title: this.$p.t('lehre/studiengang')})
-			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$p.t('ui/aktion')})
-			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$p.t('global/begruendungAnw')})
+			cols.find(e => e.getField() === 'studiengang_kz').updateDefinition({title: this.$capitalize(this.$p.t('lehre/studiengang'))})
+			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$capitalize(this.$p.t('ui/aktion'))})
+			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$capitalize(this.$p.t('global/begruendungAnw'))})
 
-
-			this.assistenzViewTabulatorOptions.columns[0].title = this.$p.t('person/vorname')
-			this.assistenzViewTabulatorOptions.columns[1].title = this.$p.t('person/nachname')
-			this.assistenzViewTabulatorOptions.columns[2].title = this.$p.t('global/status')
+			this.assistenzViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('person/vorname'))
+			this.assistenzViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('person/nachname'))
+			this.assistenzViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/status'))
 			this.assistenzViewTabulatorOptions.columns[3].title = this.$capitalize(this.$p.t('ui/von'))
 			this.assistenzViewTabulatorOptions.columns[4].title = this.$capitalize(this.$p.t('global/bis'))
-			this.assistenzViewTabulatorOptions.columns[5].title = this.$p.t('lehre/studiengang')
-			this.assistenzViewTabulatorOptions.columns[6].title = this.$p.t('ui/aktion')
-			this.assistenzViewTabulatorOptions.columns[7].title = this.$p.t('global/begruendungAnw')
-			console.log('setup end')
+			this.assistenzViewTabulatorOptions.columns[5].title = this.$capitalize(this.$p.t('lehre/studiengang'))
+			this.assistenzViewTabulatorOptions.columns[6].title = this.$capitalize(this.$p.t('ui/aktion'))
+			this.assistenzViewTabulatorOptions.columns[7].title = this.$capitalize(this.$p.t('global/begruendungAnw'))
 		},
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
@@ -252,7 +252,6 @@ export const AssistenzComponent = {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.checkEntryParamPermissions()
 		this.setup()
-		console.log('assistenz page mounted')
 	},
 	watch: {
 		'zeitraum.von'() {
@@ -263,6 +262,12 @@ export const AssistenzComponent = {
 		},
 		studiengang(newVal, oldVal) {
 			this.filtern()
+		}
+	},
+	computed: {
+		getAllowedStg() {
+			return this.$entryParams?.permissions?.assistenz ? this.$entryParams?.permissions?.studiengaengeAssistenz
+				: this.$entryParams?.permissions?.admin ? this.$entryParams?.permissions?.studiengaengeAdmin : []
 		}
 	},
 	template: `
@@ -291,7 +296,7 @@ export const AssistenzComponent = {
 				<div class="col-2">
 					<div class="row mb-3 align-items-center">
 						<StudiengangDropdown
-							:allowedStg="$entryParams?.permissions?.studiengaengeAssistenz" @sgChanged="sgChangedHandler">
+							:allowedStg="getAllowedStg" @sgChanged="sgChangedHandler">
 						</StudiengangDropdown>
 					</div>
 				</div>
@@ -328,7 +333,7 @@ export const AssistenzComponent = {
 				ref="assistenzTable"
 				:tabulator-options="assistenzViewTabulatorOptions"
 				:tabulator-events="assistenzViewTabulatorEventHandlers"
-				@nw-new-entry="newSideMenuEntryHandler"
+				:sideMenu=false
 				:table-only=true
 				:hideTopMenu=false
 			></core-filter-cmpt>

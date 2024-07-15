@@ -27,6 +27,7 @@ export default {
 			currentTab: 0,
 			tabs: this.initTabs(),
 			loaded: false,
+			phrasenResolved: false,
 			permissioncount: Vue.ref(0)
 		};
 	},
@@ -91,8 +92,6 @@ export default {
 				this.$entryParams.stg_kz = searchParams.get('stg_kz')
 				this.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 				this.$entryParams.sem = searchParams.get('sem')
-				this.$entryParams.isCis = searchParams.get('nav') === 'false' ? true : false
-
 
 				this.$entryParams.notMissingParams = !!(this.$entryParams.lv_id && this.$entryParams.stg_kz && this.$entryParams.sem_kurzbz)
 
@@ -103,6 +102,7 @@ export default {
 				}
 
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
+				this.$entryParams.phrasenPromise.then(()=> {this.phrasenResolved = true})
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 
@@ -121,8 +121,6 @@ export default {
 			this.$entryParams.viewDataLv.orgform_kurzbz = Vue.ref('')
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = Vue.ref('')
 
-			console.log(this.$entryParams.viewDataLv)
-
 			this.$entryParams.viewDataStudent = {}
 			this.$entryParams.viewDataStudent.vorname = Vue.ref('')
 			this.$entryParams.viewDataStudent.nachname = Vue.ref('')
@@ -132,23 +130,6 @@ export default {
 			this.$entryParams.viewDataStudent.gruppe = Vue.ref('')
 			this.$entryParams.viewDataStudent.verband = Vue.ref('')
 			this.$entryParams.viewDataStudent.semester = Vue.ref('')
-		},
-		routeToStudent() {
-
-			if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-				this.$refs.modalContainerStudentSetup.show()
-			} else {
-				this.$router.push({
-					name: 'Student'
-				})
-			}
-
-
-		},
-		routeToAssistenz() {
-			this.$router.push({
-				name: 'Assistenz'
-			})
 		},
 		loadLvViewData() {
 			this.$fhcApi.factory.Info.getLvViewDataInfo(this.$entryParams.lv_id).then(res => {
@@ -168,28 +149,6 @@ export default {
 				name: 'Student'
 			})
 		},
-		async routeToLektor() {
-			await this.$entryParams.setupPromise
-			await this.$entryParams.phrasenPromise
-
-			const noLeAvailable = !this.$entryParams.selected_le_id && !this.$entryParams.available_le_ids.length
-			const hasMultipleLeAvailable = this.$entryParams.selected_le_id && this.$entryParams.available_le_ids.length > 1
-
-			if (hasMultipleLeAvailable || this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-				// MULTIPLE LE SHOW SELECTION MODAL
-				this.$refs.modalContainerKontrolleSetup.show()
-				return
-			} else if (noLeAvailable) {
-				// NO LE => NO KONTROLLE
-				this.$fhcAlert.alertError(this.$p.t('global/keineAnwkontrolleMöglichWeilLEFehlt'))
-				return
-			} else {
-				// ONE LE
-				this.$router.push({
-					name: 'Lektor'
-				})
-			}
-		},
 		async handleSetup() {
 			return new Promise(resolve => {
 				let ma_uid = this.$entryParams.permissions.authID
@@ -199,29 +158,27 @@ export default {
 
 				const promises = []
 
-				// TODO: default select closest one from stundenplan AND SHOW THAT
-
 				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
 				if((this.$entryParams.permissions.admin ||
 					this.$entryParams.permissions.assistenz) && lv_id && sem_kurzbz && le_ids) {
-
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz)
 
 					maProm.then(()=> {
 						ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
 						promises.push(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids))
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
-
-						resolve(Promise.all(promises))
+						Promise.all(promises).then(()=>{
+							resolve()
+						})
 					})
 
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
 				} else if(lv_id && sem_kurzbz && le_ids) {
 					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(()=>{
-						resolve()
+						resolve(true)
 					})
 				} else {
-					resolve()
+					resolve(true)
 				}
 
 			})
@@ -318,15 +275,12 @@ export default {
 					this.$entryParams.available_le_info = [...data]
 					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 
-					this.$entryParams.selected_le_id = le_ids.length ? le_ids[0] : null
+					this.$entryParams.selected_le_id = this.$entryParams.selected_le_info ? this.$entryParams.selected_le_info.lehreinheit_id : null
 					this.$entryParams.available_le_ids = [...le_ids]
-
-					// this.$refs.LEDropdown.resetData()
 
 
 				}).finally(() => {
 					resolve()
-					console.log('globalProps', this._.appContext.config.globalProperties)
 				})
 			})
 		},
@@ -349,13 +303,17 @@ export default {
 	mounted() {
 		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
 			this.loaded = true
+			console.log('landingPage mounted then', this.$entryParams)
+
+			this.$entryParams.phrasenPromise.then(()=> this.phrasenResolved = true)
+
 		})
 		if(this.$entryParams.permissions.lektor) this.permissioncount++
 		if(this.$entryParams.permissions.student) this.permissioncount++
 		if(this.$entryParams.permissions.assistenz) this.permissioncount = 3
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
 
-		console.log(this.$entryParams)
+
 		if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
 		this.awaitPhrasen();
 	},
@@ -376,8 +334,8 @@ export default {
 	<core-navigation-cmpt 
 		v-bind:add-side-menu-entries="sideMenuEntries"
 		v-bind:add-header-menu-entries="headerMenuEntries"
-		:hideTopMenu=$entryParams.isCis
-		:leftNavCssClasses="$entryParams.isCis ? '' : 'navbar navbar-left-side'">
+		hideTopMenu=true 
+		:leftNavCssClasses=''>
 	</core-navigation-cmpt>
 
 	<core-base-layout
@@ -388,7 +346,6 @@ export default {
 				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>
 				<template v-slot:default>
 					
-					
 				</template>
 				<template v-slot:footer>
 					<button type="button" class="btn btn-primary" :disabled="$entryParams?.selected_le_id === null" @click="loadLE">{{ $p.t('global/leLaden') }}</button>
@@ -397,9 +354,9 @@ export default {
 		
 			<div style="position: relative">
 				<template  v-if="permissioncount > 1">
-					<core-tabs :default="getCurrentTab" :modelValue="currentTab" class="mb-5" :config="tabs"></core-tabs>
+					<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs"></core-tabs>
 				</template>
-				<template v-else-if="permissioncount === 1">
+				<template v-else-if="permissioncount === 1 && phrasenResolved">
 					<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>
 					<StudentComponent v-if="$entryParams?.permissions?.student"></StudentComponent>
 					<AssistenzComponent v-if="$entryParams?.permissions?.assistenz || $entryParams?.permissions?.admin"></AssistenzComponent>

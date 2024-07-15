@@ -10,8 +10,8 @@ class Profil extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'getEntschuldigungFile' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw')
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'getEntschuldigungFile' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw')
 			)
 		);
 
@@ -50,12 +50,16 @@ class Profil extends Auth_Controller
 		$viewData = array(
 			'permissions' => [
 				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
-				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_ent_admin'),
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
+				'anwesend_status' => ANWESEND_STATUS,
+				'abwesend_status' => ABWESEND_STATUS,
+				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
 				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz'),
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
+				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
 				'controller' => "Profil"
 			]
 		);
@@ -71,9 +75,10 @@ class Profil extends Auth_Controller
 			$this->terminateWithError($this->_ci->p->t('global', 'wrongParameters'));
 
 		$person_id = getAuthPersonId();
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isEntAdmin = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
 
-		//TODO (david) noch prüfen ob der Mitarbeiter Zugriff haben sollte
-		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid))
+		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid) && ($isAdmin || $isEntAdmin))
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
 		else
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);

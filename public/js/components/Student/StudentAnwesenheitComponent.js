@@ -25,14 +25,21 @@ export default {
 					{title: 'Lehrveranstaltung', visible: false},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: studentFormatters.formAnwesenheit, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, widthGrow: 1, minWidth: 150},
 				],
 				groupBy: ['bezeichnung'],
 				groupStartOpen:false,
 				rowFormatter: studentFormatters.anwesenheitRowFormatter,
 				groupHeader: studentFormatters.customGroupHeader,
 				groupToggleElement:"header",
-				persistence:true,
+				persistence: {
+					sort: false,
+					filter: true,
+					headerFilter: false,
+					group: true,
+					page: true,
+					columns: true,
+				},
 				persistenceID: "studentAnwTable"
 			},
 			studentViewTabulatorEventHandlers: [{
@@ -47,9 +54,38 @@ export default {
 		};
 	},
 	methods: {
+		formAnwesenheit: function(cell)
+		{
+			let data = cell.getValue();
+			if (data === this.$entryParams.permissions.anwesend_status || data === this.$entryParams.permissions.entschuldigt_status)
+			{
+				cell.getElement().style.color = "#28a745";
+				let returnValue = '';
+				if (data === this.$entryParams.permissions.entschuldigt_status)
+					returnValue = ' ' + this.$p.t('global/entschuldigungAkzeptiert');
+				return '<i class="fa fa-check"></i>' + returnValue;
+			}
+			else if (data === this.$entryParams.permissions.abwesend_status)
+			{
+				let returnValue = '';
+				cell.getElement().style.color = "#dc3545";
+				if (cell.getData().exists_entschuldigung === 1)
+				{
+					if (cell.getData().status_entschuldigung === null)
+						returnValue =  ' ' + this.$p.t('global/entschuldigungOffen');
+					else if (cell.getData().status_entschuldigung === false)
+						returnValue = ' ' + this.$p.t('global/entschuldigungAbgelehnt');
+					else if (cell.getData().status_entschuldigung === true)
+						returnValue = ' ' + this.$p.t('global/entschuldigungAkzeptiert');
+				}
+				return '<i class="fa fa-xmark"></i>' + returnValue;
+
+			}
+			else
+				return '-'
+		},
 		ssChangedHandler: async function(studiensemester) {
 			this.studiensemester = studiensemester
-			console.log('ssChangedHandler')
 			this.loadAnwesenheitenByUID()
 		},
 		async loadAnwesenheitenByUID() {
@@ -68,7 +104,6 @@ export default {
 			});
 		},
 		async reload() {
-			console.log('reload')
 			this.loadAnwesenheitenByUID()
 		},
 		async setup(){
@@ -76,7 +111,6 @@ export default {
 			await this.$entryParams.phrasenPromise
 			await this.tableBuiltPromise
 
-			console.log('setup')
 			this.loadAnwesenheitenByUID()
 
 			this.studiensemester = this.$entryParams.sem_kurzbz
@@ -114,7 +148,6 @@ export default {
 				ref="uebersichtTable"
 				:tabulator-options="studentViewTabulatorOptions"
 				:tabulator-events="studentViewTabulatorEventHandlers"
-				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false
 				:sideMenu=false

@@ -21,16 +21,6 @@ const router = VueRouter.createRouter({
 			component: StudentByLvaComponent,
 			props: true
 		},
-		// {
-		// 	path: `/Kontrolle`,
-		// 	name: 'Lektor',
-		// 	component: LektorComponent,
-		// },
-		// {
-		// 	path: `/Profil`,
-		// 	name: 'Student',
-		// 	component: StudentComponent
-		// },
 		{
 			path: `/Administration`,
 			name: 'LandingPage',
@@ -47,18 +37,6 @@ const router = VueRouter.createRouter({
 			name: 'LandingPage',
 			component: LandingPageComponent
 		},
-		// {
-		// 	path: '/Profil/:catchAll(.*)',
-		// 	redirect: { name: 'Profil'}
-		// },
-		// {
-		// 	path: '/Kontrolle/:catchAll(.*)',
-		// 	redirect: { name: 'Kontrolle'}
-		// },
-		// {
-		// 	path: '/Administration/:catchAll(.*)',
-		// 	redirect: { name: 'Administration'}
-		// },
 		{
 			path: '/:catchAll(.*)',
 			redirect: { name: 'LandingPage'},
@@ -78,16 +56,12 @@ const anwesenheitApp = Vue.createApp({
 	data() {
 		return {
 			title: "AnwesenheitApp",
-			isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
 		}
 	},
 	props: {
 
 	},
 	methods: {
-
-
-
 	},
 	created(){
 
@@ -96,7 +70,10 @@ const anwesenheitApp = Vue.createApp({
 
 	}
 });
-anwesenheitApp.config.globalProperties.$entryParams = {}
+anwesenheitApp.config.globalProperties.$entryParams = {
+	isInFrame: !!window.frameElement,
+	isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
+}
 
 anwesenheitApp.config.globalProperties.$capitalize = (string) => {
 	if(!string) return ''

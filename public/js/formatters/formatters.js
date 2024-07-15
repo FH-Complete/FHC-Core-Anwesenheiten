@@ -10,34 +10,6 @@ export const lektorFormatters = {
 			row.getElement().style.color = "#0335f5";
 		}
 	},
-	anwesenheitFormatter: function (cell) {
-		const data = cell.getData().status
-		if (data === "anwesend") {
-			cell.getElement().style.color = "#28a745";
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
-		} else if (data === "abwesend") {
-			cell.getElement().style.color = "#dc3545";
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
-		} else if (data === "entschuldigt") {
-			cell.getElement().style.color = "#0335f5";
-			// return '<i class="fa fa-bed"></i>'
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
-		} else return '-'
-	},
-	anwesenheitFormatterValue: function (cell) {
-		const data = cell.getValue()
-		if (data === "anwesend") {
-			cell.getElement().style.color = "#28a745";
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
-		} else if (data === "abwesend") {
-			cell.getElement().style.color = "#dc3545";
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
-		} else if (data === "entschuldigt") {
-			cell.getElement().style.color = "#0335f5";
-			// return '<i class="fa fa-bed"></i>'
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
-		} else return '-'
-	},
 	percentFormatter: function (cell) {
 		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ cell.getData().sum + ' %</div>'
 	},
@@ -110,67 +82,6 @@ export const studentFormatters = {
 			'<div style="flex-grow: 1; text-align: right;">Anwesenheit ' + data[0].anwesenheit + " %" + '</div>' +
 			'</div>';
 	},
-	formAnwesenheit: function(cell)
-	{
-		let data = cell.getValue();
-		if (data === "anwesend" || data === 'entschuldigt')
-		{
-			cell.getElement().style.color = "#28a745";
-			let returnValue = '';
-			if (data === 'entschuldigt')
-				returnValue = '   (Entschuldigung akzeptiert)';
-			return '<i class="fa fa-check"></i>' + returnValue;
-		}
-		else if (data === "abwesend")
-		{
-			let returnValue = '';
-			cell.getElement().style.color = "#dc3545";
-			if (cell.getData().exists_entschuldigung === 1)
-			{
-				if (cell.getData().status_entschuldigung === null)
-					returnValue = ' (Entschuldigung offen) ';
-				else if (cell.getData().status_entschuldigung === false)
-					returnValue = ' (Entschuldigung abgelehnt) ';
-				else if (cell.getData().status_entschuldigung === true)
-					returnValue = ' (Entschuldigung akzeptiert) ';
-			}
-			return '<i class="fa fa-xmark"></i>' + returnValue;
 
-		}
-		else
-			return '-'
-	},
 
-	anwesenheitRowFormatter: function(row)
-	{
-		// let value = row.getData().student_status;
-		// let colorClass = "";
-		// if (value === 'anwesend' || value === 'entschuldigt')
-		// {
-		// 	colorClass = "#28a745";
-		// }
-		// else if (value === 'abwesend')
-		// {
-		// 	colorClass = "#dc3545";
-		// }
-		// row.getElement().style.color = colorClass;
-	}
-}
-
-export const universalFormatter = {
-
-	entschuldigungstatusFormatter: function(cell)
-	{
-		let data = cell.getValue()
-		if (data == null) {
-			cell.getElement().style.color = "#17a2b8"
-			return 'Hochgeladen'
-		} else if (data === true) {
-			cell.getElement().style.color = "#28a745";
-			return 'Akzeptiert';
-		} else if (data === false) {
-			cell.getElement().style.color = "#dc3545";
-			return 'Abgelehnt'
-		}
-	},
 }

@@ -12,19 +12,19 @@ class KontrolleApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getAllAnwesenheitenByStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'updateAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'regenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'degenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getNewQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getExistingQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'deleteQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getAllAnwesenheitenByStudiengang' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw'),
-				'getAnwQuoteForPrestudentIds' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
+				'getAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'updateAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'regenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'degenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getNewQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getExistingQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'deleteQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getAllAnwesenheitenByStudiengang' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getAnwQuoteForPrestudentIds' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
 
@@ -42,15 +42,19 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
-//		// Loads LogLib with different debug trace levels to get data of the job that extends this class
-//		// It also specify parameters to set database fields
-//		$this->load->library('LogLib', array(
-//			'classIndex' => 5,
-//			'functionIndex' => 5,
-//			'lineIndex' => 4,
-//			'dbLogType' => 'API', // required
-//			'dbExecuteUser' => 'RESTful API'
-//		));
+		// Loads LogLib with different debug trace levels to get data of the job that extends this class
+		// It also specify parameters to set database fields
+		$this->load->library('LogLib', array(
+			'classIndex' => 5,
+			'functionIndex' => 5,
+			'lineIndex' => 4,
+			'dbLogType' => 'API', // required
+			'dbExecuteUser' => 'RESTful API',
+			'requestId' => 'API',
+			'requestDataFormatter' => function($data) {
+				return json_encode($data);
+			}
+		), 'logLib');
 
 		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
 		require_once($qrsetting_filename);
@@ -66,7 +70,6 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$this->load->helper('hlp_sancho_helper');
 	}
-
 
 	// LEKTOR API
 
@@ -158,8 +161,6 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
 
-//		$result = $this->_ci->AnwesenheitUserModel->load($changedAnwesenheiten[0]->anwesenheit_user_id);
-//		$this->terminateWithSuccess(getData($result));
 
 		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten, true);
 
@@ -275,7 +276,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
 
 		if(isEmptyString($le_id) || $le_id === 'null'
-			|| $date === 'null' || $bis === 'null' || $bis === 'null') {
+			|| $date === 'null' || $von === 'null' || $bis === 'null') {
 			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
 		}
 
@@ -361,7 +362,7 @@ class KontrolleApi extends FHCAPI_Controller
 				$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
 
 			// insert Anwesenheiten entries of every Student as Abwesend
-			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis);
+			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, ABWESEND_STATUS, ENTSCHULDIGT_STATUS);
 
 			// count entschuldigt entries
 			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
@@ -390,7 +391,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		if($isAdmin) return true;
 
-		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz');
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
 		if($isAssistenz) return true;
 
 		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
@@ -428,12 +429,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$anwesenheit_id = getData($resultKontrolle)[0]->anwesenheit_id;
 
 		// TODO: log delete
-//		$this->_ci->logInfo('Test Log KontrolleApi/deleteAnwesenheitskontrolle');
-
+//		$this->logLib->logInfoDB('Test Log KontrolleApi/deleteAnwesenheitskontrolle');
 
 		// delete history of user entries and write into log file
 		$this->_ci->AnwesenheitUserHistoryModel->deleteAllByAnwesenheitId($anwesenheit_id);
-
 
 		// delete user anwesenheiten by anwesenheit_id of kontrolle
 		$resultDelete = $this->_ci->AnwesenheitUserModel->deleteAllByAnwesenheitId($anwesenheit_id);

@@ -12,17 +12,17 @@ class ProfilApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getAllAnw' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getProfileViewData' => array ('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'getAllAnwByUID' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'addEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'deleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'getEntschuldigungenByPerson' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'checkInAnwesenheit' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_student:rw'),
-				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'deleteUserAnwesenheitById' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
-				'deleteUserAnwesenheitByIds' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw')
+				'getAllAnw' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getProfileViewData' => array ('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'getAllAnwByUID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'addEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'deleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'getEntschuldigungenByPerson' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'checkInAnwesenheit' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
+				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'deleteUserAnwesenheitById' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
+				'deleteUserAnwesenheitByIds' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
 			)
 		);
 
@@ -94,7 +94,9 @@ class ProfilApi extends FHCAPI_Controller
 		$uid = $this->_ci->input->get('uid');
 
 		if($studiensemester === null || $studiensemester === 'null') {
-			$studiensemester = getData($this->_ci->StudiensemesterModel->getAkt());
+
+			$studiensemester = $this->_ci->StudiensemesterModel->getAkt();
+			$this->terminateWithSuccess($studiensemester);
 		}
 
 		if (!isEmptyString($studiensemester))
@@ -116,7 +118,7 @@ class ProfilApi extends FHCAPI_Controller
 		$result = $this->getPostJSON();
 		$zugangscode = $result->zugangscode;
 
-		$person_id = getAuthPersonId();
+		$uid = getAuthUID();
 
 		// find relevant entry from tbl_anwesenheit_check via zugangscode
 		$result = $this->_ci->QRModel->loadWhere(array('zugangscode' => $zugangscode));
@@ -130,11 +132,10 @@ class ProfilApi extends FHCAPI_Controller
 		$nowString = date("Y-m-d H:i:s");
 		$nowDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $nowString);
 
-		$interval = $nowDateTime->diff($codeDateTime);
+		$interval = $nowDateTime->diff($codeDateTime, true);
 		$timeDiffInMilliseconds = $interval->d * 24 * 60 * 60 * 1000 + $interval->h * 60 * 60 * 1000 + $interval->i * 60 * 1000 + $interval->s * 1000;
 
-		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError($this->p->t('global', 'errorCodeTooOld'), 'general');
-
+		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError(array($this->p->t('global', 'errorCodeTooOld'), $interval, $timeDiffInMilliseconds, REGENERATE_QR_TIMER), 'general');
 
 		// find relevant entry from tbl_anwesenheit via anwesenheit_id
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
@@ -148,53 +149,28 @@ class ProfilApi extends FHCAPI_Controller
 //			$this->terminateWithError($this->p->t('global', 'errorCodeSentInTimeOutsideKontrolle'), 'general');
 //		}
 
-
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
 
 		// find relevant lehreinheit from relevant entry
 		$result = $this->_ci->LehreinheitModel->loadWhere(array('lehreinheit_id' => $lehreinheit_id));
-//		$lehreinheit = $result->retval[0];
-
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCodeLinkedToInvalidLE'), 'general');
 
-		$resultAnwKontrolle = $this->_ci->AnwesenheitModel->getAllPersonIdsForLE($lehreinheit_id);
-		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorLEhasNoStudentsAttending'), 'general');
+		$result = $this->_ci->AnwesenheitModel->isPersonAttendingLehreinheit($lehreinheit_id, $uid);
 
-		// check if the student/person sending the request is actually supposed to be in that lehreinheit
-		$isLegit = false;
-		$prestudent_id = null;
-		forEach ($resultAnwKontrolle->retval as $entry) {
-			$isLegitLoopVar = $entry->person_id == $person_id;
-			if($isLegitLoopVar) {
-				$isLegit = true;
-				$prestudent_id = $entry->prestudent_id;
-				break;
-			}
-		}
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorNotParticipantOfLE'), 'general');
+		$data = getData($result);
+		$prestudent_id = $data[0]->prestudent_id;
 
-		// to avoid random people being anwesend in random lectures
-		if(!$isLegit) $this->terminateWithError($this->p->t('global', 'errorNotParticipantOfLE'), 'general');
-
-		// check if there is already an anwesenheit written to lehreinheit on date of check
-		$date = date('Y-m-d');
-		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLehreinheitByDate($lehreinheit_id, $von);
-
-		// all entries need to be inserted on start
+		$result = $this->_ci->AnwesenheitUserModel->getAnwesenheitEntryByPrestudentIdDateLehreinheitId($prestudent_id, $lehreinheit_id, $von);
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorNoUserEntriesForAttendanceCheckFound'), 'general');
-
-		$isLegit = false;
-		$entryToUpdate = null;
-		// find the entry in fetched and existing anwesenheiten of LE of today
-		forEach ($result->retval as $entry) {
-			$isLegit = $entry->prestudent_id == $prestudent_id;
-			if($isLegit) $entryToUpdate = $entry;
-		}
+		$entryToUpdate = getData($result)[0];
 
 		// finally update the entry to anwesend
-		if($entryToUpdate) {
+		if($entryToUpdate && $entryToUpdate->status === ANWESEND_STATUS) {
+
 
 			$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, array(
-				'status' => 'anwesend',
+				'status' => ANWESEND_STATUS,
 			));
 
 			if (isError($result)) {
@@ -205,15 +181,14 @@ class ProfilApi extends FHCAPI_Controller
 				// if inserted successfully return some information to display who has entered
 				// his anwesenheitscheck for which date and lehreinheit
 				$this->terminateWithSuccess(array(
-					'anwesenheitEntry' => json_encode($entry),
 					'viewData' => json_encode($viewData),
-					$nowDateTime, $codeDateTime, $interval
+					'von' => json_encode($von),
+					'bis' => json_encode($bis)
 				));
 			}
 
 		} else {
 			$this->terminateWithError($this->p->t('global', 'errorPersonStudentIDMismatch'), 'general');
-
 		}
 	}
 
@@ -222,14 +197,22 @@ class ProfilApi extends FHCAPI_Controller
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
-		// TODO: check if person_id is getAuthPersonId or if admin/assistenz berechtigt
-
 		$vonTimestamp = strtotime($_POST['von']);
 		$bisTimestamp = strtotime($_POST['bis']);
 		$person_id = $_POST['person_id'];
 
 		if ($vonTimestamp === false || $bisTimestamp === false)
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
+		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
+
+		$berechtigt = false;
+		if($isStudent && $person_id == getAuthPersonId()) $berechtigt = true;
+		if($isAdmin || $isAssistenz) $berechtigt = true;
+
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 
 		$file = array(
 			'kategorie_kurzbz' => 'fas',
@@ -241,6 +224,8 @@ class ProfilApi extends FHCAPI_Controller
 		);
 
 		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
+		if(!isSuccess($dmsFile)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+
 		$dmsFile = getData($dmsFile);
 
 		$dmsId = $dmsFile['dms_id'];
@@ -265,11 +250,11 @@ class ProfilApi extends FHCAPI_Controller
 
 	public function sendEmailToAssistenz ($person_id_param) {
 
-		// TODO: some error handling if non student manages to upload entschuldigung
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
-		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz');
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
 
+		// Get STG mail address for the uploading student
 		$result = null;
 		if($isStudent) {
 			$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
@@ -277,8 +262,6 @@ class ProfilApi extends FHCAPI_Controller
 			$result = $this->EntschuldigungModel->getMailInfoForStudent($person_id_param);
 		}
 
-		// Get STG mail address for the uploading student
-//		$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
 
 		if (isError($result))
 			$this->terminateWithError(getError($result));
@@ -314,7 +297,7 @@ class ProfilApi extends FHCAPI_Controller
 				'AnwesenheitSanchoEntschuldigung',
 				$body_fields,
 				$email,
-				'Entschuldigung zur Befreiung der Anwesenheitspflicht: Neues Dokument wurde hochgeladen.'
+				$this->p->t('global', 'entschuldigungAutoEmailBetreff')
 			);
 		}
 

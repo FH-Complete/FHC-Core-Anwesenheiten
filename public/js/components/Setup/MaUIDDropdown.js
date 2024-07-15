@@ -12,7 +12,7 @@ export const MaUIDDropdown = {
 		};
 	},
 	props: {
-
+		title: ''
 	},
 	methods: {
 		reloadAvailableLE() {
@@ -100,7 +100,7 @@ export const MaUIDDropdown = {
 	},
 	template: `
 		<div>
-			<label for="maSelect">{{ $p.t('lehre/lektor') }}</label>
+			<label for="maSelect">{{ title }}</label>
 			<select id="maSelect" @change="maUIDChanged" class="form-control">
 				<option v-for="option in internal_available_maUID" :value="option" >
 					<a> {{option.infoString}} </a>

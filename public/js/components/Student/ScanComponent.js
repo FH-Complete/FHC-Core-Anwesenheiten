@@ -11,13 +11,10 @@ export default {
 	},
 	data: function() {
 		return {
-			headerMenuEntries: {},
-			sideMenuEntries: {},
 			internalZugangscode: this.zugangscode,
 			zugangscodeProcessed: false,
 			codeMaxlength: 8,
 			viewData: null,
-			entry: null,
 			codeButtonDisabled: true
 		};
 	},
@@ -25,9 +22,6 @@ export default {
 		zugangscode: null
 	},
 	methods: {
-		newSideMenuEntryHandler: function(payload) {
-			this.sideMenuEntries = payload;
-		},
 		sendCode() {
 			this.processAnwesenheit()
 		},
@@ -39,9 +33,8 @@ export default {
 
 						this.$fhcAlert.alertSuccess(this.$p.t('global/eintragErfolgreich'))
 
-						this.entry = JSON.parse(res.data.anwesenheitEntry)
-						this.entry.von = new Date(this.entry.von)
-						this.entry.bis = new Date(this.entry.bis)
+						this.von = new Date(JSON.parse(res.data.von))
+						this.bis = new Date(JSON.parse(res.data.bis))
 
 						this.viewData = JSON.parse(res.data.viewData).retval[0]
 
@@ -98,7 +91,7 @@ export default {
 						<div v-if="viewData">
 							<div>
 								<p>{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
-								<p>{{entry.von.toLocaleDateString()}}:  {{entry.von.toLocaleTimeString()}} - {{entry.bis.toLocaleTimeString()}}</p>
+								<p>{{von.toLocaleDateString()}}:  {{von.toLocaleTimeString()}} - {{bis.toLocaleTimeString()}}</p>
 								<p>{{viewData.vorname}} {{viewData.nachname}} {{$p.t('global/wurdeRegistriert')}}.</p>
 							</div>
 						</div>

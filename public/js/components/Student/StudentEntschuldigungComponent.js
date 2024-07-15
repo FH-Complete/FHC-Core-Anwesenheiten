@@ -1,6 +1,6 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters, universalFormatter} from "../../formatters/formatters";
+import {studentFormatters} from "../../formatters/formatters";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
@@ -43,15 +43,21 @@ export default {
 				},
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
 				layout:"fitDataStretch",
-				rowFormatter: universalFormatter.entschuldigungRowFormatter,
 				columns: [
-					{title: this.$p.t('global/status'), field: 'akzeptiert', formatter: universalFormatter.entschuldigungstatusFormatter, minWidth: 150, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, minWidth: 150, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
-					{title: this.$p.t('ui/aktion'), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 85, maxWidth: 85},
-					{title: this.$p.t('global/begruendungAnw'), field: 'notiz', tooltip:false, minWidth: 150}
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 85, maxWidth: 85},
+					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', tooltip:false, minWidth: 150}
 				],
-				persistence:true,
+				persistence: {
+					sort: false,
+					filter: true,
+					headerFilter: false,
+					group: true,
+					page: true,
+					columns: true,
+				},
 				persistenceID: "studentEntschuldigungenTable"
 			},
 			entschuldigungsViewTabulatorEventHandlers: [{
@@ -66,6 +72,19 @@ export default {
 		};
 	},
 	methods: {
+		entschuldigungstatusFormatter(cell) {
+			let data = cell.getValue()
+			if (data == null) {
+				cell.getElement().style.color = "#17a2b8"
+				return this.$p.t('global/entschuldigungOffen')
+			} else if (data === true) {
+				cell.getElement().style.color = "#28a745";
+				return this.$p.t('global/entschuldigungAkzeptiert')
+			} else if (data === false) {
+				cell.getElement().style.color = "#dc3545";
+				return this.$p.t('global/entschuldigungAbgelehnt')
+			}
+		},
 		triggerUpload() {
 			if (!this.validate())
 			{
@@ -165,6 +184,9 @@ export default {
 				return false
 			}
 
+			console.log(this.entschuldigung.files)
+			debugger
+
 
 			// javaScript Date objects are 0-indexed, subtract 1 from the month
 
@@ -228,15 +250,13 @@ export default {
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {
-			console.log(newVal)
 			if(newVal === [] || newVal === null || newVal === undefined) return
 
 			// check filetype on input change
 			const file = newVal[0]
 			if(!file) return
 
-			console.log(file)
-			if(file.type && (
+			if(file.type && !file.name.includes('jfif') && (
 				file.type.includes('jpg')
 				|| file.type.includes('jpeg')
 				|| file.type.includes('pdf')
@@ -294,7 +314,7 @@ export default {
 		
 					
 					<div class="row">
-						<Upload ref="uploadComponent" v-model="entschuldigung.files"></Upload>
+						<Upload ref="uploadComponent" accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
 					</div>
 				</template>
 				<template v-slot:footer>

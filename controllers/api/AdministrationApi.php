@@ -7,8 +7,8 @@ class AdministrationApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getEntschuldigungen' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw'),
-				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw')
+				'getEntschuldigungen' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
+				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
 			)
 		);
 
@@ -48,11 +48,6 @@ class AdministrationApi extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 		$stg_kz_arr = $result->stg_kz_arr;
-		$admin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
-
-		if($admin === true) {
-			$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getAllEntschuldigungen());
-		}
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithError($this->p->t('global', 'errorNoSTGassigned'), 'general');
 
@@ -84,11 +79,25 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$entschuldigung = getData($entschuldigung)[0];
 
-		$updateStatus = $status ? 'entschuldigt' : 'abwesend';
+		$updateStatus = $status ? ENTSCHULDIGT_STATUS : ABWESEND_STATUS;
 
-		$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheitenByDatesStudent($entschuldigung->von, $entschuldigung->bis, $entschuldigung->person_id, $updateStatus);
-		if (isError($updateAnwesenheit))
-			$this->terminateWithError($updateAnwesenheit);
+		$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
+		if (isError($result))
+			$this->terminateWithError($result);
+		$anwesenheit_user_idsArr = getData($result);
+
+		if($anwesenheit_user_idsArr) {
+			$funcAUID = function($value) {
+				return $value->anwesenheit_user_id;
+			};
+
+			$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
+
+			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus, ANWESEND_STATUS);
+
+			if (isError($updateAnwesenheit))
+				$this->terminateWithError($updateAnwesenheit);
+		}
 
 		// check notiz size and trim to char varying 255 if it is too big
 		$notiz = substr($notiz, 0, 255);

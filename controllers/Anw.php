@@ -12,7 +12,7 @@ class Anw extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_student:rw', 'extension/anwesenheit_assistenz:rw', 'extension/anwesenheit_lektor:rw')
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_student:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
 
@@ -49,7 +49,7 @@ class Anw extends Auth_Controller
 		$viewData = array(
 			'permissions' => [
 				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
-				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_ent_admin'),
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
@@ -57,7 +57,11 @@ class Anw extends Auth_Controller
 				'useRegenerateQR' => USE_REGENERATE_QR,
 				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
 				'kontrolleDeleteMaxReach' => KONTROLLE_DELETE_MAX_REACH,
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz'),
+				'anwesend_status' => ANWESEND_STATUS,
+				'abwesend_status' => ABWESEND_STATUS,
+				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
+				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
 				'controller' => "Anw"
 			]
 		);

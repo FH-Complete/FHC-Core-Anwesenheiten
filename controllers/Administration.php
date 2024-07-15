@@ -13,7 +13,7 @@ class Administration extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_assistenz:rw')
+				'index' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
 			)
 		);
 
@@ -51,13 +51,24 @@ class Administration extends Auth_Controller
 		$viewData = array(
 			'permissions' => [
 				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
-				'assistenz' => $this->permissionlib->isBerechtigt('extension/anwesenheit_assistenz'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_ent_admin'),
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
+				'anwesend_status' => ANWESEND_STATUS,
+				'abwesend_status' => ABWESEND_STATUS,
+				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
 				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_assistenz'),
-				'controller' => "Admin"
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
+				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
+				'controller' => "Admin",
+				'debug' => array(
+					'VIEWPATH' => VIEWPATH,
+					'APPPATH' => APPPATH,
+					'ENVIRONMENT' => ENVIRONMENT,
+					'APPROOT' => APP_ROOT,
+
+				)
 			]
 		);
 

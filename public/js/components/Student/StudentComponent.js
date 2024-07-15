@@ -18,8 +18,8 @@ export const StudentComponent = {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			tabsStudent: {
-				tab1: { title: Vue.ref(this.$p.t('global/anwesenheiten')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-				tab2: { title: Vue.ref(this.$p.t('global/entschuldigungen')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+				tab1: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				tab2: { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
 			},
 			viewDataStudent: {}
 		};
@@ -35,13 +35,6 @@ export const StudentComponent = {
 			this.$router.push({
 				name: 'Scan'
 			})
-		},
-		routeToLandingPage() {
-
-			this.$router.push({
-				name: 'LandingPage'
-			})
-
 		},
 		async checkEntryParamPermissions() {
 			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
@@ -95,8 +88,6 @@ export const StudentComponent = {
 
 			})
 
-			this.$refs.tabsStudent._.data.tabs.tab1.title = this.$p.t('global/anwesenheiten')
-			this.$refs.tabsStudent._.data.tabs.tab2.title = this.$p.t('global/entschuldigungen')
 		},
 		openModalStudentInit() {
 			this.$refs.modalContainerStudentSetup.show()
@@ -104,6 +95,16 @@ export const StudentComponent = {
 		loadStudentPage() {
 			this.setup()
 			this.$refs.modalContainerStudentSetup.hide()
+		},
+		async awaitTabsConfig() {
+			return new Promise((resolve) => {
+				return this.$entryParams.phrasenPromise.then(() => {
+					resolve({
+						tab1: { title: Vue.ref(this.$p.t('global/anwesenheiten')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+						tab2: { title: Vue.ref(this.$p.t('global/entschuldigungen')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+					})
+				})
+			})
 		},
 		studentChangedHandler() {
 
@@ -130,7 +131,6 @@ export const StudentComponent = {
 		async awaitPhrasen() {
 			await this.$entryParams.phrasenPromise
 		}
-
 	},
 	created() {
 	},
@@ -155,7 +155,7 @@ export const StudentComponent = {
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
 					</div>
 				</div>
-				<core-tabs class="mb-5" :config="tabsStudent" ref="tabsStudent"></core-tabs>
+				<core-tabs :config="tabsStudent" ref="tabsStudent"></core-tabs>
 			</template>
 		</core-base-layout>
 		

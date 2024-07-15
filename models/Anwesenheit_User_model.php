@@ -13,6 +13,17 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->pk = 'anwesenheit_user_id';
 	}
 
+	public function getAnwesenheitEntryByPrestudentIdDateLehreinheitId($prestudent_id, $le_id, $date) {
+		$query = "
+			SELECT *
+			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
+			WHERE prestudent_id = ? AND lehreinheit_id = ? AND DATE(extension.tbl_anwesenheit.von) = ?
+			ORDER BY von ASC;
+		";
+
+		return $this->execQuery($query, [$prestudent_id, $le_id, $date]);
+	}
+
 	public function addHistoryEntry($entry){
 		$query = "
 			INSERT INTO extension.tbl_anwesenheit_user_history (
@@ -61,9 +72,6 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false)
 	{
-
-		// TODO (johann) maybe there is a better way to update a set of entries?
-
 		$this->db->trans_start(false);
 
 		foreach ($changedAnwesenheiten as $entry) {
@@ -124,7 +132,7 @@ class Anwesenheit_User_model extends \DB_Model
 
 	}
 
-	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis)
+	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, $abwesend_status, $entschuldigt_status)
 	{
 		$this->db->trans_start(false);
 
@@ -156,7 +164,7 @@ class Anwesenheit_User_model extends \DB_Model
 				) as exists_entschuldigung
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
-			WHERE lehreinheit_id = ? AND verband != 'I'
+			WHERE lehreinheit_id = ?
 			
 			AND prestudent_id NOT IN(
 				SELECT students.prestudent_id as prestudent_id FROM
@@ -166,8 +174,7 @@ class Anwesenheit_User_model extends \DB_Model
 				(SELECT prestudent_id
 				 FROM campus.vw_student_lehrveranstaltung
 						  JOIN public.tbl_student ON (uid = student_uid)
-				 WHERE lehreinheit_id = ? AND
-					   verband != 'I') students USING(prestudent_id)
+				 WHERE lehreinheit_id = ?) students USING(prestudent_id)
 			WHERE anwesenheit_id = ?);
 		";
 
@@ -177,7 +184,7 @@ class Anwesenheit_User_model extends \DB_Model
 		if(hasData($result)) {
 
 			forEach ($result->retval as $entry) {
-				$status = $entry->exists_entschuldigung && $entry->statusakzeptiert ? 'entschuldigt' : 'abwesend';
+				$status = $entry->exists_entschuldigung && $entry->statusakzeptiert ? $entschuldigt_status : $abwesend_status;
 				$result = $this->insert(array(
 					'anwesenheit_id' => $anwesenheit_id,
 					'prestudent_id' => $entry->prestudent_id,
@@ -255,15 +262,9 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "
 			SELECT prestudent_id, get_anwesenheiten_by_time(prestudent_id, {$lv_id}, '{$sem_kurzbz}') as sum
 			FROM public.tbl_student
-			WHERE prestudent_id IN (";
+			WHERE prestudent_id IN ?";
 
-		foreach ($prestudent_Ids as $index => $id) {
-			if($index > 0) $query .= ", ";
-			$query .= $id;
-		}
-		$query .= ");";
-
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$prestudent_Ids]);
 	}
 	public function deleteUserAnwesenheitById($anwesenheit_user_id)
 	{
@@ -274,19 +275,9 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function deleteUserAnwesenheitByIds($ids)
 	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = ";
+		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id IN ?";
 
-		$index = 0;
-		forEach ($ids as $id) {
-			if($index == 0) $query .= "{$id}";
-			else $query .= " OR anwesenheit_user_id = {$id}";
-
-			$index++;
-		}
-
-		$query .= ";";
-
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$ids]);
 	}
 
 	public function deleteAllByAnwesenheitId($anwesenheit_id)
@@ -294,28 +285,6 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = {$anwesenheit_id}";
 
 		return $this->execQuery($query);
-	}
-
-	public function getPicturesForPrestudentIds($prestudent_ids)
-	{
-
-		$query = "SELECT prestudent_id, person_id
-				FROM public.tbl_student 
-					 JOIN public.tbl_benutzer ON (uid = student_uid)
-					 JOIN tbl_person USING (person_id) WHERE prestudent_id = ";
-
-		$index = 0;
-		forEach ($prestudent_ids as $id) {
-			if($index == 0) $query .= "{$id}";
-			else $query .= " OR prestudent_id = {$id}";
-
-			$index++;
-		}
-
-		$query .= ";";
-
-		return $this->execQuery($query);
-
 	}
 
 }

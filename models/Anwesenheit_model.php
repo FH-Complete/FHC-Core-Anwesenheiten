@@ -13,6 +13,18 @@ class Anwesenheit_model extends \DB_Model
 		$this->pk = 'anwesenheit_id';
 	}
 
+	public function isPersonAttendingLehreinheit($le_id, $uid) {
+		$query = "
+			SELECT prestudent_id FROM lehre.tbl_lehreinheit
+				JOIN campus.vw_student_lehrveranstaltung USING (lehreinheit_id)
+				JOIN tbl_student ON (tbl_student.student_uid = campus.vw_student_lehrveranstaltung.uid)
+				JOIN tbl_prestudent USING (prestudent_id)
+			WHERE lehreinheit_id = ? AND uid = ?;
+		";
+
+		return $this->execQuery($query, [$le_id, $uid]);
+	}
+
 	public function getKontrolleForLEOnDate($le_id, $date) {
 		$query = "
 			SELECT * FROM extension.tbl_anwesenheit
@@ -124,16 +136,10 @@ class Anwesenheit_model extends \DB_Model
 				DATE(ta.von) as datum,
 				extension.tbl_anwesenheit_user.status
 			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
-			WHERE prestudent_id IN (";
-
-		foreach ($prestudentIds as $index => $id) {
-			if($index > 0) $query .= ", ";
-			$query .= $id;
-		}
-		$query .= ") AND ta.lehreinheit_id = ?;";
+			WHERE prestudent_id IN ? AND ta.lehreinheit_id = ?;";
 
 
-		return $this->execReadOnlyQuery($query, [$le_id]);
+		return $this->execReadOnlyQuery($query, [$prestudentIds, $le_id]);
 	}
 
 	public function getLETermine($le_id) {
@@ -276,9 +282,7 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
 	}
 
-	public function updateAnwesenheitenByDatesStudent($von, $bis, $person_id, $status)
-	{
-
+	public function updateAnwesenheiten($anwesenheiten_user_ids, $updateStatus, $anwesend_status) {
 		$query='INSERT INTO extension.tbl_anwesenheit_user_history (
 			anwesenheit_user_id,
 			anwesenheit_id,
@@ -306,38 +310,15 @@ class Anwesenheit_model extends \DB_Model
 			updateamum,
 			updatevon
 			FROM extension.tbl_anwesenheit_user
-			WHERE anwesenheit_user_id IN (
-				SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id
-				FROM extension.tbl_anwesenheit_user
-				JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id
-				WHERE von >= ?
-					AND bis <= ?
-					AND prestudent_id IN (
-						SELECT prestudent_id
-						FROM tbl_prestudent
-						WHERE person_id = ?
-					)
-			)
+			WHERE anwesenheit_user_id IN ?
 			AND status != ?';
 
-		$resultHistory = $this->execQuery($query, [$von, $bis, $person_id, 'anwesend']);
-
+		$this->execQuery($query, [$anwesenheiten_user_ids, $anwesend_status]);
 
 		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1
-					WHERE anwesenheit_user_id IN (
-						SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id
-						FROM extension.tbl_anwesenheit_user
-						JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id
-						WHERE von >= ?
-							AND bis <= ?
-							AND prestudent_id IN (
-								SELECT prestudent_id
-								FROM tbl_prestudent
-								WHERE person_id = ?
-							)
-					)
+					WHERE anwesenheit_user_id IN ?
 					AND status != ?';
-		$resultUpdate = $this->execQuery($query, [$status, $von, $bis, $person_id, 'anwesend']);
+		$resultUpdate = $this->execQuery($query, [$updateStatus, $anwesenheiten_user_ids, $anwesend_status]);
 
 		return $resultUpdate;
 	}
@@ -403,17 +384,10 @@ class Anwesenheit_model extends \DB_Model
 				FROM tbl_studiengang
 				WHERE aktiv = true
 				
-				AND studiengang_kz IN (";
+				AND studiengang_kz IN ?
+				ORDER BY studiengang_kz";
 
-				foreach ($allowed_stg as $index => $id) {
-					if($index > 0) $query .= ", ";
-					$query .= $id;
-				}
-				$query .= ")";
-
-		$query .= "ORDER BY studiengang_kz";
-
-		return $this->execReadOnlyQuery($query);
+		return $this->execReadOnlyQuery($query, [$allowed_stg]);
 	}
 
 	public function getAllAnwesenheitenByStudiengang($stg_kz, $sem_kurzbz) {

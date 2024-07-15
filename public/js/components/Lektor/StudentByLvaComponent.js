@@ -45,13 +45,20 @@ export default {
 						frozen: true,
 						width: 70
 					},
-					{title: this.$p.t('global/datum'), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
-					{title: this.$p.t('global/status'), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
-					{title: this.$p.t('global/notiz'), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
+					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
-				persistence:true,
+				persistence: {
+					sort: false,
+					filter: true,
+					headerFilter: false,
+					group: true,
+					page: true,
+					columns: true,
+				},
 				persistenceID: "lektorDetailViewStudentByLva"
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
@@ -89,7 +96,7 @@ export default {
 			semester: null,
 			verband: null,
 			gruppe: null,
-			sum: 0,
+			sum: '',
 			foto: null,
 			selected: 0
 		}
@@ -107,36 +114,8 @@ export default {
 		anwCalc(values, data, calcParams){
 			return this.sum + ' %'
 		},
-		async deleteAnwesenheit(cell) {
-			if (await this.$fhcAlert.confirmDelete() === false)
-				return;
-
-			const anwesenheit_user_id = cell.getData().anwesenheit_user_id;
-
-			this.$fhcApi.factory.Profil.deleteUserAnwesenheitById(anwesenheit_user_id).then(
-				res => {
-					if(res.meta.status === "success" && res.data.anwesenheit_user_id) {
-						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
-						cell.getRow().delete()
-
-						this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
-							if(res.meta.status === "success" && res.data)
-							{
-								this.sum = result.data[0].sum
-								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
-							}
-						})
-
-					} else {
-						this.$fhcAlert.alertSuccess(this.$p.t('global/errorAnwUserDelete'))
-					}
-				}
-			)
-
-		},
 		setRowStatus(cell, row, status) {
-			//TODO: remove hardcoded status
-			if(cell.getData().status === status || cell.getData().status === "entschuldigt") return
+			if(cell.getData().status === status || cell.getData().status === this.$entryParams.permissions.entschuldigt_status) return
 
 			const newRow = {
 				anwesenheit_user_id: cell.getData().anwesenheit_user_id,
@@ -156,22 +135,16 @@ export default {
 			const wrapper = document.createElement('div');
 			wrapper.className = "d-flex gap-3";
 
-			// const deleteButton = document.createElement('button');
-			// deleteButton.className = 'btn btn-outline-secondary';
-			// deleteButton.innerHTML = '<i class="fa fa-trash"></i>';
-			// deleteButton.addEventListener('click', () => this.deleteAnwesenheit(cell, false));
-			// wrapper.append(deleteButton);
-
 			const setCheckedButton = document.createElement('button');
 			setCheckedButton.className = 'btn btn-outline-secondary';
 			setCheckedButton.innerHTML = '<i class="fa fa-check"></i>';
-			setCheckedButton.addEventListener('click', () => this.setRowStatus(cell, cell.getRow(), "anwesend"));
+			setCheckedButton.addEventListener('click', () => this.setRowStatus(cell, cell.getRow(), this.$entryParams.permissions.anwesend_status));
 			wrapper.append(setCheckedButton);
 
 			const setCrossedButton = document.createElement('button');
 			setCrossedButton.className = 'btn btn-outline-secondary';
 			setCrossedButton.innerHTML = '<i class="fa fa-xmark"></i>';
-			setCrossedButton.addEventListener('click', () => this.setRowStatus(cell, cell.getRow(), "abwesend"));
+			setCrossedButton.addEventListener('click', () => this.setRowStatus(cell, cell.getRow(), this.$entryParams.permissions.abwesend_status));
 			wrapper.append(setCrossedButton);
 
 			return wrapper;
@@ -202,11 +175,11 @@ export default {
 			const changedData = []
 			const changedRows = []
 			selectedData.forEach((data,i) => {
-				if(data.status !== "entschuldigt" || data.status === "anwesend") {
+				if(data.status !== this.$entryParams.permissions.entschuldigt_status || data.status === this.$entryParams.permissions.anwesend_status) {
 					const newData = {
 						anwesenheit_user_id: data.anwesenheit_user_id,
 						datum: data.datum,
-						status: "anwesend",
+						status: this.$entryParams.permissions.anwesend_status,
 						notiz: data.notiz
 					}
 					selectedRows[i].update(newData)
@@ -228,11 +201,11 @@ export default {
 			const changedData = []
 			const changedRows = []
 			selectedData.forEach((data,i) => {
-				if(data.status !== "entschuldigt" || data.status === "abwesend") {
+				if(data.status !== this.$entryParams.permissions.entschuldigt_status || data.status === this.$entryParams.permissions.abwesend_status) {
 					const newData = {
 						anwesenheit_user_id: data.anwesenheit_user_id,
 						datum: data.datum,
-						status: "abwesend"
+						status: this.$entryParams.permissions.abwesend_status
 					}
 					selectedRows[i].update(newData)
 					changedData.push(newData)
@@ -244,49 +217,6 @@ export default {
 			this.saveChanges(changedData)
 
 			changedRows.forEach(row => row.toggleSelect())
-		},
-		async deleteSelectedRows(){
-			if (await this.$fhcAlert.confirmDelete() === false)
-				return;
-
-			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
-			const selectedData = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedData()
-			const ids = []
-			selectedData.forEach(data => {
-				if(data.status !== "entschuldigt") ids.push(data.anwesenheit_user_id)
-			})
-
-			this.$fhcApi.factory.Profil.deleteUserAnwesenheitByIds(ids).then(
-				res => {
-					if(res.meta.status === "success") {
-						this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserDeleteSuccess'))
-						selectedRows.forEach(row => {
-							const rowData = row.getData()
-							if(rowData.status === "entschuldigt"){
-								row.deselect()
-							} else {
-								row.deselect()
-								row.delete()
-							}
-
-						})
-
-						this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
-							if(res.meta.status === "success" && res.data)
-							{
-								this.sum = res.data[0].sum
-								this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
-
-								this.setFilterTitle()
-							}
-						})
-
-					} else {
-						this.$fhcAlert.alertSuccess(this.$p.t('global/errorAnwUserDelete'))
-					}
-				}
-			)
-
 		},
 		setFilterTitle() {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
@@ -300,9 +230,6 @@ export default {
 			})
 		},
 		routeToLandingPage() {
-
-			// TODO: avoid refetch when going this route
-
 			this.$router.push({
 				name: 'LandingPage'
 			})
@@ -323,6 +250,7 @@ export default {
 			this.sum = res.data[0].sum
 			this.foto = res.data[0].foto
 
+			this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 			this.setFilterTitle()
 		})
 		
@@ -366,9 +294,6 @@ export default {
 					:sideMenu="false" 
 					noColumnFilter>
 					<template #actions>
-						<button @click="deleteSelectedRows" role="button" class="btn btn-danger align-self-end" :disabled="!selected">
-							{{ $p.t('ui/loeschen') }}
-						</button>
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesend')) }}
 						</button>
