@@ -13,3 +13,6 @@ define('QR_EXPIRATION_TIMER', 3600000); // 1 hour
 define('ENTSCHULDIGUNG_MAX_REACH', 7); // 7 days
 // frist welche entscheidet wie weit in die Vergangenheit alte Kontrollen gelöscht werden dürfen
 define('KONTROLLE_DELETE_MAX_REACH', 1); // 1 day
+define('ANWESEND_STATUS', 'anwesend');
+define('ABWESEND_STATUS', 'abwesend');
+define('ENTSCHULDIGT_STATUS', 'entschuldigt');
