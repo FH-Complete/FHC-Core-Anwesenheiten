@@ -46,7 +46,7 @@ export default {
 						width: 70
 					},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: lektorFormatters.anwesenheitFormatter, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: this.anwesenheitFormatterValue, bottomCalc: this.anwCalc, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
@@ -233,7 +233,20 @@ export default {
 			this.$router.push({
 				name: 'LandingPage'
 			})
-		}
+		},
+		anwesenheitFormatterValue(cell) {
+			const data = cell.getValue()
+			if (data === this.$entryParams.permissions.anwesend_status) {
+				cell.getElement().style.color = "#28a745";
+				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
+			} else if (data === this.$entryParams.permissions.abwesend_status) {
+				cell.getElement().style.color = "#dc3545";
+				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
+			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
+				cell.getElement().style.color = "#0335f5";
+				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
+			} else return '-'
+		},
 	},
 	created(){
 

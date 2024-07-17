@@ -20,6 +20,7 @@ export default {
 			studentViewTabulatorOptions: {
 				layout: 'fitDataStretch',
 				selectable: false,
+				height: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{title: 'Lehrveranstaltung', visible: false},

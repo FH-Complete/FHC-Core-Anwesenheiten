@@ -234,6 +234,17 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
 	}
 
+	public function getAllForKontrolle($anwesenheit_id)
+	{
+		$query = "
+			SELECT *
+			FROM extension.tbl_anwesenheit_user
+			WHERE anwesenheit_id = ?
+		";
+
+		return $this->execQuery($query, [$anwesenheit_id]);
+	}
+
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
 	{
 		$query = "

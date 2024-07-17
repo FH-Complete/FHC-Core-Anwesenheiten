@@ -133,7 +133,7 @@ export const LektorComponent = {
 		permissions: []
 	},
 	methods: {
-		anwesenheitFormatterValue: function (cell) {
+		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()
 			if (data === this.$entryParams.permissions.anwesend_status) {
 				cell.getElement().style.color = "#28a745";
@@ -146,7 +146,7 @@ export const LektorComponent = {
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
 		},
-		anwTooltip(e, cell){
+		anwTooltip(e, cell) {
 			const value= cell.getValue()
 			let valueFormatted = ''
 
@@ -487,6 +487,8 @@ export const LektorComponent = {
 		},
 		setDates(anwEntries) {
 
+			console.log('setDates from anw entries')
+
 			// from anw entries
 			anwEntries.forEach(entry => {
 				// search for distinct kontrolle dates to use for show all columns
@@ -504,8 +506,12 @@ export const LektorComponent = {
 				const bs = b.split('-')
 				return as > bs ? 1 : a < b ? -1 : 0
 			})
+
+			console.log([...this.lektorState.dates])
 		},
 		async setup() {
+			// use this to show actual entries with should be entries from stundenplan merged
+			// this.lektorState.dates = []
 			this.lektorState.termine.forEach(termin => {
 				const dateParts = termin.datum.split( "-")
 				termin.datumFrontend = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
@@ -514,12 +520,17 @@ export const LektorComponent = {
 			this.$refs.termineDropdown.setTermine(this.lektorState.termine)
 
 			if(this.lektorState.termine.length) {
+				console.log('setting dates from termine')
 				const termin = this.findClosestTermin();
 
 				this.setTimespanForKontrolleTermin(termin, false)
 
 				this.lektorState.termine.forEach(t => this.lektorState.dates.push(t.datum))
+				console.log([...this.lektorState.dates])
+
 			}
+			// use this to only show dates with actual entries
+			this.lektorState.dates = []
 
 			this.lektorState.studentsData = new Map()
 
@@ -527,7 +538,6 @@ export const LektorComponent = {
 				entry.zusatz = this.formatZusatz(entry, this.lektorState.stsem)
 				this.lektorState.studentsData.set(entry.prestudent_id, [])
 			})
-			this.lektorState.dates = []
 
 			this.setDates(this.lektorState.anwEntries)
 			this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
@@ -583,6 +593,8 @@ export const LektorComponent = {
 			}
 
 			this.loading = false
+
+			console.log(this.lektorState)
 		},
 		setupLektorState(){
 			console.log('setupLektorState')
@@ -617,7 +629,6 @@ export const LektorComponent = {
 			this.$refs.modalContainerNewKontrolle.show()
 		},
 		toggleAnwStatus (e, cell, prestudent_id) {
-
 			const value = cell.getValue()
 			if(value === undefined) return
 			let date = cell.getColumn().getField() // '2024-10-24' or 'status'
@@ -631,21 +642,21 @@ export const LektorComponent = {
 
 			const anwesenheit_user_id = found?.anwesenheit_user_id
 
-			if(value === this.$entryParams.permissions.status_abwesend) {
+			if(value === this.$entryParams.permissions.abwesend_status) {
 
 				const newEntry = {
-					prestudent_id, date, status:this.$entryParams.permissions.status_anwesend, anwesenheit_user_id
+					prestudent_id, date, status:this.$entryParams.permissions.anwesend_status, anwesenheit_user_id
 				}
 
 				this.handleChange(newEntry)
-				cell.setValue(this.$entryParams.permissions.status_anwesend)
+				cell.setValue(this.$entryParams.permissions.anwesend_status)
 
-			} else if (value === this.$entryParams.permissions.status_anwesend) {
+			} else if (value === this.$entryParams.permissions.anwesend_status) {
 				const newEntry = {
-					prestudent_id, date, status: this.$entryParams.permissions.status_abwesend, anwesenheit_user_id
+					prestudent_id, date, status: this.$entryParams.permissions.abwesend_status, anwesenheit_user_id
 				}
 				this.handleChange(newEntry)
-				cell.setValue(this.$entryParams.permissions.status_anwesend)
+				cell.setValue(this.$entryParams.permissions.abwesend_status)
 			}
 		},
 		handleChange(newEntry) {
@@ -705,7 +716,6 @@ export const LektorComponent = {
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
 
 			if(this.$entryParams.lektorState) {
-				debugger
 				this.setupLektorState()
 			} else {
 				this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {

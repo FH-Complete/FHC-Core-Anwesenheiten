@@ -30,6 +30,7 @@ export default {
 				ajaxResponse: (url, params, response) => {
 					return response.data.retval
 				},
+				height: false,
 				ajaxConfig: "POST",
 				ajaxContentType: {
 					headers:{
@@ -44,10 +45,10 @@ export default {
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
 				layout:"fitDataStretch",
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, minWidth: 150, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 150, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 85, maxWidth: 85},
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip: false, minWidth: 200, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 80, maxWidth: 85},
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', tooltip:false, minWidth: 150}
 				],
 				persistence: {
@@ -183,10 +184,6 @@ export default {
 			{
 				return false
 			}
-
-			console.log(this.entschuldigung.files)
-			debugger
-
 
 			// javaScript Date objects are 0-indexed, subtract 1 from the month
 

@@ -282,7 +282,7 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
 	}
 
-	public function updateAnwesenheiten($anwesenheiten_user_ids, $updateStatus, $anwesend_status) {
+	public function updateAnwesenheiten($anwesenheiten_user_ids, $updateStatus) {
 		$query='INSERT INTO extension.tbl_anwesenheit_user_history (
 			anwesenheit_user_id,
 			anwesenheit_id,
@@ -310,15 +310,13 @@ class Anwesenheit_model extends \DB_Model
 			updateamum,
 			updatevon
 			FROM extension.tbl_anwesenheit_user
-			WHERE anwesenheit_user_id IN ?
-			AND status != ?';
+			WHERE anwesenheit_user_id IN ?';
 
-		$this->execQuery($query, [$anwesenheiten_user_ids, $anwesend_status]);
+		$this->execQuery($query, [$anwesenheiten_user_ids]);
 
 		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1
-					WHERE anwesenheit_user_id IN ?
-					AND status != ?';
-		$resultUpdate = $this->execQuery($query, [$updateStatus, $anwesenheiten_user_ids, $anwesend_status]);
+					WHERE anwesenheit_user_id IN ?';
+		$resultUpdate = $this->execQuery($query, [$updateStatus, $anwesenheiten_user_ids]);
 
 		return $resultUpdate;
 	}

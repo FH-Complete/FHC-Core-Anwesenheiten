@@ -166,30 +166,39 @@ class ProfilApi extends FHCAPI_Controller
 		$entryToUpdate = getData($result)[0];
 
 		// finally update the entry to anwesend
-		if($entryToUpdate && $entryToUpdate->status === ANWESEND_STATUS) {
+		if($entryToUpdate) {
 
-
-			$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, array(
-				'status' => ANWESEND_STATUS,
-			));
-
-			if (isError($result)) {
-				$this->terminateWithError($this->p->t('global', 'errorUpdateUserEntry'), 'general');
-			} else {
-				$viewData = $this->_ci->AnwesenheitUserModel->getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id);
-
-				// if inserted successfully return some information to display who has entered
-				// his anwesenheitscheck for which date and lehreinheit
-				$this->terminateWithSuccess(array(
-					'viewData' => json_encode($viewData),
-					'von' => json_encode($von),
-					'bis' => json_encode($bis)
+			if($entryToUpdate->status !== ENTSCHULDIGT_STATUS) {
+				$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, array(
+					'status' => ANWESEND_STATUS,
 				));
+
+				if (isError($result)) {
+					$this->terminateWithError($this->p->t('global', 'errorUpdateUserEntry'), 'general');
+				} else {
+					$this->_returnViewDataCheckIn($prestudent_id, $lehreinheit_id, $von, $bis);
+				}
+			} else {
+				$this->_returnViewDataCheckIn($prestudent_id, $lehreinheit_id, $von, $bis);
+
 			}
 
 		} else {
 			$this->terminateWithError($this->p->t('global', 'errorPersonStudentIDMismatch'), 'general');
 		}
+	}
+
+	private function _returnViewDataCheckIn($prestudent_id, $lehreinheit_id, $von, $bis)
+	{
+		$viewData = $this->_ci->AnwesenheitUserModel->getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id);
+
+		// if inserted successfully return some information to display who has entered
+		// his anwesenheitscheck for which date and lehreinheit
+		$this->terminateWithSuccess(array(
+			'viewData' => json_encode($viewData),
+			'von' => json_encode($von),
+			'bis' => json_encode($bis)
+		));
 	}
 
 	public function addEntschuldigung()

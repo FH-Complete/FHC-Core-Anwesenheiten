@@ -44,7 +44,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->library('DmsLib');
 		// Loads LogLib with different debug trace levels to get data of the job that extends this class
 		// It also specify parameters to set database fields
-		$this->load->library('LogLib', array(
+		$this->_ci->load->library('LogLib', array(
 			'classIndex' => 5,
 			'functionIndex' => 5,
 			'lineIndex' => 4,
@@ -426,12 +426,22 @@ class KontrolleApi extends FHCAPI_Controller
 				'year' => $date->year
 			]), 'general');
 		}
-		$anwesenheit_id = getData($resultKontrolle)[0]->anwesenheit_id;
+		$kontrolle = getData($resultKontrolle)[0];
+		$anwesenheit_id = $kontrolle->anwesenheit_id;
 
-		// TODO: log delete
-//		$this->logLib->logInfoDB('Test Log KontrolleApi/deleteAnwesenheitskontrolle');
+		$result = $this->_ci->AnwesenheitUserModel->getAllForKontrolle($anwesenheit_id);
+		if(isError($result)) {
+			$this->terminateWithError($this->p->t('global', 'errorDeleteKontrolleEntryAnDatum', [
+				'le_id' => $le_id,
+				'day' => $date->day,
+				'month' => $date->month,
+				'year' => $date->year
+			]), 'general');
+		}
+		$anwesenheiten = getData($result);
 
 		// delete history of user entries and write into log file
+		$this->_ci->logLib->logInfoDB(array($kontrolle, $anwesenheiten));
 		$this->_ci->AnwesenheitUserHistoryModel->deleteAllByAnwesenheitId($anwesenheit_id);
 
 		// delete user anwesenheiten by anwesenheit_id of kontrolle

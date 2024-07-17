@@ -60,15 +60,7 @@ class Administration extends Auth_Controller
 				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
 				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
 				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
-				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
-				'controller' => "Admin",
-				'debug' => array(
-					'VIEWPATH' => VIEWPATH,
-					'APPPATH' => APPPATH,
-					'ENVIRONMENT' => ENVIRONMENT,
-					'APPROOT' => APP_ROOT,
-
-				)
+				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin')
 			]
 		);
 

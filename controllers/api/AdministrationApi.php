@@ -93,7 +93,7 @@ class AdministrationApi extends FHCAPI_Controller
 
 			$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
 
-			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus, ANWESEND_STATUS);
+			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
 
 			if (isError($updateAnwesenheit))
 				$this->terminateWithError($updateAnwesenheit);
