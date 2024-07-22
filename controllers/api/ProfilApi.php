@@ -252,7 +252,8 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id);
+		// TODO: uncomment when merging into prod, avoid email spam when testing on demo
+//		$this->sendEmailToAssistenz($person_id);
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
