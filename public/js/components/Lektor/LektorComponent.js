@@ -487,8 +487,6 @@ export const LektorComponent = {
 		},
 		setDates(anwEntries) {
 
-			console.log('setDates from anw entries')
-
 			// from anw entries
 			anwEntries.forEach(entry => {
 				// search for distinct kontrolle dates to use for show all columns
@@ -506,8 +504,6 @@ export const LektorComponent = {
 				const bs = b.split('-')
 				return as > bs ? 1 : a < b ? -1 : 0
 			})
-
-			console.log([...this.lektorState.dates])
 		},
 		async setup() {
 			// use this to show actual entries with should be entries from stundenplan merged
@@ -520,13 +516,11 @@ export const LektorComponent = {
 			this.$refs.termineDropdown.setTermine(this.lektorState.termine)
 
 			if(this.lektorState.termine.length) {
-				console.log('setting dates from termine')
 				const termin = this.findClosestTermin();
 
 				this.setTimespanForKontrolleTermin(termin, false)
 
 				this.lektorState.termine.forEach(t => this.lektorState.dates.push(t.datum))
-				console.log([...this.lektorState.dates])
 
 			}
 			// use this to only show dates with actual entries
@@ -593,11 +587,8 @@ export const LektorComponent = {
 			}
 
 			this.loading = false
-
-			console.log(this.lektorState)
 		},
 		setupLektorState(){
-			console.log('setupLektorState')
 			this.lektorState.students = this.$entryParams.lektorState.students
 			this.lektorState.anwEntries = this.$entryParams.lektorState.anwEntries
 			this.lektorState.stsem = this.$entryParams.lektorState.stsem

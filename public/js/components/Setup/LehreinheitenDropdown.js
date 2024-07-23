@@ -15,7 +15,6 @@ export const LehreinheitenDropdown = {
 	},
 	methods: {
 		leChanged(e) {
-			console.log('leChanged')
 			const selected = e.target.selectedOptions
 			this.$entryParams.selected_le_id = selected[0]._value.lehreinheit_id
 			this.$entryParams.selected_le_info = selected[0]._value
@@ -33,7 +32,6 @@ export const LehreinheitenDropdown = {
 			})
 		},
 		resetData() {
-			console.log('resetData')
 			this.internal_available_le_info = this.$entryParams.available_le_info
 			this.internal_selected_le_info =  this.$entryParams.selected_le_info
 		}

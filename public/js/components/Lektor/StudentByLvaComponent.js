@@ -2,7 +2,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
-import {lektorFormatters, studentFormatters} from "../../formatters/formatters";
+import {lektorFormatters} from "../../formatters/formatters";
 
 import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
@@ -34,6 +34,9 @@ export default {
 				index: 'datum',
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
+				selectableCheck: this.selectableCheck,
+				rowFormatter: this.unselectableFormatter,
+				selectable: true,
 				columns: [
 					{
 						formatter: 'rowSelection',
@@ -113,6 +116,17 @@ export default {
 		},
 		anwCalc(values, data, calcParams){
 			return this.sum + ' %'
+		},
+		selectableCheck(row) {
+			return row.getData().status !== this.$entryParams.permissions.entschuldigt_status
+		},
+		unselectableFormatter(row) {
+			const data = row.getData()
+
+			if(data.status === this.$entryParams.permissions.entschuldigt_status) {
+				row.getElement().children[0]?.children[0]?.remove()
+			}
+
 		},
 		setRowStatus(cell, row, status) {
 			if(cell.getData().status === status || cell.getData().status === this.$entryParams.permissions.entschuldigt_status) return

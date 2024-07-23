@@ -23,7 +23,7 @@ export default {
 				bis: Vue.ref({ hours: 23, minutes: 59 }),
 				files: []
 			},
-			minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.entschuldigungMaxReach + 1))),
+			minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.entschuldigungMaxReach))),
 			tableBuiltPromise: null,
 			entschuldigungsViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
@@ -242,6 +242,7 @@ export default {
 		}
 	},
 	mounted() {
+		this.minDate = new Date(this.minDate).setHours(0,0)
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 	},
@@ -288,7 +289,8 @@ export default {
 								:start-time="entschuldigung.von"
 								format="dd.MM.yyyy HH:mm"
 								model-type="dd.MM.yyyy HH:mm"
-								:min-date="minDate">
+								:min-date="minDate"
+								:start-date="minDate">
 							</datepicker>
 						</div>
 					</div>
@@ -304,7 +306,8 @@ export default {
 								:start-time="entschuldigung.bis"
 								format="dd.MM.yyyy HH:mm"
 								model-type="dd.MM.yyyy HH:mm"
-								:min-date="minDate">
+								:min-date="minDate"
+								:start-date="minDate">
 							</datepicker>
 						</div>
 					</div>
@@ -333,5 +336,3 @@ export default {
 	</core-base-layout>
 `
 };
-
-

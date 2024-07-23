@@ -96,7 +96,6 @@ export const AssistenzComponent = {
 					event: "tableBuilt",
 					handler: async () => {
 						await this.$entryParams.phrasenPromise
-						console.log('tableBuilt')
 						this.tableBuiltResolve()
 					}
 				}
@@ -343,4 +342,3 @@ export const AssistenzComponent = {
 };
 
 export default AssistenzComponent
-

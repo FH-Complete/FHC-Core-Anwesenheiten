@@ -303,7 +303,6 @@ export default {
 	mounted() {
 		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
 			this.loaded = true
-			console.log('landingPage mounted then', this.$entryParams)
 
 			this.$entryParams.phrasenPromise.then(()=> this.phrasenResolved = true)
 
@@ -369,5 +368,3 @@ export default {
 	</core-base-layout>
 `
 };
-
-

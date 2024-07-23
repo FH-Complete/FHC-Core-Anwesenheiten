@@ -127,6 +127,12 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$uid]);
 	}
 
+	public function loadEmptyAnwesenheitenForLE($le_id) {
+		$qry="";
+
+		return $this->execQuery($qry, [$le_id]);
+	}
+
 	public function getAnwesenheitenEntriesForStudents($prestudentIds, $le_id) {
 		$query = "
 			SELECT

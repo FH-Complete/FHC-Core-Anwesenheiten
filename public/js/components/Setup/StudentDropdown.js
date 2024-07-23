@@ -21,7 +21,6 @@ export const StudentDropdown = {
 			this.$emit('studentChanged', e)
 		},
 		async setupData() {
-			console.log('student dropdown setup data')
 			if(!(this.$entryParams.permissions.assistenz || this.$entryParams.permissions.admin)) {
 				return
 			}
