@@ -12,17 +12,13 @@ class ProfilApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getAllAnw' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getProfileViewData' => array ('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getAllAnwByUID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'addEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'deleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
-				'getEntschuldigungenByPerson' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'checkInAnwesenheit' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
-				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'deleteUserAnwesenheitById' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'deleteUserAnwesenheitByIds' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
+				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
 			)
 		);
 
@@ -54,27 +50,11 @@ class ProfilApi extends FHCAPI_Controller
 		$this->load->helper('hlp_sancho_helper');
 	}
 
-
-	// STUDENT API
-
-	public function getAllAnw()
-	{
-		$studiensemester = $this->_ci->input->get('studiensemester');
-
-		if (!isEmptyString($studiensemester))
-		{
-			$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
-
-			if (isError($studiensemester) || !hasData($studiensemester))
-				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
-
-			$studiensemester = getData($studiensemester)[0]->studiensemester_kurzbz;
-
-			$result = $this->_ci->AnwesenheitModel->getAllByStudent($this->_uid, $studiensemester);
-			$this->terminateWithSuccess($result);
-		}
-	}
-
+	/**
+	 * POST METHOD
+	 * expects parameter 'uid'
+	 * returns viewData for given student_uid for 'StudentComponent'
+	 */
 	public function getProfileViewData() {
 		$result = $this->getPostJSON();
 		$uid = $result->uid;
@@ -88,6 +68,12 @@ class ProfilApi extends FHCAPI_Controller
 		$this->terminateWithSuccess($result);
 	}
 
+	/**
+	 * GET METHOD
+	 * expects parameter 'studiensemester', 'uid'
+	 *
+	 * returns list of all anwesenheiten user entries of student in semester
+	 */
 	public function getAllAnwByUID()
 	{
 		$studiensemester = $this->_ci->input->get('studiensemester');
@@ -113,6 +99,29 @@ class ProfilApi extends FHCAPI_Controller
 		}
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameter 'zugangscode' - 8digit alphanumeric string
+	 *
+	 * performs anwesenheitskontrolle checkIn for students if they scanned/entered a zugangscode into their
+	 * digital attendances mask.
+	 *
+	 * Does not update the status if anwesenheit_user entry is ENTSCHULDIGT_STATUS at time of checkIn.
+	 *
+	 * Checks for:
+	 * 		1.) existing and valid zugangscode
+	 * 		2.) qr code age to avoid abuse of uncleaned codes
+	 * 		3.) existing and valid anwesenheitskontrolle
+	 * 		// 4.) if checkIn is performed during time the kontrolle is meant for (could lead to impossible checks so
+	 * 		       not in use right now)
+	 * 		5.) existing and valid lehreinheit kontrolle is supposed to be meant for
+	 * 		6.) if student is participant of said lehreineheit
+	 * 		7.) if anwesenheiten_user entry exists to update (should in 100% of unmanipulated cases be true)
+	 * 		8.) errors during the actual database update
+	 *
+	 * On successful checkIn returns various viewData for 'ScanComponent'
+	 * Else returns adequate Error Message
+	 */
 	public function checkInAnwesenheit() {
 
 		$result = $this->getPostJSON();
@@ -201,6 +210,14 @@ class ProfilApi extends FHCAPI_Controller
 		));
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters FORMDATA{'von', 'bis', 'person_id', 'files'}
+	 *
+	 * Adds Entschuldigungs entry, uploads file with dms lib and sends automated email to
+	 * relevant studiengangsassistenz that a new entschuldigung from student x on date y has been uploaded
+	 * with a link to the entschuldigungsmanagement.
+	 */
 	public function addEntschuldigung()
 	{
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
@@ -258,7 +275,7 @@ class ProfilApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
 
-	public function sendEmailToAssistenz ($person_id_param) {
+	private function sendEmailToAssistenz ($person_id_param) {
 
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
@@ -313,6 +330,12 @@ class ProfilApi extends FHCAPI_Controller
 
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters 'entschuldigung_id'
+	 *
+	 * Deletes Entschuldigung entry if it has not yet a accepted or declined status set.
+	 */
 	public function deleteEntschuldigung()
 	{
 		$data = json_decode($this->input->raw_input_stream, true);
@@ -322,6 +345,7 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
+		$this->terminateWithSuccess($zuordnung);
 
 		if (hasData($zuordnung))
 		{
@@ -346,11 +370,12 @@ class ProfilApi extends FHCAPI_Controller
 		}
 	}
 
-	public function getEntschuldigungenByPerson()
-	{
-		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson(getAuthPersonId()));
-	}
-
+	/**
+	 * POST METHOD
+	 * expects parameters 'person_id'
+	 *
+	 * returns list of entschuldigungen entries for given person_id
+	 */
 	public function getEntschuldigungenByPersonID() {
 		$result = $this->getPostJSON();
 
@@ -371,6 +396,12 @@ class ProfilApi extends FHCAPI_Controller
 		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id));
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters 'lv_id', 'sem_kz', 'id'
+	 *
+	 * returns calculated anwesenheiten quota for student in lva in semester
+	 */
 	public function getAnwesenheitSumByLva() {
 		$result = $this->getPostJSON();
 		$lv_id = $result->lv_id;
@@ -381,30 +412,6 @@ class ProfilApi extends FHCAPI_Controller
 
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCalculatingAnwQuota'), 'general');
 		$this->terminateWithSuccess(getData($result));
-	}
-
-	public function deleteUserAnwesenheitById() {
-		$result = $this->getPostJSON();
-		$anwesenheit_user_id = $result->anwesenheit_user_id;
-
-		$deleteresp = $this->_ci->AnwesenheitUserModel->delete(array(
-			'anwesenheit_user_id' => $anwesenheit_user_id
-		));
-
-		if(!hasData($deleteresp)) $this->terminateWithError($this->p->t('global', 'errorDeleteSingleAnwUserEntry'), 'general');
-
-		$this->terminateWithSuccess(getData($deleteresp));
-	}
-
-	public function deleteUserAnwesenheitByIds() {
-		$result = $this->getPostJSON();
-		$ids = $result->ids;
-
-		$deleteresp = $this->_ci->AnwesenheitUserModel->deleteUserAnwesenheitByIds($ids);
-
-		if(!hasData($deleteresp)) $this->terminateWithError($this->p->t('global', 'errorDeleteMultipleAnwUserEntry'), 'general');
-
-		$this->terminateWithSuccess(getData($deleteresp));
 	}
 
 	private function _setAuthUID()

@@ -13,7 +13,8 @@ class Anwesenheit_User_model extends \DB_Model
 		$this->pk = 'anwesenheit_user_id';
 	}
 
-	public function getAnwesenheitEntryByPrestudentIdDateLehreinheitId($prestudent_id, $le_id, $date) {
+	public function getAnwesenheitEntryByPrestudentIdDateLehreinheitId($prestudent_id, $le_id, $date)
+	{
 		$query = "
 			SELECT *
 			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
@@ -24,7 +25,8 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query, [$prestudent_id, $le_id, $date]);
 	}
 
-	public function addHistoryEntry($entry){
+	public function addHistoryEntry($entry)
+	{
 		$query = "
 			INSERT INTO extension.tbl_anwesenheit_user_history (
 			    anwesenheit_user_id,
@@ -74,6 +76,8 @@ class Anwesenheit_User_model extends \DB_Model
 	{
 		$this->db->trans_start(false);
 
+		$updateResults = [];
+
 		foreach ($changedAnwesenheiten as $entry) {
 			$existingResult = $this->load($entry->anwesenheit_user_id);
 			if(isError($existingResult)) {
@@ -88,17 +92,24 @@ class Anwesenheit_User_model extends \DB_Model
 			}
 
 			if(property_exists($entry, 'notiz')) {
-
 				$result = $this->update($entry->anwesenheit_user_id, array(
 					'version' => $existing->version + 1,
 					'status' => $entry->status,
 					'notiz' => $entry->notiz
 				));
+
+				if(isSuccess($result) && hasData($result)) {
+					$updateResults[] = getData($result);
+				}
 			} else {
 				$result = $this->update($entry->anwesenheit_user_id, array(
 					'version' => $existing->version + 1,
 					'status' => $entry->status
 				));
+
+				if(isSuccess($result) && hasData($result)) {
+					$updateResults[] = getData($result);
+				}
 			}
 
 
@@ -116,12 +127,13 @@ class Anwesenheit_User_model extends \DB_Model
 			return error($result->msg, EXIT_ERROR);
 		} else {
 			$this->db->trans_commit();
-			return success('Anwesenheiten successfully updated.');
+			return success($updateResults);
 		}
 
 	}
 
-	public function getEntschuldigungsstatusForPersonIdsOnDate($personIds) {
+	public function getEntschuldigungsstatusForPersonIds($personIds)
+	{
 
 
 		$query ='SELECT person_id, von, bis

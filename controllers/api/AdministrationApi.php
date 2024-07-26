@@ -42,8 +42,10 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->load->helper('hlp_sancho_helper');
 	}
 
-	// ASSISTENZ API
-
+	/**
+	 * POST METHOD
+	 * Expects parameter 'stg_kz_arr'
+	 */
 	public function getEntschuldigungen()
 	{
 		$result = $this->getPostJSON();
@@ -54,11 +56,14 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->terminateWithSuccess( $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr));
 	}
 
-	public function assistenzGetAllEntschuldigungen()
-	{
-		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getAllEntschuldigungen());
-	}
-
+	/**
+	 * POST METHOD
+	 * Expects parameter 'entschuldigung_id', 'status'
+	 * Optional parameter 'notiz'
+	 * Updates an existing Entschuldigung entry in extension.tbl_anwesenheit_entschuldigung and finds relevant
+	 * Anwesenheiten User entries to update to or back from ENTSCHULDIGT_STATUS to ABWESEND_STATUS in respect to
+	 * the updated Entschuldigung status.
+	 */
 	public function updateEntschuldigung()
 	{
 		$data = json_decode($this->input->raw_input_stream, true);

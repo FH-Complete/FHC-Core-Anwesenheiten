@@ -88,24 +88,6 @@ export default {
 			throw error;
 		}
 	},
-	async getAllAnwesenheitenByStudiengang(stg_kz, sem_kurzbz) {
-		try {
-			const payload = {stg_kz, sem_kurzbz}
-			const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByStudiengang';
-			return this.$fhcApi.post(url, payload, null)
-		} catch (error) {
-			throw error;
-		}
-	},
-	async getAllAnwesenheitenByLva(lv_id, sem_kurzbz) {
-		try {
-			const payload = {lv_id, sem_kurzbz}
-			const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByLva';
-			return this.$fhcApi.post(url, payload, null)
-		} catch (error) {
-			throw error;
-		}
-	},
 	async getAnwQuoteForPrestudentIds(ids, lv_id, sem_kurzbz) {
 		try {
 			const payload = {ids, lv_id, sem_kurzbz}

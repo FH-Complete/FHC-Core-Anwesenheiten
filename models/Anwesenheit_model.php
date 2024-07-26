@@ -127,10 +127,13 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$uid]);
 	}
 
-	public function loadEmptyAnwesenheitenForLE($le_id) {
-		$qry="";
+	public function loadEmptyAnwesenheitenForLE($le_ids) {
+		$qry="SELECT anwesenheit_id, von, bis, lehreinheit_id
+		FROM extension.tbl_anwesenheit
+			LEFT JOIN extension.tbl_anwesenheit_user USING (anwesenheit_id)
+			WHERE tbl_anwesenheit_user.anwesenheit_user_id IS NULL AND lehreinheit_id IN ?;";
 
-		return $this->execQuery($qry, [$le_id]);
+		return $this->execQuery($qry, [$le_ids]);
 	}
 
 	public function getAnwesenheitenEntriesForStudents($prestudentIds, $le_id) {

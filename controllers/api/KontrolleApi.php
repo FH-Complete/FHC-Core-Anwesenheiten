@@ -71,13 +71,28 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->load->helper('hlp_sancho_helper');
 	}
 
-	// LEKTOR API
-
+	/**
+	 * POST METHOD
+	 * expects parameters 'le_id', 'lv_id', 'sem_kurzbz', 'ma_uid', 'date'
+	 *
+	 * main setup & state management Method of LektorComponent and fulfills several functions
+	 * in order to keep state management simple in the prototype phase. High potential for optimization.
+	 *
+	 * returns (
+	 *    1. list of students attending le in semester on date for lektor
+	 * 	  2. anwesenheiten_user entries of students
+	 *    3. object of current studiensemester (used to calculate zusätze like outgoing, incoming, etc of students)
+	 *    4. a list of every accepted entschuldigungsrange for students in this lesson
+	 *    5. existing anwesenheitskontrollen to delete later on
+	 *    6. some lektor and lehreinheit viewData for 'LektorComponent'
+	 *    7. termine for lehreinheit in stundenplan
+	 * )
+	 */
 	public function getAllAnwesenheitenByLvaAssigned()
 	{
 		$result = $this->getPostJSON();
 
-		if(!property_exists($result, 'le_id') || !property_exists($result, 'le_id')
+		if(!property_exists($result, 'le_id') || !property_exists($result, 'lv_id')
 			|| !property_exists($result, 'sem_kurzbz') || !property_exists($result, 'ma_uid')
 			|| !property_exists($result, 'date')) {
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
@@ -86,10 +101,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
 		$le_id = $result->le_id;
-
 		$ma_uid = $result->ma_uid;
 		$date = $result->date;
-
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
@@ -110,18 +123,17 @@ class KontrolleApi extends FHCAPI_Controller
 		};
 
 		$personIds = array_map($funcPID, $students);
-		$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIdsOnDate($personIds);
+		$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIds($personIds);
 		$entschuldigungsstatus = getData($result);
 
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
 
-
 		// get kontrollen for le_id and newer than age constant if permission is lektor
-
 		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		$kontrollen = null;
-		if($isLektor) {
+		if($isLektor && !$isAdmin) { // admin could be lektor at the same time
 			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndInterval($le_id, KONTROLLE_DELETE_MAX_REACH);
 			$kontrollen = getData($result);
 		} else {
@@ -138,6 +150,11 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine));
 	}
 
+	/**
+	 * GET METHOD
+	 * expects parameters 'prestudent_id', 'lv_id', 'sem_kurzbz'
+	 * returns list of anwesenheiten_user entries of student for lva in semester
+	 */
 	public function getAllAnwesenheitenByStudentByLva()
 	{
 		$prestudent_id = $this->input->get('prestudent_id');
@@ -150,6 +167,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->terminateWithSuccess($res);
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters 'le_id'
+	 * returns list of ids of updated anwesenheit_user rows
+	 *
+	 */
 	public function updateAnwesenheiten()
 	{
 		$result = $this->getPostJSON();
@@ -168,7 +191,22 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(getData($result));
 	}
 
-	public function getExistingQRCode(){
+	/**
+	 * POST METHOD
+	 * expects parameters 'le_id'
+	 *
+	 * looks for currently active anwesenheitskontrolle for given lehreinheit
+	 *
+	 * returns (
+	 *  	1. qr code svg image to render in frontend client
+	 *  	2. url which is baked into qr code for debugging puposes
+	 *  	3. zugangscode to display on its own
+	 *  	4. id of anwesenheitskontrolle which has to exist for the found qr code to be valid with
+	 *  	5. count of already checked in students (anwesend or entschuldigt)
+	 * ) OR 'NO QR FOUND' message
+	 */
+	public function getExistingQRCode()
+	{
 		$result = $this->getPostJSON();
 
 		if(!property_exists($result, 'le_id')) {
@@ -204,6 +242,19 @@ class KontrolleApi extends FHCAPI_Controller
 
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters 'anwesenheit_id'
+	 *
+	 * generates a new hashCode and QR code image for existing anwesenheitskontrolle
+	 *
+	 * returns (
+	 *    1. qr code svg image to render in frontend client
+	 *    2. url which is baked into qr code for debugging puposes
+	 *    3. zugangscode to display on its own
+	 *    4. id of anwesenheitskontrolle which has to exist for the found qr code to be valid with
+	 *  )
+	 */
 	public function regenerateQRCode()
 	{
 		$result = $this->getPostJSON();
@@ -241,6 +292,13 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters 'anwesenheit_id', 'zugangscode'
+	 *
+	 * usually called a short time after regenerateQR, used to delete old Code from DB so Students could potentially
+	 * still check in with their soon to be invalid QR
+	 */
 	public function degenerateQRCode()
 	{
 		$result = $this->getPostJSON();
@@ -257,6 +315,20 @@ class KontrolleApi extends FHCAPI_Controller
 		return $deleteresp;
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameters 'le_id', 'datum', 'beginn', 'ende'
+	 *
+	 * Method used to create new anwesenheitskontrolle
+	 * Either finds existing Kontrolle or creates new one, then handles lookup/creation of corresponding QR Code
+	 * returns (
+	 *  	1. qr code svg image to render in frontend client
+	 *  	2. url which is baked into qr code for debugging puposes
+	 *  	3. zugangscode to display on its own
+	 *  	4. id of anwesenheitskontrolle which has to exist for the found qr code to be valid with
+	 *  	5. count of already checked in students (anwesend or entschuldigt)
+	 * ) OR AN ERROR MESSAGE
+	 */
 	public function getNewQRCode()
 	{
 		$result = $this->getPostJSON();
@@ -326,7 +398,8 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 	}
 
-	private function _handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id, $von, $bis){
+	private function _handleResultQR($resultQR, $qrcode, $anwesenheit_id, $le_id, $von, $bis)
+	{
 
 		if(hasData($resultQR)) { // resend existing qr
 
@@ -371,6 +444,12 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 	}
 
+	/**
+	 * POST METHOD
+	 * expects 'anwesenheit_id'
+	 * deletes extisting QR Code
+	 * returns deleted id or error message
+	 */
 	public function deleteQRCode()
 	{
 		$result = $this->getPostJSON();
@@ -387,7 +466,14 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 	}
 
-	private function isAdminOrTeachesLE($le) {
+	/**
+	 * @param $le
+	 * @return bool
+	 *
+	 * checks Berechtigungen for Admin/Assistenz or Lektor and is Teaching lehreinheit
+	 */
+	private function isAdminOrTeachesLE($le)
+	{
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		if($isAdmin) return true;
 
@@ -405,7 +491,15 @@ class KontrolleApi extends FHCAPI_Controller
 		return false;
 	}
 
-	public function deleteAnwesenheitskontrolle() {
+	/**
+	 * POST METHOD
+	 * expects parameters 'le_id', 'date'
+	 *
+	 * deletes anwesenheitskontrollen and their corresponding user entries from db
+	 * also deletes entries from history table and writes latest state into db logs
+	 */
+	public function deleteAnwesenheitskontrolle()
+	{
 		$result = $this->getPostJSON();
 		$le_id = $result->le_id;
 		$date = $result->date;
@@ -477,6 +571,12 @@ class KontrolleApi extends FHCAPI_Controller
 		]));
 	}
 
+	/**
+	 * POST METHOD
+	 * expects parameter 'anwesenheit_id'
+	 *
+	 * returns positive checkIn count for anwesenheitskontrolle (entschuldigt or anwesend)
+	 */
 	public function pollAnwesenheiten() {
 		$result = $this->getPostJSON();
 		$anwesenheit_id = $result->anwesenheit_id;
@@ -485,28 +585,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(getData($countPoll)[0]);
 	}
 
-	public function getAllAnwesenheitenByStudiengang() {
-		$result = $this->getPostJSON();
-		$stg_kz = $result->stg_kz;
-		$sem_kurzbz = $result->sem_kurzbz;
-
-		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByStudiengang($stg_kz, $sem_kurzbz);
-
-		$this->terminateWithSuccess(getData($result));
-	}
-
-	public function getAllAnwesenheitenByLva() {
-		$result = $this->getPostJSON();
-		$lv_id = $result->lv_id;
-		$sem_kurzbz = $result->sem_kurzbz;
-
-		$result = $this->_ci->AnwesenheitModel->getAllAnwesenheitenByLva($lv_id,  $sem_kurzbz);
-
-		if(!isSuccess($result)) $this->terminateWithError($result);
-
-		$this->terminateWithSuccess($result);
-	}
-
+	/**
+	 * POST METHOD
+	 * expects parameters 'ids', 'lv_id', 'sem_kurzbz'
+	 *
+	 * returns list of prestudent_ids and their corresponding anwesneheits quota for given lva in semester
+	 */
 	public function getAnwQuoteForPrestudentIds() {
 		$result = $this->getPostJSON();
 		$ids = $result->ids;

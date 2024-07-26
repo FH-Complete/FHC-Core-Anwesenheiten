@@ -1,13 +1,4 @@
 export default {
-
-	async getAllAnw(studiensemester) {
-		try {
-			const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnw?studiensemester=${studiensemester}`;
-			return this.$fhcApi.get(url, null, null)
-		} catch (error) {
-			throw error;
-		}
-	},
 	async getAllAnwByUID(studiensemester, uid) {
 		try {
 			const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID?studiensemester=${studiensemester}&uid=${uid}`;
@@ -53,14 +44,6 @@ export default {
 			throw error;
 		}
 	},
-	async getEntschuldigungenByPerson() {
-		try {
-			const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPerson';
-			return this.$fhcApi.get(url, null, null)
-		} catch (error) {
-			throw error;
-		}
-	},
 	async getEntschuldigungenByPersonID(person_id) {
 		try {
 			const payload = {person_id}
@@ -78,25 +61,5 @@ export default {
 		} catch (error) {
 			throw error;
 		}
-	},
-	async deleteUserAnwesenheitById(anwesenheit_user_id) {
-		try {
-			const payload = {anwesenheit_user_id}
-			const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/deleteUserAnwesenheitById';
-			return this.$fhcApi.post(url, payload, null)
-		} catch (error) {
-			throw error;
-		}
-	},
-	async deleteUserAnwesenheitByIds(ids) {
-		try {
-			const payload = {ids}
-			const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/deleteUserAnwesenheitByIds';
-			return this.$fhcApi.post(url, payload, null)
-		} catch (error) {
-			throw error;
-		}
 	}
-
-
 }

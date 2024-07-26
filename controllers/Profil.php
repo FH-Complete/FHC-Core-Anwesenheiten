@@ -66,6 +66,14 @@ class Profil extends Auth_Controller
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', $viewData);
 	}
 
+	/**
+	 * GET METHOD
+	 * expects parameter 'entschuldigung' (dms_id)
+	 *
+	 * Is being used in Auth_Controller and not FHC_API Controller since return value is file object
+	 *
+	 * checks for zuordnung just like api/ProfilApi/deleteEntschuldigung
+	 */
 	public function getEntschuldigungFile()
 	{
 		$dms_id = $this->_ci->input->get('entschuldigung');
@@ -103,4 +111,3 @@ class Profil extends Auth_Controller
 	}
 
 }
-
