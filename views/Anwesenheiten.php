@@ -38,7 +38,12 @@ $includesArray = array(
 	)
 );
 
-$this->load->view('templates/FHC-Header', $includesArray);
+if(defined('CIS4') && CIS4 === true) {
+	$this->load->view('templates/CISHTML-Header', $includesArray);
+} else {
+	$this->load->view('templates/FHC-Header', $includesArray);
+}
+
 ?>
 
 
@@ -51,6 +56,10 @@ $this->load->view('templates/FHC-Header', $includesArray);
 	</router-view>
 </div>
 </body>
-
-<?php $this->load->view('templates/FHC-Footer', $includesArray); ?>
-
+<?php
+	if(defined('CIS4') && CIS4 === true) {
+		$this->load->view('templates/CISHTML-Footer', $includesArray);
+	} else {
+		$this->load->view('templates/FHC-Footer', $includesArray);
+	}
+?>
