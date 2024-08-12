@@ -14,8 +14,8 @@ Events::on('lvMenuBuild', function($menu_reference, $params) {
 	(
 		'id'=>'core_menu_digitale_anwesenheitslisten',
 		'position'=>'50',
-		'name'=> $p->t('global/digitalesAnwManagement'),
-		'c4_icon'=>'../../../skin/images/button_kreuzerltool.png',
+		'name'=> $ci_p->t('global', 'digitalesAnwManagement'),
+		'c4_icon'=>APP_ROOT."/skin/images/button_kreuzerltool.png",
 		'c4_link'=>$link,
 		'text'=>''
 	);
