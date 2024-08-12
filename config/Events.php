@@ -14,7 +14,7 @@ Events::on('lvMenuBuild', function($menu_reference, $params) {
 	(
 		'id'=>'core_menu_digitale_anwesenheitslisten',
 		'position'=>'50',
-		'name'=> $p->t('lehre/digiAnw'),
+		'name'=> $p->t('global/digitalesAnwManagement'),
 		'c4_icon'=>'../../../skin/images/button_kreuzerltool.png',
 		'c4_link'=>$link,
 		'text'=>''
