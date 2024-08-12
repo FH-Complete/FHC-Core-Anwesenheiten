@@ -1,3 +1,8 @@
+INSERT INTO system.tbl_app(app)
+SELECT 'anwesenheiten'
+WHERE
+	NOT EXISTS(SELECT 1 FROM system.tbl_app WHERE app='anwesenheiten');
+
 CREATE TABLE IF NOT EXISTS extension.tbl_anwesenheit_status
 (
     status_kurzbz               varchar(64) NOT NULL,
