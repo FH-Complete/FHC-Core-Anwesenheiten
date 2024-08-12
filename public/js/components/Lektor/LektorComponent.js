@@ -910,7 +910,7 @@ export const LektorComponent = {
 				</div>
 				
 				<div class="row mt-4" style="height: 70px">
-					<div class="col-6" style="transform: translateY(-90px)">
+					<div class="col-6" style="transform: translateY(-80px)">
 						<h1 class="h4">{{ filterTitle }}</h1>
 						<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>
 					</div>

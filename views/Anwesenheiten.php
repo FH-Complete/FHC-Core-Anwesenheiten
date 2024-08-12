@@ -38,7 +38,9 @@ $includesArray = array(
 	)
 );
 
-if(defined('CIS4') && CIS4 === true) {
+$cis_4 = false;
+if(defined('CIS4') && CIS4) {
+	$cis_4 = true;
 	$this->load->view('templates/CISHTML-Header', $includesArray);
 } else {
 	$this->load->view('templates/FHC-Header', $includesArray);
@@ -50,14 +52,14 @@ if(defined('CIS4') && CIS4 === true) {
 
 <body>
 
-<div id="main" permissions='<?php echo json_encode($permissions) ?>' style="margin-right: 18px;">
-	<router-view permissions='<?php echo json_encode($permissions) ?>'>
+<div id="main" permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>' style="margin-right: 18px;">
+	<router-view permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>'>
 	
 	</router-view>
 </div>
 </body>
 <?php
-	if(defined('CIS4') && CIS4 === true) {
+	if(defined('CIS4') && CIS4) {
 		$this->load->view('templates/CISHTML-Footer', $includesArray);
 	} else {
 		$this->load->view('templates/FHC-Footer', $includesArray);

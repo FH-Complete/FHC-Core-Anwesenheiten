@@ -80,4 +80,3 @@ class Anw extends Auth_Controller
 	}
 
 }
-

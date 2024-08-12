@@ -105,6 +105,9 @@ export default {
 				this.$entryParams.phrasenPromise.then(()=> {this.phrasenResolved = true})
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
+				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
+
+				console.log('$entryParams', this.$entryParams)
 
 				el.removeAttribute('permissions')
 
@@ -338,7 +341,7 @@ export default {
 	</core-navigation-cmpt>
 
 	<core-base-layout
-		:title="$p.t('global/digitalesAnwManagement')"
+		:title="$entryParams?.cis4 ? null : $p.t('global/digitalesAnwManagement')"
 		:subtitle="getSubtitle">
 		<template #main>
 			<bs-modal ref="modalContainerKontrolleSetup" class="bootstrap-prompt" dialogClass="modal-lg">
@@ -361,8 +364,6 @@ export default {
 					<AssistenzComponent v-if="$entryParams?.permissions?.assistenz || $entryParams?.permissions?.admin"></AssistenzComponent>
 				</template>
 			</div>
-			
-			
 			
 		</template>
 	</core-base-layout>

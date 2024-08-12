@@ -8,7 +8,7 @@ Events::on('lvMenuBuild', function($menu_reference, $params) {
 	extract($params);
 	$menu =& $menu_reference();
 
-	$link= APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/?stg_kz=$studiengang_kz&sem=$semester&lvid=$lvid&sem_kurzbz=$angezeigtes_stsem";
+	$link= APP_ROOT."cis.php/extensions/FHC-Core-Anwesenheiten/?stg_kz=$studiengang_kz&sem=$semester&lvid=$lvid&sem_kurzbz=$angezeigtes_stsem";
 
 	$menu[]=array
 	(

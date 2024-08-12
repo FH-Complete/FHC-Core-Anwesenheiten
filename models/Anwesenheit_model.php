@@ -443,4 +443,11 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$lv_id]);
 	}
 
+	public function loadLEForSemester($sem) {
+
+		$query = "SELECT lehreinheit_id FROM lehre.tbl_lehreinheit WHERE studiensemester_kurzbz = ?;";
+
+		return $this->execReadOnlyQuery($query, [$sem]);
+	}
+
 }

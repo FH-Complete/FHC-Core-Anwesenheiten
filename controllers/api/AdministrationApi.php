@@ -51,7 +51,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$result = $this->getPostJSON();
 		$stg_kz_arr = $result->stg_kz_arr;
 
-		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithError($this->p->t('global', 'errorNoSTGassigned'), 'general');
+		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithSuccess($this->p->t('global', 'errorNoSTGassigned'));
 
 		$this->terminateWithSuccess( $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr));
 	}
