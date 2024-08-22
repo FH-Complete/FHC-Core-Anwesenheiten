@@ -93,6 +93,7 @@ export default {
 				this.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 				this.$entryParams.sem = searchParams.get('sem')
 
+
 				this.$entryParams.notMissingParams = !!(this.$entryParams.lv_id && this.$entryParams.stg_kz && this.$entryParams.sem_kurzbz)
 
 				this.setupViewDataRefs()
@@ -108,6 +109,7 @@ export default {
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
 				console.log('$entryParams', this.$entryParams)
+				console.log('called controller: ', this.$entryParams.permissions.controller)
 
 				el.removeAttribute('permissions')
 
