@@ -909,14 +909,14 @@ export const LektorComponent = {
 					</div>
 				</div>
 				
-				<div class="row mt-4" style="height: 70px">
+				<div class="row mt-4">
 					<div class="col-6" style="transform: translateY(-80px)">
 						<h1 class="h4">{{ filterTitle }}</h1>
 						<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>
 					</div>
 					
-					<div class="col-1" style="height: 40px; align-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
-					<div class="col-2" style="height: 40px">
+					<div class="col-1" style="height: 40px; align-self: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
+					<div class="col-2" style="height: 40px;">
 						<datepicker
 							v-model="selectedDate"
 							:clearable="false"

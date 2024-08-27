@@ -376,7 +376,7 @@ class Anwesenheit_model extends \DB_Model
 					orgform_kurzbz
 				FROM tbl_studiengang
 				WHERE aktiv = true
-				ORDER BY studiengang_kz";
+				ORDER BY kurzbzlang";
 
 		return $this->execReadOnlyQuery($query);
 	}
@@ -388,11 +388,13 @@ class Anwesenheit_model extends \DB_Model
 					bezeichnung,
 					kurzbzlang,
 					orgform_kurzbz
-				FROM tbl_studiengang
+				FROM tbl_studiengang JOIN lehre.tbl_studienordnung USING(studiengang_kz)
+					JOIN lehre.tbl_studienplan USING(studienordnung_id)
+					JOIN lehre.tbl_studienplan_semester USING(studienplan_id)
 				WHERE aktiv = true
 				
 				AND studiengang_kz IN ?
-				ORDER BY studiengang_kz";
+				ORDER BY kurzbzlang";
 
 		return $this->execReadOnlyQuery($query, [$allowed_stg]);
 	}

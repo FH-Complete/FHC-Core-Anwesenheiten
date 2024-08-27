@@ -101,8 +101,8 @@ export const MaUIDDropdown = {
 	template: `
 		<div>
 			<label for="maSelect">{{ title }}</label>
-			<select id="maSelect" @change="maUIDChanged" class="form-control">
-				<option v-for="option in internal_available_maUID" :value="option" >
+			<select id="maSelect" @change="maUIDChanged" class="form-control" >
+				<option v-for="option in internal_available_maUID" :value="option" selected="option.mitarbeiter_uid === internal_selected_maUID.mitarbeiter_uid">
 					<a> {{option.infoString}} </a>
 				</option>
 			</select>

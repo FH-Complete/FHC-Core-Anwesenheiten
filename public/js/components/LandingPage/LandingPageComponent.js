@@ -166,10 +166,9 @@ export default {
 				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
 				if((this.$entryParams.permissions.admin ||
 					this.$entryParams.permissions.assistenz) && lv_id && sem_kurzbz && le_ids) {
-					const maProm = this.handleMaSetup(lv_id, sem_kurzbz)
+					const maProm = this.handleMaSetup(lv_id, sem_kurzbz, ma_uid)
 
 					maProm.then(()=> {
-						ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
 						promises.push(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids))
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
 						Promise.all(promises).then(()=>{
@@ -211,11 +210,16 @@ export default {
 				}).finally(()=>{resolve()})
 			})
 		},
-		handleMaSetup(lv_id, sem_kurzbz) {
+		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.available_maUID = []
-					const lektor = res.data.retval[0]
+
+					debugger
+
+					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
+
+					const lektor = found ?? res.data.retval[0]
 					const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 						+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 						+ (lektor.titelpost ? ' ' + lektor.titelpost : '')

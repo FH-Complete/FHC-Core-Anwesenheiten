@@ -39,7 +39,7 @@ export const StudiengangDropdown = {
 
 	template: `
 		<div class="col-12">
-			<Dropdown @change="sgChanged" :placeholder="$p.t('lehre/studiengang')" :style="{'width': '100%'}" :optionLabel="getOptionLabel" v-model="selectedOption" :options="options" showClear>
+			<Dropdown @change="sgChanged" scrollHeight="600px" :placeholder="$p.t('lehre/studiengang')" :style="{'width': '100%'}" :optionLabel="getOptionLabel" v-model="selectedOption" :options="options" showClear>
 				<template #optionsgroup="slotProps">
 					<div> {{ option.kurzbzlang }} {{ option.bezeichnung }} </div>
 				</template>

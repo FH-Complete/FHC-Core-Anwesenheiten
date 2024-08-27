@@ -6,7 +6,6 @@ import StudentComponent from "../components/Student/StudentComponent";
 import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent";
 import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent";
 import ScanComponent from "../components/Student/ScanComponent";
-import AssistenzComponent from "../components/Assistenz/AssistenzComponent";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent";
 import fhcapifactory from "../api/fhcapifactory";
 
@@ -88,4 +87,3 @@ anwesenheitApp
 	})
 	.use(Phrasen)
 	.mount("#main");
-
