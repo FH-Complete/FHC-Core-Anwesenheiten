@@ -8,7 +8,7 @@ import verticalsplit from "../../../../../js/components/verticalsplit/verticalsp
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 
 
-export default {
+export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
 		CoreBaseLayout,
@@ -337,3 +337,5 @@ export default {
 		</core-base-layout>
 	</div>`
 };
+
+export default StudentByLvaComponent

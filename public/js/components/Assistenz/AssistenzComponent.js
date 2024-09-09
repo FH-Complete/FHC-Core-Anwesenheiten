@@ -23,15 +23,18 @@ export const AssistenzComponent = {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			editCellValue: '',
+			tableData: null,
 			zeitraum: {
-				von: null,
-				bis: null
+				von: this.$formatTime(new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (30)))),
+				bis: this.$formatTime(new Date(Date.now()))
 			},
 			permissionsLoaded: false,
 			tableBuiltPromise: null,
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
+					this.tableData = response.data.retval
+					console.log(this.tableData)
 					return response.data.retval
 				},
 				ajaxConfig: "POST",
@@ -43,18 +46,32 @@ export const AssistenzComponent = {
 						return JSON.stringify({
 							stg_kz_arr: this.$entryParams.permissions.assistenz ?
 								this.$entryParams.permissions.studiengaengeAssistenz :
-								this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
+								this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : [],
+							von: this.zeitraum.von,
+							bis: this.zeitraum.bis
 						})
 					}
 				},
 				layout: 'fitDataStretch',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
+				pagination: true,
+				paginationSize: 100,
 				height: false,
 				columns: [
-					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', headerFilter: true},
-					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', headerFilter: true} ,
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip:false},
+					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname',
+						headerFilter: true
+					},
+					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname',
+						headerFilter: true
+					} ,
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert',
+						headerFilter:'list',
+						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Hochgeladen', '':'Alle'}},
+						headerFilterFunc: this.akzeptiertFilterFunc,
+						formatter: this.entschuldigungstatusFormatter,
+						tooltip: false
+					},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
@@ -67,7 +84,7 @@ export const AssistenzComponent = {
 					headerFilter: false,
 					group: true,
 					page: true,
-					columns: true,
+					columns: false,
 				},
 				persistenceID: "assistenzTable"
 			},
@@ -95,6 +112,8 @@ export const AssistenzComponent = {
 				{
 					event: "tableBuilt",
 					handler: async () => {
+						console.log(this.$refs.assistenzTable.tabulator)
+						debugger
 						await this.$entryParams.phrasenPromise
 						this.tableBuiltResolve()
 					}
@@ -110,6 +129,12 @@ export const AssistenzComponent = {
 		permissions: []
 	},
 	methods: {
+		akzeptiertFilterFunc(filterVal, rowVal, rowData, filterParams) {
+			// 400 iq code
+			if(filterVal === 'null') return rowVal === null
+			else if(filterVal === 'true') return rowVal === true
+			else if(filterVal === 'false') return rowVal === false
+		},
 		entschuldigungstatusFormatter(cell) {
 			let data = cell.getValue()
 			if (data == null) {
@@ -184,9 +209,10 @@ export const AssistenzComponent = {
 		{
 			this.$refs.assistenzTable.tabulator.clearFilter()
 
-			if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
-			if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
+			// if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
+			// if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
 			if (this.studiengang) this.$refs.assistenzTable.tabulator.addFilter(this.studiengangFilter, {studiengang: this.studiengang})
+
 		},
 		handleInputNotiz(e) {
 			this.notiz = e.target.value;
@@ -246,6 +272,16 @@ export const AssistenzComponent = {
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
 		},
+		refetchData() {
+			const stg_kz_arr =  this.$entryParams.permissions.assistenz ?
+				this.$entryParams.permissions.studiengaengeAssistenz :
+				this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
+
+			this.$fhcApi.factory.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
+				console.log(res)
+				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
+			})
+		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
@@ -254,12 +290,15 @@ export const AssistenzComponent = {
 	},
 	watch: {
 		'zeitraum.von'() {
-			this.filtern()
+
+			this.refetchData()
 		},
 		'zeitraum.bis'() {
-			this.filtern()
+
+			this.refetchData()
 		},
 		studiengang(newVal, oldVal) {
+			console.log(this.$refs.assistenzTable.tabulator)
 			this.filtern()
 		}
 	},
@@ -287,55 +326,55 @@ export const AssistenzComponent = {
 					<button type="button" class="btn btn-primary" :disabled="!notiz" @click="rejectEntschuldigung">{{ $p.t('global/reject') }}</button>
 				</template>
 			</bs-modal>
-		
-			<div class="row">
-				<div class="col-6">
-					<h1 class="h4 mb-5">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
-				</div>
-				<div class="col-2">
-					<div class="row mb-3 align-items-center">
-						<StudiengangDropdown
-							:allowedStg="getAllowedStg" @sgChanged="sgChangedHandler">
-						</StudiengangDropdown>
+			<div style="min-height: 70vh;">
+			
+				<div class="row">
+					<div class="col-6">
+						<h1 class="h4 mb-5">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+					</div>
+					<div class="col-2">
+						<div class="row mb-3 align-items-center">
+							<StudiengangDropdown
+								:allowedStg="getAllowedStg" @sgChanged="sgChangedHandler">
+							</StudiengangDropdown>
+						</div>
+					</div>
+					<div class="col-2">
+						<div class="row mb-3 align-items-center">
+							<datepicker
+								v-model="zeitraum.von"
+								:placeholder="$capitalize($p.t('ui/von'))"
+								clearable="false"
+								auto-apply
+								:enable-time-picker="false"
+								format="dd.MM.yyyy"
+								model-type="yyyy-MM-dd"
+							></datepicker>
+						</div>
+					</div>
+					<div class="col-2 mr-4">
+						<div class="row mb-3 align-items-center">
+							<datepicker
+								v-model="zeitraum.bis"
+								:placeholder="$capitalize($p.t('global/bis'))"
+								clearable="false"
+								auto-apply
+								:enable-time-picker="false"
+								format="dd.MM.yyyy"
+								model-type="yyyy-MM-dd"
+							></datepicker>
+						</div>
 					</div>
 				</div>
-				<div class="col-2">
-					<div class="row mb-3 align-items-center">
-						<datepicker
-							v-model="zeitraum.von"
-							:placeholder="$capitalize($p.t('ui/von'))"
-							clearable="false"
-							auto-apply
-							:enable-time-picker="false"
-							format="dd.MM.yyyy"
-							model-type="yyyy-MM-dd"
-						></datepicker>
-					</div>
-				</div>
-				<div class="col-2 mr-4">
-					<div class="row mb-3 align-items-center">
-						<datepicker
-							v-model="zeitraum.bis"
-							:placeholder="$capitalize($p.t('global/bis'))"
-							clearable="false"
-							auto-apply
-							:enable-time-picker="false"
-							format="dd.MM.yyyy"
-							model-type="yyyy-MM-dd"
-						></datepicker>
-					</div>
-				</div>
-				
-				
+				<core-filter-cmpt
+					ref="assistenzTable"
+					:tabulator-options="assistenzViewTabulatorOptions"
+					:tabulator-events="assistenzViewTabulatorEventHandlers"
+					:sideMenu=false
+					:table-only=true
+					:hideTopMenu=false
+				></core-filter-cmpt>
 			</div>
-			<core-filter-cmpt
-				ref="assistenzTable"
-				:tabulator-options="assistenzViewTabulatorOptions"
-				:tabulator-events="assistenzViewTabulatorEventHandlers"
-				:sideMenu=false
-				:table-only=true
-				:hideTopMenu=false
-			></core-filter-cmpt>
 		</template>
 	</core-base-layout>
 `

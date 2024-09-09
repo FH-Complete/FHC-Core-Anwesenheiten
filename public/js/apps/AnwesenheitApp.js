@@ -1,7 +1,7 @@
 import LektorComponent from "../components/Lektor/LektorComponent.js";
 import FhcApi from '../../../../js/plugin/FhcApi.js';
 import Phrasen from "../../../../js/plugin/Phrasen.js";
-import StudentByLvaComponent from "../components/Lektor/StudentByLvaComponent";
+import {StudentByLvaComponent} from "../components/Lektor/StudentByLvaComponent";
 import StudentComponent from "../components/Student/StudentComponent";
 import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent";
 import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent";
@@ -79,11 +79,27 @@ anwesenheitApp.config.globalProperties.$capitalize = (string) => {
 	return string[0].toUpperCase() + string.slice(1);
 }
 
+anwesenheitApp.config.globalProperties.$formatTime = (timeStamp, delimiter = '-', format = 'YYYY-MM-DD') => {
+	const date = new Date(timeStamp)
+	switch (format) {
+		case 'YYYY-MM-DD':
+			return date.getFullYear() + delimiter + String(date.getMonth() + 1).padStart(2, '0') + delimiter + String(date.getDate()).padStart(2, '0');
+		case 'DD-MM-YYYY':
+			return String(date.getDate()).padStart(2, '0') + delimiter + String(date.getMonth() + 1).padStart(2, '0') + delimiter + date.getFullYear();
+	}
+}
+
+anwesenheitApp.directive('tooltip', primevue.tooltip)
+
 anwesenheitApp
 	.use(router)
 	.use(FhcApi, fhcapifactory)
 	.use(primevue.config.default, {
-		zIndex: {overlay: 9999},
+		// TODO: set primevue locale with language
+		zIndex: {
+			overlay: 9000,
+			tooltip: 8000
+		},
 	})
 	.use(Phrasen)
 	.mount("#main");

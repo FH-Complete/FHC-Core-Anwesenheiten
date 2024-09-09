@@ -1,8 +1,8 @@
 export default {
 
-	async getEntschuldigungen(stg_kz_arr) {
+	async getEntschuldigungen(stg_kz_arr, von, bis) {
 		try {
-			const payload = {stg_kz_arr}
+			const payload = {stg_kz_arr, von, bis}
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen';
 			return this.$fhcApi.post(url, payload, null)
 		} catch (error) {

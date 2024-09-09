@@ -101,9 +101,9 @@ class Entschuldigung_model extends \DB_Model
 		return $this->execReadOnlyQuery($query);
 	}
 
-	public function getEntschuldigungenForStudiengaenge($stg_kz_arr)
+	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{
-
+		$params = [$stg_kz_arr];
 		$query = 'SELECT DISTINCT ON (dms_id,
 							von,
 							bis,
@@ -131,10 +131,20 @@ class Entschuldigung_model extends \DB_Model
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ?
-					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';
+					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ';
 
-		return $this->execReadOnlyQuery($query, [$stg_kz_arr]);
+		if($von) {
+			$query.= 'AND von > ? ';
+			$params[] = $von;
+		}
+		if($bis) {
+			$query.= 'AND bis < ? ';
+			$params[] = $bis;
+		}
+
+		$query.='ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';
+
+		return $this->execReadOnlyQuery($query, $params);
 	}
 	
 	public function checkZuordnungByDms($dms_id, $person_id = null)

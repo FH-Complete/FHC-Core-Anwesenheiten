@@ -452,4 +452,14 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$sem]);
 	}
 
+	public function getRandomStudentPersonIDS() {
+		$qry = "SELECT person_id
+				FROM tbl_person JOIN tbl_prestudent USING (person_id)
+				WHERE tbl_person.insertamum > '2021-10-10 10:10:10.000000'
+				ORDER BY RANDOM()
+				LIMIT 10000;";
+
+		return $this->execReadOnlyQuery($qry);
+	}
+
 }

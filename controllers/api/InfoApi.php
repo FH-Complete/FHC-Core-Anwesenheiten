@@ -19,7 +19,8 @@ class InfoApi extends FHCAPI_Controller
 				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'populateDBWithAnwEntries' => array('extension/anwesenheit_admin:rw'),
-				'populateDBWithAnwEntriesFromExistingKontrollen' => array('extension/anwesenheit_admin:rw')
+				'populateDBWithAnwEntriesFromExistingKontrollen' => array('extension/anwesenheit_admin:rw'),
+				'populateDBWithEntschuldigungen' => array ('extension/anwesenheit_admin:rw')
 			)
 		);
 
@@ -203,7 +204,7 @@ class InfoApi extends FHCAPI_Controller
 
 	public function populateDBWithAnwEntriesFromExistingKontrollen() {
 
-		$res = $this->AnwesenheitModel->loadLEForSemester('WS2023');
+		$res = $this->AnwesenheitModel->loadLEForSemester('WS2024');
 		$leBatch = $res->retval;
 
 //		foreach($leBatch as $le_id) {
@@ -212,6 +213,8 @@ class InfoApi extends FHCAPI_Controller
 
 //			$this->terminateWithSuccess($res);
 			$data = $res->retval;
+
+
 
 			foreach($data as $anw) {
 				$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
@@ -230,8 +233,9 @@ class InfoApi extends FHCAPI_Controller
 		// insert tbl.extension_anwesenheit_user entries for every LE of every LVA of every Studiengang to test limits
 
 		// tbl.studiengang WHERE aktiv = true AND studienplaetze > 0 AND typ = 'b' OR typ = 'm'
-		$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915,
-			336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
+//		$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915,
+//			336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
+		$studiengaenge = [227];
 
 		$response = [];
 		$sgIndex = 0;
@@ -249,7 +253,7 @@ class InfoApi extends FHCAPI_Controller
 			$lvaIndex = 0;
 			foreach($data as $lvaRow) {
 				// load all le
-				$resLE = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lvaRow->lehrveranstaltung_id, 'WS2023');
+				$resLE = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lvaRow->lehrveranstaltung_id, 'WS2024');
 				$this->_ci->AnwesenheitModel->resetQuery();
 				$dataLE = $resLE->retval;
 
@@ -263,6 +267,7 @@ class InfoApi extends FHCAPI_Controller
 					$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$leRow->lehreinheit_id] = [];
 					// find termine for LE
 					$resTermine = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
+//					$resTermine = $this->_ci->AnwesenheitModel->getLETermine(146286);
 					$this->_ci->AnwesenheitModel->resetQuery();
 					$dataTermine = $resTermine->retval;
 
@@ -275,21 +280,21 @@ class InfoApi extends FHCAPI_Controller
 						$vonString = $terminRow->datum.' '.$terminRow->beginn;
 						$endeString = $terminRow->datum.' '.$terminRow->ende;
 
-						$insert = $this->_ci->AnwesenheitModel->insert(array(
-							'lehreinheit_id' => $leRow->lehreinheit_id,
-							'insertamum' => date('Y-m-d H:i:s'),
-							'von' => $vonString,
-							'bis' => $endeString
-						));
+//						$insert = $this->_ci->AnwesenheitModel->insert(array(
+//							'lehreinheit_id' => $leRow->lehreinheit_id,
+//							'insertamum' => date('Y-m-d H:i:s'),
+//							'von' => $vonString,
+//							'bis' => $endeString
+//						));
 
-						$anwesenheit_id = $insert->retval;
-						$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
-							$leRow->lehreinheit_id,
-							$anwesenheit_id,
-							$vonString,
-							$endeString,
-							'abwesend',
-							'entschuldigt');
+//						$anwesenheit_id = $insert->retval;
+//						$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+//							146286,
+//							$anwesenheit_id,
+//							$vonString,
+//							$endeString,
+//							'abwesend',
+//							'entschuldigt');
 
 						$terminIndex++;
 					}
@@ -304,6 +309,47 @@ class InfoApi extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess($response);
+	}
+
+	public function populateDBWithEntschuldigungen() {
+
+		$res = $this->_ci->AnwesenheitModel->getRandomStudentPersonIDs();
+		$data = $res->retval;
+
+//		$this->terminateWithSuccess($data);
+
+		$start = new DateTime('2024-05-01 00:00:01');
+		$end = new DateTime('2024-12-30 23:59:59');
+
+		foreach ($data as $datarow) {
+			// generate random $von & $bis timestrings
+			$randomTimestamp1 = mt_rand($start->getTimestamp(), $end->getTimestamp());
+			$von = date('Y-m-d H:i:s', $randomTimestamp1);
+			$vonDateTime = new DateTime($von);
+
+			$randomTimestamp2 = mt_rand($start->getTimestamp(), $end->getTimestamp());
+			$bis = date('Y-m-d H:i:s', $randomTimestamp2);
+			$bisDateTime = new DateTime($bis);
+
+			if($bisDateTime < $vonDateTime) {
+				$tmp = $bis;
+				$bis = $von;
+				$von = $tmp;
+			}
+
+
+			$this->_ci->EntschuldigungModel->insert(
+				array(
+					'person_id' => $datarow->person_id,
+					'von' => $von,
+					'bis' => $bis,
+					'dms_id' => 314240,
+					'insertvon' => $this->_uid,
+					'version' => 1
+				)
+			);
+		}
+
 	}
 
 }

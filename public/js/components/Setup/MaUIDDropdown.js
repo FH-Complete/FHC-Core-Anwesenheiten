@@ -16,6 +16,7 @@ export const MaUIDDropdown = {
 	},
 	methods: {
 		reloadAvailableLE() {
+			console.log('reloadAvailableLE')
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
 			const sem_kurzbz = this.$entryParams.sem_kurzbz
 			const lv_id = this.$entryParams.lv_id
@@ -26,6 +27,7 @@ export const MaUIDDropdown = {
 			return new Promise(resolve => {
 
 				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
+					console.log('getLehreinheitenForLehrveranstaltungAndMaUid res', res)
 
 					// merge entries with same LE
 					const data = []
@@ -102,7 +104,9 @@ export const MaUIDDropdown = {
 		<div>
 			<label for="maSelect">{{ title }}</label>
 			<select id="maSelect" @change="maUIDChanged" class="form-control" >
-				<option v-for="option in internal_available_maUID" :value="option" selected="option.mitarbeiter_uid === internal_selected_maUID.mitarbeiter_uid">
+				<option v-for="option in internal_available_maUID" :value="option" >
+<!--				selected="option.mitarbeiter_uid === internal_selected_maUID.mitarbeiter_uid"-->
+				
 					<a> {{option.infoString}} </a>
 				</option>
 			</select>

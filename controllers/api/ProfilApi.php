@@ -220,6 +220,7 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	public function addEntschuldigung()
 	{
+
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
@@ -250,7 +251,9 @@ class ProfilApi extends FHCAPI_Controller
 		);
 
 		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
-		if(!isSuccess($dmsFile)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+		if(!isSuccess($dmsFile)) {
+			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+		}
 
 		$dmsFile = getData($dmsFile);
 
@@ -387,7 +390,7 @@ class ProfilApi extends FHCAPI_Controller
 		$person_id = $result->person_id;
 
 		// students are only allowed to fetch their own entschuldigungen
-		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($isStudent, 'general');
 
 		if(is_object($person_id) || isEmptyString($person_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');

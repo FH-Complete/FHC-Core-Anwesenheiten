@@ -9,6 +9,7 @@ import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown";
 import {TermineDropdown} from "../Setup/TermineDropdown";
+import {TermineOverview} from "./TermineOverview";
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -22,6 +23,7 @@ export const LektorComponent = {
 		LehreinheitenDropdown,
 		MaUIDDropdown,
 		KontrollenDropdown,
+		TermineOverview,
 		"datepicker": VueDatePicker,
 		verticalsplit: verticalsplit,
 		searchbar: searchbar
@@ -45,7 +47,8 @@ export const LektorComponent = {
 				tableStudentsData: [],
 				beginn: null,
 				ende: null,
-				tabulatorCols: null
+				tabulatorCols: null,
+				gruppen: null
 			},
 			anwesenheitenTabulatorOptions: {
 				rowHeight: 88, // foto max-height + 2x padding
@@ -59,7 +62,9 @@ export const LektorComponent = {
 					{title: this.$capitalize(this.$p.t('person/student')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false,tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe',
+						headerFilter: "list", headerFilterParams: {values: this.getGroups, sort:"asc"},
+						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'status', formatter: this.anwesenheitFormatterValue, hozAlign:"center",widthGrow: 1, tooltip: this.anwTooltip, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false, minWidth: 150},
 				],
@@ -69,13 +74,13 @@ export const LektorComponent = {
 					headerFilter: false,
 					group: true,
 					page: true,
-					columns: true,
+					columns: false,
 				},
 				persistenceID: "lektorOverviewLe"
 			},
 			anwesenheitenTabulatorEventHandlers: [{
 				event: "cellClick",
-				handler: (e, cell) => {
+				handler: async (e, cell) => {
 
 					// on non date fields route to student by lva component
 					const field = cell.getColumn().getField()
@@ -86,6 +91,15 @@ export const LektorComponent = {
 					if(field === "gruppe" || field === "foto" || field === "prestudent_id" ||
 						field === "vorname" || field === "nachname" || field === "sum") {
 
+						if(this.changedData.length && await this.$fhcAlert.confirm({
+							message: 'Ungespeicherte Änderungen werden verloren!',
+							acceptLabel: 'Verwerfen und Fortfahren',
+							acceptClass: 'btn btn-danger',
+							rejectLabel: 'Zurück',
+							rejectClass: 'btn btn-outline-secondary'
+						}) === false) {
+							return
+						}
 
 						// maybe incorporate more changes to dataState to avoid reloads
 						//  in the future when performance is an issue
@@ -304,7 +318,8 @@ export const LektorComponent = {
 			if(this.regenerateProgress >= this.progressMax) this.regenerateProgress = 0
 			this.regenerateProgress++
 		},
-		saveChanges () {
+		async saveChanges () {
+
 			const changedStudents = new Set(this.changedData.map(e => e.prestudent_id))
 			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, this.changedData).then((res) => {
 
@@ -558,15 +573,19 @@ export const LektorComponent = {
 				})
 
 				const nachname = student.nachname + student.zusatz
+				const gruppe = student.semester + student.verband + student.gruppe
+				this.lektorState.gruppen.add(gruppe)
 				this.lektorState.tableStudentData.push({prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
 					nachname: nachname,
-					gruppe: student.semester + student.verband + student.gruppe,
+					gruppe: gruppe,
 					entschuldigt: isEntschuldigt,
 					status: status ?? '-',
 					sum: student.sum});
 			})
+
+			console.log('gruppen: ', this.lektorState.gruppen)
 
 			if(this.lektorState.showAllVar) {
 				this.showAll()
@@ -596,6 +615,7 @@ export const LektorComponent = {
 			this.lektorState.kontrollen = this.$entryParams.lektorState.kontrollen
 			this.lektorState.viewData = this.$entryParams.lektorState.viewData
 			this.lektorState.termine = this.$entryParams.lektorState.termine
+			this.lektorState.gruppen = new Set()
 
 			this.$entryParams.lektorState = null
 			this.setup()
@@ -608,7 +628,8 @@ export const LektorComponent = {
 			this.lektorState.kontrollen = data[4] ?? []
 			this.lektorState.viewData = data[5] ?? []
 			this.lektorState.termine = data[6] ?? []
-
+			this.lektorState.gruppen = new Set()
+			
 			this.setup()
 		},
 		maUIDchangedHandler(oldIds) {
@@ -709,6 +730,7 @@ export const LektorComponent = {
 			if(this.$entryParams.lektorState) {
 				this.setupLektorState()
 			} else {
+				console.log('setupMounted getAllAnwesenheitenByLvaAssigned')
 				this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
 					this.setupData(res.data)
 				}).finally(() => {
@@ -800,6 +822,33 @@ export const LektorComponent = {
 		},
 		getDeleteBtnClass() {
 			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-danger ml-2"
+		},
+		getAnwCountOnCurrentDate() {
+			console.log('getAnwCountOnCurrentDate')
+			let fin = 0
+			const k = this.lektorState.tableStudentData.length
+			for(let i = 0; i < k; i++ ) {
+				if(this.lektorState.tableStudentData[i].status === this.$entryParams.permissions.entschuldigt_status  ||
+					this.lektorState.tableStudentData[i].status === this.$entryParams.permissions.anwesend_status) {
+					fin++
+				}
+			}
+
+			console.log(fin)
+
+			return fin
+		},
+		getGroups() {
+			console.log('computed getGroups')
+
+			const grps = {}
+
+			this.lektorState.gruppen.forEach(g => {
+				console.log(g)
+			})
+
+			return grps
+
 		}
 	},
 	template:`
@@ -810,12 +859,19 @@ export const LektorComponent = {
 		<core-base-layout>			
 			<template #main>
 				
-				
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
-					<template v-slot:title>{{ $p.t('global/neueAnwKontrolle') }}</template>
+					<template v-slot:title>
+						<div v-tooltip="{ value: 'some FAQ Text', hideDelay: 300 }">
+							{{ $p.t('global/neueAnwKontrolle') }}
+							<i class="fa fa-circle-question"></i>
+						</div>
+						
+					</template>
 					<template v-slot:default>
 						<div class="row align-items-center">
-							<div class="col-2" style="align-items: center; justify-items: center;"><label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label></div>
+							<div class="col-2" style="align-items: center; justify-items: center;">
+								<label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label>
+							</div>
 							<div class="col-10">
 								<datepicker
 									v-model="lektorState.beginn"
@@ -827,7 +883,9 @@ export const LektorComponent = {
 							</div>
 						</div>
 						<div class="row align-items-center mt-2">
-							<div class="col-2" style="align-items: center; justify-items: center;"><label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label></div>
+							<div class="col-2" style="align-items: center; justify-items: center;">
+								<label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label>
+							</div>
 							<div class="col-10">
 								<datepicker
 									v-model="lektorState.ende"
@@ -851,9 +909,13 @@ export const LektorComponent = {
 								</datepicker>
 							</div>
 						</div>
+						
 						<Divider/>
 						<div class="row align items center mt-8">
 							<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
+														
+							<TermineOverview :date="selectedDate" :kontrollen="lektorState.kontrollen" :termine="lektorState.termine"></TermineOverview>
+							
 						</div>
 					</template>
 					<template v-slot:footer>
@@ -897,6 +959,7 @@ export const LektorComponent = {
 				</bs-modal>
 				
 				<div class="row">
+									
 					<div class="col-6"></div>
 					<div class="col-3">
 						<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz" :title="$capitalize($p.t('lehre/lektor') )" 
@@ -929,6 +992,13 @@ export const LektorComponent = {
 					<div class="col-3 d-flex " style="height: 40px; align-items: center;">
 						<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
 						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllDates') }}</label>
+					</div>
+				</div>
+				
+				<div class="row">
+					<div class="col-6"></div>
+					<div class="col-6">
+						<h4 v-if="lektorState.tableStudentData && !this.lektorState.showAllVar">{{ $p.t('global/anwCountTermin') }}: {{getAnwCountOnCurrentDate}}/{{studentCount}}</h4>
 					</div>
 				</div>
 				

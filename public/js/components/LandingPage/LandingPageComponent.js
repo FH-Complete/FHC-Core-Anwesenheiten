@@ -156,7 +156,7 @@ export default {
 		},
 		async handleSetup() {
 			return new Promise(resolve => {
-				let ma_uid = this.$entryParams.permissions.authID
+				const ma_uid = this.$entryParams.permissions.authID
 				const sem_kurzbz = this.$entryParams.sem_kurzbz
 				const lv_id = this.$entryParams.lv_id
 				const le_ids = []
@@ -169,7 +169,7 @@ export default {
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz, ma_uid)
 
 					maProm.then(()=> {
-						promises.push(this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids))
+						promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.mitarbeiter_uid, sem_kurzbz, le_ids))
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
 						Promise.all(promises).then(()=>{
 							resolve()
@@ -215,8 +215,6 @@ export default {
 				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.available_maUID = []
 
-					debugger
-
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
 					const lektor = found ?? res.data.retval[0]
@@ -245,6 +243,8 @@ export default {
 			})
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
+			console.log('handleLeSetup')
+			console.log('ma_uid', ma_uid)
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
 
@@ -346,9 +346,7 @@ export default {
 		:leftNavCssClasses=''>
 	</core-navigation-cmpt>
 
-	<core-base-layout
-		:title="$entryParams?.cis4 ? null : $p.t('global/digitalesAnwManagement')"
-		:subtitle="getSubtitle">
+	<core-base-layout>
 		<template #main>
 			<bs-modal ref="modalContainerKontrolleSetup" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ $p.t('global/lehreinheitConfig') }}</template>
@@ -360,7 +358,7 @@ export default {
 				</template>
 			</bs-modal>
 		
-			<div style="position: relative">
+			<div style="position: relative; margin-top: 12px;">
 				<template  v-if="permissioncount > 1">
 					<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs"></core-tabs>
 				</template>
