@@ -351,10 +351,10 @@ class Anwesenheit_model extends \DB_Model
 	}
 
 	public function getAllLehreinheitenForLva($lva_id, $sem_kurzbz) {
-		$query = "SELECT DISTINCT tbl_stundenplan.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
-						tbl_stundenplan.mitarbeiter_uid, studiengang_kz, semester, verband, gruppe, gruppe_kurzbz
-		FROM lehre.tbl_lehreinheit LEFT JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
-		WHERE lehrveranstaltung_id = ? AND studiensemester_kurzbz = ?";
+		$query = "SELECT DISTINCT ON (tbl_stundenplan.lehreinheit_id) tbl_stundenplan.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
+				tbl_stundenplan.mitarbeiter_uid, studiengang_kz, semester, verband, gruppe, gruppe_kurzbz
+				FROM lehre.tbl_lehreinheit LEFT JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
+				WHERE lehrveranstaltung_id = ? AND studiensemester_kurzbz = ? AND tbl_stundenplan.lehreinheit_id IS NOT NULL";
 
 		return $this->execQuery($query, [$lva_id, $sem_kurzbz]);
 	}
@@ -460,6 +460,15 @@ class Anwesenheit_model extends \DB_Model
 				LIMIT 10000;";
 
 		return $this->execReadOnlyQuery($qry);
+	}
+
+	public function getAllLvaWithLEForSgAndSem($sg, $sem) {
+		$qry = "SELECT DISTINCT ON (lehre.tbl_lehreinheit.lehrveranstaltung_id, lehreinheit_id) lehreinheit_id, lehre.tbl_lehreinheit.lehrveranstaltung_id
+				FROM lehre.vw_stundenplan JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+				WHERE studiengang_kz = ? AND studiensemester_kurzbz = ?;";
+
+		return $this->execReadOnlyQuery($qry, [$sg, $sem]);
+
 	}
 
 }

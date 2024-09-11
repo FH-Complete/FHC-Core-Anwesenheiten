@@ -31,6 +31,7 @@ $includesArray = array(
 		'vendor/npm-asset/primevue/dropdown/dropdown.js',
 		'vendor/npm-asset/primevue/divider/divider.js',
 		'vendor/npm-asset/primevue/tooltip/tooltip.js',
+		'vendor/npm-asset/primevue/panel/panel.js',
 		'vendor/npm-asset/primevue/progressspinner/progressspinner.js'
 	),
 	'customJSModules' => array(

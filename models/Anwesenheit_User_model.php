@@ -146,7 +146,7 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, $abwesend_status, $entschuldigt_status)
 	{
-		$this->db->trans_start(false);
+//		$this->db->trans_start(false);
 
 		// find every student not already having an anwesenheit for the check with given anwesenheit_id
 		// and find if they have any accepted entschuldigungen in this timespan
@@ -215,19 +215,19 @@ class Anwesenheit_User_model extends \DB_Model
 
 		}
 
-		$this->db->trans_complete();
-
-		// Check if everything went ok during the transaction
-		if ($this->db->trans_status() === false || isError($result))
-		{
-			$this->db->trans_rollback();
-			return error($result->msg, EXIT_ERROR);
-		}
-		else
-		{
-			$this->db->trans_commit();
-			return success('Anwesenheiten successfully inserted.');
-		}
+//		$this->db->trans_complete();
+//
+//		// Check if everything went ok during the transaction
+//		if ($this->db->trans_status() === false || isError($result))
+//		{
+//			$this->db->trans_rollback();
+//			return error($result->msg, EXIT_ERROR);
+//		}
+//		else
+//		{
+//			$this->db->trans_commit();
+//			return success('Anwesenheiten successfully inserted.');
+//		}
 	}
 
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)

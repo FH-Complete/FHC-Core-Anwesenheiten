@@ -1,7 +1,13 @@
+import {Kontrolle} from "./Kontrolle";
+import {Termin} from "./Termin";
+
 export const TermineOverview = {
 	name: 'TermineOverview',
 	components: {
 		Calendar: primevue.calendar,
+		Panel: primevue.panel,
+		Kontrolle,
+		Termin
 	},
 	data() {
 		return {
@@ -14,10 +20,6 @@ export const TermineOverview = {
 		date: null
 	},
 	methods: {
-		debugShow() {
-			const ref = this.$refs.calendarRef
-			debugger
-		},
 		isDate(slotProp) {
 
 			if(this.date === null) return false
@@ -44,6 +46,32 @@ export const TermineOverview = {
 			})
 
 			return !!found
+		},
+		handleDateSelect(e) {
+			console.log('handleDateSelect', e)
+		},
+		getKontrolleForTermin(termin) {
+			console.log('getKontrolleForTermin', termin)
+			const kontrolleFound = this.kontrollen.find((k) => {
+				return k.datum=== termin.datumFrontend
+			})
+
+			return kontrolleFound ?? null
+		},
+		kontrolleHasTermin(kontrolle) {
+			console.log('kontrolleHasTermin', kontrolle)
+
+			const terminFound = this.termine.find((t) => {
+				return t.datumFrontend === kontrolle.datum
+			})
+
+			return !!terminFound
+		},
+		linkTermineWithKontrollen() {
+			this.termine.forEach(t => {
+				const k = this.getKontrolleForTermin(t)
+				t.kontrolle = k
+			})
 		}
 	},
 	created(){
@@ -64,6 +92,8 @@ export const TermineOverview = {
 			console.log('watch kontrollen')
 
 			console.log(newVal)
+			// todo: maybe call somewhere else?
+			this.linkTermineWithKontrollen()
 		},
 		date(newVal) {
 			console.log('watch date')
@@ -80,21 +110,60 @@ export const TermineOverview = {
 		},
 		dateYear() {
 			return this.date.getFullYear()
+		},
+		kontrollenOhneTermine() {
+			const arr = []
+
+			this.kontrollen.forEach(k => {
+				if(!this.kontrolleHasTermin(k)) {
+					arr.push(k)
+				}
+			})
+
+			return arr
 		}
 	},
 	template:`	
-	
-		<Calendar ref="calendarRef" @show="debugShow" v-model="date" dateFormat="YYYY-MM-DD" inline>
-			<template #date="slotProps">
-				<template v-if="isTermin(slotProps)">
-					<a v-if="isKontrolle(slotProps)" style="color: red">K</a>
-					{{ slotProps.date.day }} 
-					<a v-if="isTermin(slotProps)" style="color: green">T</a>
+		<Panel header="Kalender Übersicht" toggleable collapsed>
+
+			<Calendar ref="calendarRef" :style="{'width': '100%'}" @date-select="handleDateSelect" v-model="date" dateFormat="YYYY-MM-DD" inline>
+				<template #date="slotProps">
+					<template v-if="isTermin(slotProps)">
+						<a v-if="isKontrolle(slotProps)" style="color: red">K</a>
+						{{ slotProps.date.day }} 
+						<a v-if="isTermin(slotProps)" style="color: green">T</a>
+					</template>
 				</template>
-<!--				<strong v-if="isTermin(slotProps)" >{{ slotProps.date.day }} <a style="">.</a></strong>-->
-<!--				<template v-else>{{ slotProps.date.day }}</template>-->
-			</template>
-		</Calendar>
+			</Calendar>
+		
+		</Panel>
+		
+		<Panel header="Stundenplan Terminliste" toggleable collapsed>
+			<a>Termine</a>
+			<div v-for="termin in termine" :key="termin.datum">
+				<Panel :header="termin.datumFrontend" toggleable collapsed>
+					<template #icons>
+						<div v-if="termin.kontrolle" :style="{'display': 'initial'}">
+							<a> {{termin.kontrolle.anw}} / {{termin.kontrolle.sumAnw}} </a>
+							<i  class="fa fa-circle-check text-success"></i>
+						</div>
+						
+					</template>
+					<Termin :value="termin"></Termin>
+					<Kontrolle :value="getKontrolleForTermin(termin)"></Kontrolle>
+				</Panel>
+			</div>
+			<div v-if="kontrollenOhneTermine.length" style="margin-top: 12px;">
+				<a> Kontrollen ohne Termin</a>
+				<div v-for="kontrolle in kontrollenOhneTermine" :key="kontrolle.datum">
+					<Panel :header="kontrolle.datum" toggleable collapsed>
+						<Kontrolle :value="kontrolle"></Kontrolle>
+					</Panel>
+				</div>
+			</div>
+			
+		</Panel>
+		
 	
 	`
 };

@@ -235,74 +235,65 @@ class InfoApi extends FHCAPI_Controller
 		// tbl.studiengang WHERE aktiv = true AND studienplaetze > 0 AND typ = 'b' OR typ = 'm'
 //		$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915,
 //			336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
-		$studiengaenge = [227];
+//		$studiengaenge = [227];
+		$studiengaenge = [779, 257, 330];
+//		$sg = 227;
 
 		$response = [];
 		$sgIndex = 0;
 		foreach($studiengaenge as $sg) {
 
-			// load all lva
-			$resLVA = $this->_ci->LehrveranstaltungModel->loadWhere(array('studiengang_kz' => $sg));
-			$this->_ci->LehrveranstaltungModel->resetQuery();
+			// load all lva with le
+			$resLVA = $this->_ci->AnwesenheitModel->getAllLvaWithLEForSgAndSem($sg, 'WS2024');
 			$data = $resLVA->retval;
 
 			$response[$sgIndex] = array(
 				'sg' => $sg,
-				'lva' => array());
+				'lva' => array()
+			);
 
 			$lvaIndex = 0;
 			foreach($data as $lvaRow) {
-				// load all le
-				$resLE = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lvaRow->lehrveranstaltung_id, 'WS2024');
-				$this->_ci->AnwesenheitModel->resetQuery();
-				$dataLE = $resLE->retval;
-
-				if(!empty($dataLE)) {
-					$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id] = [];
-				}
+				$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id] = [];
 
 				$leIndex = 0;
-				foreach($dataLE as $leRow) {
 
-					$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$leRow->lehreinheit_id] = [];
-					// find termine for LE
-					$resTermine = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
-//					$resTermine = $this->_ci->AnwesenheitModel->getLETermine(146286);
-					$this->_ci->AnwesenheitModel->resetQuery();
-					$dataTermine = $resTermine->retval;
+				$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$lvaRow->lehreinheit_id] = [];
 
-					// kontrolle and anwesenheiten on each termin
-					$terminIndex = 0;
-					foreach($dataTermine as $terminRow) {
+				// find termine for LE
+				$resTermine = $this->_ci->AnwesenheitModel->getLETermine($lvaRow->lehreinheit_id);
+				$dataTermine = $resTermine->retval;
 
-						$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$leRow->lehreinheit_id][$terminIndex] = $terminRow;
+				// kontrolle and anwesenheiten on each termin
+				$terminIndex = 0;
 
-						$vonString = $terminRow->datum.' '.$terminRow->beginn;
-						$endeString = $terminRow->datum.' '.$terminRow->ende;
+				foreach($dataTermine as $terminRow) {
 
-//						$insert = $this->_ci->AnwesenheitModel->insert(array(
-//							'lehreinheit_id' => $leRow->lehreinheit_id,
-//							'insertamum' => date('Y-m-d H:i:s'),
-//							'von' => $vonString,
-//							'bis' => $endeString
-//						));
+					$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$lvaRow->lehreinheit_id][$terminIndex] = $terminRow;
 
-//						$anwesenheit_id = $insert->retval;
-//						$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
-//							146286,
-//							$anwesenheit_id,
-//							$vonString,
-//							$endeString,
-//							'abwesend',
-//							'entschuldigt');
+					$vonString = $terminRow->datum.' '.$terminRow->beginn;
+					$endeString = $terminRow->datum.' '.$terminRow->ende;
 
-						$terminIndex++;
-					}
+					$insert = $this->_ci->AnwesenheitModel->insert(array(
+						'lehreinheit_id' => $lvaRow->lehreinheit_id,
+						'insertamum' => date('Y-m-d H:i:s'),
+						'von' => $vonString,
+						'bis' => $endeString
+					));
 
-					$leIndex++;
+					$anwesenheit_id = $insert->retval;
+					$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+						$lvaRow->lehreinheit_id,
+						$anwesenheit_id,
+						$vonString,
+						$endeString,
+						'abwesend',
+						'entschuldigt');
+
+					$terminIndex++;
 				}
 
-				$lvaIndex++;
+
 			}
 
 			$sgIndex++;

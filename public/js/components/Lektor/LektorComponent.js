@@ -500,6 +500,21 @@ export const LektorComponent = {
 
 			return zusatz
 		},
+		linkKontrollData() {
+			this.lektorState.kontrollen.forEach(k => {
+				k.sumAnw = 0
+				k.anw = 0
+				k.abw = 0
+				k.ent = 0
+			})
+			this.lektorState.anwEntries.forEach(anw => {
+				const k = this.lektorState.kontrollen.find(k => k.anwesenheit_id === anw.anwesenheit_id)
+				k.sumAnw++
+				if(anw.status === 'anwesend') k.anw++
+				else if (anw.status === 'abwesend') k.abw++
+				else if (anw.status === 'entschuldigt') k.ent++
+			})
+		},
 		setDates(anwEntries) {
 
 			// from anw entries
@@ -549,6 +564,8 @@ export const LektorComponent = {
 			})
 
 			this.setDates(this.lektorState.anwEntries)
+
+
 			this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
 
 			// date string formatting
@@ -584,6 +601,8 @@ export const LektorComponent = {
 					status: status ?? '-',
 					sum: student.sum});
 			})
+
+			this.linkKontrollData()
 
 			console.log('gruppen: ', this.lektorState.gruppen)
 
@@ -817,6 +836,9 @@ export const LektorComponent = {
 		}
 	},
 	computed: {
+		getTooltipObj() {
+			return { value: 'some FAQ Text' }
+		},
 		getSaveBtnClass() {
 			return !this.changedData.length ? "btn btn-secondary ml-2" : "btn btn-primary ml-2"
 		},
@@ -861,11 +883,15 @@ export const LektorComponent = {
 				
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
 					<template v-slot:title>
-						<div v-tooltip="{ value: 'some FAQ Text', hideDelay: 300 }">
+<!--						<div v-tooltip="{ value: 'some FAQ Text' }">-->
+<!--							{{ $p.t('global/neueAnwKontrolle') }}-->
+<!--							<i class="fa fa-circle-question"></i>-->
+<!--						</div>-->
+						
+						<div v-tooltip="getTooltipObj">
 							{{ $p.t('global/neueAnwKontrolle') }}
 							<i class="fa fa-circle-question"></i>
 						</div>
-						
 					</template>
 					<template v-slot:default>
 						<div class="row align-items-center">
