@@ -112,8 +112,7 @@ export const AssistenzComponent = {
 				{
 					event: "tableBuilt",
 					handler: async () => {
-						console.log(this.$refs.assistenzTable.tabulator)
-						debugger
+						console.log('tableBuilt', this.$refs.assistenzTable.tabulator)
 						await this.$entryParams.phrasenPromise
 						this.tableBuiltResolve()
 					}

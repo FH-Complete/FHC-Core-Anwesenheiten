@@ -39,7 +39,7 @@ export const TermineOverview = {
 		},
 		isKontrolle(slotProp) {
 			if(this.date === null || this.kontrollen === null || !this.kontrollen.length || !slotProp.date) return false
-			debugger
+
 			const formatted = this.$formatTime(new Date(slotProp.date.year, slotProp.date.month, slotProp.date.day).getTime(), '.', 'DD-MM-YYYY')
 			const found = this.kontrollen.find(t => {
 				return t.datum === formatted
