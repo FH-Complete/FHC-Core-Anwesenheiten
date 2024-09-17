@@ -233,12 +233,12 @@ class InfoApi extends FHCAPI_Controller
 		// insert tbl.extension_anwesenheit_user entries for every LE of every LVA of every Studiengang to test limits
 
 		// tbl.studiengang WHERE aktiv = true AND studienplaetze > 0 AND typ = 'b' OR typ = 'm'
-//		$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915,
-//			336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
+		$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915,
+			336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
 //		$studiengaenge = [227];
 //		$studiengaenge = [779, 257, 330];
 //		$studiengaenge = [327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915];
-		$studiengaenge = [336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
+//		$studiengaenge = [336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
 //		$sg = 227;
 
 		$response = [];
@@ -246,7 +246,7 @@ class InfoApi extends FHCAPI_Controller
 		foreach($studiengaenge as $sg) {
 
 			// load all lva with le
-			$resLVA = $this->_ci->AnwesenheitModel->getAllLvaWithLEForSgAndSem($sg, 'WS2024');
+			$resLVA = $this->_ci->AnwesenheitModel->getAllLvaWithLEForSgAndSem($sg, 'SS2024');
 			$data = $resLVA->retval;
 
 			$response[$sgIndex] = array(
@@ -294,10 +294,7 @@ class InfoApi extends FHCAPI_Controller
 
 					$terminIndex++;
 				}
-
-
 			}
-
 			$sgIndex++;
 		}
 
