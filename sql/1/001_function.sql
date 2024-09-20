@@ -1,4 +1,4 @@
-create or replace function get_anwesenheiten_by_time(integer, integer, character varying) returns float
+create or replace function extension.get_anwesenheiten_by_time(integer, integer, character varying) returns float
 	stable
 	language plpgsql
 as

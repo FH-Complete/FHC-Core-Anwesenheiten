@@ -7,6 +7,14 @@ export default {
 			throw error;
 		}
 	},
+	async getStunden() {
+		try {
+			const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getStunden';
+			return this.$fhcApi.get(url, null, null)
+		} catch (error) {
+			throw error;
+		}
+	},
 	async getStudiensemester() {
 		try {
 			const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getStudiensemester';

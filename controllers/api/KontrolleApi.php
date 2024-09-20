@@ -90,6 +90,9 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	public function getAllAnwesenheitenByLvaAssigned()
 	{
+		$times = [];
+		$start = microtime(true);
+
 		$result = $this->getPostJSON();
 
 		if(!property_exists($result, 'le_id') || !property_exists($result, 'lv_id')
@@ -106,6 +109,9 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
+
+		$times[] = microtime(true) - $start;
+
 		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFound'), 'general');
 		$students = getData($result);
@@ -117,6 +123,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$prestudentIds = array_map($func, $students);
 		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudents($prestudentIds, $le_id);
 		$anwesenheiten = getData($result);
+		$times[] = microtime(true) - $start;
 
 		$funcPID = function($value) {
 			return $value->person_id;
@@ -125,14 +132,18 @@ class KontrolleApi extends FHCAPI_Controller
 		$personIds = array_map($funcPID, $students);
 		$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIds($personIds);
 		$entschuldigungsstatus = getData($result);
+		$times[] = microtime(true) - $start;
 
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
+		$times[] = microtime(true) - $start;
 
 		// get kontrollen for le_id and newer than age constant if permission is lektor
 		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		$kontrollen = null;
+		$times[] = microtime(true) - $start;
+
 		if($isLektor && !$isAdmin) { // admin could be lektor at the same time
 			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndInterval($le_id, KONTROLLE_DELETE_MAX_REACH);
 			$kontrollen = getData($result);
@@ -140,14 +151,18 @@ class KontrolleApi extends FHCAPI_Controller
 			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeId($le_id);
 			$kontrollen = getData($result);
 		}
+		$times[] = microtime(true) - $start;
 
 		$result = $this->_ci->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $date);
 		$lektorLehreinheitData = getData($result);
+		$times[] = microtime(true) - $start;
 
 		$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
 		$leTermine = getData($result);
+		$times[] = microtime(true) - $start;
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine));
+
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine, $times));
 	}
 
 	/**
@@ -234,9 +249,9 @@ class KontrolleApi extends FHCAPI_Controller
 
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 
-			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
 
-			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]->count));
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]));
 
 		}
 
@@ -408,9 +423,9 @@ class KontrolleApi extends FHCAPI_Controller
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 
 
-			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
 
-			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]->count));
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]));
 
 		} else { // create a newqr
 
@@ -438,9 +453,9 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, ABWESEND_STATUS, ENTSCHULDIGT_STATUS);
 
 			// count entschuldigt entries
-			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
 
-			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]->count));
+			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]));
 		}
 	}
 
@@ -581,7 +596,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->getPostJSON();
 		$anwesenheit_id = $result->anwesenheit_id;
 
-		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountForAnwesenheitId($anwesenheit_id);
+		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
 		$this->terminateWithSuccess(getData($countPoll)[0]);
 	}
 

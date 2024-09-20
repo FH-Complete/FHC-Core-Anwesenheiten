@@ -12,6 +12,7 @@ class InfoApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				'getStudiensemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getStunden' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getStudentInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getStudiengaenge' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
@@ -32,6 +33,7 @@ class InfoApi extends FHCAPI_Controller
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 		$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
+		$this->_ci->load->model('ressource/stunde_model', 'StundeModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 
 		$this->_ci->load->library('PermissionLib');
@@ -64,6 +66,15 @@ class InfoApi extends FHCAPI_Controller
 		$aktuell = getData($result);
 
 		$this->terminateWithSuccess(array($studiensemester, $aktuell));
+	}
+
+	public function getStunden()
+	{
+		$this->_ci->StudiensemesterModel->addOrder("stunde", "ASC");
+		$result = $this->_ci->StundeModel->load();
+		$data = getData($result);
+
+		$this->terminateWithSuccess($data);
 	}
 
 	/**

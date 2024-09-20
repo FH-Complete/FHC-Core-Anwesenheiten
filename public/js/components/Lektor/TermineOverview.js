@@ -1,11 +1,13 @@
 import {Kontrolle} from "./Kontrolle";
 import {Termin} from "./Termin";
 
+
 export const TermineOverview = {
 	name: 'TermineOverview',
 	components: {
 		Calendar: primevue.calendar,
 		Panel: primevue.panel,
+		Badge: primevue.badge,
 		Kontrolle,
 		Termin
 	},
@@ -129,9 +131,9 @@ export const TermineOverview = {
 			<Calendar ref="calendarRef" :style="{'width': '100%'}" @date-select="handleDateSelect" v-model="date" dateFormat="YYYY-MM-DD" inline>
 				<template #date="slotProps">
 					<template v-if="isTermin(slotProps)">
-						<a v-if="isKontrolle(slotProps)" style="color: red">K</a>
+						<Badge v-if="isKontrolle(slotProps)" size="large" severity="danger" value="K"></Badge>
 						{{ slotProps.date.day }} 
-						<a v-if="isTermin(slotProps)" style="color: green">T</a>
+						<Badge v-if="isTermin(slotProps)" size="large" severity="success" value="T"></Badge>
 					</template>
 				</template>
 			</Calendar>

@@ -11,6 +11,7 @@ class Anwesenheit_model extends \DB_Model
 		parent::__construct();
 		$this->dbTable = 'extension.tbl_anwesenheit';
 		$this->pk = 'anwesenheit_id';
+
 	}
 
 	public function isPersonAttendingLehreinheit($le_id, $uid) {
@@ -359,13 +360,21 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query, [$lva_id, $sem_kurzbz]);
 	}
 
-	public function getCheckInCountForAnwesenheitId($anwesenheit_id) {
-		$query = "SELECT COUNT(*)
-		FROM extension.tbl_anwesenheit_user
+	public function getCheckInCountsForAnwesenheitId($anwesenheit_id) {
+		$query = "SELECT (SELECT COUNT(*)
+			FROM extension.tbl_anwesenheit_user
 			LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
-		WHERE anwesenheit_id = ? AND (status = 'anwesend' OR status = 'entschuldigt')";
+			WHERE anwesenheit_id = ? AND status = 'anwesend') as anwesend,
+		(SELECT COUNT(*)
+			FROM extension.tbl_anwesenheit_user
+			LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
+			WHERE anwesenheit_id = ? AND status = 'abwesend') as abwesend,
+		(SELECT COUNT(*)
+				FROM extension.tbl_anwesenheit_user
+				LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
+				WHERE anwesenheit_id = ? AND status = 'entschuldigt') as entschuldigt;";
 
-		return $this->execQuery($query, [$anwesenheit_id]);
+		return $this->execQuery($query, [$anwesenheit_id, $anwesenheit_id, $anwesenheit_id]);
 	}
 
 	public function getStudiengaenge() {

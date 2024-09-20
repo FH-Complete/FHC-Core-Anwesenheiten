@@ -146,66 +146,42 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, $abwesend_status, $entschuldigt_status)
 	{
-//		$this->db->trans_start(false);
+		$this->db->trans_start(false);
 
 		// find every student not already having an anwesenheit for the check with given anwesenheit_id
 		// and find if they have any accepted entschuldigungen in this timespan
 		$query = "
-			SELECT prestudent_id, (
-				SELECT entschuldigung.akzeptiert
+			SELECT prestudent_id,
+			    (SELECT entschuldigung.akzeptiert
 					FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
-					WHERE entschuldigung.person_id = (
-						SELECT tbl_prestudent.person_id
-						FROM tbl_prestudent
-						WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
-							AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
-					)
+					WHERE entschuldigung.person_id = public.tbl_prestudent.person_id
+					AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
 					ORDER BY akzeptiert DESC NULLS LAST
 					LIMIT 1
-				) as statusAkzeptiert,
-				(
-				   SELECT 1
-				   FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
-				   WHERE entschuldigung.person_id = (
-					   SELECT tbl_prestudent.person_id
-					   FROM tbl_prestudent
-					   WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
-						 AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
-				   )
-				   LIMIT 1
-				) as exists_entschuldigung
+				) as statusAkzeptiert
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
-			WHERE lehreinheit_id = ?
-			
-			AND prestudent_id NOT IN(
-				SELECT students.prestudent_id as prestudent_id FROM
-					extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_user USING (anwesenheit_id)
-											  JOIN
-			
-				(SELECT prestudent_id
-				 FROM campus.vw_student_lehrveranstaltung
-						  JOIN public.tbl_student ON (uid = student_uid)
-				 WHERE lehreinheit_id = ?) students USING(prestudent_id)
-			WHERE anwesenheit_id = ?);
-		";
+				 JOIN public.tbl_prestudent USING(prestudent_id)
+			WHERE lehreinheit_id = ?;";
 
-		$result = $this->execQuery($query, [$von, $bis, $von, $bis, $le_id, $le_id, $anwesenheit_id]);
+		$result = $this->execQuery($query, [$von, $bis, $le_id]);
 
 		// and insert them with their respecting status
 		if(hasData($result)) {
+			$authid = getAuthUID();
+			$now = $this->escape('NOW()');
 
 			forEach ($result->retval as $entry) {
-				$status = $entry->exists_entschuldigung && $entry->statusakzeptiert ? $entschuldigt_status : $abwesend_status;
+				$status = $entry->statusakzeptiert ? $entschuldigt_status : $abwesend_status;;
 				$result = $this->insert(array(
 					'anwesenheit_id' => $anwesenheit_id,
 					'prestudent_id' => $entry->prestudent_id,
 					'status' => $status,
 					'version' => 1,
-					'statussetvon' => getAuthUID(),
-					'statussetamum' => $this->escape('NOW()'),
-					'insertamum' => $this->escape('NOW()'),
-					'insertvon' => getAuthUID()
+					'statussetvon' => $authid,
+					'statussetamum' => $now,
+					'insertamum' => $now,
+					'insertvon' => $authid
 				));
 
 				if (!isSuccess($result)) {
@@ -215,26 +191,27 @@ class Anwesenheit_User_model extends \DB_Model
 
 		}
 
-//		$this->db->trans_complete();
-//
-//		// Check if everything went ok during the transaction
-//		if ($this->db->trans_status() === false || isError($result))
-//		{
-//			$this->db->trans_rollback();
-//			return error($result->msg, EXIT_ERROR);
-//		}
-//		else
-//		{
-//			$this->db->trans_commit();
-//			return success('Anwesenheiten successfully inserted.');
-//		}
+		$this->db->trans_complete();
+
+		// Check if everything went ok during the transaction
+		if ($this->db->trans_status() === false || isError($result))
+		{
+			$this->db->trans_rollback();
+		}
+		else
+		{
+			$this->db->trans_commit();
+		}
+
 	}
 
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
 		$query = "
 			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status,
-			       extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis, extension.tbl_anwesenheit_user.notiz
+			       extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis, 
+			       extension.tbl_anwesenheit_user.notiz, 
+			       CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
 			FROM extension.tbl_anwesenheit
 				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)

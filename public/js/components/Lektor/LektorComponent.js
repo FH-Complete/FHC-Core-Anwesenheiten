@@ -3,13 +3,14 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import { lektorFormatters } from "../../formatters/formatters";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown";
 import {TermineDropdown} from "../Setup/TermineDropdown";
 import {TermineOverview} from "./TermineOverview";
+import {AnwCountDisplay} from "./AnwCountDisplay";
+import {Stundenliste} from "./Stundenliste";
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -24,12 +25,14 @@ export const LektorComponent = {
 		MaUIDDropdown,
 		KontrollenDropdown,
 		TermineOverview,
+		AnwCountDisplay,
+		Stundenliste,
 		"datepicker": VueDatePicker,
-		verticalsplit: verticalsplit,
 		searchbar: searchbar
 	},
 	data() {
 		return {
+			stunden: null,
 			loading: false,
 			tableBuiltResolve: null,
 			tableBuiltPromise: null,
@@ -138,6 +141,8 @@ export const LektorComponent = {
 			progressMax: 0,
 			polling: false,
 			checkInCount: 0,
+			abwesendCount: 0,
+			entschuldigtCount: 0,
 			studentCount: 0,
 			changes: false, // if something could have happened to dataset -> reload on mounted
 			isAllowedToStartKontrolle: true
@@ -184,7 +189,9 @@ export const LektorComponent = {
 		},
 		pollAnwesenheit() {
 			this.$fhcApi.factory.Kontrolle.pollAnwesenheiten(this.anwesenheit_id).then(res => {
-				this.checkInCount = res.data.count
+				this.checkInCount = res.data.anwesend
+				this.abwesendCount = res.data.abwesend
+				this.entschuldigtCount = res.data.entschuldigt
 			})
 		},
 		startPollingAnwesenheiten() {
@@ -278,7 +285,9 @@ export const LektorComponent = {
 			this.qr = data.svg
 			this.url = data.url
 			this.code = data.code
-			this.checkInCount = data.count
+			this.checkInCount = data.count.anwesend
+			this.abwesendCount = data.count.abwesend
+			this.entschuldigtCount = data.count.entschuldigt
 			this.anwesenheit_id = data.anwesenheit_id
 			this.$refs.modalContainerQR.show()
 			if(this.$entryParams.permissions.useRegenerateQR) this.startRegenerateQR()
@@ -335,7 +344,7 @@ export const LektorComponent = {
 						this.updateSumData(res.data.retval)
 						this.changes = true
 				})
-			})
+			}).finally(()=> this.setCurrentCountsFromTableData())
 
 			this.changedData = []
 		},
@@ -536,6 +545,7 @@ export const LektorComponent = {
 			})
 		},
 		async setup() {
+			console.log('setup()')
 			// use this to show actual entries with should be entries from stundenplan merged
 			// this.lektorState.dates = []
 			this.lektorState.termine.forEach(termin => {
@@ -573,6 +583,7 @@ export const LektorComponent = {
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 
+
 			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
 
 			this.lektorState.tableStudentData = []
@@ -602,9 +613,12 @@ export const LektorComponent = {
 					sum: student.sum});
 			})
 
+			// get current counts for selectedDate
+			this.setCurrentCountsFromTableData()
+
 			this.linkKontrollData()
 
-			console.log('gruppen: ', this.lektorState.gruppen)
+			console.log('lektorState: ', this.lektorState)
 
 			if(this.lektorState.showAllVar) {
 				this.showAll()
@@ -625,6 +639,26 @@ export const LektorComponent = {
 			}
 
 			this.loading = false
+		},
+		setCurrentCountsFromTableData() {
+			let tmpCntAnw = 0;
+			let tmpCntAbw = 0;
+			let tmpCntEnt = 0;
+
+			this.lektorState.tableStudentData.forEach(row => {
+				switch (row.status) {
+					case this.$entryParams.permissions.anwesend_status: tmpCntAnw++
+						break;
+					case this.$entryParams.permissions.abwesend_status: tmpCntAbw++
+						break;
+					case this.$entryParams.permissions.entschuldigt_status: tmpCntEnt++
+						break;
+				}
+			})
+
+			this.checkInCount = tmpCntAnw;
+			this.abwesendCount = tmpCntAbw;
+			this.entschuldigtCount = tmpCntEnt;
 		},
 		setupLektorState(){
 			this.lektorState.students = this.$entryParams.lektorState.students
@@ -775,9 +809,18 @@ export const LektorComponent = {
 		},
 		async awaitPhrasen() {
 			await this.$entryParams.phrasenPromise
+		},
+		loadStunden() {
+			this.$fhcApi.factory.Info.getStunden().then(res => {
+				console.log('stunden res', res)
+
+				this.stunden = res.data
+
+			})
 		}
 	},
 	created(){
+		this.loadStunden()
 		this.awaitPhrasen()
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
@@ -799,6 +842,8 @@ export const LektorComponent = {
 				this.selectedDate = new Date(Date.now())
 				return
 			}
+
+			console.log('selectedDate watcher')
 
 			this.lektorState.showAllVar = false
 			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
@@ -828,6 +873,8 @@ export const LektorComponent = {
 				foundEntry.entschuldigt = isEntschuldigt
 				foundEntry.status = status
 			})
+			this.setCurrentCountsFromTableData()
+
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
@@ -881,7 +928,7 @@ export const LektorComponent = {
 		<core-base-layout>			
 			<template #main>
 				
-				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-lg">
+				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
 					<template v-slot:title>
 <!--						<div v-tooltip="{ value: 'some FAQ Text' }">-->
 <!--							{{ $p.t('global/neueAnwKontrolle') }}-->
@@ -894,54 +941,63 @@ export const LektorComponent = {
 						</div>
 					</template>
 					<template v-slot:default>
-						<div class="row align-items-center">
-							<div class="col-2" style="align-items: center; justify-items: center;">
-								<label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label>
-							</div>
-							<div class="col-10">
-								<datepicker
-									v-model="lektorState.beginn"
-									:clearable="false"
-									time-picker="true"
-									text-input="true"
-									auto-apply="true">
-								</datepicker>
-							</div>
-						</div>
-						<div class="row align-items-center mt-2">
-							<div class="col-2" style="align-items: center; justify-items: center;">
-								<label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label>
-							</div>
-							<div class="col-10">
-								<datepicker
-									v-model="lektorState.ende"
-									:clearable="false"
-									time-picker="true"
-									text-input="true"
-									auto-apply="true">
-								</datepicker>
-							</div>
-						</div>
-						<div class="row mt-2">
-							<div class="col-2 d-flex" style="height: 40px; align-items: center; justify-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
-							<div class="col-10" style="height: 40px">
-								<datepicker
-									v-model="selectedDate"
-									:clearable="false"
-									locale="de"
-									format="dd.MM.yyyy"
-									text-input="true"
-									auto-apply="true">
-								</datepicker>
-							</div>
-						</div>
-						
-						<Divider/>
-						<div class="row align items center mt-8">
-							<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
-														
-							<TermineOverview :date="selectedDate" :kontrollen="lektorState.kontrollen" :termine="lektorState.termine"></TermineOverview>
+						<div class="row">
+						<div class="col-7">
 							
+							<div class="row align-items-center">
+								<div class="col-2" style="align-items: center; justify-items: center;">
+									<label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label>
+								</div>
+								<div class="col-10">
+									<datepicker
+										v-model="lektorState.beginn"
+										:clearable="false"
+										time-picker="true"
+										text-input="true"
+										auto-apply="true">
+									</datepicker>
+								</div>
+							</div>
+							<div class="row align-items-center mt-2">
+								<div class="col-2" style="align-items: center; justify-items: center;">
+									<label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label>
+								</div>
+								<div class="col-10">
+									<datepicker
+										v-model="lektorState.ende"
+										:clearable="false"
+										time-picker="true"
+										text-input="true"
+										auto-apply="true">
+									</datepicker>
+								</div>
+							</div>
+							<div class="row mt-2">
+								<div class="col-2 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
+								<div class="col-10" style="height: 40px">
+									<datepicker
+										v-model="selectedDate"
+										:clearable="false"
+										locale="de"
+										format="dd.MM.yyyy"
+										text-input="true"
+										auto-apply="true">
+									</datepicker>
+								</div>
+							</div>
+							
+							<Divider/>
+							<div class="row align items center mt-8">
+								<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
+															
+								<TermineOverview :date="selectedDate" :kontrollen="lektorState.kontrollen" :termine="lektorState.termine"></TermineOverview>
+								
+							</div>
+							
+						</div>
+						<div class="col-5">
+							<Stundenliste :stunden="stunden" />
+						</div>
 						</div>
 					</template>
 					<template v-slot:footer>
@@ -968,9 +1024,9 @@ export const LektorComponent = {
 					<template v-slot:default>
 						<h1 class="text-center">Code: {{code}}</h1>
 						<div v-html="qr" class="text-center"></div>
-						<div class="text-center">
-							<h3>{{checkInCount}}/{{studentCount}}</h3>
-						</div>
+						
+						<AnwCountDisplay :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
+						
 						<div class="row" style="width: 80%; margin-left: 10%;">
 							<progress 
 								v-if="$entryParams.permissions.useRegenerateQR"
@@ -999,12 +1055,15 @@ export const LektorComponent = {
 				</div>
 				
 				<div class="row mt-4">
-					<div class="col-6" style="transform: translateY(-80px)">
+					<div class="col-6" style="transform: translateY(-80px); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
 						<h1 class="h4">{{ filterTitle }}</h1>
 						<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>
+						
+						<AnwCountDisplay  v-if="!lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
+
 					</div>
 					
-					<div class="col-1" style="height: 40px; align-self: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
+					<div class="col-1" style="height: 40px; align-self: start;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
 					<div class="col-2" style="height: 40px;">
 						<datepicker
 							v-model="selectedDate"
@@ -1020,13 +1079,7 @@ export const LektorComponent = {
 						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllDates') }}</label>
 					</div>
 				</div>
-				
-				<div class="row">
-					<div class="col-6"></div>
-					<div class="col-6">
-						<h4 v-if="lektorState.tableStudentData && !this.lektorState.showAllVar">{{ $p.t('global/anwCountTermin') }}: {{getAnwCountOnCurrentDate}}/{{studentCount}}</h4>
-					</div>
-				</div>
+			
 				
 				<div style="transform: translateY(-40px)">
 					<core-filter-cmpt
