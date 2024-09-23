@@ -396,7 +396,9 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
-		$this->terminateWithSuccess($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id));
+		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+
+		$this->terminateWithSuccess($result);
 	}
 
 	/**

@@ -243,9 +243,25 @@ class InfoApi extends FHCAPI_Controller
 	public function populateDBWithAnwEntries() {
 		// insert tbl.extension_anwesenheit_user entries for every LE of every LVA of every Studiengang to test limits
 
+		$sem_kurzbz = $this->input->get('sem');
+		$batchnum = $this->input->get('batchnum');
+
+		$studiengaenge = null;
+		if($batchnum == 1){
+			$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333];
+		} else if ($batchnum == 2) {
+			$studiengaenge = [255, 335, 258, 301, 228, 934, 302, 578];
+		} else if ($batchnum == 3) {
+			$studiengaenge = [329, 915, 336, 303, 854, 334, 331, 300];
+		} else if ($batchnum == 4) {
+			$studiengaenge = [332, 328, 692, 804, 585, 297, 298, 299];
+		}
 		// tbl.studiengang WHERE aktiv = true AND studienplaetze > 0 AND typ = 'b' OR typ = 'm'
-		$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915,
-			336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
+//		$studiengaenge = [
+//			227, 254, 779, 257, 330, 327, 256, 476, 333,
+//			255, 335, 258, 301, 228, 934, 302, 578,
+//			329, 915, 336, 303, 854, 334, 331, 300,
+//			332, 328, 692, 804, 585, 297, 298, 299];
 //		$studiengaenge = [227];
 //		$studiengaenge = [779, 257, 330];
 //		$studiengaenge = [327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915];
@@ -257,7 +273,7 @@ class InfoApi extends FHCAPI_Controller
 		foreach($studiengaenge as $sg) {
 
 			// load all lva with le
-			$resLVA = $this->_ci->AnwesenheitModel->getAllLvaWithLEForSgAndSem($sg, 'SS2024');
+			$resLVA = $this->_ci->AnwesenheitModel->getAllLvaWithLEForSgAndSem($sg, $sem_kurzbz);
 			$data = $resLVA->retval;
 
 			$response[$sgIndex] = array(

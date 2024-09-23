@@ -252,7 +252,7 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
-		$query = "SELECT get_anwesenheiten_by_time(?, ?, ?) as sum";
+		$query = "SELECT extension.get_anwesenheiten_by_time(?, ?, ?) as sum";
 
 		return $this->execQuery($query, [$prestudent_id, $lv_id, $sem_kurzbz]);
 	}
@@ -260,7 +260,7 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAnwQuoteForPrestudentIds($prestudent_Ids, $lv_id, $sem_kurzbz)
 	{
 		$query = "
-			SELECT prestudent_id, get_anwesenheiten_by_time(prestudent_id, {$lv_id}, '{$sem_kurzbz}') as sum
+			SELECT prestudent_id, extension.get_anwesenheiten_by_time(prestudent_id, {$lv_id}, '{$sem_kurzbz}') as sum
 			FROM public.tbl_student
 			WHERE prestudent_id IN ?";
 

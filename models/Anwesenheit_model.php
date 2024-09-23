@@ -65,7 +65,7 @@ class Anwesenheit_model extends \DB_Model
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
-			   	get_anwesenheiten_by_time(prestudent_id, $lv_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
+			   	extension.get_anwesenheiten_by_time(prestudent_id, $lv_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
 			   (SELECT status_kurzbz FROM public.tbl_prestudentstatus
 				WHERE prestudent_id=tbl_student.prestudent_id
 				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
@@ -235,7 +235,7 @@ class Anwesenheit_model extends \DB_Model
 		$query = "
 			SELECT vorname, nachname, 
 			      CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || person_id as foto,
-			    semester, verband, gruppe, get_anwesenheiten_by_time(?, ?, ?) as sum
+			    semester, verband, gruppe, extension.get_anwesenheiten_by_time(?, ?, ?) as sum
 			FROM public.tbl_benutzer
 					 JOIN public.tbl_person USING(person_id)
 					 LEFT JOIN public.tbl_student ON(uid=student_uid)
@@ -253,7 +253,7 @@ class Anwesenheit_model extends \DB_Model
 				tbl_anwesenheit_status.status_kurzbz as student_status,
 				(tbl_anwesenheit.von) as von,
 				(tbl_anwesenheit.bis) as bis,
-				get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,
+				extension.get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,
 				(
 					SELECT entschuldigung.akzeptiert
 					FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
@@ -379,13 +379,15 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStudiengaenge() {
 		$query ="SELECT
-					studiengang_kz,
-					bezeichnung,
-					kurzbzlang,
-					orgform_kurzbz
-				FROM tbl_studiengang
-				WHERE aktiv = true
-				ORDER BY kurzbzlang";
+					public.tbl_studiengang.studiengang_kz,
+					public.tbl_studiengang.bezeichnung,
+					public.tbl_studiengang.kurzbzlang,
+					public.tbl_studiengang.orgform_kurzbz
+				FROM public.tbl_studiengang JOIN lehre.tbl_studienordnung USING(studiengang_kz)
+					JOIN lehre.tbl_studienplan USING(studienordnung_id)
+					JOIN lehre.tbl_studienplan_semester USING(studienplan_id)
+				WHERE public.tbl_studiengang.aktiv = true
+				ORDER BY public.tbl_studiengang.kurzbzlang";
 
 		return $this->execReadOnlyQuery($query);
 	}
@@ -393,17 +395,17 @@ class Anwesenheit_model extends \DB_Model
 	public function getStudiengaengeFiltered($allowed_stg)
 	{
 		$query ="SELECT
-					studiengang_kz,
-					bezeichnung,
-					kurzbzlang,
-					orgform_kurzbz
-				FROM tbl_studiengang JOIN lehre.tbl_studienordnung USING(studiengang_kz)
+					public.tbl_studiengang.studiengang_kz,
+					public.tbl_studiengang.bezeichnung,
+					public.tbl_studiengang.kurzbzlang,
+					public.tbl_studiengang.orgform_kurzbz
+				FROM public.tbl_studiengang JOIN lehre.tbl_studienordnung USING(studiengang_kz)
 					JOIN lehre.tbl_studienplan USING(studienordnung_id)
 					JOIN lehre.tbl_studienplan_semester USING(studienplan_id)
-				WHERE aktiv = true
+				WHERE public.tbl_studiengang.aktiv = true
 				
-				AND studiengang_kz IN ?
-				ORDER BY kurzbzlang";
+				AND public.tbl_studiengang.studiengang_kz IN ?
+				ORDER BY public.tbl_studiengang.kurzbzlang";
 
 		return $this->execReadOnlyQuery($query, [$allowed_stg]);
 	}
@@ -466,7 +468,7 @@ class Anwesenheit_model extends \DB_Model
 				FROM tbl_person JOIN tbl_prestudent USING (person_id)
 				WHERE tbl_person.insertamum > '2021-10-10 10:10:10.000000'
 				ORDER BY RANDOM()
-				LIMIT 10000;";
+				LIMIT 25000;";
 
 		return $this->execReadOnlyQuery($qry);
 	}

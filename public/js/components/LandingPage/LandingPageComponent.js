@@ -47,11 +47,11 @@ export default {
 			const sem_kurzbz = searchParams.get('sem_kurzbz')
 			const notMissingParams = (lv_id && stg_kz && sem_kurzbz) || this.$entryParams.notMissingParams
 
-			if((permissions.lektor || permissions.admin || permissions.assistenz) && notMissingParams) {
+			if((permissions.lektor || permissions.admin) && notMissingParams) {
 				tabs.push({key: 'Kontrolle', title: 'Kontrolle', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
 			}
 
-			if((permissions.student || permissions.admin || permissions.assistenz) && notMissingParams)  {
+			if((permissions.student || permissions.admin) && notMissingParams)  {
 				tabs.push({key: 'Profil', title: 'Profil', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 

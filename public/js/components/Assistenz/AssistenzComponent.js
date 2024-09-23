@@ -26,7 +26,7 @@ export const AssistenzComponent = {
 			tableData: null,
 			zeitraum: {
 				von: this.$formatTime(new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (30)))),
-				bis: this.$formatTime(new Date(Date.now()))
+				bis: this.$formatTime(new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (60))))
 			},
 			permissionsLoaded: false,
 			tableBuiltPromise: null,
@@ -42,11 +42,12 @@ export const AssistenzComponent = {
 					headers:{
 						'Content-Type': 'application/json'
 					},
-					body:(url,config,params)=>{
+					body:(url,config,params)=> {
+						const berechtigungenArrayAdmin = this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
+						const berechtigungenArrayAssistenz = this.$entryParams.permissions.assistenz ? this.$entryParams.permissions.studiengaengeAssistenz : []
+						const joined = [... new Set([... berechtigungenArrayAssistenz, ... berechtigungenArrayAdmin])]
 						return JSON.stringify({
-							stg_kz_arr: this.$entryParams.permissions.assistenz ?
-								this.$entryParams.permissions.studiengaengeAssistenz :
-								this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : [],
+							stg_kz_arr: joined,
 							von: this.zeitraum.von,
 							bis: this.zeitraum.bis
 						})
