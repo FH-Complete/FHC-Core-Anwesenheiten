@@ -27,7 +27,7 @@ export const Stundenliste = {
 	},
 	watch: {
 		stunden(newVal) {
-			console.log('stundenwatcher', newVal)
+			// console.log('stundenwatcher', newVal)
 		}
 	},
 	computed: {

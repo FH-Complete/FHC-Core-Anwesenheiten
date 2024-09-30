@@ -18,8 +18,8 @@ export const StudentComponent = {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			tabsStudent: {
-				tab1: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-				tab2: { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				entschuldigungen: { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
 			},
 			viewDataStudent: {}
 		};
@@ -100,8 +100,8 @@ export const StudentComponent = {
 			return new Promise((resolve) => {
 				return this.$entryParams.phrasenPromise.then(() => {
 					resolve({
-						tab1: { title: Vue.ref(this.$p.t('global/anwesenheiten')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-						tab2: { title: Vue.ref(this.$p.t('global/entschuldigungen')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+						anwesenheiten: { title: Vue.ref(this.$p.t('global/anwesenheiten')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+						entschuldigungen: { title: Vue.ref(this.$p.t('global/entschuldigungen')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
 					})
 				})
 			})
@@ -137,6 +137,14 @@ export const StudentComponent = {
 	mounted() {
 		this.checkEntryParamPermissions()
 		this.setup()
+
+		// get some info if desired user endpoint is anw list or entschuldigungen tab and set it accordingly
+
+
+		console.log('this.$entryParams.activetabstudent', this.$entryParams.activetabstudent)
+
+		if(this.$entryParams.activetabstudent) this.$refs.tabsStudent.change(this.$entryParams.activetabstudent)
+
 	},
 	template: `
 	<div class="row-cols">
@@ -155,7 +163,7 @@ export const StudentComponent = {
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
 					</div>
 				</div>
-				<core-tabs :config="tabsStudent" ref="tabsStudent"></core-tabs>
+				<core-tabs :config="tabsStudent" :modelValue="currentTab" ref="tabsStudent"></core-tabs>
 			</template>
 		</core-base-layout>
 		
@@ -165,5 +173,3 @@ export const StudentComponent = {
 };
 
 export default StudentComponent
-
-

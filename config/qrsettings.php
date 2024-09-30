@@ -16,3 +16,5 @@ define('KONTROLLE_DELETE_MAX_REACH', 1); // 1 day
 define('ANWESEND_STATUS', 'anwesend');
 define('ABWESEND_STATUS', 'abwesend');
 define('ENTSCHULDIGT_STATUS', 'entschuldigt');
+// dauer einer Unterrichtseinheit in Stunden
+define('EINHEIT_DAUER', 0.75);

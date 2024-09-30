@@ -32,6 +32,18 @@ const router = VueRouter.createRouter({
 			props: true
 		},
 		{
+			path: '/Profil/Scan',
+			name: 'Scan',
+			component: ScanComponent,
+		},
+		{
+			path: '/Profil/Entschuldigung',
+			name: 'Profil',
+			component: LandingPageComponent,
+			props: { activetabstudent: 'entschuldigungen'}
+		},
+
+		{
 			path: `/`,
 			name: 'LandingPage',
 			component: LandingPageComponent

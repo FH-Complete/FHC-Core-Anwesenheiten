@@ -58,6 +58,7 @@ class Profil extends Auth_Controller
 				'abwesend_status' => ABWESEND_STATUS,
 				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
 				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
+				'einheitDauer' => EINHEIT_DAUER,
 				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
 				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
 				'controller' => get_class($this)

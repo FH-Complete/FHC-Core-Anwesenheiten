@@ -1,7 +1,7 @@
 export default {
-	async getAllAnwByUID(studiensemester, uid) {
+	async getAllAnwByUID(studiensemester, uid, person_id) {
 		try {
-			const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID?studiensemester=${studiensemester}&uid=${uid}`;
+			const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID?studiensemester=${studiensemester}&uid=${uid}&person_id=${person_id}`;
 			return this.$fhcApi.get(url, null, null)
 		} catch (error) {
 			throw error;

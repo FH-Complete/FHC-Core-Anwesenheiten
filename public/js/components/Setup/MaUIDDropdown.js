@@ -6,8 +6,8 @@ export const MaUIDDropdown = {
 	data () {
 		return {
 			errors: null,
-			internal_available_maUID: [],
-			internal_selected_maUID: null,
+			internal_available_maUID: Vue.ref([]),
+			internal_selected_maUID: Vue.ref({mitarbeiter_uid: '', infoString: ''}),
 			oldLeIds: []
 		};
 	},
@@ -74,6 +74,7 @@ export const MaUIDDropdown = {
 
 		},
 		maUIDChanged(e) {
+			console.log('maUIDChanged', e)
 			const selected = e.target.selectedOptions
 
 			// reload LEs
@@ -83,18 +84,27 @@ export const MaUIDDropdown = {
 			})
 		},
 		async setupData() {
-			if(!(this.$entryParams?.permissions?.assistenz
-				|| this.$entryParams?.permissions?.admin)) {
+			console.log('setupData')
+
+			if(!(this.$entryParams?.permissions?.admin)) {
 				return
 			}
 			await this.$entryParams.setupPromise.then(() => {
-				this.internal_available_maUID = this.$entryParams.available_maUID
-				this.internal_selected_maUID =  this.$entryParams.selected_maUID
+				console.log('this.$entryParams.setupPromise.then')
+				this.internal_available_maUID.value = this.$entryParams.available_maUID
+				this.internal_selected_maUID.mitarbeiter_uid =  this.$entryParams.selected_maUID.mitarbeiter_uid
+				this.internal_selected_maUID.infoString =  this.$entryParams.selected_maUID.infoString
 			})
 		},
 		resetData() {
-			this.internal_available_maUID = this.$entryParams.available_maUID
-			this.internal_selected_maUID =  this.$entryParams.selected_maUID
+			console.log('resetData')
+			this.internal_available_maUID.value = this.$entryParams.available_maUID
+			this.internal_selected_maUID.mitarbeiter_uid =  this.$entryParams.selected_maUID.mitarbeiter_uid
+			this.internal_selected_maUID.infoString =  this.$entryParams.selected_maUID.infoString
+		},
+		getSelected(option) {
+			debugger
+			return option.mitarbeiter_uid === this.internal_selected_maUID.mitarbeiter_uid
 		}
 	},
 	mounted() {
@@ -104,8 +114,8 @@ export const MaUIDDropdown = {
 		<div>
 			<label for="maSelect">{{ title }}</label>
 			<select id="maSelect" @change="maUIDChanged" class="form-control" >
-				<option v-for="option in internal_available_maUID" :value="option" >
-<!--				selected="option.mitarbeiter_uid === internal_selected_maUID.mitarbeiter_uid"-->
+				<option v-for="option in internal_available_maUID.value" :value="option.mitarbeiter_uid" 
+				:selected="getSelected(option)">
 				
 					<a> {{option.infoString}} </a>
 				</option>

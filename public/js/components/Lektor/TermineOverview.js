@@ -50,10 +50,10 @@ export const TermineOverview = {
 			return !!found
 		},
 		handleDateSelect(e) {
-			console.log('handleDateSelect', e)
+			// console.log('handleDateSelect', e)
 		},
 		getKontrolleForTermin(termin) {
-			console.log('getKontrolleForTermin', termin)
+			// console.log('getKontrolleForTermin', termin)
 			const kontrolleFound = this.kontrollen.find((k) => {
 				return k.datum=== termin.datumFrontend
 			})
@@ -61,7 +61,7 @@ export const TermineOverview = {
 			return kontrolleFound ?? null
 		},
 		kontrolleHasTermin(kontrolle) {
-			console.log('kontrolleHasTermin', kontrolle)
+			// console.log('kontrolleHasTermin', kontrolle)
 
 			const terminFound = this.termine.find((t) => {
 				return t.datumFrontend === kontrolle.datum
@@ -87,20 +87,20 @@ export const TermineOverview = {
 	},
 	watch: {
 		termine(newVal, oldVal) {
-			console.log('watch termine')
-			console.log(newVal)
+			// console.log('watch termine')
+			// console.log(newVal)
 		},
 		kontrollen(newVal, oldVal) {
-			console.log('watch kontrollen')
+			// console.log('watch kontrollen')
 
-			console.log(newVal)
+			// console.log(newVal)
 			// todo: maybe call somewhere else?
 			this.linkTermineWithKontrollen()
 		},
 		date(newVal) {
-			console.log('watch date')
+			// console.log('watch date')
 
-			console.log(newVal)
+			// console.log(newVal)
 		}
 	},
 	computed: {

@@ -44,6 +44,8 @@ export default {
 				},
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
 				layout:"fitDataStretch",
+				pagination: true,
+				paginationSize: 100,
 				columns: [
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip: false, minWidth: 200, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},

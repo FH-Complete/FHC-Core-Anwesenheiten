@@ -930,10 +930,6 @@ export const LektorComponent = {
 				
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
 					<template v-slot:title>
-<!--						<div v-tooltip="{ value: 'some FAQ Text' }">-->
-<!--							{{ $p.t('global/neueAnwKontrolle') }}-->
-<!--							<i class="fa fa-circle-question"></i>-->
-<!--						</div>-->
 						
 						<div v-tooltip="getTooltipObj">
 							{{ $p.t('global/neueAnwKontrolle') }}

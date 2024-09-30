@@ -76,8 +76,10 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	public function getAllAnwByUID()
 	{
+
 		$studiensemester = $this->_ci->input->get('studiensemester');
 		$uid = $this->_ci->input->get('uid');
+		$person_id = $this->_ci->input->get('person_id');
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
@@ -89,13 +91,15 @@ class ProfilApi extends FHCAPI_Controller
 		{
 			$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
 
+
 			if (isError($studiensemester) || !hasData($studiensemester))
 				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$studiensemester = getData($studiensemester)[0]->studiensemester_kurzbz;
 
 			$result = $this->_ci->AnwesenheitModel->getAllByStudent($uid, $studiensemester);
-			$this->terminateWithSuccess($result);
+			$entschuldigungen = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+			$this->terminateWithSuccess(array($result, $entschuldigungen));
 		}
 	}
 
@@ -382,21 +386,34 @@ class ProfilApi extends FHCAPI_Controller
 	public function getEntschuldigungenByPersonID() {
 		$result = $this->getPostJSON();
 
+		$times = [];
+		$start = microtime(true);
+
 		if(!property_exists($result, 'person_id')) {
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
+		$times[] = microtime(true) - $start;
+
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
 		$person_id = $result->person_id;
 
+		$times[] = microtime(true) - $start;
+
 		// students are only allowed to fetch their own entschuldigungen
 		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($isStudent, 'general');
+
+		$times[] = microtime(true) - $start;
 
 		if(is_object($person_id) || isEmptyString($person_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
+		$times[] = microtime(true) - $start;
+
 		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+
+		$times[] = microtime(true) - $start;
 
 		$this->terminateWithSuccess($result);
 	}

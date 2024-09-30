@@ -30,7 +30,6 @@ export default {
 				],
 				groupBy: ['bezeichnung'],
 				groupStartOpen:false,
-				rowFormatter: studentFormatters.anwesenheitRowFormatter,
 				groupHeader: studentFormatters.customGroupHeader,
 				groupToggleElement:"header",
 				persistence: {
@@ -64,22 +63,19 @@ export default {
 				let returnValue = '';
 				if (data === this.$entryParams.permissions.entschuldigt_status)
 					returnValue = ' ' + this.$p.t('global/entschuldigungAkzeptiert');
-				return '<i class="fa fa-check"></i>' + returnValue;
+				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%;"><i class="fa fa-check" style="margin-right: 4px;"></i> ' + returnValue + '</div>';
 			}
 			else if (data === this.$entryParams.permissions.abwesend_status)
 			{
 				let returnValue = '';
 				cell.getElement().style.color = "#dc3545";
-				if (cell.getData().exists_entschuldigung === 1)
-				{
-					if (cell.getData().status_entschuldigung === null)
-						returnValue =  ' ' + this.$p.t('global/entschuldigungOffen');
-					else if (cell.getData().status_entschuldigung === false)
-						returnValue = ' ' + this.$p.t('global/entschuldigungAbgelehnt');
-					else if (cell.getData().status_entschuldigung === true)
-						returnValue = ' ' + this.$p.t('global/entschuldigungAkzeptiert');
-				}
-				return '<i class="fa fa-xmark"></i>' + returnValue;
+
+				if (cell.getData().hasOffene)
+					returnValue =  ' ' + this.$p.t('global/entschuldigungOffen');
+				else if (cell.getData().hasAbgelehnte)
+					returnValue = ' ' + this.$p.t('global/entschuldigungAbgelehnt');
+
+				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%;"><i class="fa fa-xmark" style="margin-right: 4px;"></i> ' + returnValue + '</div>';
 
 			}
 			else
@@ -94,15 +90,53 @@ export default {
 
 			// toggle anwesenheiten loading procedure based on admin or student login
 			const uid = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.uid : this.$entryParams.viewDataStudent.student_uid
+			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
 			if(!uid) return
-			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid).then(res => {
+			this.$fhcApi.factory.Profil.getAllAnwByUID(this.studiensemester, uid, person_id).then(res => {
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
-					this.$refs.uebersichtTable.tabulator.setData(res.data?.retval);
+					const processedAnw = this.processAnw(res.data)
+
+					this.$refs.uebersichtTable.tabulator.setData(processedAnw);
 				}
 			});
+		},
+		processAnw(data) {
+			const anw = data[0].retval
+			anw.forEach(a => {
+				a.vonDate = new Date(a.von)
+				a.bisDate = new Date(a.bis)
+			})
+
+			const ent = data[1].retval
+			ent.forEach(e => {
+				e.vonDate = new Date(e.von)
+				e.bisDate = new Date(e.bis)
+			})
+
+			// filter entschuldigungen into offene and abgelehnte (entschuldigt status already in anw_user)
+			const offene = ent.filter(e => e.akzeptiert === null)
+			const abgelehnte = ent.filter(e => e.akzeptiert === false)
+
+			// for every offene set anw_user entry property to true for every eligible date & abgelehnt combo
+			offene.forEach(o => {
+				const anwInDateRange = anw.filter(a => a.vonDate >= o.vonDate && a.bisDate <= o.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+
+				anwInDateRange.forEach(a => a.hasOffene = true)
+
+			})
+
+
+			// for every abgelehnte set anw_user entry property to true for every eligible date & abgelehnt combo
+
+			abgelehnte.forEach(abg => {
+				const anwInRange = anw.filter(a => a.vonDate >= abg.vonDate && a.bisDate <= abg.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+				anwInRange.forEach(a => a.hasAbgelehnte = true)
+			})
+
+			return anw
 		},
 		async reload() {
 			this.loadAnwesenheitenByUID()
@@ -158,5 +192,3 @@ export default {
 	</core-base-layout>
 `
 };
-
-

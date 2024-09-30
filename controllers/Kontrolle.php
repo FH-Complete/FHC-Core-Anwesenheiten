@@ -58,6 +58,7 @@ class Kontrolle extends Auth_Controller
 				'anwesend_status' => ANWESEND_STATUS,
 				'abwesend_status' => ABWESEND_STATUS,
 				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
+				'einheitDauer' => EINHEIT_DAUER,
 				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
 				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
 				'controller' => get_class($this)

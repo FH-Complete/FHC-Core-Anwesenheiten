@@ -371,6 +371,12 @@ DO $$
 	EXCEPTION WHEN OTHERS THEN NULL;
 	END $$;
 
+CREATE INDEX anwesenheit_user_prestudent_id_hash_index ON
+	extension.tbl_anwesenheit_user USING hash(prestudent_id);
+
+CREATE INDEX entschuldigungen_person_id_hash_index ON
+	extension.tbl_anwesenheit_entschuldigung USING hash(person_id);
+
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_anwesenheit_entschuldigung_history TO vilesci;
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_anwesenheit_entschuldigung_history TO fhcomplete;
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_anwesenheit_entschuldigung_history TO web;
