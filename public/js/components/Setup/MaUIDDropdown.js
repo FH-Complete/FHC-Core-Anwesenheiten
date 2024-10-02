@@ -17,7 +17,7 @@ export const MaUIDDropdown = {
 	methods: {
 		reloadAvailableLE() {
 			console.log('reloadAvailableLE')
-			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid
+			const ma_uid = this.$entryParams.selected_maUID
 			const sem_kurzbz = this.$entryParams.sem_kurzbz
 			const lv_id = this.$entryParams.lv_id
 			const le_ids = []
@@ -77,6 +77,8 @@ export const MaUIDDropdown = {
 			console.log('maUIDChanged', e)
 			const selected = e.target.selectedOptions
 
+
+			debugger
 			// reload LEs
 			this.$entryParams.selected_maUID = selected[0]._value
 			this.reloadAvailableLE().then(() => {
@@ -103,7 +105,6 @@ export const MaUIDDropdown = {
 			this.internal_selected_maUID.infoString =  this.$entryParams.selected_maUID.infoString
 		},
 		getSelected(option) {
-			debugger
 			return option.mitarbeiter_uid === this.internal_selected_maUID.mitarbeiter_uid
 		}
 	},

@@ -158,7 +158,7 @@ export default {
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz, ma_uid)
 
 					maProm.then(()=> {
-						debugger
+
 						promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.mitarbeiter_uid, sem_kurzbz, le_ids))
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
 						Promise.all(promises).then(()=>{
@@ -206,7 +206,7 @@ export default {
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.available_maUID = []
-					debugger
+
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
 					const lektor = found ?? res.data.retval[0]
@@ -226,7 +226,7 @@ export default {
 							infoString
 						})
 					})
-					debugger
+
 					// this.$refs.MADropdown.resetData()
 
 				}).finally(()=> {
@@ -314,7 +314,7 @@ export default {
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
 
 
-		if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
+		// if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
 		this.awaitPhrasen();
 	},
 	watch: {

@@ -799,6 +799,7 @@ export const LektorComponent = {
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
+
 			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id, ma_uid, date).then(res => {
 				this.setupData(res.data)
 			}).finally(() => {
