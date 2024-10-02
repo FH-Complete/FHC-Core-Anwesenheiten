@@ -34,7 +34,6 @@ export const AssistenzComponent = {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
 					this.tableData = response.data.retval
-					console.log(this.tableData)
 					return response.data.retval
 				},
 				ajaxConfig: "POST",
@@ -113,7 +112,6 @@ export const AssistenzComponent = {
 				{
 					event: "tableBuilt",
 					handler: async () => {
-						console.log('tableBuilt', this.$refs.assistenzTable.tabulator)
 						await this.$entryParams.phrasenPromise
 						this.tableBuiltResolve()
 					}
@@ -278,7 +276,6 @@ export const AssistenzComponent = {
 				this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
 
 			this.$fhcApi.factory.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
-				console.log(res)
 				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
 			})
 		}
@@ -290,15 +287,12 @@ export const AssistenzComponent = {
 	},
 	watch: {
 		'zeitraum.von'() {
-
 			this.refetchData()
 		},
 		'zeitraum.bis'() {
-
 			this.refetchData()
 		},
 		studiengang(newVal, oldVal) {
-			console.log(this.$refs.assistenzTable.tabulator)
 			this.filtern()
 		}
 	},

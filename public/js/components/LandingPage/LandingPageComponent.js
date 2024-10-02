@@ -112,7 +112,6 @@ export default {
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
 				console.log('$entryParams', this.$entryParams)
-				console.log('called controller: ', this.$entryParams.permissions.controller)
 
 				el.removeAttribute('permissions')
 
@@ -145,6 +144,7 @@ export default {
 			})
 		},
 		async handleSetup() {
+			if(this.$entryParams.setupPromise) return
 			return new Promise(resolve => {
 				const ma_uid = this.$entryParams.permissions.authID
 				const sem_kurzbz = this.$entryParams.sem_kurzbz
@@ -152,7 +152,6 @@ export default {
 				const le_ids = []
 
 				const promises = []
-
 				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
 				if(this.$entryParams.permissions.admin && lv_id && sem_kurzbz && le_ids) {
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz, ma_uid)
@@ -201,8 +200,6 @@ export default {
 			})
 		},
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
-			console.log('handleMaSetup')
-			console.log('ma_uid', ma_uid)
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.available_maUID = []
@@ -235,11 +232,8 @@ export default {
 			})
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
-			console.log('handleLeSetup')
-			console.log('ma_uid', ma_uid)
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
-
 					// merge entries with same LE
 					const data = []
 
@@ -272,12 +266,17 @@ export default {
 						}
 					})
 
-					this.$entryParams.selected_le_info = data.length ? data[0] : null
-					this.$entryParams.available_le_info = [...data]
+					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? data[0] : null
+					this.$entryParams.available_le_info.value = [...data]
 					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 
-					this.$entryParams.selected_le_id = this.$entryParams.selected_le_info ? this.$entryParams.selected_le_info.lehreinheit_id : null
-					this.$entryParams.available_le_ids = [...le_ids]
+					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
+					this.$entryParams.available_le_ids.value = [...le_ids]
+
+					// console.log('this.$entryParams.selected_le_info.value', this.$entryParams.selected_le_info.value)
+					// console.log('this.$entryParams.available_le_info.value', this.$entryParams.available_le_info.value)
+					// console.log('this.$entryParams.selected_le_id', this.$entryParams.selected_le_id)
+					// console.log('this.$entryParams.available_le_ids.value', this.$entryParams.available_le_ids.value)
 
 
 				}).finally(() => {
@@ -316,6 +315,12 @@ export default {
 
 		// if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
 		this.awaitPhrasen();
+
+		// console.log('mounted end lpc')
+		// console.log('this.$entryParams.selected_le_info.value', this.$entryParams.selected_le_info.value)
+		// console.log('this.$entryParams.available_le_info.value', this.$entryParams.available_le_info.value)
+		// console.log('this.$entryParams.selected_le_id', this.$entryParams.selected_le_id)
+		// console.log('this.$entryParams.available_le_ids.value', this.$entryParams.available_le_ids.value)
 	},
 	watch: {
 

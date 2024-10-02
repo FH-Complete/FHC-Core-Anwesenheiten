@@ -140,9 +140,6 @@ export const StudentComponent = {
 
 		// get some info if desired user endpoint is anw list or entschuldigungen tab and set it accordingly
 
-
-		console.log('this.$entryParams.activetabstudent', this.$entryParams.activetabstudent)
-
 		if(this.$entryParams.activetabstudent) this.$refs.tabsStudent.change(this.$entryParams.activetabstudent)
 
 	},

@@ -154,7 +154,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getLETermine($le_id) {
 		$query = "SELECT datum, MIN(beginn) as beginn, MAX(ende) as ende
-				FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
+				FROM lehre.vw_stundenplan JOIN lehre.tbl_stunde USING(stunde)
 				WHERE lehreinheit_id = ?
 				GROUP BY datum
 				ORDER BY datum ASC";

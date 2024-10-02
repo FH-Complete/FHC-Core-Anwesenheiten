@@ -84,6 +84,10 @@ const anwesenheitApp = Vue.createApp({
 anwesenheitApp.config.globalProperties.$entryParams = {
 	isInFrame: !!window.frameElement,
 	isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
+	available_le_ids: Vue.ref([]),
+	available_le_info: Vue.ref([]),
+	selected_le_id: Vue.ref(),
+	selected_le_info: Vue.ref()
 }
 
 anwesenheitApp.config.globalProperties.$capitalize = (string) => {

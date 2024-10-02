@@ -16,7 +16,6 @@ export const MaUIDDropdown = {
 	},
 	methods: {
 		reloadAvailableLE() {
-			console.log('reloadAvailableLE')
 			const ma_uid = this.$entryParams.selected_maUID
 			const sem_kurzbz = this.$entryParams.sem_kurzbz
 			const lv_id = this.$entryParams.lv_id
@@ -27,7 +26,6 @@ export const MaUIDDropdown = {
 			return new Promise(resolve => {
 
 				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
-					console.log('getLehreinheitenForLehrveranstaltungAndMaUid res', res)
 
 					// merge entries with same LE
 					const data = []
@@ -61,11 +59,13 @@ export const MaUIDDropdown = {
 						}
 					})
 
-					this.$entryParams.selected_le_info = data.length ? data[0] : null
-					this.$entryParams.available_le_info = [...data]
+
+					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? data[0] : null
+					this.$entryParams.available_le_info.value = [...data]
 					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
-					this.$entryParams.selected_le_id = le_ids.length ? le_ids[0] : null
-					this.$entryParams.available_le_ids = [...le_ids]
+
+					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
+					this.$entryParams.available_le_ids.value = [...le_ids]
 
 				}).finally(() => {
 					resolve()
@@ -74,7 +74,6 @@ export const MaUIDDropdown = {
 
 		},
 		maUIDChanged(e) {
-			console.log('maUIDChanged', e)
 			const selected = e.target.selectedOptions
 
 			// reload LEs
@@ -84,13 +83,10 @@ export const MaUIDDropdown = {
 			})
 		},
 		async setupData() {
-			console.log('setupData')
-
 			if(!(this.$entryParams?.permissions?.admin)) {
 				return
 			}
 			await this.$entryParams.setupPromise.then(() => {
-				console.log('this.$entryParams.setupPromise.then')
 				this.internal_available_maUID.value = this.$entryParams.available_maUID
 				this.internal_selected_maUID.mitarbeiter_uid =  this.$entryParams.selected_maUID.mitarbeiter_uid
 				this.internal_selected_maUID.infoString =  this.$entryParams.selected_maUID.infoString
