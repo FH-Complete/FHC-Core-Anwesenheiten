@@ -77,8 +77,6 @@ export const MaUIDDropdown = {
 			console.log('maUIDChanged', e)
 			const selected = e.target.selectedOptions
 
-
-			debugger
 			// reload LEs
 			this.$entryParams.selected_maUID = selected[0]._value
 			this.reloadAvailableLE().then(() => {

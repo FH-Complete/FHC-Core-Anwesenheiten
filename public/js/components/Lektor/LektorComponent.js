@@ -557,7 +557,7 @@ export const LektorComponent = {
 
 			if(this.lektorState.termine.length) {
 				const termin = this.findClosestTermin();
-
+				console.log('closest termin', termin)
 				this.setTimespanForKontrolleTermin(termin, false)
 
 				this.lektorState.termine.forEach(t => this.lektorState.dates.push(t.datum))
@@ -616,7 +616,7 @@ export const LektorComponent = {
 			// get current counts for selectedDate
 			this.setCurrentCountsFromTableData()
 
-			this.linkKontrollData()
+			// this.linkKontrollData()
 
 			console.log('lektorState: ', this.lektorState)
 
@@ -793,7 +793,6 @@ export const LektorComponent = {
 
 		},
 		handleLEChanged () {
-
 			this.filterTitle = this.$entryParams.selected_le_info?.infoString ?? ''
 
 			const date = this.formatDateToDbString(this.selectedDate)
@@ -939,7 +938,7 @@ export const LektorComponent = {
 					</template>
 					<template v-slot:default>
 						<div class="row">
-						<div class="col-7">
+						<div class="col-12">
 							
 							<div class="row align-items-center">
 								<div class="col-2" style="align-items: center; justify-items: center;">
@@ -987,15 +986,15 @@ export const LektorComponent = {
 							<div class="row align items center mt-8">
 								<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
 															
-								<TermineOverview :date="selectedDate" :kontrollen="lektorState.kontrollen" :termine="lektorState.termine"></TermineOverview>
+<!--								<TermineOverview :date="selectedDate" :kontrollen="lektorState.kontrollen" :termine="lektorState.termine"></TermineOverview>-->
 								
 							</div>
 							
-						</div>
-						<div class="col-5">
-							<Stundenliste :stunden="stunden" />
-						</div>
-						</div>
+<!--						</div>-->
+<!--						<div class="col-5">-->
+<!--							<Stundenliste :stunden="stunden" />-->
+<!--						</div>-->
+<!--						</div>-->
 					</template>
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
