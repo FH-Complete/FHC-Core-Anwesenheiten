@@ -87,7 +87,12 @@ anwesenheitApp.config.globalProperties.$entryParams = {
 	available_le_ids: Vue.ref([]),
 	available_le_info: Vue.ref([]),
 	selected_le_id: Vue.ref(),
-	selected_le_info: Vue.ref()
+	selected_le_info: Vue.ref(),
+	available_maUID: Vue.ref([]),
+	selected_maUID: Vue.ref(),
+	available_termine: Vue.ref(),
+	avaialble_students: Vue.ref([]),
+	selected_student: Vue.ref()
 }
 
 anwesenheitApp.config.globalProperties.$capitalize = (string) => {

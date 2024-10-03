@@ -6,8 +6,6 @@ export const MaUIDDropdown = {
 	data () {
 		return {
 			errors: null,
-			internal_available_maUID: Vue.ref([]),
-			internal_selected_maUID: Vue.ref({mitarbeiter_uid: '', infoString: ''}),
 			oldLeIds: []
 		};
 	},
@@ -15,72 +13,13 @@ export const MaUIDDropdown = {
 		title: ''
 	},
 	methods: {
-		reloadAvailableLE() {
-			const ma_uid = this.$entryParams.selected_maUID
-			const sem_kurzbz = this.$entryParams.sem_kurzbz
-			const lv_id = this.$entryParams.lv_id
-			const le_ids = []
-
-			this.oldLeIds = this.$entryParams.available_le_ids
-
-			return new Promise(resolve => {
-
-				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
-
-					// merge entries with same LE
-					const data = []
-
-					res.data?.forEach(entry => {
-
-						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
-						if (existing) {
-							// supplement info
-							existing.infoString += ', '
-							if (entry.gruppe_kurzbz !== null) {
-								existing.infoString += entry.gruppe_kurzbz
-							} else {
-								existing.infoString += entry.kurzbzlang + '-' + entry.semester
-									+ (entry.verband ? entry.verband : '')
-									+ (entry.gruppe ? entry.gruppe : '')
-							}
-						} else {
-							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
-							// so a new entry will always start with those groups, others are appended afterwards
-							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-							if (entry.gruppe_kurzbz !== null) {
-								entry.infoString += entry.gruppe_kurzbz
-							} else {
-								entry.infoString += entry.kurzbzlang + '-' + entry.semester
-									+ (entry.verband ? entry.verband : '')
-									+ (entry.gruppe ? entry.gruppe : '')
-							}
-
-							data.push(entry)
-						}
-					})
-
-
-					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? data[0] : null
-					this.$entryParams.available_le_info.value = [...data]
-					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
-
-					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
-					this.$entryParams.available_le_ids.value = [...le_ids]
-
-				}).finally(() => {
-					resolve()
-				})
-			})
-
-		},
 		maUIDChanged(e) {
 			const selected = e.target.selectedOptions
 
 			// reload LEs
 			this.$entryParams.selected_maUID = selected[0]._value
-			this.reloadAvailableLE().then(() => {
-				this.$emit('maUIDchanged', this.oldLeIds)
-			})
+			this.$emit('maUIDchanged')
+
 		},
 		async setupData() {
 			if(!(this.$entryParams?.permissions?.admin)) {

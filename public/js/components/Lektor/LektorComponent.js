@@ -414,7 +414,7 @@ export const LektorComponent = {
 
 			// maybe only fetch new entries and merge
 			const date = this.formatDateToDbString(this.selectedDate)
-			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
 			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
 				if(res.meta.status !== "success") return
@@ -455,7 +455,7 @@ export const LektorComponent = {
 			const dataparts = this.deleteData.datum.split('.')
 			const dateobj = new Date(dataparts[2], dataparts[1], dataparts[0])
 			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth(), day: dateobj.getDate()}
-			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
 			this.$fhcApi.factory.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date).then(res => {
@@ -677,10 +677,12 @@ export const LektorComponent = {
 			
 			this.setup()
 		},
-		maUIDchangedHandler(oldIds) {
+		async maUIDchangedHandler() {
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			// this.$refs.LEDropdown.resetData()
-			this.handleLEChanged()
+
+			this.$emit('maUIDChanged')
+			// this.handleLEChanged()
 		},
 		openNewAnwesenheitskontrolleModal(){
 			this.$refs.modalContainerNewKontrolle.show()
@@ -769,7 +771,7 @@ export const LektorComponent = {
 
 			// fetch LE data
 			const date = this.formatDateToDbString(this.selectedDate)
-			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 
 			if(this.$entryParams.lektorState) {
 				this.setupLektorState()
@@ -784,7 +786,7 @@ export const LektorComponent = {
 		},
 		handleLEChanged () {
 			const date = this.formatDateToDbString(this.selectedDate)
-			const ma_uid = this.$entryParams.selected_maUID?.mitarbeiter_uid ?? this.ma_uid
+			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
 			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
 				this.setupData(res.data)

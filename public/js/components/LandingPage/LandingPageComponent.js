@@ -158,7 +158,7 @@ export default {
 
 					maProm.then(()=> {
 
-						promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.mitarbeiter_uid, sem_kurzbz, le_ids))
+						promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.value?.mitarbeiter_uid, sem_kurzbz, le_ids))
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
 						Promise.all(promises).then(()=>{
 							resolve()
@@ -202,7 +202,7 @@ export default {
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
 				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
-					this.$entryParams.available_maUID = []
+					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
@@ -210,7 +210,7 @@ export default {
 					const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 						+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 						+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
-					this.$entryParams.selected_maUID = lektor ?{mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
+					this.$entryParams.selected_maUID.value = lektor ?{mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
 
 
 					res.data?.retval?.forEach(lektor => {
@@ -218,7 +218,7 @@ export default {
 							+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 							+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
 
-						this.$entryParams.available_maUID.push({
+						this.$entryParams.available_maUID.value.push({
 							mitarbeiter_uid: lektor.mitarbeiter_uid,
 							infoString
 						})
