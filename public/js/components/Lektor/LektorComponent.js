@@ -65,8 +65,12 @@ export const LektorComponent = {
 					{title: this.$capitalize(this.$p.t('person/student')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false,tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe',
-						headerFilter: "list", headerFilterParams: {values: this.getGroups, sort:"asc"},
+					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe', headerFilter: 'list',
+						headerFilterParams: {
+							valuesLookup: true,
+							clearable: true,
+							autocomplete: true,
+						},
 						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'status', formatter: this.anwesenheitFormatterValue, hozAlign:"center",widthGrow: 1, tooltip: this.anwTooltip, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false, minWidth: 150},
@@ -888,17 +892,6 @@ export const LektorComponent = {
 			}
 
 			return fin
-		},
-		getGroups() {
-
-			const grps = {}
-
-			this.lektorState.gruppen.forEach(g => {
-				// console.log(g)
-			})
-
-			return grps
-
 		}
 	},
 	template:`

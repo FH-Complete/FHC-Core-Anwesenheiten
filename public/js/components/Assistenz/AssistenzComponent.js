@@ -338,7 +338,7 @@ export const AssistenzComponent = {
 							<datepicker
 								v-model="zeitraum.von"
 								:placeholder="$capitalize($p.t('ui/von'))"
-								clearable="false"
+								:clearable="false"
 								auto-apply
 								:enable-time-picker="false"
 								format="dd.MM.yyyy"
@@ -351,7 +351,7 @@ export const AssistenzComponent = {
 							<datepicker
 								v-model="zeitraum.bis"
 								:placeholder="$capitalize($p.t('global/bis'))"
-								clearable="false"
+								:clearable="false"
 								auto-apply
 								:enable-time-picker="false"
 								format="dd.MM.yyyy"

@@ -245,12 +245,7 @@ export const StudentByLvaComponent = {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
 				+ this.verband + this.gruppe + ' '
 			this.filterSubtitle = this.$p.t('global/summe')
-				+ ': ' + (this.sum ? this.sum : '-') + ' %'
-		},
-		routeToLektor() {
-			this.$router.push({
-				name: 'Lektor'
-			})
+				+ ': ' + this.sum+ ' %'
 		},
 		routeToLandingPage() {
 			this.$router.push({

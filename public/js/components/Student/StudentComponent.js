@@ -148,7 +148,7 @@ export const StudentComponent = {
 		<core-base-layout>	
 			<template #main>	
 				<div class="row">
-					<div class="col-4">
+					<div class="col-6">
 						<h1 class="h4 mb-5">{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} <span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span></h1>
 					</div>
 					<div class="col-4">
@@ -156,7 +156,7 @@ export const StudentComponent = {
 							 id="studentUID" ref="studentDropdown" @studentChanged="studentChangedHandler">
 						</StudentDropdown>
 					</div>
-					<div class="col-4 text-center">
+					<div class="col-2 text-center">
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
 					</div>
 				</div>

@@ -176,7 +176,7 @@ export default {
 		:title="filterTitle">
 		<template #main>
 			<div class="row">
-				<div class="col-9"></div>
+				<div class="col-10"></div>
 				<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler"></StudiensemesterDropdown></div>
 			</div>
 			<core-filter-cmpt
