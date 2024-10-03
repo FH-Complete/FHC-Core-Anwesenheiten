@@ -24,7 +24,8 @@ $includesArray = array(
 		'public/css/components/verticalsplit.css',
 		'public/css/components/searchbar.css',
 		'vendor/vuejs/vuedatepicker_css/main.css',
-		'public/css/Fhc.css'
+		'public/css/Fhc.css',
+		'public/extensions/FHC-Core-Anwesenheiten/css/PrimevueCustom.css'
 	),
 	'customJSs' => array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',

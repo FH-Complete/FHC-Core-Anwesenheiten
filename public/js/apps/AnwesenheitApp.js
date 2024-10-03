@@ -91,8 +91,7 @@ anwesenheitApp.config.globalProperties.$entryParams = {
 	available_maUID: Vue.ref([]),
 	selected_maUID: Vue.ref(),
 	available_termine: Vue.ref(),
-	avaialble_students: Vue.ref([]),
-	selected_student: Vue.ref()
+	selected_termin: Vue.ref()
 }
 
 anwesenheitApp.config.globalProperties.$capitalize = (string) => {
@@ -120,7 +119,7 @@ anwesenheitApp
 		zIndex: {
 			overlay: 9000,
 			tooltip: 8000
-		},
+		}
 	})
 	.use(Phrasen)
 	.mount("#main");

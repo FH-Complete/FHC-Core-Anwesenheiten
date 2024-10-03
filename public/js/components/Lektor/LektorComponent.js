@@ -32,7 +32,6 @@ export const LektorComponent = {
 	},
 	data() {
 		return {
-			closestTermin: null,
 			stunden: null,
 			loading: false,
 			tableBuiltResolve: null,
@@ -144,8 +143,7 @@ export const LektorComponent = {
 			abwesendCount: 0,
 			entschuldigtCount: 0,
 			studentCount: 0,
-			changes: false, // if something could have happened to dataset -> reload on mounted
-			isAllowedToStartKontrolle: true
+			changes: false // if something could have happened to dataset -> reload on mounted
 		}
 	},
 	props: {
@@ -305,8 +303,8 @@ export const LektorComponent = {
 				}
 			})
 		},
-		handleTerminChanged(termin) {
-			this.setTimespanForKontrolleTermin(termin)
+		handleTerminChanged() {
+			this.setTimespanForKontrolleTermin(this.$entryParams.selected_termin.value)
 		},
 		regenerateQR() {
 			this.$fhcApi.factory.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(async (res) => {
@@ -377,12 +375,12 @@ export const LektorComponent = {
 		findClosestTermin() {
 			const todayTime = new Date(Date.now()).getTime()
 
-			this.lektorState.termine.forEach((termin, i) => {
+			this.$entryParams.available_termine.value.forEach((termin, i) => {
 				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
 
 			})
 
-			return this.lektorState.termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, this.lektorState.termine[0]);
+			return this.$entryParams.available_termine.value.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, this.$entryParams.available_termine.value[0]);
 
 		},
 		startNewAnwesenheitskontrolle(){
@@ -543,18 +541,16 @@ export const LektorComponent = {
 		async setup() {
 			// use this to show actual entries with should be entries from stundenplan merged
 			// this.lektorState.dates = []
-			this.lektorState.termine.forEach(termin => {
+			this.$entryParams.available_termine.value.forEach(termin => {
 				const dateParts = termin.datum.split( "-")
 				termin.datumFrontend = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 			})
+			
+			if(this.$entryParams.available_termine.value.length) {
+				this.$entryParams.selected_termin.value = this.findClosestTermin();
+				this.setTimespanForKontrolleTermin(this.$entryParams.selected_termin.value, false)
 
-			this.$refs.termineDropdown.setTermine(this.lektorState.termine)
-
-			if(this.lektorState.termine.length) {
-				this.$entryParams.closestTermin = this.findClosestTermin();
-				this.setTimespanForKontrolleTermin(this.$entryParams.closestTermin, false)
-
-				this.lektorState.termine.forEach(t => this.lektorState.dates.push(t.datum))
+				this.$entryParams.available_termine.value.forEach(t => this.lektorState.dates.push(t.datum))
 
 			}
 			// use this to only show dates with actual entries
@@ -659,7 +655,6 @@ export const LektorComponent = {
 			this.lektorState.entschuldigtStati = this.$entryParams.lektorState.entschuldigtStati
 			this.lektorState.kontrollen = this.$entryParams.lektorState.kontrollen
 			this.lektorState.viewData = this.$entryParams.lektorState.viewData
-			this.lektorState.termine = this.$entryParams.lektorState.termine
 			this.lektorState.gruppen = new Set()
 
 			this.$entryParams.lektorState = null
@@ -672,7 +667,7 @@ export const LektorComponent = {
 			this.lektorState.entschuldigtStati = data[3] ?? []
 			this.lektorState.kontrollen = data[4] ?? []
 			this.lektorState.viewData = data[5] ?? []
-			this.lektorState.termine = data[6] ?? []
+			this.$entryParams.available_termine.value = data[6] ?? []
 			this.lektorState.gruppen = new Set()
 			
 			this.setup()
@@ -682,7 +677,7 @@ export const LektorComponent = {
 			// this.$refs.LEDropdown.resetData()
 
 			this.$emit('maUIDChanged')
-			// this.handleLEChanged()
+			this.handleLEChanged()
 		},
 		openNewAnwesenheitskontrolleModal(){
 			this.$refs.modalContainerNewKontrolle.show()
@@ -837,8 +832,6 @@ export const LektorComponent = {
 
 
 			const today = new Date(Date.now())
-			this.isAllowedToStartKontrolle = this.areDatesSame(newVal, today)
-
 
 			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
 
@@ -869,7 +862,14 @@ export const LektorComponent = {
 	},
 	computed: {
 		getTooltipObj() {
-			return { value: 'some FAQ Text' }
+			return {
+				value: `Um eine Anwesenheitskontrolle für Ihre ausgewählte Unterrichtsgruppe durchzuführen, wählen Sie bitte einen Termin aus dem Stundenplan aus oder geben händisch die gewünschte Gültigkeitkeitsdauer der Kontrolle an.
+				
+				Die Gültigkeitsdauer bestimmt die Gewichtung der Anwesenheit in Relation zum Gesamtausmaß, sie können diese aber nach eigenem Ermessen anpassen und müssen sich nicht streng an die Termine im Stundenplan halten.
+				
+				Sie können pro Datum und Unterrichtsgruppe eine Anwesenheitskontrolle pro Tag eröffnen, welche jedoch beliebig oft aufgerufen und von Studenten eingecheckt werden kann. Es gelten dabei ihre zuletzt eingetragenen Zeiten. Ein Student muss nur einmal am Tag pro Gruppe einchecken um als anwesend registriert zu sein, egal wie oft Sie die Kontrolle starten.`,
+				class: "custom-tooltip"
+			}
 		},
 		getSaveBtnClass() {
 			return !this.changedData.length ? "btn btn-secondary ml-2" : "btn btn-primary ml-2"
@@ -912,7 +912,7 @@ export const LektorComponent = {
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
 					<template v-slot:title>
 						
-						<div v-tooltip="getTooltipObj">
+						<div v-tooltip.bottom="getTooltipObj">
 							{{ $p.t('global/neueAnwKontrolle') }}
 							<i class="fa fa-circle-question"></i>
 						</div>
@@ -1021,7 +1021,7 @@ export const LektorComponent = {
 									
 					<div class="col-6"></div>
 					<div class="col-3">
-						<MaUIDDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz" :title="$capitalize($p.t('lehre/lektor') )" 
+						<MaUIDDropdown v-if="$entryParams?.permissions?.admin" :title="$capitalize($p.t('lehre/lektor') )" 
 						 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
 						</MaUIDDropdown>
 					</div>

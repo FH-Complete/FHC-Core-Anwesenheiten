@@ -96,6 +96,7 @@ export default {
 				this.$entryParams.sem_kurzbz = searchParams.get('sem_kurzbz')
 				this.$entryParams.sem = searchParams.get('sem')
 
+				this.$entryParams.handleLeSetup = this.handleLeSetup
 
 				this.$entryParams.notMissingParams = !!(this.$entryParams.lv_id && this.$entryParams.stg_kz && this.$entryParams.sem_kurzbz)
 
@@ -224,8 +225,6 @@ export default {
 						})
 					})
 
-					// this.$refs.MADropdown.resetData()
-
 				}).finally(()=> {
 					resolve()
 				})
@@ -273,12 +272,6 @@ export default {
 					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
 					this.$entryParams.available_le_ids.value = [...le_ids]
 
-					// console.log('this.$entryParams.selected_le_info.value', this.$entryParams.selected_le_info.value)
-					// console.log('this.$entryParams.available_le_info.value', this.$entryParams.available_le_info.value)
-					// console.log('this.$entryParams.selected_le_id', this.$entryParams.selected_le_id)
-					// console.log('this.$entryParams.available_le_ids.value', this.$entryParams.available_le_ids.value)
-
-
 				}).finally(() => {
 					resolve()
 				})
@@ -293,9 +286,9 @@ export default {
 			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
 		},
-		async awaitPhrasen(){
-			await this.$entryParams.phrasenPromise
-		}
+		// async awaitPhrasen(){
+		// 	await this.$entryParams.phrasenPromise
+		// }
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
@@ -314,13 +307,8 @@ export default {
 
 
 		// if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
-		this.awaitPhrasen();
+		// this.awaitPhrasen();
 
-		// console.log('mounted end lpc')
-		// console.log('this.$entryParams.selected_le_info.value', this.$entryParams.selected_le_info.value)
-		// console.log('this.$entryParams.available_le_info.value', this.$entryParams.available_le_info.value)
-		// console.log('this.$entryParams.selected_le_id', this.$entryParams.selected_le_id)
-		// console.log('this.$entryParams.available_le_ids.value', this.$entryParams.available_le_ids.value)
 	},
 	watch: {
 
