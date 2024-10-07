@@ -83,8 +83,9 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$studiensemester = $this->_ci->StudiensemesterModel->getAkt();
-			$this->terminateWithSuccess($studiensemester);
+			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$aktuellesSem = getData($result)[0];
+			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
 
 		if (!isEmptyString($studiensemester))
