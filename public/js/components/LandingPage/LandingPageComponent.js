@@ -272,6 +272,8 @@ export default {
 					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
 					this.$entryParams.available_le_ids.value = [...le_ids]
 
+					// console.log('this.$entryParams.available_le_info', this.$entryParams.available_le_info)
+
 				}).finally(() => {
 					resolve()
 				})

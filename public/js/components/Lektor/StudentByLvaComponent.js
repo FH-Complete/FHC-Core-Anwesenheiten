@@ -58,7 +58,7 @@ export const StudentByLvaComponent = {
 					},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: this.anwesenheitFormatterValue,  widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/anteil')), field: 'anteil', bottomCalc: this.anwCalc},
+					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalc: this.anwCalc},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
