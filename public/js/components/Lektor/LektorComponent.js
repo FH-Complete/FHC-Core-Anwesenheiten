@@ -244,7 +244,7 @@ export const LektorComponent = {
 				this.lektorState.showAllVar = false
 			}
 		},
-		setupAllData(cols){
+		setupAllData(){
 			const data = []
 
 			this.lektorState.students.forEach(student => {
@@ -379,7 +379,7 @@ export const LektorComponent = {
 		findClosestTermin() {
 			const todayTime = new Date(Date.now()).getTime()
 
-			this.$entryParams.available_termine.value.forEach((termin, i) => {
+			this.$entryParams.available_termine.value.forEach((termin) => {
 				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
 
 			})
@@ -455,8 +455,8 @@ export const LektorComponent = {
 			if (await this.$fhcAlert.confirmDelete() === false) return;
 
 			const dataparts = this.deleteData.datum.split('.')
-			const dateobj = new Date(dataparts[2], dataparts[1], dataparts[0])
-			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth(), day: dateobj.getDate()}
+			const dateobj = new Date(dataparts[2], dataparts[1] - 1, dataparts[0])
+			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth() + 1, day: dateobj.getDate()}
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
@@ -494,7 +494,7 @@ export const LektorComponent = {
 
 			if(entry.studienstatus === 'Incoming') zusatz = ' (i)'
 			if(entry.bisio_id && entry.studienstatus !== 'Incoming'
-				&& entry.bis > stsemdatumvon && von < stsemdatumbis && ((bis.getTime()-von.getTime())/1000*3600*24) >= 30) {
+				&& entry.bis > stsemdatumvon && entry.von < stsemdatumbis && ((entry.bis.getTime()-entry.von.getTime())/1000*3600*24) >= 30) {
 				zusatz = ' (o) (ab ' + entry.von + ')'
 			}
 
@@ -551,8 +551,8 @@ export const LektorComponent = {
 			})
 			
 			if(this.$entryParams.available_termine.value.length) {
-				this.$entryParams.selected_termin.value = this.findClosestTermin();
-				this.setTimespanForKontrolleTermin(this.$entryParams.selected_termin.value, false)
+				const closestTermin = this.findClosestTermin();
+				this.setTimespanForKontrolleTermin(closestTermin, false)
 
 				this.$entryParams.available_termine.value.forEach(t => this.lektorState.dates.push(t.datum))
 
@@ -834,12 +834,9 @@ export const LektorComponent = {
 			const dateParts = selectedDateDBFormatted.split( "-")
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 
-
-			const today = new Date(Date.now())
-
 			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
 
-			this.lektorState.students.forEach((student, index) => {
+			this.lektorState.students.forEach((student) => {
 				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'

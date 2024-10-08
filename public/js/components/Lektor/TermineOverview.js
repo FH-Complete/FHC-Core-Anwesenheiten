@@ -86,18 +86,18 @@ export const TermineOverview = {
 
 	},
 	watch: {
-		termine(newVal, oldVal) {
+		termine() {
 			// console.log('watch termine')
 			// console.log(newVal)
 		},
-		kontrollen(newVal, oldVal) {
+		kontrollen() {
 			// console.log('watch kontrollen')
 
 			// console.log(newVal)
 			// todo: maybe call somewhere else?
 			this.linkTermineWithKontrollen()
 		},
-		date(newVal) {
+		date() {
 			// console.log('watch date')
 
 			// console.log(newVal)

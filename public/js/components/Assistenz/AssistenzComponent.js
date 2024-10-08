@@ -41,7 +41,7 @@ export const AssistenzComponent = {
 					headers:{
 						'Content-Type': 'application/json'
 					},
-					body:(url,config,params)=> {
+					body:()=> {
 						const berechtigungenArrayAdmin = this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
 						const berechtigungenArrayAssistenz = this.$entryParams.permissions.assistenz ? this.$entryParams.permissions.studiengaengeAssistenz : []
 						const joined = [... new Set([... berechtigungenArrayAssistenz, ... berechtigungenArrayAdmin])]
@@ -127,7 +127,7 @@ export const AssistenzComponent = {
 		permissions: []
 	},
 	methods: {
-		akzeptiertFilterFunc(filterVal, rowVal, rowData, filterParams) {
+		akzeptiertFilterFunc(filterVal, rowVal) {
 			// 400 iq code
 			if(filterVal === 'null') return rowVal === null
 			else if(filterVal === 'true') return rowVal === true
@@ -292,7 +292,7 @@ export const AssistenzComponent = {
 		'zeitraum.bis'() {
 			this.refetchData()
 		},
-		studiengang(newVal, oldVal) {
+		studiengang() {
 			this.filtern()
 		}
 	},

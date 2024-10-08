@@ -112,7 +112,7 @@ export default {
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
-				// console.log('$entryParams', this.$entryParams)
+				console.log('$entryParams', this.$entryParams)
 
 				el.removeAttribute('permissions')
 

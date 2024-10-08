@@ -3,7 +3,7 @@
 use CI3_Events as Events;
 
 
-Events::on('lvMenuBuild', function($menu_reference, $params) {
+Events::on('lvMenuBuild', function ($menu_reference, $params) {
 
 	extract($params);
 	$menu =& $menu_reference();

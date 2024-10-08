@@ -14,7 +14,8 @@ class QR_model extends \DB_Model
 		$this->hasSequence = false;
 	}
 
-	public function getActiveCodeForLE($le_id) {
+	public function getActiveCodeForLE($le_id)
+	{
 		$query = "
 			SELECT anwesenheit_id, zugangscode
 			FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_check USING(anwesenheit_id)
@@ -24,7 +25,8 @@ class QR_model extends \DB_Model
 		return $this->execQuery($query, [$le_id]);
 	}
 
-	public function deleteOlderThanMilliseconds($milliseconds) {
+	public function deleteOlderThanMilliseconds($milliseconds)
+	{
 		$query = "
 			DELETE FROM extension.tbl_anwesenheit_check
 			WHERE tbl_anwesenheit_check.insertamum < NOW() - INTERVAL '{$milliseconds} milliseconds';";

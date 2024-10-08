@@ -94,7 +94,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$anwesenheit_user_idsArr = getData($result);
 
 		if($anwesenheit_user_idsArr) {
-			$funcAUID = function($value) {
+			$funcAUID = function ($value) {
 				return $value->anwesenheit_user_id;
 			};
 
@@ -111,7 +111,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$version = $entschuldigung->version + 1;
 
 		// add old version to history table
-		$insert = $this->_ci->EntschuldigungHistoryModel->insert(
+		$this->_ci->EntschuldigungHistoryModel->insert(
 			array(
 				'entschuldigung_id' => $entschuldigung->entschuldigung_id,
 				'person_id' => $entschuldigung->person_id,

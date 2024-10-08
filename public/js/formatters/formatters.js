@@ -75,7 +75,7 @@ export const studentFormatters = {
 		return rowData.kurzbzlang + ' ' + rowData.bezeichnung
 	},
 
-	customGroupHeader: function(value, count, data, group)
+	customGroupHeader: function(value, count, data)
 	{
 		return '<div style="display:flex; justify-content: space-between;">' +
 			'<div>' + value + '</div>' +

@@ -149,7 +149,13 @@ class ProfilApi extends FHCAPI_Controller
 		$interval = $nowDateTime->diff($codeDateTime, true);
 		$timeDiffInMilliseconds = $interval->d * 24 * 60 * 60 * 1000 + $interval->h * 60 * 60 * 1000 + $interval->i * 60 * 1000 + $interval->s * 1000;
 
-		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) $this->terminateWithError(array($this->p->t('global', 'errorCodeTooOld'), $interval, $timeDiffInMilliseconds, REGENERATE_QR_TIMER), 'general');
+		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) {
+			$this->terminateWithError(
+				array($this->p->t('global', 'errorCodeTooOld'),
+					$interval, $timeDiffInMilliseconds, REGENERATE_QR_TIMER),
+				'general'
+			);
+		}
 
 		// find relevant entry from tbl_anwesenheit via anwesenheit_id
 		$anwesenheit_id = $result->retval[0]->anwesenheit_id;
@@ -283,7 +289,8 @@ class ProfilApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
 
-	private function sendEmailToAssistenz ($person_id_param) {
+	private function sendEmailToAssistenz($person_id_param)
+	{
 
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
@@ -293,7 +300,7 @@ class ProfilApi extends FHCAPI_Controller
 		$result = null;
 		if($isStudent) {
 			$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
-		} else if ($isAdmin || $isAssistenz) {
+		} elseif ($isAdmin || $isAssistenz) {
 			$result = $this->EntschuldigungModel->getMailInfoForStudent($person_id_param);
 		}
 
@@ -384,7 +391,8 @@ class ProfilApi extends FHCAPI_Controller
 	 *
 	 * returns list of entschuldigungen entries for given person_id
 	 */
-	public function getEntschuldigungenByPersonID() {
+	public function getEntschuldigungenByPersonID()
+	{
 		$result = $this->getPostJSON();
 
 		$times = [];
@@ -425,7 +433,8 @@ class ProfilApi extends FHCAPI_Controller
 	 *
 	 * returns calculated anwesenheiten quota for student in lva in semester
 	 */
-	public function getAnwesenheitSumByLva() {
+	public function getAnwesenheitSumByLva()
+	{
 		$result = $this->getPostJSON();
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kz;

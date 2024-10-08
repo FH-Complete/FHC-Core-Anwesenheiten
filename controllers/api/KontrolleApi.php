@@ -51,7 +51,7 @@ class KontrolleApi extends FHCAPI_Controller
 			'dbLogType' => 'API', // required
 			'dbExecuteUser' => 'RESTful API',
 			'requestId' => 'API',
-			'requestDataFormatter' => function($data) {
+			'requestDataFormatter' => function ($data) {
 				return json_encode($data);
 			}
 		), 'logLib');
@@ -111,7 +111,7 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFound'), 'general');
 		$students = getData($result);
 
-		$func = function($value) {
+		$func = function ($value) {
 			return $value->prestudent_id;
 		};
 
@@ -119,7 +119,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudents($prestudentIds, $le_id);
 		$anwesenheiten = getData($result);
 
-		$funcPID = function($value) {
+		$funcPID = function ($value) {
 			return $value->person_id;
 		};
 

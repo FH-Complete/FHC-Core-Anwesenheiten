@@ -171,8 +171,8 @@ class Anwesenheit_User_model extends \DB_Model
 			$authid = getAuthUID();
 			$now = $this->escape('NOW()');
 
-			forEach ($result->retval as $entry) {
-				$status = $entry->statusakzeptiert ? $entschuldigt_status : $abwesend_status;;
+			foreach ($result->retval as $entry) {
+				$status = $entry->statusakzeptiert ? $entschuldigt_status : $abwesend_status;
 				$result = $this->insert(array(
 					'anwesenheit_id' => $anwesenheit_id,
 					'prestudent_id' => $entry->prestudent_id,
@@ -188,7 +188,6 @@ class Anwesenheit_User_model extends \DB_Model
 					break;
 				}
 			}
-
 		}
 
 		$this->db->trans_complete();
@@ -208,7 +207,9 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
 	{
 		$query = "
-			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von) as datum, extension.tbl_anwesenheit_user.status,
+			SELECT extension.tbl_anwesenheit_user.anwesenheit_user_id, 
+			       Date(extension.tbl_anwesenheit.von) as datum, 
+			       extension.tbl_anwesenheit_user.status,
 			       extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis, 
 			       extension.tbl_anwesenheit_user.notiz, 
 			       CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer

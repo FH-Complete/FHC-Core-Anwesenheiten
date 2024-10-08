@@ -76,13 +76,13 @@ export const StudentByLvaComponent = {
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
 			{
 				event: "rowSelected",
-				handler: (row) => {
+				handler: () => {
 					this.selected++
 				}
 			},
 			{
 				event: "rowDeselected",
-				handler: (row) => {
+				handler: () => {
 					this.selected--
 				}
 			},
@@ -92,6 +92,9 @@ export const StudentByLvaComponent = {
 					const data = cell.getData()
 					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, [data]).then(res => {
 						if(res.meta.status === "success") {
+
+
+
 							this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
 						}
 					})
@@ -123,7 +126,7 @@ export const StudentByLvaComponent = {
 		newSideMenuEntryHandler: function(payload) {
 			this.appSideMenuEntries = payload;
 		},
-		anwCalc(values, data, calcParams){
+		anwCalc(){
 			return this.sum + ' %'
 		},
 		selectableCheck(row) {
@@ -285,12 +288,6 @@ export const StudentByLvaComponent = {
 			this.setFilterTitle()
 		})
 		
-	},
-	updated(){
-
-	},
-	watch: {
-
 	},
 	computed: {
 		dataChanged() {

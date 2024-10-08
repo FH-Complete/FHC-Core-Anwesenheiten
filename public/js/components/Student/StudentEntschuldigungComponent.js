@@ -36,7 +36,7 @@ export default {
 					headers:{
 						'Content-Type': 'application/json'
 					},
-					body:(url,config,params)=>{
+					body:()=>{
 						return JSON.stringify({
 							person_id: this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 						})
@@ -235,7 +235,6 @@ export default {
 			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('ui/aktion')})
 			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$p.t('global/notiz')})
 
-
 			this.entschuldigungsViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('global/status'))
 			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/von'))
 			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/bis'))
@@ -250,7 +249,7 @@ export default {
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {
-			if(newVal === [] || newVal === null || newVal === undefined) return
+			if(newVal == [] || newVal === null || newVal === undefined) return
 
 			// check filetype on input change
 			const file = newVal[0]

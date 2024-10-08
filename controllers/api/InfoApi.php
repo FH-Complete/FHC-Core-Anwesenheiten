@@ -213,34 +213,8 @@ class InfoApi extends FHCAPI_Controller
 			show_error('User authentification failed');
 	}
 
-	public function populateDBWithAnwEntriesFromExistingKontrollen() {
-
-		$res = $this->AnwesenheitModel->loadLEForSemester('WS2024');
-		$leBatch = $res->retval;
-
-//		foreach($leBatch as $le_id) {
-//			$res = $this->AnwesenheitModel->loadWhere(array('lehreinheit_id' => $le_id));
-			$res = $this->AnwesenheitModel->loadEmptyAnwesenheitenForLE($leBatch);
-
-//			$this->terminateWithSuccess($res);
-			$data = $res->retval;
-
-
-
-			foreach($data as $anw) {
-				$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
-					$anw->lehreinheit_id,
-					$anw->anwesenheit_id,
-					$anw->von,
-					$anw->bis,
-					'abwesend',
-					'entschuldigt');
-			}
-//		}
-
-	}
-
-	public function populateDBWithAnwEntries() {
+	public function populateDBWithAnwEntries()
+	{
 		// insert tbl.extension_anwesenheit_user entries for every LE of every LVA of every Studiengang to test limits
 
 		$sem_kurzbz = $this->input->get('sem');
@@ -249,24 +223,13 @@ class InfoApi extends FHCAPI_Controller
 		$studiengaenge = null;
 		if($batchnum == 1){
 			$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333];
-		} else if ($batchnum == 2) {
+		} elseif ($batchnum == 2) {
 			$studiengaenge = [255, 335, 258, 301, 228, 934, 302, 578];
-		} else if ($batchnum == 3) {
+		} elseif ($batchnum == 3) {
 			$studiengaenge = [329, 915, 336, 303, 854, 334, 331, 300];
-		} else if ($batchnum == 4) {
+		} elseif ($batchnum == 4) {
 			$studiengaenge = [332, 328, 692, 804, 585, 297, 298, 299];
 		}
-		// tbl.studiengang WHERE aktiv = true AND studienplaetze > 0 AND typ = 'b' OR typ = 'm'
-//		$studiengaenge = [
-//			227, 254, 779, 257, 330, 327, 256, 476, 333,
-//			255, 335, 258, 301, 228, 934, 302, 578,
-//			329, 915, 336, 303, 854, 334, 331, 300,
-//			332, 328, 692, 804, 585, 297, 298, 299];
-//		$studiengaenge = [227];
-//		$studiengaenge = [779, 257, 330];
-//		$studiengaenge = [327, 256, 476, 333, 255, 335, 258, 301, 228, 934, 302, 578, 329, 915];
-//		$studiengaenge = [336, 303, 854, 334, 331, 300, 332, 328, 692, 804, 585, 297, 298, 299];
-//		$sg = 227;
 
 		$response = [];
 		$sgIndex = 0;
@@ -281,11 +244,8 @@ class InfoApi extends FHCAPI_Controller
 				'lva' => array()
 			);
 
-			$lvaIndex = 0;
 			foreach($data as $lvaRow) {
 				$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id] = [];
-
-				$leIndex = 0;
 
 				$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$lvaRow->lehreinheit_id] = [];
 
@@ -333,8 +293,6 @@ class InfoApi extends FHCAPI_Controller
 		$res = $this->_ci->AnwesenheitModel->getRandomStudentPersonIDs();
 		$data = $res->retval;
 
-//		$this->terminateWithSuccess($data);
-
 		$start = new DateTime('2024-05-01 00:00:01');
 		$end = new DateTime('2024-12-30 23:59:59');
 
@@ -353,7 +311,6 @@ class InfoApi extends FHCAPI_Controller
 				$bis = $von;
 				$von = $tmp;
 			}
-
 
 			$this->_ci->EntschuldigungModel->insert(
 				array(
