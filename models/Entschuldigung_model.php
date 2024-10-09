@@ -134,11 +134,11 @@ class Entschuldigung_model extends \DB_Model
 					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ';
 
 		if($von) {
-			$query.= 'AND von > ? ';
+			$query.= 'AND Date(von) >= ? ';
 			$params[] = $von;
 		}
 		if($bis) {
-			$query.= 'AND bis < ? ';
+			$query.= 'AND Date(bis) <= ? ';
 			$params[] = $bis;
 		}
 

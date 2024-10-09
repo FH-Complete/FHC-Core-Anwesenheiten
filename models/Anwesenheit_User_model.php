@@ -95,7 +95,9 @@ class Anwesenheit_User_model extends \DB_Model
 				$result = $this->update($entry->anwesenheit_user_id, array(
 					'version' => $existing->version + 1,
 					'status' => $entry->status,
-					'notiz' => $entry->notiz
+					'notiz' => $entry->notiz,
+					'updatevon' => getAuthUID(),
+					'updateamum' => date('Y-m-d H:i:s')
 				));
 
 				if(isSuccess($result) && hasData($result)) {
@@ -104,7 +106,9 @@ class Anwesenheit_User_model extends \DB_Model
 			} else {
 				$result = $this->update($entry->anwesenheit_user_id, array(
 					'version' => $existing->version + 1,
-					'status' => $entry->status
+					'status' => $entry->status,
+					'updatevon' => getAuthUID(),
+					'updateamum' => date('Y-m-d H:i:s')
 				));
 
 				if(isSuccess($result) && hasData($result)) {
