@@ -1,12 +1,7 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-
 import {lektorFormatters} from "../../formatters/formatters";
-
-import verticalsplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
-import searchbar from "../../../../../js/components/searchbar/searchbar.js";
-
 
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
@@ -14,8 +9,6 @@ export const StudentByLvaComponent = {
 		CoreBaseLayout,
 		CoreFilterCmpt,
 		CoreNavigationCmpt,
-		verticalsplit: verticalsplit,
-		searchbar: searchbar
 	},
 	data() {
 		return {
@@ -56,11 +49,12 @@ export const StudentByLvaComponent = {
 						frozen: true,
 						width: 70
 					},
-					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: this.anwesenheitFormatterValue,  widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalc: this.anwCalc},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence: {
@@ -132,6 +126,21 @@ export const StudentByLvaComponent = {
 		selectableCheck(row) {
 			return row.getData().status !== this.$entryParams.permissions.entschuldigt_status
 		},
+		dauerFormatter: function (cell) {
+			let val = cell.getValue() + ' Minuten'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+val+'</div>'
+
+		},
+		einheitenFormatter: function (cell) {
+			const valInMin = Number(cell.getValue())
+			let valInEh = (cell.getValue() / 60 / this.$entryParams.permissions.einheitDauer)
+			const rest = valInEh % 1
+			if(rest > 0) valInEh = valInEh.toFixed(2)
+			console.log('rest', rest)
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'
+					+valInMin+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')+
+				'</div>'
+		},
 		unselectableFormatter(row) {
 			const data = row.getData()
 
@@ -187,6 +196,9 @@ export const StudentByLvaComponent = {
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
+						const student = this.$entryParams.lektorState.students.find(s => s.prestudent_id === this.prestudent_id && s.person_id === this.person_id)
+						student.sum = this.sum
+
 						this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 
 						this.setFilterTitle()
@@ -276,6 +288,8 @@ export const StudentByLvaComponent = {
 		this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
 			if (res.meta.status !== "success" || !res.data) return
 
+			this.prestudent_id = res.data[0].prestudent_id
+			this.person_id = res.data[0].person_id
 			this.vorname = res.data[0].vorname
 			this.nachname = res.data[0].nachname
 			this.semester = res.data[0].semester

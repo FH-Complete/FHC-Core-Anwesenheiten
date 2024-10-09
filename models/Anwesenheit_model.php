@@ -245,7 +245,8 @@ class Anwesenheit_model extends \DB_Model
 	public function getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, $root)
 	{
 		$query = "
-			SELECT vorname, nachname, 
+			SELECT vorname, nachname,
+			       person_id, prestudent_id,
 			      CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || person_id as foto,
 			    semester, verband, gruppe, extension.get_anwesenheiten_by_time(?, ?, ?) as sum
 			FROM public.tbl_benutzer

@@ -3,7 +3,6 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import { lektorFormatters } from "../../formatters/formatters";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import searchbar from "../../../../../js/components/searchbar/searchbar.js";
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown";
@@ -27,8 +26,7 @@ export const LektorComponent = {
 		TermineOverview,
 		AnwCountDisplay,
 		Stundenliste,
-		"datepicker": VueDatePicker,
-		searchbar: searchbar
+		"datepicker": VueDatePicker
 	},
 	data() {
 		return {
@@ -111,6 +109,7 @@ export const LektorComponent = {
 						// maybe incorporate more changes to dataState to avoid reloads
 						//  in the future when performance is an issue
 						if(!this.changes) this.$entryParams.lektorState = this.lektorState
+						debugger
 
 						this.$router.push({
 							name: 'StudentByLva',
