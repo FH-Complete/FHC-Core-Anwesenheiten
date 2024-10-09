@@ -109,7 +109,6 @@ export const LektorComponent = {
 						// maybe incorporate more changes to dataState to avoid reloads
 						//  in the future when performance is an issue
 						if(!this.changes) this.$entryParams.lektorState = this.lektorState
-						debugger
 
 						this.$router.push({
 							name: 'StudentByLva',

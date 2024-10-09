@@ -11,7 +11,9 @@ export const lektorFormatters = {
 		}
 	},
 	percentFormatter: function (cell) {
-		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ cell.getData().sum + ' %</div>'
+		const data = cell.getData()
+		const val = data.sum ??  data.anteil ?? '-'
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
 	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();

@@ -24,7 +24,7 @@ export const StudentByLvaComponent = {
 					// calculate total time of anw
 					const sum = arr.reduce((acc, cur) => acc + cur.dauer, 0)
 					arr.forEach(row => {
-						row.anteil = (row.dauer / sum * 100).toFixed(2) + ' %'
+						row.anteil = (row.dauer / sum * 100).toFixed(2)
 					})
 
 					this.tableData = response.data.retval
@@ -51,7 +51,7 @@ export const StudentByLvaComponent = {
 					},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: this.anwesenheitFormatterValue,  widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalc: this.anwCalc},
+					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalc: this.anwCalc, formatter: lektorFormatters.percentFormatter},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 150},
@@ -126,17 +126,12 @@ export const StudentByLvaComponent = {
 		selectableCheck(row) {
 			return row.getData().status !== this.$entryParams.permissions.entschuldigt_status
 		},
-		dauerFormatter: function (cell) {
-			let val = cell.getValue() + ' Minuten'
-			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+val+'</div>'
-
-		},
 		einheitenFormatter: function (cell) {
 			const valInMin = Number(cell.getValue())
 			let valInEh = (cell.getValue() / 60 / this.$entryParams.permissions.einheitDauer)
 			const rest = valInEh % 1
 			if(rest > 0) valInEh = valInEh.toFixed(2)
-			console.log('rest', rest)
+
 			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'
 					+valInMin+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')+
 				'</div>'

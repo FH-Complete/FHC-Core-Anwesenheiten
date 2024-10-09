@@ -1,6 +1,6 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters} from "../../formatters/formatters";
+import {lektorFormatters, studentFormatters} from "../../formatters/formatters";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
@@ -24,9 +24,12 @@ export default {
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{title: 'Lehrveranstaltung', visible: false},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', formatter: lektorFormatters.formDateOnly, tooltip:false, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcParams: this.bottomCalcParamLookup, tooltip:false, bottomCalc: this.anwCalc, formatter: lektorFormatters.percentFormatter},
+					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, tooltip:false, minWidth: 150},
 				],
 				groupBy: ['bezeichnung'],
 				groupStartOpen:false,
@@ -50,10 +53,25 @@ export default {
 					this.tableBuiltResolve()
 				}
 			}],
+			sums: {},
 			filterTitle: ""
 		};
 	},
 	methods: {
+		bottomCalcParamLookup (values, data) {
+			const first = data[0]
+			return first ? first.anwesenheit + ' %' : ''
+		},
+		einheitenFormatter: function (cell) {
+			const valInMin = Number(cell.getValue())
+			let valInEh = (cell.getValue() / 60 / this.$entryParams.permissions.einheitDauer)
+			const rest = valInEh % 1
+			if(rest > 0) valInEh = valInEh.toFixed(2)
+
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'
+				+valInMin+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')+
+				'</div>'
+		},
 		formAnwesenheit: function(cell)
 		{
 			let data = cell.getValue();
@@ -103,11 +121,26 @@ export default {
 				}
 			});
 		},
+		anwCalc(values, data, percentage) {
+			return percentage
+		},
 		processAnw(data) {
 			const anw = data[0].retval
+
+			// calc sum for each lva to display percentage
+
+			anw.forEach(entry => {
+				if(!this.sums[entry.lehrveranstaltung_id]) {
+					this.sums[entry.lehrveranstaltung_id] = entry.dauer
+				} else {
+					this.sums[entry.lehrveranstaltung_id] += entry.dauer
+				}
+			})
+
 			anw.forEach(a => {
 				a.vonDate = new Date(a.von)
 				a.bisDate = new Date(a.bis)
+				a.anteil = (a.dauer / this.sums[a.lehrveranstaltung_id] * 100).toFixed(2)
 			})
 
 			const ent = data[1].retval
@@ -149,18 +182,6 @@ export default {
 			this.loadAnwesenheitenByUID()
 
 			this.studiensemester = this.$entryParams.sem_kurzbz
-
-			const cols = this.$refs.uebersichtTable.tabulator.getColumns()
-
-			// phrasen bandaid
-
-			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
-			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
-			cols.find(e => e.getField() === 'student_status').updateDefinition({title: this.$capitalize(this.$p.t('global/anwesend'))})
-
-			this.studentViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('ui/von'))
-			this.studentViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('global/bis'))
-			this.studentViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/anwesend'))
 
 		},
 		tableResolve(resolve) {

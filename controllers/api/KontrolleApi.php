@@ -151,15 +151,6 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine));
 
-//		$this->terminateWithSuccess(array(
-//			'students' => $students,
-//			'anwesenheiten' => $anwesenheiten,
-//			'studiensemester' => $studiensemester,
-//			'entschuldigungsstatus' => $entschuldigungsstatus,
-//			'kontrollen' => $kontrollen,
-//			'lektorLehreinheitData' => $lektorLehreinheitData,
-//			'leTermine' => $leTermine
-//		));
 	}
 
 	/**
