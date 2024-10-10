@@ -27,7 +27,7 @@ export default {
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', formatter: lektorFormatters.formDateOnly, tooltip:false, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, tooltip:false, widthGrow: 1, minWidth: 250},
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcParams: this.bottomCalcParamLookup, tooltip:false, bottomCalc: this.anwCalc, formatter: lektorFormatters.percentFormatter},
 					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, tooltip:false, minWidth: 150},
 				],
@@ -128,7 +128,6 @@ export default {
 			const anw = data[0].retval
 
 			// calc sum for each lva to display percentage
-
 			anw.forEach(entry => {
 				if(!this.sums[entry.lehrveranstaltung_id]) {
 					this.sums[entry.lehrveranstaltung_id] = entry.dauer
@@ -192,13 +191,29 @@ export default {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 	},
+	computed: {
+		getTooltipObj() {
+			return {
+				value: `Hier sehen Sie sämtliche digitale Anwesenheiten zugeordnet nach Lehrveranstaltung. Sie können eine positive Anwesenheit erreichen, indem Sie den während einer laufenden Anwesenheitskontrolle gültigen Zugangscode eintragen. Sie können hierfür den angezeigten QR Code scannen, welcher Sie entsprechend weiterleitet oder Sie können den Code manuell eingeben.
+				
+				Sollte es Ihnen technisch nicht möglich sein einen Zugangscode einzugeben, können Sie die unterrichtende Person bitten Ihre digitale Anwesenheit zu setzen.`,
+				class: "custom-tooltip"
+			}
+		}
+	},
 	template: `
 	<core-base-layout
 		:title="filterTitle">
 		<template #main>
-			<div class="row">
-				<div class="col-10"></div>
-				<div class="col-2"><StudiensemesterDropdown @ssChanged="ssChangedHandler"></StudiensemesterDropdown></div>
+			<div class="row" style="justify-content: flex-end;">
+				
+					<div style="max-width: 50px; align-content: center;" v-tooltip.bottom="getTooltipObj">
+						<h5><i class="fa fa-circle-question"></i></h5>
+					</div>
+					
+				<div class="col-2">
+					<StudiensemesterDropdown @ssChanged="ssChangedHandler"></StudiensemesterDropdown>
+				</div>
 			</div>
 			<core-filter-cmpt
 				ref="uebersichtTable"

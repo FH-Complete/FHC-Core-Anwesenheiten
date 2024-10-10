@@ -270,13 +270,26 @@ export default {
 
 		}
 	},
+	computed: {
+		getTooltipObj() {
+			return {
+				value: ``,
+				class: "custom-tooltip"
+			}
+		}
+	},
 	template: `
 
 	<core-base-layout
 		:title="filterTitle">
 		<template #main>
 			<bs-modal ref="modalContainerEntschuldigungUpload" class="bootstrap-prompt" dialogClass="modal-lg">
-				<template v-slot:title>{{$p.t('global/addEntschuldigung')}}</template>
+				<template v-slot:title>
+					<div v-tooltip.bottom="getTooltipObj">
+						{{$p.t('global/addEntschuldigung')}}
+						<i class="fa fa-circle-question"></i>
+					</div>
+				</template>
 				<template v-slot:default>
 					<div class="row mb-3 align-items-center">
 						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label></div>

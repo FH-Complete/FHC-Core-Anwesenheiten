@@ -959,11 +959,7 @@ export const LektorComponent = {
 								
 							</div>
 							
-<!--						</div>-->
-<!--						<div class="col-5">-->
-<!--							<Stundenliste :stunden="stunden" />-->
-<!--						</div>-->
-<!--						</div>-->
+						</div>
 					</template>
 					<template v-slot:footer>
 						<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
@@ -1041,7 +1037,7 @@ export const LektorComponent = {
 					</div>
 					<div class="col-3 d-flex " style="height: 40px; align-items: center;">
 						<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
-						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllDates') }}</label>
+						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllKontrollen') }}</label>
 					</div>
 				</div>
 			

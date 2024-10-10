@@ -54,7 +54,7 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalc: this.anwCalc, formatter: lektorFormatters.percentFormatter},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 250},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence: {
@@ -274,7 +274,7 @@ export const StudentByLvaComponent = {
 				cell.getElement().style.color = "#0335f5";
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
-		},
+		}
 	},
 	created(){
 
@@ -301,6 +301,16 @@ export const StudentByLvaComponent = {
 	computed: {
 		dataChanged() {
 			return this.changedData.length
+		},
+		getTooltipObj() {
+			return {
+				value: `In dieser Detailansicht können Sie einzelne Anwesenheiten eines Studenten bearbeiten, falls ein anwesender Student aus technischen Gründen den Zugangscode nicht eingeben kann. Ebenso steht es Ihnen frei Studenten auszutragen, welche nicht anwesend sind aber den Zugangscode mit Hilfe von anwesenden Studenten erhalten haben.
+				
+				Falls eine Anwesenheit durch eine akzeptierte Entschuldigung entstanden ist, können Sie den Status nicht verändern.
+				
+				Es steht Ihnen frei die Anwesenheitseinträge mit Notiztexten zu versehen, welche dem Studenten nicht zugänglich sind`,
+				class: "custom-tooltip"
+			}
 		}
 	},
 	template:`	
@@ -312,17 +322,14 @@ export const StudentByLvaComponent = {
 		</core-navigation-cmpt>
 
 		<core-base-layout
-			:title="filterTitle"
-			:subtitle="filterSubtitle"
+			:title="asdf"
+			:subtitle="wert"
 			:main-cols=[10]
 			:aside-cols=[2]
 			>
 			<template #main>
-				<row>
-					<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
-				</row>
 				<core-filter-cmpt
-					title=""
+					:title="filterTitle"
 					ref="anwesenheitenByStudentByLvaTable"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
@@ -331,12 +338,18 @@ export const StudentByLvaComponent = {
 					:sideMenu="false" 
 					noColumnFilter>
 					<template #actions>
+						<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
+
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesend')) }}
 						</button>
 						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/abwesend')) }}
 						</button>
+						
+						<div v-tooltip.bottom="getTooltipObj">
+							<h5><i class="fa fa-circle-question"></i></h5>
+						</div>
 					</template>
 				</core-filter-cmpt>
 					
