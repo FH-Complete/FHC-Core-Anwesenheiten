@@ -2,19 +2,20 @@
 
 if (! defined('BASEPATH')) exit('No direct script access allowed');
 
-define('REGENERATE_QR_TIMER', 30000); //30 seconds
-//define('REGENERATE_QR_TIMER', 3000000); //50 minutes
-//define('REGENERATE_QR_TIMER', 8000); //8 seconds
-//define('REGENERATE_QR_TIMER', 120000); //120 seconds
-define('USE_REGENERATE_QR', true);
+$config['REGENERATE_QR_TIMER'] = 30000; //30 seconds
+//$config['REGENERATE_QR_TIMER', 3000000); //50 minutes
+//$config['REGENERATE_QR_TIMER', 8000); //8 seconds
+//$config['REGENERATE_QR_TIMER', 120000); //120 seconds
+$config['USE_REGENERATE_QR'] = true;
 // used in deleteOldQR Cronjob
-define('QR_EXPIRATION_TIMER', 3600000); // 1 hour
+$config['QR_EXPIRATION_TIMER'] = 3600000; // 1 hour
 // frist welche entscheidet wie weit in die Vergangenheit eine neue Entschuldigung reichen darf
-define('ENTSCHULDIGUNG_MAX_REACH', 7); // 7 days
+$config['ENTSCHULDIGUNG_MAX_REACH'] = 7; // 7 days
 // frist welche entscheidet wie weit in die Vergangenheit alte Kontrollen gelöscht werden dürfen
-define('KONTROLLE_DELETE_MAX_REACH', 1); // 1 day
-define('ANWESEND_STATUS', 'anwesend');
-define('ABWESEND_STATUS', 'abwesend');
-define('ENTSCHULDIGT_STATUS', 'entschuldigt');
+$config['KONTROLLE_DELETE_MAX_REACH'] = 1; // 1 day
+$config['ANWESEND_STATUS'] = 'anwesend';
+$config['ABWESEND_STATUS'] = 'abwesend';
+$config['ENTSCHULDIGT_STATUS'] = 'entschuldigt';
 // dauer einer Unterrichtseinheit in Stunden
-define('EINHEIT_DAUER', 0.75);
+$config['EINHEIT_DAUER'] = 0.75;
+$config['ENTSCHULDIGUNGEN_ENABLED'] = true;

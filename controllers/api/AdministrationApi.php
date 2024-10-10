@@ -27,8 +27,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 
-		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require_once($qrsetting_filename);
+		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
 		$this->loadPhrases(
 			array(
@@ -48,6 +47,12 @@ class AdministrationApi extends FHCAPI_Controller
 	 */
 	public function getEntschuldigungen()
 	{
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
 		$result = $this->getPostJSON();
 		$stg_kz_arr = $result->stg_kz_arr;
 		$von = $result->von;
@@ -68,6 +73,12 @@ class AdministrationApi extends FHCAPI_Controller
 	 */
 	public function updateEntschuldigung()
 	{
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
 		$data = json_decode($this->input->raw_input_stream, true);
 
 		$entschuldigung_id = $data['entschuldigung_id'];
@@ -86,7 +97,7 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$entschuldigung = getData($entschuldigung)[0];
 
-		$updateStatus = $status ? ENTSCHULDIGT_STATUS : ABWESEND_STATUS;
+		$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
 
 		$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
 		if (isError($result))

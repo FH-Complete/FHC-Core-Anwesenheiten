@@ -142,31 +142,29 @@ export default {
 				a.anteil = (a.dauer / this.sums[a.lehrveranstaltung_id] * 100).toFixed(2)
 			})
 
-			const ent = data[1].retval
-			ent.forEach(e => {
-				e.vonDate = new Date(e.von)
-				e.bisDate = new Date(e.bis)
-			})
+			if(this.$entryParams.permissions.entschuldigungen_enabled) {
+				const ent = data[1].retval
+				ent.forEach(e => {
+					e.vonDate = new Date(e.von)
+					e.bisDate = new Date(e.bis)
+				})
 
-			// filter entschuldigungen into offene and abgelehnte (entschuldigt status already in anw_user)
-			const offene = ent.filter(e => e.akzeptiert === null)
-			const abgelehnte = ent.filter(e => e.akzeptiert === false)
+				// filter entschuldigungen into offene and abgelehnte (entschuldigt status already in anw_user)
+				const offene = ent.filter(e => e.akzeptiert === null)
+				const abgelehnte = ent.filter(e => e.akzeptiert === false)
 
-			// for every offene set anw_user entry property to true for every eligible date & abgelehnt combo
-			offene.forEach(o => {
-				const anwInDateRange = anw.filter(a => a.vonDate >= o.vonDate && a.bisDate <= o.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+				// for every offene set anw_user entry property to true for every eligible date & abgelehnt combo
+				offene.forEach(o => {
+					const anwInDateRange = anw.filter(a => a.vonDate >= o.vonDate && a.bisDate <= o.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+					anwInDateRange.forEach(a => a.hasOffene = true)
+				})
 
-				anwInDateRange.forEach(a => a.hasOffene = true)
-
-			})
-
-
-			// for every abgelehnte set anw_user entry property to true for every eligible date & abgelehnt combo
-
-			abgelehnte.forEach(abg => {
-				const anwInRange = anw.filter(a => a.vonDate >= abg.vonDate && a.bisDate <= abg.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
-				anwInRange.forEach(a => a.hasAbgelehnte = true)
-			})
+				// for every abgelehnte set anw_user entry property to true for every eligible date & abgelehnt combo
+				abgelehnte.forEach(abg => {
+					const anwInRange = anw.filter(a => a.vonDate >= abg.vonDate && a.bisDate <= abg.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+					anwInRange.forEach(a => a.hasAbgelehnte = true)
+				})
+			}
 
 			return anw
 		},

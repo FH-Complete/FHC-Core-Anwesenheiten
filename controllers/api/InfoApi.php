@@ -19,8 +19,8 @@ class InfoApi extends FHCAPI_Controller
 				'getLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getAktuellesSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'populateDBWithAnwEntries' => array('extension/anwesenheit_admin:rw'),
-				'populateDBWithAnwEntriesFromExistingKontrollen' => array('extension/anwesenheit_admin:rw'),
 				'populateDBWithEntschuldigungen' => array ('extension/anwesenheit_admin:rw')
 			)
 		);
@@ -51,6 +51,20 @@ class InfoApi extends FHCAPI_Controller
 	}
 
 	// INFO API
+
+	/**
+	 * GET METHOD
+	 * returns List of all studiensemester as well as current one
+	 */
+	public function getAktuellesSemester()
+	{
+		$this->_ci->StudiensemesterModel->addOrder("start", "DESC");
+
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		$aktuell = getData($result);
+
+		$this->terminateWithSuccess($aktuell);
+	}
 
 	/**
 	 * GET METHOD

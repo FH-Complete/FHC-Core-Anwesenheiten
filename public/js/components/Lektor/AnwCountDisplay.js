@@ -14,7 +14,7 @@ export const AnwCountDisplay = {
 
 				<div style="color: #dc3545; margin-left: 36px;"><h3>{{abwesend}} <i class="fa fa-xmark"></i></h3></div>
 
-				<div style="color: #0335f5; margin-left: 36px;"><h3>{{entschuldigt}} <i class="fa-solid fa-user-shield"></i></h3></div>
+				<div v-if="this.$entryParams.permissions.entschuldigungen_enabled" style="color: #0335f5; margin-left: 36px;"><h3>{{entschuldigt}} <i class="fa-solid fa-user-shield"></i></h3></div>
 
 			</div>
 		</div>

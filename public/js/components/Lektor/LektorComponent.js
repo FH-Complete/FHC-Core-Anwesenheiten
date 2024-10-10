@@ -860,7 +860,15 @@ export const LektorComponent = {
 		}
 	},
 	computed: {
-		getTooltipObj() {
+		getTooltipKontrolleLöschen() {
+			return {
+				value: `Sollten Sie eine Anwesenheitskontrolle fälschlicherweise gestartet haben, können Sie diese löschen wenn sie nicht älter als ` + this.$entryParams.permissions.kontrolleDeleteMaxReach + ` Tage ist. Dabei werden sämtliche mit dieser Kontrolle verknüpfte Anwesenheitseinträge Ihrer Studenten ebenfalls gelöscht und Ihre Anwesenheitsquoten neu berechnet.
+				
+				Sollten Sie eine Kontrolle, welche älter als ` + this.$entryParams.permissions.kontrolleDeleteMaxReach + ` Tage ist, löschen wollen, wenden Sie sich an einen Administrator.`,
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipKontrolleNeu() {
 			return {
 				value: `Um eine Anwesenheitskontrolle für Ihre ausgewählte Unterrichtsgruppe durchzuführen, wählen Sie bitte einen Termin aus dem Stundenplan aus oder geben händisch die gewünschte Gültigkeitkeitsdauer der Kontrolle an.
 				
@@ -900,7 +908,7 @@ export const LektorComponent = {
 				<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
 					<template v-slot:title>
 						
-						<div v-tooltip.bottom="getTooltipObj">
+						<div v-tooltip.bottom="getTooltipKontrolleNeu">
 							{{ $p.t('global/neueAnwKontrolle') }}
 							<i class="fa fa-circle-question"></i>
 						</div>
@@ -968,7 +976,12 @@ export const LektorComponent = {
 				
 				<bs-modal ref="modalContainerDeleteKontrolle" class="bootstrap-prompt"
 				dialogClass="modal-lg">
-					<template v-slot:title>{{ $p.t('global/deleteAnwKontrolle') }}</template>
+					<template v-slot:title>
+						<div v-tooltip.bottom="getTooltipKontrolleLöschen">
+							{{ $p.t('global/deleteAnwKontrolle') }}
+							<i class="fa fa-circle-question"></i>
+						</div>
+					</template>
 					<template v-slot:default>
 						
 						<KontrollenDropdown ref="kontrolleDropdown" @kontrolleChanged="handleKontrolleChanged"></KontrollenDropdown>

@@ -56,8 +56,6 @@ class KontrolleApi extends FHCAPI_Controller
 			}
 		), 'logLib');
 
-		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require_once($qrsetting_filename);
 
 		$this->loadPhrases(
 			array(
@@ -67,7 +65,7 @@ class KontrolleApi extends FHCAPI_Controller
 		);
 
 		$this->_setAuthUID(); // sets property uid
-
+		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 		$this->load->helper('hlp_sancho_helper');
 	}
 
@@ -124,8 +122,11 @@ class KontrolleApi extends FHCAPI_Controller
 		};
 
 		$personIds = array_map($funcPID, $students);
-		$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIds($personIds);
-		$entschuldigungsstatus = getData($result);
+		$entschuldigungsstatus = [];
+		if($this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIds($personIds);
+			$entschuldigungsstatus = getData($result);
+		}
 
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
@@ -136,7 +137,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$kontrollen = null;
 
 		if($isLektor && !$isAdmin) { // admin could be lektor at the same time
-			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndInterval($le_id, KONTROLLE_DELETE_MAX_REACH);
+			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndInterval($le_id, $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH'));
 			$kontrollen = getData($result);
 		} else {
 			$result = $this->_ci->AnwesenheitModel->getKontrollenForLeId($le_id);
@@ -438,7 +439,12 @@ class KontrolleApi extends FHCAPI_Controller
 				$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
 
 			// insert Anwesenheiten entries of every Student as Abwesend
-			if(!$existsKontrolle) $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, ABWESEND_STATUS, ENTSCHULDIGT_STATUS);
+			if(!$existsKontrolle) $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+				$le_id,
+				$anwesenheit_id,
+				$von, $bis,
+				$this->_ci->config->item('ABWESEND_STATUS'),
+				$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
 			// count entschuldigt entries
 			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);

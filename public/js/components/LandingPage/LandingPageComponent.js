@@ -58,7 +58,7 @@ export default {
 				tabs.push({key: 'Profil', title: 'Profil', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 
-			if(permissions.admin || permissions.assistenz) {
+			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
 				tabs.push({key: 'Admin', title: 'Admin', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
 			}
 
@@ -112,7 +112,7 @@ export default {
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
-				console.log('$entryParams', this.$entryParams)
+				// console.log('$entryParams', this.$entryParams)
 
 				el.removeAttribute('permissions')
 

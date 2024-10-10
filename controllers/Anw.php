@@ -16,9 +16,6 @@ class Anw extends Auth_Controller
 			)
 		);
 
-		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require_once($qrsetting_filename);
-
 		$this->_ci =& get_instance();
 
 		// load libraries
@@ -36,6 +33,8 @@ class Anw extends Auth_Controller
 
 		// Load helpers
 		$this->load->helper('array');
+		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
+
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
 	}
@@ -46,6 +45,7 @@ class Anw extends Auth_Controller
 	 */
 	public function index()
 	{
+
 		$viewData = array(
 			'permissions' => [
 				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
@@ -53,14 +53,15 @@ class Anw extends Auth_Controller
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
 				'authID' => getAuthUID(),
-				'regenerateQRTimer' => REGENERATE_QR_TIMER,
-				'useRegenerateQR' => USE_REGENERATE_QR,
-				'entschuldigungMaxReach' => ENTSCHULDIGUNG_MAX_REACH,
-				'kontrolleDeleteMaxReach' => KONTROLLE_DELETE_MAX_REACH,
-				'anwesend_status' => ANWESEND_STATUS,
-				'abwesend_status' => ABWESEND_STATUS,
-				'entschuldigt_status' => ENTSCHULDIGT_STATUS,
-				'einheitDauer' => EINHEIT_DAUER,
+				'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),
+				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
+				'entschuldigungMaxReach' => $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'),
+				'kontrolleDeleteMaxReach' => $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH'),
+				'anwesend_status' => $this->_ci->config->item('ANWESEND_STATUS'),
+				'abwesend_status' => $this->_ci->config->item('ABWESEND_STATUS'),
+				'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),
+				'einheitDauer' => $this->_ci->config->item('EINHEIT_DAUER'),
+				'entschuldigungen_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
 				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
 				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
 				'controller' => get_class($this)

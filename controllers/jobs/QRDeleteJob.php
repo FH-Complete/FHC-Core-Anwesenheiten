@@ -12,11 +12,9 @@ class QRDeleteJob extends JOB_Controller
 	{
 		parent::__construct();
 
-		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require($qrsetting_filename);
-
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
+		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 	}
 
 
@@ -25,7 +23,7 @@ class QRDeleteJob extends JOB_Controller
 	{
 		$this->logInfo('Start job queue scheduler FHC-Core-Anwesenheiten->deleteOldCodes');
 
-		$milliseconds = QR_EXPIRATION_TIMER;
+		$milliseconds = $this->_ci->config->item('QR_EXPIRATION_TIMER');
 
 		$result = $this->QRModel->deleteOlderThanMilliseconds($milliseconds);
 

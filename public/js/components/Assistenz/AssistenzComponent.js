@@ -285,6 +285,14 @@ export const AssistenzComponent = {
 		this.checkEntryParamPermissions()
 		this.setup()
 	},
+	beforeMounted() {
+		if(!this.$entryParams?.permissions?.entschuldigungen_enabled) {
+
+			// TODO: route to some 404 page or show entschuldigung disabled status
+			this.$router.back()
+
+		}
+	},
 	watch: {
 		'zeitraum.von'() {
 			this.refetchData()
@@ -300,6 +308,14 @@ export const AssistenzComponent = {
 		getAllowedStg() {
 			return this.$entryParams?.permissions?.assistenz ? this.$entryParams?.permissions?.studiengaengeAssistenz
 				: this.$entryParams?.permissions?.admin ? this.$entryParams?.permissions?.studiengaengeAdmin : []
+		},
+		getTooltipObj(){
+			return {
+				value: `Im Entschuldigungsmanagement können Sie als Studiengangsassistenz beziehungsweise als Administrator die von Studenten hochgeladenen Entschuldigungsdokumente überprüfen und den Status entsprechend vergeben.
+				
+				Bitte beachten Sie dass nur Entschuldigungen INNERHALB des angegebenen Zeitraumes angezeigt werden. Sollten Sie nach einer lang wirken Entschuldigung suchen, müssen Sie die Zeitspanne entsprechend weit setzen.`,
+				class: "custom-tooltip"
+			}
 		}
 	},
 	template: `
@@ -323,9 +339,14 @@ export const AssistenzComponent = {
 			<div style="min-height: 70vh;">
 			
 				<div class="row">
-					<div class="col-6">
-						<h1 class="h4 mb-5">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+				
+					<div class="col-6" style="display: flex; align-items: center;">
+						<h1 class="h4 mb-5" style="max-width: 50%; margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+						<div style="max-width: 25%; align-self: normal;" v-tooltip.bottom="getTooltipObj">
+							<h4 style="margin: 0;"><i class="fa fa-circle-question"></i></h4>
+						</div>
 					</div>
+				
 					<div class="col-2">
 						<div class="row mb-3 align-items-center">
 							<StudiengangDropdown

@@ -35,8 +35,8 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 
-		$qrsetting_filename = APPPATH.'config/extensions/FHC-Core-Anwesenheiten/qrsettings.php';
-		require_once($qrsetting_filename);
+		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
+
 
 		$this->loadPhrases(
 			array(
@@ -92,15 +92,19 @@ class ProfilApi extends FHCAPI_Controller
 		{
 			$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
 
-
 			if (isError($studiensemester) || !hasData($studiensemester))
 				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$studiensemester = getData($studiensemester)[0]->studiensemester_kurzbz;
 
 			$result = $this->_ci->AnwesenheitModel->getAllByStudent($uid, $studiensemester);
-			$entschuldigungen = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
-			$this->terminateWithSuccess(array($result, $entschuldigungen));
+
+			if($this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+				$entschuldigungen = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+				$this->terminateWithSuccess(array($result, $entschuldigungen));
+			} else {
+				$this->terminateWithSuccess(array($result));
+			}
 		}
 	}
 
@@ -149,10 +153,10 @@ class ProfilApi extends FHCAPI_Controller
 		$interval = $nowDateTime->diff($codeDateTime, true);
 		$timeDiffInMilliseconds = $interval->d * 24 * 60 * 60 * 1000 + $interval->h * 60 * 60 * 1000 + $interval->i * 60 * 1000 + $interval->s * 1000;
 
-		if($timeDiffInMilliseconds > (REGENERATE_QR_TIMER) * 2) {
+		if($timeDiffInMilliseconds > ($this->_ci->config->item('REGENERATE_QR_TIMER')) * 2) {
 			$this->terminateWithError(
 				array($this->p->t('global', 'errorCodeTooOld'),
-					$interval, $timeDiffInMilliseconds, REGENERATE_QR_TIMER),
+					$interval, $timeDiffInMilliseconds, $this->_ci->config->item('REGENERATE_QR_TIMER')),
 				'general'
 			);
 		}
@@ -188,9 +192,9 @@ class ProfilApi extends FHCAPI_Controller
 		// finally update the entry to anwesend
 		if($entryToUpdate) {
 
-			if($entryToUpdate->status !== ENTSCHULDIGT_STATUS) {
+			if($entryToUpdate->status !== $this->_ci->config->item('ENTSCHULDIGT_STATUS')) {
 				$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, array(
-					'status' => ANWESEND_STATUS,
+					'status' => $this->_ci->config->item('ANWESEND_STATUS'),
 				));
 
 				if (isError($result)) {
@@ -231,6 +235,11 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	public function addEntschuldigung()
 	{
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
 
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
@@ -353,6 +362,12 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	public function deleteEntschuldigung()
 	{
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
 		$data = json_decode($this->input->raw_input_stream, true);
 		$entschuldigung_id = $data['entschuldigung_id'];
 
@@ -393,36 +408,29 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	public function getEntschuldigungenByPersonID()
 	{
-		$result = $this->getPostJSON();
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
 
-		$times = [];
-		$start = microtime(true);
+		$result = $this->getPostJSON();
 
 		if(!property_exists($result, 'person_id')) {
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
-		$times[] = microtime(true) - $start;
-
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
 		$person_id = $result->person_id;
 
-		$times[] = microtime(true) - $start;
-
 		// students are only allowed to fetch their own entschuldigungen
 		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($isStudent, 'general');
-
-		$times[] = microtime(true) - $start;
 
 		if(is_object($person_id) || isEmptyString($person_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
-		$times[] = microtime(true) - $start;
-
 		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
-
-		$times[] = microtime(true) - $start;
 
 		$this->terminateWithSuccess($result);
 	}

@@ -3,6 +3,7 @@ import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {StudentDropdown} from "../Setup/StudentDropdown"
+import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent";
 
 export const StudentComponent = {
 	name: 'StudentComponent',
@@ -11,16 +12,14 @@ export const StudentComponent = {
 		CoreBaseLayout,
 		CoreTabs,
 		BsModal,
-		StudentDropdown
+		StudentDropdown,
+		StudentAnwesenheitComponent
 	},
 	data: function() {
 		return {
 			headerMenuEntries: {},
 			sideMenuEntries: {},
-			tabsStudent: {
-				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-				entschuldigungen: { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
-			},
+			tabsStudent: this.getTabsStudent(),
 			viewDataStudent: {}
 		};
 	},
@@ -28,17 +27,21 @@ export const StudentComponent = {
 		permissions: []
 	},
 	methods: {
-		newSideMenuEntryHandler: function(payload) {
-			this.sideMenuEntries = payload;
+		getTabsStudent() {
+			const tabs = {
+				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+			}
+			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+
+			return tabs
 		},
 		routeToCodeScan() {
 			this.$router.push({
 				name: 'Scan'
 			})
 		},
-		async checkEntryParamPermissions() {
+		checkEntryParamPermissions() {
 			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
-
 
 				this.$entryParams.permissions = JSON.parse(this.permissions)
 			}
@@ -46,6 +49,7 @@ export const StudentComponent = {
 			if(this.$entryParams.phrasenPromise === undefined) {
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['global', 'person', 'lehre', 'table', 'filter', 'ui'])
 			}
+
 		},
 		async setup() {
 			await this.$entryParams.setupPromise
@@ -88,23 +92,20 @@ export const StudentComponent = {
 
 			})
 
-		},
-		openModalStudentInit() {
-			this.$refs.modalContainerStudentSetup.show()
-		},
-		loadStudentPage() {
-			this.setup()
-			this.$refs.modalContainerStudentSetup.hide()
-		},
-		async awaitTabsConfig() {
-			return new Promise((resolve) => {
-				return this.$entryParams.phrasenPromise.then(() => {
-					resolve({
-						anwesenheiten: { title: Vue.ref(this.$p.t('global/anwesenheiten')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
-						entschuldigungen: { title: Vue.ref(this.$p.t('global/entschuldigungen')), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
+
+			// TODO: maybe move into landing page setup if lektor logic can benefit from knowing about semester
+			if(this.$entryParams.permissions.entschuldigungen_enabled) {
+				this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
+					this.$fhcApi.factory.Info.getAktuellesSemester().then(res => {
+						if(res?.meta?.status === 'success') {
+							this.$entryParams.aktuellesSemester = res?.data?.[0]
+							this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
+							console.log(this.$entryParams.maxDate)
+						}
 					})
 				})
-			})
+			}
+
 		},
 		studentChangedHandler() {
 
@@ -160,7 +161,12 @@ export const StudentComponent = {
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
 					</div>
 				</div>
-				<core-tabs :config="tabsStudent" :modelValue="currentTab" ref="tabsStudent"></core-tabs>
+				<template v-if="$entryParams?.permissions?.entschuldigungen_enabled">
+					<core-tabs :config="tabsStudent" :modelValue="currentTab" ref="tabsStudent"></core-tabs>
+				</template>
+				<template v-else>
+					<StudentAnwesenheitComponent/>				
+				</template>
 			</template>
 		</core-base-layout>
 		
