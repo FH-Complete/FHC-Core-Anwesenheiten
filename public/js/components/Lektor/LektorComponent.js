@@ -122,10 +122,7 @@ export const LektorComponent = {
 			{
 				event: "tableBuilt",
 				handler: async () => {
-					await this.$entryParams.phrasenPromise
-
 					this.tableBuiltResolve()
-
 				}
 			}],
 			boundRegenerateQR: null,
@@ -206,7 +203,7 @@ export const LektorComponent = {
 		},
 		handleShowAllToggle() {
 			if(!this.lektorState.dates.length) {
-				this.$fhcAlert.alertInfo(this.$p.t('global/anwInfoKeineTermineGefunden'))
+				this.$fhcAlert.alertInfo(this.$p.t('global/anwInfoKeineKontrollenGefunden'))
 				return
 			}
 			this.showAll()
@@ -687,7 +684,7 @@ export const LektorComponent = {
 		toggleAnwStatus (e, cell, prestudent_id) {
 			const value = cell.getValue()
 			if(value === undefined) return
-			let date = cell.getColumn().getField() // '2024-10-24' or 'status'
+			let date = cell.getColumn().getField() // '2024-10-16' or 'status'
 			if(date === 'status') {
 				date = this.formatDateToDbString(this.selectedDate)
 			}
@@ -740,7 +737,6 @@ export const LektorComponent = {
 			this.loading = true
 			this.tableBuiltPromise = new Promise(this.tableResolve)
 			await this.$entryParams.setupPromise
-			await this.$entryParams.phrasenPromise
 			await this.tableBuiltPromise
 
 			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
@@ -748,11 +744,6 @@ export const LektorComponent = {
 			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
 			const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
 			found.title = selectedDateFrontendFormatted
-
-			// TODO: maybe use default times when no termine will be found?
-			// const now = new Date(Date.now())
-			// this.lektorState.beginn = {hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds()}
-			// this.lektorState.ende = {hours: now.getHours() + 2, minutes: now.getMinutes(), seconds: now.getSeconds()}
 
 			this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 			this.boundRegenerateQR = this.regenerateQR.bind(this)
@@ -793,9 +784,6 @@ export const LektorComponent = {
 
 			this.getExistingQRCode()
 		},
-		async awaitPhrasen() {
-			await this.$entryParams.phrasenPromise
-		},
 		loadStunden() {
 			this.$fhcApi.factory.Info.getStunden().then(res => {
 				this.stunden = res.data
@@ -805,7 +793,6 @@ export const LektorComponent = {
 	},
 	created(){
 		this.loadStunden()
-		this.awaitPhrasen()
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.$entryParams.permissions.authID

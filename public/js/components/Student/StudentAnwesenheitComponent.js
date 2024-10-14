@@ -66,7 +66,7 @@ export default {
 			const valInMin = Number(cell.getValue())
 			let valInEh = (cell.getValue() / 60 / this.$entryParams.permissions.einheitDauer)
 			const rest = valInEh % 1
-			if(rest > 0) valInEh = valInEh.toFixed(2)
+			if(rest > 0) valInEh = valInEh.toFixed(2).replace('.', ',')
 
 			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'
 				+valInMin+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')+

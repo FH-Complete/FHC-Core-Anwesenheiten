@@ -84,7 +84,7 @@ export const StudentByLvaComponent = {
 				event: "cellEdited",
 				handler: (cell) => {
 					const data = cell.getData()
-					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, [data]).then(res => {
+					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
 						if(res.meta.status === "success") {
 
 
@@ -130,7 +130,7 @@ export const StudentByLvaComponent = {
 			const valInMin = Number(cell.getValue())
 			let valInEh = (cell.getValue() / 60 / this.$entryParams.permissions.einheitDauer)
 			const rest = valInEh % 1
-			if(rest > 0) valInEh = valInEh.toFixed(2)
+			if(rest > 0) valInEh = valInEh.toFixed(2).replace('.', ',')
 
 			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'
 					+valInMin+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')+
@@ -180,7 +180,7 @@ export const StudentByLvaComponent = {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id, changedData).then(res => {
+			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData).then(res => {
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
 				} else {

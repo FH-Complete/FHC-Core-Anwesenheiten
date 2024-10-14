@@ -287,10 +287,7 @@ export default {
 			this.$entryParams.viewDataLv.oe_kurzbz = data.oe_kurzbz
 			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
-		},
-		// async awaitPhrasen(){
-		// 	await this.$entryParams.phrasenPromise
-		// }
+		}
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
@@ -306,10 +303,6 @@ export default {
 		if(this.$entryParams.permissions.student) this.permissioncount++
 		if(this.$entryParams.permissions.assistenz) this.permissioncount = 3
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
-
-
-		// if(!this.$entryParams.notMissingParams) this.permissioncount = 1 // only administration available -> only page working without params
-		// this.awaitPhrasen();
 
 	},
 	watch: {
