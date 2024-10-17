@@ -18,6 +18,7 @@ export default {
 	},
 	data: function() {
 		return {
+			tabulatorUuid: Vue.ref(0),
 			entschuldigung: {
 				von: Vue.ref({ hours: 0, minutes: 0 }),
 				bis: Vue.ref({ hours: 23, minutes: 59 }),
@@ -30,7 +31,7 @@ export default {
 				ajaxResponse: (url, params, response) => {
 					return response.data.retval
 				},
-				height: false,
+				height: this.$entryParams.tabHeights.studentEnt,
 				ajaxConfig: "POST",
 				ajaxContentType: {
 					headers:{
@@ -240,12 +241,22 @@ export default {
 			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/bis'))
 			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/aktion'))
 			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/notiz'))
+		},
+		handleUuidDefined(uuid) {
+			this.tabulatorUuid = uuid
 		}
 	},
 	mounted() {
 		this.minDate = new Date(this.minDate).setHours(0,0)
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
+
+		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		const rect = tableDataSet.getBoundingClientRect();
+
+		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+		this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {
@@ -343,8 +354,8 @@ export default {
 			</bs-modal>
 			<core-filter-cmpt
 				ref="entschuldigungsTable"
+				@uuidDefined="handleUuidDefined"
 				:tabulator-options="entschuldigungsViewTabulatorOptions"
-				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false
 				newBtnShow=true

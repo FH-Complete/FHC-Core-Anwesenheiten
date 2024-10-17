@@ -2,8 +2,8 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import {StudentDropdown} from "../Setup/StudentDropdown"
-import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent";
+import {StudentDropdown} from "../Setup/StudentDropdown.js"
+import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
 
 export const StudentComponent = {
 	name: 'StudentComponent',
@@ -17,8 +17,6 @@ export const StudentComponent = {
 	},
 	data: function() {
 		return {
-			headerMenuEntries: {},
-			sideMenuEntries: {},
 			tabsStudent: this.getTabsStudent(),
 			viewDataStudent: {}
 		};
@@ -100,7 +98,6 @@ export const StudentComponent = {
 						if(res?.meta?.status === 'success') {
 							this.$entryParams.aktuellesSemester = res?.data?.[0]
 							this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
-							console.log(this.$entryParams.maxDate)
 						}
 					})
 				})
@@ -148,7 +145,7 @@ export const StudentComponent = {
 	<div class="row-cols">
 		<core-base-layout>	
 			<template #main>	
-				<div class="row">
+				<div ref="studentHeaderRow" class="row">
 					<div class="col-6">
 						<h1 class="h4 mb-5">{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} <span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span></h1>
 					</div>

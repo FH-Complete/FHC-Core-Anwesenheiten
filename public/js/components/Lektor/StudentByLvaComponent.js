@@ -12,6 +12,7 @@ export const StudentByLvaComponent = {
 	},
 	data() {
 		return {
+			tabulatorUuid: Vue.ref(0),
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			anwesenheitenByStudentByLvaTabulatorOptions: {
@@ -31,7 +32,7 @@ export const StudentByLvaComponent = {
 					this.initialTableData = [...response.data.retval]
 					return response.data.retval
 				},
-				height: false,
+				height: this.$entryParams?.tabHeights?.studentByLva ?? 400,
 				index: 'datum',
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
@@ -111,6 +112,7 @@ export const StudentByLvaComponent = {
 		}
 	},
 	props: {
+		permissions: [],
 		id: null,
 		lv_id: null,
 		sem_kz: null,
@@ -124,7 +126,7 @@ export const StudentByLvaComponent = {
 			return this.sum + ' %'
 		},
 		selectableCheck(row) {
-			return row.getData().status !== this.$entryParams.permissions.entschuldigt_status
+			return row.getData().status !== this.$entryParams?.permissions?.entschuldigt_status
 		},
 		einheitenFormatter: function (cell) {
 			const valInMin = Number(cell.getValue())
@@ -274,12 +276,19 @@ export const StudentByLvaComponent = {
 				cell.getElement().style.color = "#0335f5";
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
+		},
+		handleUuidDefined(uuid) {
+			this.tabulatorUuid = uuid
 		}
 	},
 	created(){
-
+		// TODO: app whide permissions setup OR kübel the link to studentByAnw
+		if(!this.$entryParams.permissions) {// missing setup -> redirect on landing page
+			this.$router.push({name: 'LandingPage'})
+		}
 	},
 	mounted() {
+
 		this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
 			if (res.meta.status !== "success" || !res.data) return
 
@@ -296,7 +305,13 @@ export const StudentByLvaComponent = {
 			this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 			this.setFilterTitle()
 		})
-		
+
+		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		const rect = tableDataSet.getBoundingClientRect();
+
+		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
+		this.$entryParams.tabHeights['studentByLva'].value = screenY - rect.top - 100 // approx for calc row on bottom
 	},
 	computed: {
 		dataChanged() {
@@ -330,6 +345,7 @@ export const StudentByLvaComponent = {
 			<template #main>
 				<core-filter-cmpt
 					:title="filterTitle"
+					@uuidDefined="handleUuidDefined"
 					ref="anwesenheitenByStudentByLvaTable"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"

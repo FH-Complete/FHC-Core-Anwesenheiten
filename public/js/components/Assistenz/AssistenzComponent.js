@@ -2,9 +2,9 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {studentFormatters} from "../../formatters/formatters";
+import {studentFormatters} from "../../formatters/formatters.js";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-import {StudiengangDropdown} from "../Student/StudiengangDropdown";
+import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
 export const AssistenzComponent = {
@@ -20,6 +20,7 @@ export const AssistenzComponent = {
 	},
 	data: function() {
 		return {
+			tabulatorUuid: Vue.ref(0),
 			headerMenuEntries: {},
 			sideMenuEntries: {},
 			editCellValue: '',
@@ -57,7 +58,7 @@ export const AssistenzComponent = {
 				placeholder: this.$p.t('global/noDataAvailable'),
 				pagination: true,
 				paginationSize: 100,
-				height: false,
+				height: this.$entryParams.tabHeights.assistenz,
 				columns: [
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname',
 						headerFilter: true
@@ -278,12 +279,22 @@ export const AssistenzComponent = {
 			this.$fhcApi.factory.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
 				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
 			})
+		},
+		handleUuidDefined(uuid) {
+			this.tabulatorUuid = uuid
 		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.checkEntryParamPermissions()
 		this.setup()
+
+		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		const rect = tableDataSet.getBoundingClientRect();
+
+		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+		this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
 	},
 	beforeMounted() {
 		if(!this.$entryParams?.permissions?.entschuldigungen_enabled) {
@@ -336,8 +347,7 @@ export const AssistenzComponent = {
 					<button type="button" class="btn btn-primary" :disabled="!notiz" @click="rejectEntschuldigung">{{ $p.t('global/reject') }}</button>
 				</template>
 			</bs-modal>
-			<div style="min-height: 70vh;">
-			
+
 				<div class="row">
 				
 					<div class="col-6" style="display: flex; align-items: center;">
@@ -383,13 +393,13 @@ export const AssistenzComponent = {
 				</div>
 				<core-filter-cmpt
 					ref="assistenzTable"
+					@uuidDefined="handleUuidDefined"
 					:tabulator-options="assistenzViewTabulatorOptions"
 					:tabulator-events="assistenzViewTabulatorEventHandlers"
 					:sideMenu=false
 					:table-only=true
 					:hideTopMenu=false
 				></core-filter-cmpt>
-			</div>
 		</template>
 	</core-base-layout>
 `

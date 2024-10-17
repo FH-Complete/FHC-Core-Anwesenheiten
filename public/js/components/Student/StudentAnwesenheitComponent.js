@@ -15,12 +15,14 @@ export default {
 	},
 	data: function() {
 		return {
+			tabulatorUuid: Vue.ref(0),
 			studiensemester: [],
 			tableBuiltPromise: null,
 			studentViewTabulatorOptions: {
 				layout: 'fitDataStretch',
 				selectable: false,
-				height: false,
+				height: this.$entryParams.tabHeights.studentAnw,
+				renderVerticalBuffer: 2000,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
 					{title: 'Lehrveranstaltung', visible: false},
@@ -184,10 +186,21 @@ export default {
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
 		},
+		handleUuidDefined(uuid) {
+			this.tabulatorUuid = uuid
+		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
+
+		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		// TODO: test collapsables behaviour in nested tabs and without by 2030
+		const collapsables = document.getElementById('filterCollapsables' + tableID);
+		const rect = tableDataSet.getBoundingClientRect();
+		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+		this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight
 	},
 	computed: {
 		getTooltipObj() {
@@ -203,7 +216,7 @@ export default {
 	<core-base-layout
 		:title="filterTitle">
 		<template #main>
-			<div class="row" style="justify-content: flex-end;">
+			<div ref="studentAnwContentHeader" class="row" style="justify-content: flex-end;">
 				
 					<div style="max-width: 50px; align-content: center;" v-tooltip.bottom="getTooltipObj">
 						<h5><i class="fa fa-circle-question"></i></h5>
@@ -215,6 +228,7 @@ export default {
 			</div>
 			<core-filter-cmpt
 				ref="uebersichtTable"
+				@uuidDefined="handleUuidDefined"
 				:tabulator-options="studentViewTabulatorOptions"
 				:tabulator-events="studentViewTabulatorEventHandlers"
 				:table-only=true

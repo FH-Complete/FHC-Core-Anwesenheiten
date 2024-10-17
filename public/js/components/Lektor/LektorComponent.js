@@ -1,15 +1,15 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import { lektorFormatters } from "../../formatters/formatters";
+import { lektorFormatters } from "../../formatters/formatters.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
-import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown";
-import {MaUIDDropdown} from "../Setup/MaUIDDropdown";
-import {KontrollenDropdown} from "../Setup/KontrollenDropdown";
-import {TermineDropdown} from "../Setup/TermineDropdown";
-import {TermineOverview} from "./TermineOverview";
-import {AnwCountDisplay} from "./AnwCountDisplay";
-import {Stundenliste} from "./Stundenliste";
+import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown.js";
+import {MaUIDDropdown} from "../Setup/MaUIDDropdown.js";
+import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
+import {TermineDropdown} from "../Setup/TermineDropdown.js";
+import {TermineOverview} from "./TermineOverview.js";
+import {AnwCountDisplay} from "./AnwCountDisplay.js";
+import {Stundenliste} from "./Stundenliste.js";
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -30,6 +30,7 @@ export const LektorComponent = {
 	},
 	data() {
 		return {
+			tabulatorUuid: Vue.ref(0),
 			stunden: null,
 			loading: false,
 			tableBuiltResolve: null,
@@ -52,15 +53,15 @@ export const LektorComponent = {
 				gruppen: null
 			},
 			anwesenheitenTabulatorOptions: {
-				rowHeight: 88, // foto max-height + 2x padding
+				rowHeight: 44, // foto max-height + 2x padding
 				rowFormatter: lektorFormatters.entschuldigtColoring,
-				height: false,
+				height: this.$entryParams.tabHeights.lektor,
 				index: 'prestudent_id',
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false},
-					{title: this.$capitalize(this.$p.t('person/student')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false,tooltip:false, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, tooltip: false, download: false},
+					{title: this.$capitalize(this.$p.t('global/prestudentID')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false,tooltip:false, minWidth: 150, download: true},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe', headerFilter: 'list',
@@ -146,7 +147,11 @@ export const LektorComponent = {
 		}
 	},
 	props: {
-		permissions: []
+		permissions: [],
+		translateOffset: {
+			type: Number,
+			default: 60
+		}
 	},
 	methods: {
 		anwesenheitFormatterValue(cell) {
@@ -206,7 +211,14 @@ export const LektorComponent = {
 				this.$fhcAlert.alertInfo(this.$p.t('global/anwInfoKeineKontrollenGefunden'))
 				return
 			}
+			this.loading = true
 			this.showAll()
+			this.loading = false
+		},
+		async setAllColsAndData() {
+			this.$refs.anwesenheitenTable.tabulator.clearSort()
+			this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
+			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
 		},
 		showAll() {
 			// set tabulator column definition to show every distinct date fetched
@@ -226,9 +238,8 @@ export const LektorComponent = {
 
 				this.lektorState.tableStudentData = this.setupAllData(newCols)
 				this.lektorState.tabulatorCols = newCols
-				this.$refs.anwesenheitenTable.tabulator.clearSort()
-				this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
-				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
+				this.setAllColsAndData()
+
 				this.lektorState.showAllVar = true
 			} else {
 
@@ -238,6 +249,7 @@ export const LektorComponent = {
 
 				this.lektorState.showAllVar = false
 			}
+
 		},
 		setupAllData(){
 			const data = []
@@ -503,19 +515,24 @@ export const LektorComponent = {
 			return zusatz
 		},
 		linkKontrollData() {
+			// TODO: write Set of controlled groups into kontroll obj
+
 			this.lektorState.kontrollen.forEach(k => {
 				k.sumAnw = 0
 				k.anw = 0
 				k.abw = 0
 				k.ent = 0
+				k.groupSet = new Set()
 			})
 			this.lektorState.anwEntries.forEach(anw => {
 				const k = this.lektorState.kontrollen.find(k => k.anwesenheit_id === anw.anwesenheit_id)
 				k.sumAnw++
-				if(anw.status === 'anwesend') k.anw++
-				else if (anw.status === 'abwesend') k.abw++
-				else if (anw.status === 'entschuldigt') k.ent++
+				if(anw.status === this.$entryParams.permissions.anwesend_status) k.anw++
+				else if (anw.status === this.$entryParams.permissions.abwesend_status) k.abw++
+				else if (anw.status === this.$entryParams.permissions.entschuldigt_status) k.ent++
 			})
+
+			// console.log('this.lektorState.kontrollen', this.lektorState.kontrollen)
 		},
 		setDates(anwEntries) {
 
@@ -613,7 +630,7 @@ export const LektorComponent = {
 				const cols = this.$refs.anwesenheitenTable.tabulator.getColumns()
 
 				this.anwesenheitenTabulatorOptions.columns[0].title =this.$capitalize( await this.$p.t('global/foto'))
-				this.anwesenheitenTabulatorOptions.columns[1].title =this.$capitalize( await this.$p.t('person/student'))
+				this.anwesenheitenTabulatorOptions.columns[1].title =this.$capitalize( await this.$p.t('global/prestudentID'))
 				this.anwesenheitenTabulatorOptions.columns[2].title =this.$capitalize( await this.$p.t('person/vorname'))
 				this.anwesenheitenTabulatorOptions.columns[3].title =this.$capitalize( await this.$p.t('person/nachname'))
 				this.anwesenheitenTabulatorOptions.columns[4].title =this.$capitalize( await this.$p.t('lehre/gruppe'))
@@ -771,6 +788,7 @@ export const LektorComponent = {
 				})
 			}
 
+
 		},
 		handleLEChanged () {
 			const date = this.formatDateToDbString(this.selectedDate)
@@ -789,6 +807,12 @@ export const LektorComponent = {
 				this.stunden = res.data
 
 			})
+		},
+		downloadCSV() {
+			this.$refs.anwesenheitenTable.tabulator.download('csv', this.getCSVFilename, {bom: true})
+		},
+		handleUuidDefined(uuid) {
+			this.tabulatorUuid = uuid
 		}
 	},
 	created(){
@@ -800,12 +824,16 @@ export const LektorComponent = {
 	mounted() {
 		this.setupMounted()
 
+		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		const rect = tableDataSet.getBoundingClientRect();
+
+		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
+		this.$entryParams.tabHeights['lektor'].value = screenY - rect.top
 	},
 	unmounted(){
 		// anwesenheitskontrolle could be active
 		this.stopPollingAnwesenheiten()
-	},
-	updated(){
 	},
 	watch: {
 		selectedDate(newVal) {
@@ -844,9 +872,12 @@ export const LektorComponent = {
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			this.$refs.showAllTickbox.checked = false
 
-		}
+		},
 	},
 	computed: {
+		getTabulatorStyle(){
+			return "transform: translateY(-"+this.translateOffset+"px); overflow: hidden;"
+		},
 		getTooltipKontrolleLöschen() {
 			return {
 				value: `Sollten Sie eine Anwesenheitskontrolle fälschlicherweise gestartet haben, können Sie diese löschen wenn sie nicht älter als ` + this.$entryParams.permissions.kontrolleDeleteMaxReach + ` Tage ist. Dabei werden sämtliche mit dieser Kontrolle verknüpfte Anwesenheitseinträge Ihrer Studenten ebenfalls gelöscht und Ihre Anwesenheitsquoten neu berechnet.
@@ -882,6 +913,12 @@ export const LektorComponent = {
 			}
 
 			return fin
+		},
+		getCSVFilename() {
+			let str = this.$entryParams.selected_le_info?.value?.infoString ?? ''
+			str += '_'+ this.$entryParams?.viewDataLv?.bezeichnung + '_'
+			str += this.lektorState.showAllVar ? 'AllDates' : this.selectedDate.toDateString()
+			return str
 		}
 	},
 	template:`
@@ -1001,55 +1038,60 @@ export const LektorComponent = {
 					</template>
 				</bs-modal>
 				
-				<div class="row">
-									
-					<div class="col-6"></div>
-					<div class="col-3">
-						<MaUIDDropdown v-if="$entryParams?.permissions?.admin" :title="$capitalize($p.t('lehre/lektor') )" 
-						 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
-						</MaUIDDropdown>
-					</div>
-					<div class="col-3">
-						<LehreinheitenDropdown id="lehreinheit" :title="$capitalize($p.t('lehre/lehreinheit'))" ref="LEDropdown" @leChanged="handleLEChanged">
-						</LehreinheitenDropdown>
-					</div>
-				</div>
+				<div class="row" id="lektorContentHeader" ref="lektorContentHeader">
 				
-				<div class="row mt-4">
-					<div class="col-6" style="transform: translateY(-80px); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-						<h1 class="h4">{{ $entryParams.selected_le_info?.value?.infoString ?? '' }}</h1>
-						<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>
-						
-						<AnwCountDisplay  v-if="!lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
-
+					<div class="col-6">				
+						<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+							<h1 class="h4">{{ $entryParams.selected_le_info?.value?.infoString ?? '' }}</h1>
+							<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>		
+							<AnwCountDisplay  v-if="!lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
+						</div>
 					</div>
 					
-					<div class="col-1" style="height: 40px; align-self: start;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
-					<div class="col-2" style="height: 40px;">
-						<datepicker
-							v-model="selectedDate"
-							:clearable="false"
-							locale="de"
-							format="dd.MM.yyyy"
-							text-input="true"
-							auto-apply="true">
-						</datepicker>
+
+					<div class="col-6">
+						<div class="row">
+							<div class="col-1"></div>
+								<div class="col-5">
+									<MaUIDDropdown v-if="$entryParams?.permissions?.admin" :title="$capitalize($p.t('lehre/lektor') )" 
+									 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
+									</MaUIDDropdown>
+								</div>
+								<div class="col-5">
+									<LehreinheitenDropdown id="lehreinheit" :title="$capitalize($p.t('lehre/lehreinheit'))" ref="LEDropdown" @leChanged="handleLEChanged">
+									</LehreinheitenDropdown>
+								</div>
+							</div>		
+							<div class="row mt-4">
+								<div class="col-1"></div>
+	
+								<div class="col-2" style="height: 40px; align-self: start;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
+								<div class="col-3" style="height: 40px;">
+									<datepicker
+										v-model="selectedDate"
+										:clearable="false"
+										locale="de"
+										format="dd.MM.yyyy"
+										text-input="true"
+										auto-apply="true">
+									</datepicker>
+								</div>
+								<div class="col-5 d-flex " style="height: 40px; align-items: center;">
+									<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
+									<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllKontrollen') }}</label>
+								</div>
+							</div>				
+						</div>
 					</div>
-					<div class="col-3 d-flex " style="height: 40px; align-items: center;">
-						<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
-						<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllKontrollen') }}</label>
-					</div>
-				</div>
-			
-				
-				<div style="transform: translateY(-40px)">
+					
+				<div id="getTabulatorStyle" style=getTabulatorStyle>
 					<core-filter-cmpt
 						title=""
+						@uuidDefined="handleUuidDefined"
 						ref="anwesenheitenTable"
 						:tabulator-options="anwesenheitenTabulatorOptions"
 						:tabulator-events="anwesenheitenTabulatorEventHandlers"
 						:id-field="'anwesenheiten_id'"
-						@nw-new-entry="newSideMenuEntryHandler"
 						:tableOnly
 						newBtnShow=true
 						:newBtnLabel="$p.t('global/neueAnwKontrolle')"
@@ -1065,9 +1107,14 @@ export const LektorComponent = {
 								<button @click="openDeleteModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getDeleteBtnClass">
 									<i class="fa fa-trash"></i>
 								</button>
+								
+								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2">
+									<i class="fa fa-file-csv"></i>
+								</button>
 							</template>
 					</core-filter-cmpt>
 				</div>
+				
 			</template>
 		</core-base-layout>
 	</div>`

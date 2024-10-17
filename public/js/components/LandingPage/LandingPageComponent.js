@@ -1,4 +1,3 @@
-import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
@@ -6,13 +5,12 @@ import CoreTabs from '../../../../../js/components/Tabs.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
-import AssistenzComponent from "../Assistenz/AssistenzComponent";
+import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
 
 export default {
 	name: 'LandingPageComponent',
 	components: {
 		CoreBaseLayout,
-		CoreNavigationCmpt,
 		CoreRESTClient,
 		CoreTabs,
 		BsModal,
@@ -69,7 +67,17 @@ export default {
 
 			this.setCurrentTab(permissions.controller, tabs)
 
+			this.setDefaultTabHeight()
+
 			return ret
+		},
+		setDefaultTabHeight() {
+			this.$entryParams.tabHeights = {}
+			this.$entryParams.tabHeights.studentByLva = Vue.ref(400)
+			this.$entryParams.tabHeights.lektor = Vue.ref(400)
+			this.$entryParams.tabHeights.studentAnw = Vue.ref(400)
+			this.$entryParams.tabHeights.studentEnt = Vue.ref(400)
+			this.$entryParams.tabHeights.assistenz = Vue.ref(400)
 		},
 		setCurrentTab (controller, tabs) {
 
@@ -89,6 +97,8 @@ export default {
 		},
 		async createdSetup () {
 			await new Promise (resolve => {
+
+				// TODO: auf app function auslagern
 				const queryString = window.location.search;
 				const searchParams = new URLSearchParams(queryString)
 				this.$entryParams.lv_id = searchParams.get('lvid')
@@ -272,8 +282,6 @@ export default {
 					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
 					this.$entryParams.available_le_ids.value = [...le_ids]
 
-					// console.log('this.$entryParams.available_le_info', this.$entryParams.available_le_info)
-
 				}).finally(() => {
 					resolve()
 				})
@@ -319,27 +327,17 @@ export default {
 		}
 	},
 	template: `
-	<core-navigation-cmpt 
-		v-bind:add-side-menu-entries="sideMenuEntries"
-		v-bind:add-header-menu-entries="headerMenuEntries"
-		hideTopMenu=true 
-		:leftNavCssClasses=''>
-	</core-navigation-cmpt>
 
-	<core-base-layout>
-		<template #main>
-			<div style="position: relative; margin-top: 12px;">
-				<template  v-if="permissioncount > 1">
-					<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs"></core-tabs>
-				</template>
-				<template v-else-if="permissioncount === 1 && phrasenResolved">
-					<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>
-					<StudentComponent v-if="$entryParams?.permissions?.student"></StudentComponent>
-					<AssistenzComponent v-if="$entryParams?.permissions?.assistenz || $entryParams?.permissions?.admin"></AssistenzComponent>
-				</template>
-			</div>
-			
+	<div style="position: relative;" ref="appContainer">
+		<template  v-if="permissioncount > 1">
+			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs"></core-tabs>
 		</template>
-	</core-base-layout>
+		<template v-else-if="permissioncount === 1 && phrasenResolved">
+			<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>
+			<StudentComponent v-if="$entryParams?.permissions?.student"></StudentComponent>
+			<AssistenzComponent v-if="$entryParams?.permissions?.assistenz || $entryParams?.permissions?.admin"></AssistenzComponent>
+		</template>
+	</div>
+
 `
 };

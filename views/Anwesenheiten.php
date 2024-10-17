@@ -37,7 +37,8 @@ $includesArray = array(
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
-		'public/extensions/FHC-Core-Anwesenheiten/js/formatters/formatters.js'
+		'public/extensions/FHC-Core-Anwesenheiten/js/formatters/formatters.js',
+		'vendor/olifolkerd/tabulator5/src/js/modules/Download/Download.js'
 	)
 );
 
@@ -53,14 +54,14 @@ if(defined('CIS4') && CIS4) {
 
 
 
-<body>
 
-<div id="main" permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>' style="margin-right: 18px;">
+
+<div id="main" permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>' style="overflow: hidden;">
 	<router-view permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>'>
 	
 	</router-view>
 </div>
-</body>
+
 <?php
 	if(defined('CIS4') && CIS4) {
 		$this->load->view('templates/CISHTML-Footer', $includesArray);
