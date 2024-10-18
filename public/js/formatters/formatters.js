@@ -10,11 +10,6 @@ export const lektorFormatters = {
 			row.getElement().style.color = "#0335f5";
 		}
 	},
-	percentFormatter: function (cell) {
-		const data = cell.getData()
-		const val = data.sum ??  data.anteil ?? '-'
-		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
-	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();
 

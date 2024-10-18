@@ -61,6 +61,8 @@ class Administration extends Auth_Controller
 				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
 				'entschuldigungMaxReach' => $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'),
 				'kontrolleDeleteMaxReach' => $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH'),
+				'kontrolleCreateMaxReach' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH'),
+				'positiveRatingThreshold' => $this->_ci->config->item('POSITIVE_RATING_THRESHOLD'),
 				'anwesend_status' => $this->_ci->config->item('ANWESEND_STATUS'),
 				'abwesend_status' => $this->_ci->config->item('ABWESEND_STATUS'),
 				'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),

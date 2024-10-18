@@ -30,7 +30,7 @@ export default {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, tooltip:false, widthGrow: 1, minWidth: 250},
-					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcParams: this.bottomCalcParamLookup, tooltip:false, bottomCalc: this.anwCalc, formatter: lektorFormatters.percentFormatter},
+					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcFormatter: this.sumBottomCalcFormatter, bottomCalcParams: this.bottomCalcParamLookup, tooltip:false, bottomCalc: this.anwCalc, formatter: this.percentFormatter},
 					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, tooltip:false, minWidth: 150},
 				],
 				groupBy: ['bezeichnung'],
@@ -60,6 +60,11 @@ export default {
 		};
 	},
 	methods: {
+		percentFormatter: function (cell) {
+			const data = cell.getData()
+			const val = data.sum ??  data.anteil ?? '-'
+			return '<div style="display: flex;'+(val < (this.$entryParams.permissions.positiveRatingThreshold * 100) ? 'color: red; ' : '') +'justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
+		},
 		bottomCalcParamLookup (values, data) {
 			const first = data[0]
 			return first ? first.anwesenheit + ' %' : ''
@@ -188,7 +193,17 @@ export default {
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
-		}
+		},
+		sumBottomCalcFormatter(cell) {
+			const val = Number.parseFloat(cell.getValue())
+			if(Number.isNaN(val)) return cell.getValue()
+			if (val < (this.$entryParams.permissions.positiveRatingThreshold * 100)) {
+				const el = cell.getElement()
+				el.style.setProperty('color', 'red')
+			}
+
+			return cell.getValue()
+		},
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)

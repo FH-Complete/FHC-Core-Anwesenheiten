@@ -18,7 +18,7 @@ export const TermineDropdown = {
 			<label for="terminSelect">{{ $p.t('global/termineLautStundenplan') }}</label>
 			
 			<select id="terminSelect" @change="terminChanged" class="form-control" v-model="$entryParams.selected_termin.value">
-				<option v-for="option in $entryParams.available_termine.value" :value="option">
+				<option v-for="option in $entryParams.available_termine.value" :value="option" :disabled="option.disabled">
 					<a>{{option.datumFrontend}}: {{option.beginn}} - {{option.ende}}</a>
 				</option>
 			</select>

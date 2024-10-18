@@ -15,23 +15,8 @@ export const StudentByLvaComponent = {
 			tabulatorUuid: Vue.ref(0),
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
+			tableBuiltPromise: null,
 			anwesenheitenByStudentByLvaTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+`/extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAllAnwesenheitenByStudentByLva?prestudent_id=${this.id}&lv_id=${this.lv_id}&sem_kurzbz=${this.sem_kz}`,
-				ajaxResponse: (url, params, response) => {
-					if(response.meta.status !== "success") return []
-
-					const arr = response?.data?.retval ?? []
-
-					// calculate total time of anw
-					const sum = arr.reduce((acc, cur) => acc + cur.dauer, 0)
-					arr.forEach(row => {
-						row.anteil = (row.dauer / sum * 100).toFixed(2)
-					})
-
-					this.tableData = response.data.retval
-					this.initialTableData = [...response.data.retval]
-					return response.data.retval
-				},
 				height: this.$entryParams?.tabHeights?.studentByLva ?? 400,
 				index: 'datum',
 				layout: 'fitDataStretch',
@@ -52,10 +37,10 @@ export const StudentByLvaComponent = {
 					},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: this.anwesenheitFormatterValue,  widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalc: this.anwCalc, formatter: lektorFormatters.percentFormatter},
+					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcFormatter: this.sumBottomCalcFormatter, bottomCalc: this.anwCalc, formatter: this.percentFormatter},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 250},
+					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', bottomCalc: this.einheitenCalc, formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 250},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
 				persistence: {
@@ -94,6 +79,14 @@ export const StudentByLvaComponent = {
 						}
 					})
 				}
+			},
+			{
+				event: "tableBuilt",
+				handler: async () => {
+					await this.$entryParams.phrasenPromise
+
+					this.tableBuiltResolve()
+				}
 			}
 			],
 			filterTitle: "",
@@ -119,23 +112,44 @@ export const StudentByLvaComponent = {
 
 	},
 	methods: {
-		newSideMenuEntryHandler: function(payload) {
-			this.appSideMenuEntries = payload;
+		percentFormatter: function (cell) {
+			const data = cell.getData()
+			const val = data.sum ??  data.anteil ?? '-'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
 		},
 		anwCalc(){
 			return this.sum + ' %'
 		},
+		sumBottomCalcFormatter(cell) {
+			const val = Number.parseFloat(cell.getValue())
+			if(Number.isNaN(val)) return cell.getValue()
+			if (val < (this.$entryParams.permissions.positiveRatingThreshold * 100)) {
+				const el = cell.getElement()
+				el.style.setProperty('color', 'red')
+			}
+
+			return cell.getValue()
+		},
+		einheitenCalc(values) {
+
+			return this.formatMinutes(values.reduce((acc, cur) => cur+=acc,0))
+		},
 		selectableCheck(row) {
 			return row.getData().status !== this.$entryParams?.permissions?.entschuldigt_status
 		},
-		einheitenFormatter: function (cell) {
-			const valInMin = Number(cell.getValue())
-			let valInEh = (cell.getValue() / 60 / this.$entryParams.permissions.einheitDauer)
+		formatMinutes(minutes) {
+			let valInEh = (minutes / 60 / this.$entryParams.permissions.einheitDauer)
 			const rest = valInEh % 1
 			if(rest > 0) valInEh = valInEh.toFixed(2).replace('.', ',')
 
+			return minutes+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')
+		},
+		einheitenFormatter: function (cell) {
+			const valInMin = Number(cell.getValue())
+			const content = this.formatMinutes(valInMin)
+
 			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'
-					+valInMin+' '+this.$p.t('global/minuten')+' / '+valInEh+' '+this.$p.t('global/einheiten')+
+					+content+
 				'</div>'
 		},
 		unselectableFormatter(row) {
@@ -279,6 +293,55 @@ export const StudentByLvaComponent = {
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
+		},
+		tableResolve(resolve) {
+			this.tableBuiltResolve = resolve
+		},
+		async setupMounted() {
+			this.tableBuiltPromise = new Promise(this.tableResolve)
+			await this.tableBuiltPromise
+			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz).then(res => {
+				if (res.meta.status !== "success" || !res.data) {
+					return []
+				} else {
+					const arr = res?.data?.retval ?? []
+
+					// calculate total time of anw
+					const sum = arr.reduce((acc, cur) => acc + cur.dauer, 0)
+					arr.forEach(row => {
+						row.anteil = (row.dauer / sum * 100).toFixed(2)
+					})
+
+					this.tableData = res.data.retval
+					this.initialTableData = [...res.data.retval]
+					this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(res.data.retval)
+					// return res.data.retval
+				}
+
+			})
+
+			this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
+				if (res.meta.status !== "success" || !res.data) return
+
+				this.prestudent_id = res.data[0].prestudent_id
+				this.person_id = res.data[0].person_id
+				this.vorname = res.data[0].vorname
+				this.nachname = res.data[0].nachname
+				this.semester = res.data[0].semester
+				this.verband = res.data[0].verband
+				this.gruppe = res.data[0].gruppe
+				this.sum = res.data[0].sum
+				this.foto = res.data[0].foto
+
+				this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
+				this.setFilterTitle()
+			})
+
+		},
+		isLowResolution(imgSrc) {
+			const img = new Image()
+			img.src = imgSrc
+			return img.width < 150 || img.height < 200
 		}
 	},
 	created(){
@@ -288,23 +351,7 @@ export const StudentByLvaComponent = {
 		}
 	},
 	mounted() {
-
-		this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
-			if (res.meta.status !== "success" || !res.data) return
-
-			this.prestudent_id = res.data[0].prestudent_id
-			this.person_id = res.data[0].person_id
-			this.vorname = res.data[0].vorname
-			this.nachname = res.data[0].nachname
-			this.semester = res.data[0].semester
-			this.verband = res.data[0].verband
-			this.gruppe = res.data[0].gruppe
-			this.sum = res.data[0].sum
-			this.foto = res.data[0].foto
-
-			this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
-			this.setFilterTitle()
-		})
+		this.setupMounted()
 
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
@@ -329,24 +376,17 @@ export const StudentByLvaComponent = {
 		}
 	},
 	template:`	
-		<core-navigation-cmpt 
-			v-bind:add-side-menu-entries="appSideMenuEntries"
-			v-bind:add-header-menu-entries="headerMenuEntries"
-			:hideTopMenu=true
-			leftNavCssClasses="">	
-		</core-navigation-cmpt>
-
 		<core-base-layout
-			:title="asdf"
-			:subtitle="wert"
+			:title=""
+			:subtitle=""
 			:main-cols=[10]
 			:aside-cols=[2]
 			>
 			<template #main>
 				<core-filter-cmpt
+					ref="anwesenheitenByStudentByLvaTable"
 					:title="filterTitle"
 					@uuidDefined="handleUuidDefined"
-					ref="anwesenheitenByStudentByLvaTable"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
 					@nw-new-entry="newSideMenuEntryHandler"
@@ -370,8 +410,9 @@ export const StudentByLvaComponent = {
 				</core-filter-cmpt>
 					
 			</template>
-			<template #aside>
-				<img v-if="foto" :src="foto" style="width: 100%;"/>
+			<template #aside >
+				<img v-if="foto" :src="foto" :class="isLowResolution(foto) ? 'image-low-resolution' : ''" style="width: 100%"/>
+				<div v-else></div>
 			</template>
 		</core-base-layout>
 	</div>`

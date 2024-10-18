@@ -72,7 +72,7 @@ export const LektorComponent = {
 						},
 						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, tooltip:false, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'status', formatter: this.anwesenheitFormatterValue, hozAlign:"center",widthGrow: 1, tooltip: this.anwTooltip, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: lektorFormatters.percentFormatter,widthGrow: 1, tooltip:false, minWidth: 150},
+					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: this.percentFormatter,widthGrow: 1, tooltip:false, minWidth: 150},
 				],
 				persistence: {
 					sort: false,
@@ -143,6 +143,8 @@ export const LektorComponent = {
 			abwesendCount: 0,
 			entschuldigtCount: 0,
 			studentCount: 0,
+			minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach))),
+			maxDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach))),
 			changes: false // if something could have happened to dataset -> reload on mounted
 		}
 	},
@@ -154,6 +156,11 @@ export const LektorComponent = {
 		}
 	},
 	methods: {
+		percentFormatter: function (cell) {
+			const data = cell.getData()
+			const val = data.sum ??  data.anteil ?? '-'
+			return '<div style="display: flex;'+(val < (this.$entryParams.permissions.positiveRatingThreshold * 100) ? 'color: red; ' : '') +'justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
+		},
 		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()
 			if (data === this.$entryParams.permissions.anwesend_status) {
@@ -923,7 +930,7 @@ export const LektorComponent = {
 	},
 	template:`
 
-		<div v-show="loading" style="position: absolute; width: 100%; height: 100%; background: rgba(255,255,255,0.5); z-index: 9999998;">
+		<div v-show="loading" style="position: absolute; width: 100%; height: 100%; background: rgba(255,255,255,0.5); z-index: 8500;">
 		</div>
 		
 		<core-base-layout>			
@@ -978,7 +985,9 @@ export const LektorComponent = {
 										locale="de"
 										format="dd.MM.yyyy"
 										text-input="true"
-										auto-apply="true">
+										auto-apply="true"
+										:min-date="minDate"
+										:max-date="maxDate">
 									</datepicker>
 								</div>
 							</div>
@@ -1073,7 +1082,9 @@ export const LektorComponent = {
 										locale="de"
 										format="dd.MM.yyyy"
 										text-input="true"
-										auto-apply="true">
+										auto-apply="true"
+										:min-date="minDate"
+										:max-date="maxDate">
 									</datepicker>
 								</div>
 								<div class="col-5 d-flex " style="height: 40px; align-items: center;">

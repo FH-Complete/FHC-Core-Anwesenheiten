@@ -18,4 +18,7 @@ $config['ABWESEND_STATUS'] = 'abwesend';
 $config['ENTSCHULDIGT_STATUS'] = 'entschuldigt';
 // dauer einer Unterrichtseinheit in Stunden
 $config['EINHEIT_DAUER'] = 0.75;
+// toggle für UI elemente & API endpunkte, bestehende daten bleiben unverändert
 $config['ENTSCHULDIGUNGEN_ENABLED'] = true;
+$config['KONTROLLE_CREATE_MAX_REACH'] = 14; // days +/- semester beginn bzw ende
+$config['POSITIVE_RATING_THRESHOLD'] = 0.75; // min. 75 % anwesenheit

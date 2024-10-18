@@ -19,3 +19,10 @@
 	max-width: 45px;
 	max-height: 45px;
 }
+
+.image-low-resolution {
+	filter: brightness(0.9) saturate(1.2);
+	image-rendering: smooth;
+	border: 1px solid #ddd;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
