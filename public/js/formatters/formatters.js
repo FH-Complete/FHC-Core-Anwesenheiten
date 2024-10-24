@@ -3,13 +3,6 @@ export const lektorFormatters = {
 		const val = cell.getValue()
 		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+val+'</div>'
 	},
-	entschuldigtColoring: function (row) {
-		const data = row.getData()
-
-		if(data.entschuldigt) {
-			row.getElement().style.color = "#0335f5";
-		}
-	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();
 

@@ -218,6 +218,9 @@ export default {
 				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
 			})
 		},
+		redrawTable() {
+			if(this.$refs?.entschuldigungsTable?.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
+		},
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
 		},

@@ -68,15 +68,13 @@ class Anwesenheit_model extends \DB_Model
 				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id,
 				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
-			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
 			   	extension.get_anwesenheiten_by_time(prestudent_id, $lv_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
 			   (SELECT status_kurzbz FROM public.tbl_prestudentstatus
 				WHERE prestudent_id=tbl_student.prestudent_id
 				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
-			     tbl_bisio.bisio_id, tbl_bisio.von, tbl_bisio.bis, tbl_student.studiengang_kz AS stg_kz_student,
-			   tbl_note.lkt_ueberschreibbar, tbl_note.anmerkung, tbl_mitarbeiter.mitarbeiter_uid, tbl_person.matr_nr, tbl_person.geschlecht, tbl_studiengang.kurzbzlang,
-			   tbl_mobilitaet.mobilitaetstyp_kurzbz, tbl_zeugnisnote.note,
+			   tbl_mitarbeiter.mitarbeiter_uid,
+			   tbl_mobilitaet.mobilitaetstyp_kurzbz,
 			   (CASE WHEN bis.tbl_mobilitaet.studiensemester_kurzbz = vw_student_lehrveranstaltung.studiensemester_kurzbz THEN 1 ELSE 0 END) as doubledegree
 			
 			 FROM

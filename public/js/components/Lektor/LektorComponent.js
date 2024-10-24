@@ -54,7 +54,7 @@ export const LektorComponent = {
 			},
 			anwesenheitenTabulatorOptions: {
 				rowHeight: 44, // foto max-height + 2x padding
-				rowFormatter: lektorFormatters.entschuldigtColoring,
+				rowFormatter: this.entschuldigtColoring,
 				height: this.$entryParams.tabHeights.lektor,
 				index: 'prestudent_id',
 				layout: 'fitDataStretch',
@@ -613,6 +613,8 @@ export const LektorComponent = {
 					return status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate
 				})
 
+				const studentEntschuldigungen = this.lektorState.entschuldigtStati.filter(entschuldigung => entschuldigung.person_id === student.person_id)
+
 				const nachname = student.nachname + student.zusatz
 				const gruppe = student.semester + student.verband + student.gruppe
 				this.lektorState.gruppen.add(gruppe)
@@ -622,6 +624,7 @@ export const LektorComponent = {
 					nachname: nachname,
 					gruppe: gruppe,
 					entschuldigt: isEntschuldigt,
+					entschuldigungen: studentEntschuldigungen,
 					status: status ?? '-',
 					sum: student.sum});
 			})
@@ -820,7 +823,21 @@ export const LektorComponent = {
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
-		}
+		},
+		redrawTable() {
+			if(this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.redraw(true)
+		},
+		entschuldigtColoring: function (row) {
+			const data = row.getData()
+
+			data.entschuldigungen.forEach(ent => {
+
+			})
+			console.log(data)
+			if(data.entschuldigt) {
+				row.getElement().style.color = "#0335f5";
+			}
+		},
 	},
 	created(){
 		this.loadStunden()
@@ -843,6 +860,12 @@ export const LektorComponent = {
 		this.stopPollingAnwesenheiten()
 	},
 	watch: {
+		'lektorState.beginn'(newVal) {
+			console.log('lektorState.beginn watcher', newVal)
+		},
+		'lektorState.ende'(newVal) {
+			console.log('lektorState.ende watcher', newVal)
+		},
 		selectedDate(newVal) {
 			if(newVal === "") {
 				this.selectedDate = new Date(Date.now())
@@ -885,7 +908,7 @@ export const LektorComponent = {
 		getTabulatorStyle(){
 			return "transform: translateY(-"+this.translateOffset+"px); overflow: hidden;"
 		},
-		getTooltipKontrolleLöschen() {
+		getTooltipKontrolleLoeschen() {
 			return {
 				value: `Sollten Sie eine Anwesenheitskontrolle fälschlicherweise gestartet haben, können Sie diese löschen wenn sie nicht älter als ` + this.$entryParams.permissions.kontrolleDeleteMaxReach + ` Tage ist. Dabei werden sämtliche mit dieser Kontrolle verknüpfte Anwesenheitseinträge Ihrer Studenten ebenfalls gelöscht und Ihre Anwesenheitsquoten neu berechnet.
 				
@@ -1010,7 +1033,7 @@ export const LektorComponent = {
 				<bs-modal ref="modalContainerDeleteKontrolle" class="bootstrap-prompt"
 				dialogClass="modal-lg">
 					<template v-slot:title>
-						<div v-tooltip.bottom="getTooltipKontrolleLöschen">
+						<div v-tooltip.bottom="getTooltipKontrolleLoeschen">
 							{{ $p.t('global/deleteAnwKontrolle') }}
 							<i class="fa fa-circle-question"></i>
 						</div>

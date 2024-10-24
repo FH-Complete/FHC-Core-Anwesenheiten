@@ -57,7 +57,7 @@ export const AssistenzComponent = {
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				pagination: true,
-				paginationSize: 100,
+				paginationSize: 50,
 				height: this.$entryParams.tabHeights.assistenz,
 				columns: [
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname',
@@ -282,6 +282,9 @@ export const AssistenzComponent = {
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
+		},
+		redrawTable() {
+			if(this.$refs.assistenzTable?.tabulator) this.$refs.assistenzTable.tabulator.redraw(true)
 		}
 	},
 	mounted() {

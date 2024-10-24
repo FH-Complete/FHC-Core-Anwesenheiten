@@ -178,6 +178,9 @@ export default {
 		async reload() {
 			this.loadAnwesenheitenByUID()
 		},
+		redrawTable() {
+			if(this.$refs.uebersichtTable?.tabulator) this.$refs.uebersichtTable.tabulator.redraw(true)
+		},
 		async setup(){
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise

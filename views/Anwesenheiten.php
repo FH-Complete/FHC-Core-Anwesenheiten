@@ -17,9 +17,6 @@ $includesArray = array(
 	'dialoglib' => true,
 	'vue3' => true,
 	'primevue3' => true,
-	'phrases' => array(
-		'ui', 'person', 'lehre', 'table', 'filter', 'global'
-	),
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',
 		'public/css/components/searchbar.css',
@@ -52,10 +49,6 @@ if(defined('CIS4') && CIS4) {
 }
 
 ?>
-
-
-
-
 
 <div id="main" permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>' style="overflow: hidden;">
 	<router-view permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>'>

@@ -295,6 +295,9 @@ export default {
 			this.$entryParams.viewDataLv.oe_kurzbz = data.oe_kurzbz
 			this.$entryParams.viewDataLv.orgform_kurzbz = data.orgform_kurzbz
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
+		},
+		handleTabChanged(key) {
+			if(this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
 		}
 	},
 	created(){
@@ -313,9 +316,6 @@ export default {
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
 
 	},
-	watch: {
-
-	},
 	computed: {
 		getSubtitle(){
 			if(this.$entryParams?.viewDataLv?.kurzbz?.value && this.$entryParams?.viewDataLv?.bezeichnung?.value) {
@@ -330,7 +330,7 @@ export default {
 
 	<div style="position: relative;" ref="appContainer">
 		<template  v-if="permissioncount > 1">
-			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs"></core-tabs>
+			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs" @changed="handleTabChanged" ref="tabsMain"></core-tabs>
 		</template>
 		<template v-else-if="permissioncount === 1 && phrasenResolved">
 			<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>

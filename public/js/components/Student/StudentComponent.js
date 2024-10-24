@@ -49,6 +49,9 @@ export const StudentComponent = {
 			}
 
 		},
+		handleTabChanged (key) {
+			if(this.$refs.tabsStudent?._?.refs?.current) this.$refs.tabsStudent._.refs.current.redrawTable()
+		},
 		async setup() {
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
@@ -87,9 +90,7 @@ export const StudentComponent = {
 					resolve()
 				}
 
-
 			})
-
 
 			// TODO: maybe move into landing page setup if lektor logic can benefit from knowing about semester
 			if(this.$entryParams.permissions.entschuldigungen_enabled) {
@@ -102,7 +103,6 @@ export const StudentComponent = {
 					})
 				})
 			}
-
 		},
 		studentChangedHandler() {
 
@@ -128,6 +128,9 @@ export const StudentComponent = {
 		},
 		async awaitPhrasen() {
 			await this.$entryParams.phrasenPromise
+		},
+		redrawTable() {
+			// empty method so landing page doesnt break on this tab
 		}
 	},
 	created() {
@@ -159,7 +162,7 @@ export const StudentComponent = {
 					</div>
 				</div>
 				<template v-if="$entryParams?.permissions?.entschuldigungen_enabled">
-					<core-tabs :config="tabsStudent" :modelValue="currentTab" ref="tabsStudent"></core-tabs>
+					<core-tabs :config="tabsStudent" ref="tabsStudent" @changed="handleTabChanged"></core-tabs>
 				</template>
 				<template v-else>
 					<StudentAnwesenheitComponent/>				
