@@ -182,7 +182,7 @@ class Entschuldigung_model extends \DB_Model
 				JOIN tbl_prestudent USING (person_id)
 				JOIN tbl_studiengang USING (studiengang_kz)
 				JOIN tbl_student USING(prestudent_id)
-			WHERE person_id = ?
+			WHERE person_id = ? AND tbl_student.semester > 0
 		";
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
