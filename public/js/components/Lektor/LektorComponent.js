@@ -833,7 +833,6 @@ export const LektorComponent = {
 			data.entschuldigungen.forEach(ent => {
 
 			})
-			console.log(data)
 			if(data.entschuldigt) {
 				row.getElement().style.color = "#0335f5";
 			}
@@ -861,10 +860,10 @@ export const LektorComponent = {
 	},
 	watch: {
 		'lektorState.beginn'(newVal) {
-			console.log('lektorState.beginn watcher', newVal)
+			// console.log('lektorState.beginn watcher', newVal)
 		},
 		'lektorState.ende'(newVal) {
-			console.log('lektorState.ende watcher', newVal)
+			// console.log('lektorState.ende watcher', newVal)
 		},
 		selectedDate(newVal) {
 			if(newVal === "") {
