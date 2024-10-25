@@ -294,6 +294,7 @@ export const AssistenzComponent = {
 
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		if(!tableDataSet) return
 		const rect = tableDataSet.getBoundingClientRect();
 
 		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
@@ -325,9 +326,7 @@ export const AssistenzComponent = {
 		},
 		getTooltipObj(){
 			return {
-				value: `Im Entschuldigungsmanagement können Sie als Studiengangsassistenz beziehungsweise als Administrator die von Studenten hochgeladenen Entschuldigungsdokumente überprüfen und den Status entsprechend vergeben.
-				
-				Bitte beachten Sie dass nur Entschuldigungen INNERHALB des angegebenen Zeitraumes angezeigt werden. Sollten Sie nach einer lang wirken Entschuldigung suchen, müssen Sie die Zeitspanne entsprechend weit setzen.`,
+				value: this.$p.t('global/tooltipAssistenz'),
 				class: "custom-tooltip"
 			}
 		}

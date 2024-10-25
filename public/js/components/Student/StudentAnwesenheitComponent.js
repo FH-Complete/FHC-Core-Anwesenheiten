@@ -214,7 +214,8 @@ export default {
 
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		// TODO: test collapsables behaviour in nested tabs and without by 2030
+		if(!tableDataSet) return
+		// TODO: test collapsables behaviour in nested tabs and without
 		const collapsables = document.getElementById('filterCollapsables' + tableID);
 		const rect = tableDataSet.getBoundingClientRect();
 		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
@@ -223,9 +224,7 @@ export default {
 	computed: {
 		getTooltipObj() {
 			return {
-				value: `Hier sehen Sie sämtliche digitale Anwesenheiten zugeordnet nach Lehrveranstaltung. Sie können eine positive Anwesenheit erreichen, indem Sie den während einer laufenden Anwesenheitskontrolle gültigen Zugangscode eintragen. Sie können hierfür den angezeigten QR Code scannen, welcher Sie entsprechend weiterleitet oder Sie können den Code manuell eingeben.
-				
-				Sollte es Ihnen technisch nicht möglich sein einen Zugangscode einzugeben, können Sie die unterrichtende Person bitten Ihre digitale Anwesenheit zu setzen.`,
+				value: this.$p.t('global/tooltipStudentAnwesenheit'),
 				class: "custom-tooltip"
 			}
 		}

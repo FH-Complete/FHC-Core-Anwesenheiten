@@ -366,11 +366,7 @@ export const StudentByLvaComponent = {
 		},
 		getTooltipObj() {
 			return {
-				value: `In dieser Detailansicht können Sie einzelne Anwesenheiten eines Studenten bearbeiten, falls ein anwesender Student aus technischen Gründen den Zugangscode nicht eingeben kann. Ebenso steht es Ihnen frei Studenten auszutragen, welche nicht anwesend sind aber den Zugangscode mit Hilfe von anwesenden Studenten erhalten haben.
-				
-				Falls eine Anwesenheit durch eine akzeptierte Entschuldigung entstanden ist, können Sie den Status nicht verändern.
-				
-				Es steht Ihnen frei die Anwesenheitseinträge mit Notiztexten zu versehen, welche dem Studenten nicht zugänglich sind`,
+				value: this.$p.t('global/tooltipStudentByLva'),
 				class: "custom-tooltip"
 			}
 		}

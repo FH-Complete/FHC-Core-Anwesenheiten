@@ -256,6 +256,7 @@ export default {
 
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		if(!tableDataSet) return
 		const rect = tableDataSet.getBoundingClientRect();
 
 		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
@@ -287,11 +288,7 @@ export default {
 	computed: {
 		getTooltipObj() {
 			return {
-				value: `Sie können eine Entschuldigung für einen Zeitraum von bis zu ` + this.$entryParams.permissions.entschuldigungMaxReach + ` Tagen in die Vergangenheit und bis zum Ende des aktuellen Semesters hochladen. Die erlaubten Dateitypen für das Dokument sind .pdf, .png und .jpg.
-				
-				Sobald Sie eine Entschuldigung hochladen wird die zugehörige Studiengangsassistenz informiert und Ihr Anliegen überprüft. Solange Ihre Entschuldigung noch keinen akzeptierten oder abgelehnten Status erhalten hat, steht es Ihnen frei diese inklusive Datei zu löschen. Sobald sie entweder akzeptiert oder abgelehnt wurde können Sie den Eintrag nichtmehr löschen.
-				
-				Bei einer akzeptierten Entschuldigung werden sämtliche digitalen Anwesenheiten in diesem Zeitraum als positiv gewertet. Eine abgelehnte Entschuldigung hat keine Auswirkungen auf ihre Anwesenheitsquote.`,
+				value: this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach]),
 				class: "custom-tooltip"
 			}
 		}

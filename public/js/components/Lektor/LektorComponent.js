@@ -909,19 +909,13 @@ export const LektorComponent = {
 		},
 		getTooltipKontrolleLoeschen() {
 			return {
-				value: `Sollten Sie eine Anwesenheitskontrolle fälschlicherweise gestartet haben, können Sie diese löschen wenn sie nicht älter als ` + this.$entryParams.permissions.kontrolleDeleteMaxReach + ` Tage ist. Dabei werden sämtliche mit dieser Kontrolle verknüpfte Anwesenheitseinträge Ihrer Studenten ebenfalls gelöscht und Ihre Anwesenheitsquoten neu berechnet.
-				
-				Sollten Sie eine Kontrolle, welche älter als ` + this.$entryParams.permissions.kontrolleDeleteMaxReach + ` Tage ist, löschen wollen, wenden Sie sich an einen Administrator.`,
+				value: this.$p.t('global/tooltipLektorDeleteKontrolle', [this.$entryParams.permissions.kontrolleDeleteMaxReach ]),
 				class: "custom-tooltip"
 			}
 		},
 		getTooltipKontrolleNeu() {
 			return {
-				value: `Um eine Anwesenheitskontrolle für Ihre ausgewählte Unterrichtsgruppe durchzuführen, wählen Sie bitte einen Termin aus dem Stundenplan aus oder geben händisch die gewünschte Gültigkeitkeitsdauer der Kontrolle an.
-				
-				Die Gültigkeitsdauer bestimmt die Gewichtung der Anwesenheit in Relation zum Gesamtausmaß, sie können diese aber nach eigenem Ermessen anpassen und müssen sich nicht streng an die Termine im Stundenplan halten.
-				
-				Sie können pro Datum und Unterrichtsgruppe eine Anwesenheitskontrolle pro Tag eröffnen, welche jedoch beliebig oft aufgerufen und von Studenten eingecheckt werden kann. Es gelten dabei ihre zuletzt eingetragenen Zeiten. Ein Student muss nur einmal am Tag pro Gruppe einchecken um als anwesend registriert zu sein, egal wie oft Sie die Kontrolle starten.`,
+				value: this.$p.t('global/tooltipLektorStartKontrolle'),
 				class: "custom-tooltip"
 			}
 		},

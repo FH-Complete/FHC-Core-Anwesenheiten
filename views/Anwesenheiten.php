@@ -43,7 +43,7 @@ $includesArray = array(
 $cis_4 = false;
 if(defined('CIS4') && CIS4) {
 	$cis_4 = true;
-	$this->load->view('templates/CISHTML-Header', $includesArray);
+	$this->load->view('templates/CISVUE-Header', $includesArray);
 } else {
 	$this->load->view('templates/FHC-Header', $includesArray);
 }
@@ -58,7 +58,8 @@ if(defined('CIS4') && CIS4) {
 
 <?php
 	if(defined('CIS4') && CIS4) {
-		$this->load->view('templates/CISHTML-Footer', $includesArray);
+		$this->load->view('templates/CISVUE-Footer', $includesArray);
+
 	} else {
 		$this->load->view('templates/FHC-Footer', $includesArray);
 	}
