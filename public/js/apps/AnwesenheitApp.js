@@ -109,8 +109,6 @@ anwesenheitApp.config.globalProperties.$formatTime = (timeStamp, delimiter = '-'
 	}
 }
 
-anwesenheitApp.directive('tooltip', primevue.tooltip)
-
 anwesenheitApp
 	.use(router)
 	.use(FhcApi, fhcapifactory)
@@ -122,4 +120,24 @@ anwesenheitApp
 		}
 	})
 	.use(Phrasen)
-	.mount("#main");
+
+function getTarget(el) {
+
+	return primevue.utils.DomHandler.hasClass(el, "p-inputwrapper")
+		? primevue.utils.DomHandler.findSingle(el, "input")
+		: el;
+}
+
+anwesenheitApp.directive("tooltip", {
+
+	mounted(el) {
+		console.log('mounted(el)', primevue)
+
+		const target = getTarget(el);
+		target.$_ptooltipZIndex ??=
+			anwesenheitApp.config.globalProperties.$primevue.config.zIndex.tooltip;
+	},
+	...primevue.tooltip,
+});
+
+anwesenheitApp.mount("#main");

@@ -561,7 +561,7 @@ export const LektorComponent = {
 				return as > bs ? 1 : a < b ? -1 : 0
 			})
 		},
-		async setup() {
+		async setupLektorComponent() {
 			// use this to show actual entries with should be entries from stundenplan merged
 			// this.lektorState.dates = []
 			this.$entryParams.available_termine.value.forEach(termin => {
@@ -684,7 +684,7 @@ export const LektorComponent = {
 			this.lektorState.gruppen = new Set()
 
 			this.$entryParams.lektorState = null
-			this.setup()
+			this.setupLektorComponent()
 		},
 		setupData(data) {
 			this.lektorState.students = data[0] ?? []
@@ -696,7 +696,7 @@ export const LektorComponent = {
 			this.$entryParams.available_termine.value = data[6] ?? []
 			this.lektorState.gruppen = new Set()
 			
-			this.setup()
+			this.setupLektorComponent()
 		},
 		async maUIDchangedHandler() {
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
@@ -849,6 +849,7 @@ export const LektorComponent = {
 
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		if(!tableDataSet) return
 		const rect = tableDataSet.getBoundingClientRect();
 
 		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height

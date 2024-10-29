@@ -355,6 +355,7 @@ export const StudentByLvaComponent = {
 
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+		if(!tableDataSet) return
 		const rect = tableDataSet.getBoundingClientRect();
 
 		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
