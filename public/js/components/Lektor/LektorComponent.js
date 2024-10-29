@@ -830,9 +830,6 @@ export const LektorComponent = {
 		entschuldigtColoring: function (row) {
 			const data = row.getData()
 
-			data.entschuldigungen.forEach(ent => {
-
-			})
 			if(data.entschuldigt) {
 				row.getElement().style.color = "#0335f5";
 			}

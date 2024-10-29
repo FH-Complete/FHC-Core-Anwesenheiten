@@ -131,8 +131,6 @@ function getTarget(el) {
 anwesenheitApp.directive("tooltip", {
 
 	mounted(el) {
-		console.log('mounted(el)', primevue)
-
 		const target = getTarget(el);
 		target.$_ptooltipZIndex ??=
 			anwesenheitApp.config.globalProperties.$primevue.config.zIndex.tooltip;
