@@ -29,8 +29,8 @@ class QR_model extends \DB_Model
 	{
 		$query = "
 			DELETE FROM extension.tbl_anwesenheit_check
-			WHERE tbl_anwesenheit_check.insertamum < NOW() - INTERVAL '{$milliseconds} milliseconds';";
+			WHERE tbl_anwesenheit_check.insertamum < NOW() - INTERVAL (?+' milliseconds');";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query[$milliseconds]);
 	}
 }

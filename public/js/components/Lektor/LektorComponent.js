@@ -197,7 +197,7 @@ export const LektorComponent = {
 			})
 		},
 		pollAnwesenheit() {
-			this.$fhcApi.factory.Kontrolle.pollAnwesenheiten(this.anwesenheit_id).then(res => {
+			this.$fhcApi.factory.Kontrolle.pollAnwesenheiten(this.anwesenheit_id, this.lv_id).then(res => {
 				this.checkInCount = res.data.anwesend
 				this.abwesendCount = res.data.abwesend
 				this.entschuldigtCount = res.data.entschuldigt
@@ -439,7 +439,7 @@ export const LektorComponent = {
 				this.loading = false
 			})
 
-			this.$fhcApi.factory.Kontrolle.deleteQRCode(this.anwesenheit_id).then(
+			this.$fhcApi.factory.Kontrolle.deleteQRCode(this.anwesenheit_id, this.lv_id).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwKontrolleBeendet'))
