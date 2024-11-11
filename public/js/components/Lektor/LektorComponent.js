@@ -514,7 +514,7 @@ export const LektorComponent = {
 
 			if(entry.lkt_ueberschreibbar === false) zusatz = ' ('+entry.anmerkung+')'
 			if(entry.mitarbeiter_uid !== null) zusatz = ' (ma)'
-			if(entry.stg_kz_student === '9005') {
+			if(entry.stg_kz_student == this.lektorState.a_o_kz) {
 				zusatz = ' (a.o.)'
 			}
 			if(entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) zusatz = ' (d.d.)'
@@ -539,7 +539,6 @@ export const LektorComponent = {
 				else if (anw.status === this.$entryParams.permissions.entschuldigt_status) k.ent++
 			})
 
-			// console.log('this.lektorState.kontrollen', this.lektorState.kontrollen)
 		},
 		setDates(anwEntries) {
 
@@ -607,6 +606,7 @@ export const LektorComponent = {
 				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
 				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
+				// TODO: auslagern
 				const isEntschuldigt = !!this.lektorState.entschuldigtStati.find(status => {
 					const vonDate = new Date(status.von)
 					const bisDate = new Date(status.bis)
@@ -681,6 +681,7 @@ export const LektorComponent = {
 			this.lektorState.entschuldigtStati = this.$entryParams.lektorState.entschuldigtStati
 			this.lektorState.kontrollen = this.$entryParams.lektorState.kontrollen
 			this.lektorState.viewData = this.$entryParams.lektorState.viewData
+			this.lektorState.a_o_kz = this.$entryParams.lektorState.a_o_kz
 			this.lektorState.gruppen = new Set()
 
 			this.$entryParams.lektorState = null
@@ -694,6 +695,7 @@ export const LektorComponent = {
 			this.lektorState.kontrollen = data[4] ?? []
 			this.lektorState.viewData = data[5] ?? []
 			this.$entryParams.available_termine.value = data[6] ?? []
+			this.lektorState.a_o_kz = data[7] ?? []
 			this.lektorState.gruppen = new Set()
 			
 			this.setupLektorComponent()
@@ -858,10 +860,10 @@ export const LektorComponent = {
 	},
 	watch: {
 		'lektorState.beginn'(newVal) {
-			// console.log('lektorState.beginn watcher', newVal)
+			// could set selectedDate time in here or ende watcher and calculate entschuldigt status visualization from
+			// lektors selected attendance check times in order to support status coloring for 'future' Kontrollen.
 		},
 		'lektorState.ende'(newVal) {
-			// console.log('lektorState.ende watcher', newVal)
 		},
 		selectedDate(newVal) {
 			if(newVal === "") {
@@ -883,7 +885,9 @@ export const LektorComponent = {
 
 				const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
 
+				debugger
 				const isEntschuldigt = !!this.lektorState.entschuldigtStati.find(status => {
+					debugger
 					const vonDate = new Date(status.von)
 					const bisDate = new Date(status.bis)
 					return status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate

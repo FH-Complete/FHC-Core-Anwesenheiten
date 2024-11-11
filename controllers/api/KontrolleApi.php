@@ -38,6 +38,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('organisation/Erhalter_model', 'ErhalterModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
@@ -153,7 +154,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
 		$leTermine = getData($result);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine));
+		$result = $this->_ci->ErhalterModel->load();
+		$erhalter = getData($result)[0];
+
+		$a_o_kz = '9' . sprintf("%03s", $erhalter->erhalter_kz);
+
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine, $a_o_kz));
 
 	}
 
