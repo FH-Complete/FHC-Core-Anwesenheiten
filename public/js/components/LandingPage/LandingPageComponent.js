@@ -177,7 +177,7 @@ export default {
 					})
 
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
-				} else if(lv_id && sem_kurzbz && le_ids) {
+				} else if(this.$entryParams.permissions.lektor && lv_id && sem_kurzbz && le_ids) {
 					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(()=>{
 						resolve(true)
 					})
