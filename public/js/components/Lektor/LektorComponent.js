@@ -885,9 +885,7 @@ export const LektorComponent = {
 
 				const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
 
-				debugger
 				const isEntschuldigt = !!this.lektorState.entschuldigtStati.find(status => {
-					debugger
 					const vonDate = new Date(status.von)
 					const bisDate = new Date(status.bis)
 					return status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate
