@@ -139,7 +139,6 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getEntschuldigungsstatusForPersonIds($personIds)
 	{
 
-
 		$query ='SELECT person_id, von, bis
 			FROM extension.tbl_anwesenheit_entschuldigung
 			WHERE person_id IN ? AND akzeptiert = true;';
@@ -270,17 +269,17 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAnwQuoteForPrestudentIds($prestudent_Ids, $lv_id, $sem_kurzbz)
 	{
 		$query = "
-			SELECT prestudent_id, extension.get_anwesenheiten_by_time(prestudent_id, {$lv_id}, '{$sem_kurzbz}') as sum
+			SELECT prestudent_id, extension.get_anwesenheiten_by_time(prestudent_id, ?, ?) as sum
 			FROM public.tbl_student
 			WHERE prestudent_id IN ?";
 
-		return $this->execQuery($query, [$prestudent_Ids]);
+		return $this->execQuery($query, [$lv_id, $sem_kurzbz, $prestudent_Ids]);
 	}
 	public function deleteUserAnwesenheitById($anwesenheit_user_id)
 	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = {$anwesenheit_user_id}";
+		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = ?";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$anwesenheit_user_id]);
 	}
 
 	public function deleteUserAnwesenheitByIds($ids)
@@ -292,9 +291,9 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function deleteAllByAnwesenheitId($anwesenheit_id)
 	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = {$anwesenheit_id}";
+		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = ?";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$anwesenheit_id]);
 	}
 
 }

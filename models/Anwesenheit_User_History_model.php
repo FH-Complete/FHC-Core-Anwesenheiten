@@ -15,9 +15,9 @@ class Anwesenheit_User_History_model extends \DB_Model
 
 	public function deleteAllByAnwesenheitId($anwesenheit_id) {
 
-		$query = "DELETE FROM extension.tbl_anwesenheit_user_history WHERE anwesenheit_id = {$anwesenheit_id}";
+		$query = "DELETE FROM extension.tbl_anwesenheit_user_history WHERE anwesenheit_id = ?";
 
-		return $this->execQuery($query);
+		return $this->execQuery($query, [$anwesenheit_id]);
 	}
 
 }

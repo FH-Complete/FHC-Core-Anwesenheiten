@@ -18,7 +18,7 @@ class ProfilApi extends FHCAPI_Controller
 				'deleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'checkInAnwesenheit' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
-				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
+				'getAnwesenheitSumByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
 
@@ -61,6 +61,9 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($uid === null) $uid = $this->_uid;
 
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
 		$result = $this->_ci->AnwesenheitModel->getStudentViewData($uid);
 
 		if(isError($result)) $this->terminateWithError($result);
@@ -80,6 +83,10 @@ class ProfilApi extends FHCAPI_Controller
 		$studiensemester = $this->_ci->input->get('studiensemester');
 		$uid = $this->_ci->input->get('uid');
 		$person_id = $this->_ci->input->get('person_id');
+
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
@@ -262,7 +269,7 @@ class ProfilApi extends FHCAPI_Controller
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 
 		$file = array(
-			'kategorie_kurzbz' => 'fas',
+			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 			'version' => 0,
 			'name' => $_FILES['files']['name'],
 			'mimetype' => $_FILES['files']['type'],
@@ -451,6 +458,28 @@ class ProfilApi extends FHCAPI_Controller
 
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCalculatingAnwQuota'), 'general');
 		$this->terminateWithSuccess(getData($result));
+	}
+
+	/**
+	 * @param $le_id
+	 * @return bool
+	 *
+	 * checks Berechtigungen for Admin/Assistenz or is Student and sending their own $uid
+	 */
+	private function isAdminOrStudentCheckingItself($uid)
+	{
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		if($isAdmin) return true;
+
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
+		if($isAssistenz) return true;
+
+		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
+		if($isStudent) {
+			return getAuthUID() == $uid;
+		}
+
+		return false;
 	}
 
 	private function _setAuthUID()

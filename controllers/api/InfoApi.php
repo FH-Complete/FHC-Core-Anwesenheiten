@@ -14,14 +14,12 @@ class InfoApi extends FHCAPI_Controller
 				'getStudiensemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getStunden' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getStudentInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_lektor:rw'),
 				'getStudiengaenge' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getAktuellesSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'populateDBWithAnwEntries' => array('extension/anwesenheit_admin:rw'),
-				'populateDBWithEntschuldigungen' => array ('extension/anwesenheit_admin:rw')
+				'getAktuellesSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
 			)
 		);
 
@@ -225,119 +223,6 @@ class InfoApi extends FHCAPI_Controller
 
 		if (!$this->_uid)
 			show_error('User authentification failed');
-	}
-
-	public function populateDBWithAnwEntries()
-	{
-		// insert tbl.extension_anwesenheit_user entries for every LE of every LVA of every Studiengang to test limits
-
-		$sem_kurzbz = $this->input->get('sem');
-		$batchnum = $this->input->get('batchnum');
-
-		$studiengaenge = null;
-		if($batchnum == 1){
-			$studiengaenge = [227, 254, 779, 257, 330, 327, 256, 476, 333];
-		} elseif ($batchnum == 2) {
-			$studiengaenge = [255, 335, 258, 301, 228, 934, 302, 578];
-		} elseif ($batchnum == 3) {
-			$studiengaenge = [329, 915, 336, 303, 854, 334, 331, 300];
-		} elseif ($batchnum == 4) {
-			$studiengaenge = [332, 328, 692, 804, 585, 297, 298, 299];
-		}
-
-		$response = [];
-		$sgIndex = 0;
-		foreach($studiengaenge as $sg) {
-
-			// load all lva with le
-			$resLVA = $this->_ci->AnwesenheitModel->getAllLvaWithLEForSgAndSem($sg, $sem_kurzbz);
-			$data = $resLVA->retval;
-
-			$response[$sgIndex] = array(
-				'sg' => $sg,
-				'lva' => array()
-			);
-
-			foreach($data as $lvaRow) {
-				$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id] = [];
-
-				$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$lvaRow->lehreinheit_id] = [];
-
-				// find termine for LE
-				$resTermine = $this->_ci->AnwesenheitModel->getLETermine($lvaRow->lehreinheit_id);
-				$dataTermine = $resTermine->retval;
-
-				// kontrolle and anwesenheiten on each termin
-				$terminIndex = 0;
-
-				foreach($dataTermine as $terminRow) {
-
-					$response[$sgIndex]['lva'][$lvaRow->lehrveranstaltung_id][$lvaRow->lehreinheit_id][$terminIndex] = $terminRow;
-
-					$vonString = $terminRow->datum.' '.$terminRow->beginn;
-					$endeString = $terminRow->datum.' '.$terminRow->ende;
-
-					$insert = $this->_ci->AnwesenheitModel->insert(array(
-						'lehreinheit_id' => $lvaRow->lehreinheit_id,
-						'insertamum' => date('Y-m-d H:i:s'),
-						'von' => $vonString,
-						'bis' => $endeString
-					));
-
-					$anwesenheit_id = $insert->retval;
-					$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
-						$lvaRow->lehreinheit_id,
-						$anwesenheit_id,
-						$vonString,
-						$endeString,
-						'abwesend',
-						'entschuldigt');
-
-					$terminIndex++;
-				}
-			}
-			$sgIndex++;
-		}
-
-		$this->terminateWithSuccess($response);
-	}
-
-	public function populateDBWithEntschuldigungen() {
-
-		$res = $this->_ci->AnwesenheitModel->getRandomStudentPersonIDs();
-		$data = $res->retval;
-
-		$start = new DateTime('2024-05-01 00:00:01');
-		$end = new DateTime('2024-12-30 23:59:59');
-
-		foreach ($data as $datarow) {
-			// generate random $von & $bis timestrings
-			$randomTimestamp1 = mt_rand($start->getTimestamp(), $end->getTimestamp());
-			$von = date('Y-m-d H:i:s', $randomTimestamp1);
-			$vonDateTime = new DateTime($von);
-
-			$randomTimestamp2 = mt_rand($start->getTimestamp(), $end->getTimestamp());
-			$bis = date('Y-m-d H:i:s', $randomTimestamp2);
-			$bisDateTime = new DateTime($bis);
-
-			if($bisDateTime < $vonDateTime) {
-				$tmp = $bis;
-				$bis = $von;
-				$von = $tmp;
-			}
-
-			$this->_ci->EntschuldigungModel->insert(
-				array(
-					'person_id' => $datarow->person_id,
-					'von' => $von,
-					'bis' => $bis,
-					'dms_id' => 314240,
-					'insertvon' => $this->_uid,
-					'version' => 1
-				)
-			);
-		}
-
 	}
 
 }
