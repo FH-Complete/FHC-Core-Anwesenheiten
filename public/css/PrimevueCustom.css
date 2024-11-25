@@ -1,0 +1,16 @@
+.custom-tooltip {
+	max-height: 400px;
+	max-width: 600px;
+	/*TODO: remove margin-left hotfix for iframe views and find sophisticated solution*/
+	margin-left: 160px;
+}
+
+.p-tooltip-arrow {
+	position: absolute;
+	width: 0;
+	height: 0;
+	border-color: transparent;
+	border-style: solid;
+	/*TODO: use the arrow again but with hotfix it looks dumb so lets hide it*/
+	visibility: hidden;
+}
