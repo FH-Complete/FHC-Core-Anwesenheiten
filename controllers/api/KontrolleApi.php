@@ -38,6 +38,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('organisation/Erhalter_model', 'ErhalterModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
@@ -103,6 +104,9 @@ class KontrolleApi extends FHCAPI_Controller
 		$ma_uid = $result->ma_uid;
 		$date = $result->date;
 
+		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
 		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
@@ -150,7 +154,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
 		$leTermine = getData($result);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine));
+		$result = $this->_ci->ErhalterModel->load();
+		$erhalter = getData($result)[0];
+
+		$a_o_kz = '9' . sprintf("%03s", $erhalter->erhalter_kz);
+
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine, $a_o_kz));
 
 	}
 
@@ -164,6 +173,9 @@ class KontrolleApi extends FHCAPI_Controller
 		$prestudent_id = $this->input->get('prestudent_id');
 		$lv_id = $this->input->get('lv_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
@@ -184,7 +196,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 		// check if user is lektor for that le or admin/assistenz
 		$berechtigt = $this->isAdminOrTeachesLE($le_id);
-		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
 
@@ -217,6 +229,8 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
+		// TODO: check for LVA or LE zuteilung here?
+
 		$le_id = $result->le_id;
 
 		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id);
@@ -238,7 +252,10 @@ class KontrolleApi extends FHCAPI_Controller
 
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 
-			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
+				$this->_ci->config->item('ANWESEND_STATUS'),
+				$this->_ci->config->item('ABWESEND_STATUS'),
+				$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
 			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]));
 
@@ -345,6 +362,9 @@ class KontrolleApi extends FHCAPI_Controller
 		$le_id = $result->le_id;
 		$date = $result->datum;
 
+		$berechtigt = $this->isAdminOrTeachesLe($le_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+
 		$beginn = $result->beginn;
 		$von = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds, $date->month, $date->day, $date->year));
 
@@ -356,7 +376,8 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
 		}
 
-		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $date);
+		$dateString = $date->year.'-'.$date->month.'-'.$date->day;
+		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $dateString);
 		$existsKontrolle = hasData($resultKontrolle);
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -412,7 +433,10 @@ class KontrolleApi extends FHCAPI_Controller
 			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 
 
-			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
+				$this->_ci->config->item('ANWESEND_STATUS'),
+				$this->_ci->config->item('ABWESEND_STATUS'),
+				$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
 			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]));
 
@@ -447,7 +471,10 @@ class KontrolleApi extends FHCAPI_Controller
 				$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
 			// count entschuldigt entries
-			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
+			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
+				$this->_ci->config->item('ANWESEND_STATUS'),
+				$this->_ci->config->item('ABWESEND_STATUS'),
+				$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
 			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0]));
 		}
@@ -455,7 +482,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 	/**
 	 * POST METHOD
-	 * expects 'anwesenheit_id'
+	 * expects 'anwesenheit_id', 'lv_id'
 	 * deletes extisting QR Code
 	 * returns deleted id or error message
 	 */
@@ -463,7 +490,10 @@ class KontrolleApi extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 		$anwesenheit_id = $result->anwesenheit_id;
+		$lv_id = $result->lv_id;
 
+		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		$deleteresp = $this->_ci->QRModel->delete(array(
 			'anwesenheit_id' => $anwesenheit_id
@@ -476,22 +506,41 @@ class KontrolleApi extends FHCAPI_Controller
 	}
 
 	/**
-	 * @param $le
+	 * @param $le_id
 	 * @return bool
 	 *
-	 * checks Berechtigungen for Admin/Assistenz or Lektor and is Teaching lehreinheit
+	 * checks Berechtigungen for Admin or Lektor and is Teaching lehreinheit
 	 */
-	private function isAdminOrTeachesLE($le)
+	private function isAdminOrTeachesLE($le_id)
 	{
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
 		if($isAdmin) return true;
 
-		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
-		if($isAssistenz) return true;
+		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
+		if($isLektor) {
+			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLE($le_id, $this->_uid);
+			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
+
+			return $lektorIsTeaching;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param $lva_id
+	 * @return bool
+	 *
+	 * checks Berechtigungen for Admin or Lektor and is Teaching lehrveranstaltung
+	 */
+	private function isAdminOrTeachesLva($lva_id)
+	{
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		if($isAdmin) return true;
 
 		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
 		if($isLektor) {
-			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLE($le, $this->_uid);
+			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
 			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
 
 			return $lektorIsTeaching;
@@ -515,10 +564,11 @@ class KontrolleApi extends FHCAPI_Controller
 
 		// check if user is lektor for that le or admin/assistenz
 		$berechtigt = $this->isAdminOrTeachesLE($le_id);
-		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 
+		$dateString = $date->year.'-'.$date->month.'-'.$date->day;
 		// find anwesenheitkontrolle by le_id and date
-		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $date);
+		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $dateString);
 
 		//$this->p->t('global', 'errorDeletingAnwKontrolle')
 		if(!hasData($resultKontrolle)) {
@@ -582,15 +632,22 @@ class KontrolleApi extends FHCAPI_Controller
 
 	/**
 	 * POST METHOD
-	 * expects parameter 'anwesenheit_id'
+	 * expects parameter 'anwesenheit_id', 'lv_id'
 	 *
-	 * returns positive checkIn count for anwesenheitskontrolle (entschuldigt or anwesend)
+	 * returns checkIn count for anwesenheitskontrolle
 	 */
 	public function pollAnwesenheiten() {
 		$result = $this->getPostJSON();
 		$anwesenheit_id = $result->anwesenheit_id;
+		$lv_id = $result->lv_id;
 
-		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id);
+		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
+		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
+			$this->_ci->config->item('ANWESEND_STATUS'),
+			$this->_ci->config->item('ABWESEND_STATUS'),
+			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 		$this->terminateWithSuccess(getData($countPoll)[0]);
 	}
 
@@ -605,6 +662,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$ids = $result->ids;
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
+
+		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
 
 		$result = $this->_ci->AnwesenheitUserModel->getAnwQuoteForPrestudentIds($ids, $lv_id,  $sem_kurzbz);
 

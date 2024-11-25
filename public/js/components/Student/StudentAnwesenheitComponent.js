@@ -63,7 +63,7 @@ export default {
 		percentFormatter: function (cell) {
 			const data = cell.getData()
 			const val = data.sum ??  data.anteil ?? '-'
-			return '<div style="display: flex;'+(val < (this.$entryParams.permissions.positiveRatingThreshold * 100) ? 'color: red; ' : '') +'justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+ val + ' %</div>'
 		},
 		bottomCalcParamLookup (values, data) {
 			const first = data[0]
