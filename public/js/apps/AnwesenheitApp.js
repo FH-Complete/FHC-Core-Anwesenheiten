@@ -133,9 +133,4 @@ anwesenheitApp.directive("tooltip", {
 	...primevue.tooltip,
 });
 
-router.beforeEach((to, from) => {
-	console.log('to', to)
-	console.log('from', from)
-})
-
 anwesenheitApp.mount("#main");
