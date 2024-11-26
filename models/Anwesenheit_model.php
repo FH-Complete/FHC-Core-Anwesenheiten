@@ -55,7 +55,7 @@ class Anwesenheit_model extends \DB_Model
 		$query = "
 			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis
 			FROM extension.tbl_anwesenheit
-			WHERE lehreinheit_id =  ? AND von >= (NOW() - INTERVAL (?+' days'))
+			WHERE lehreinheit_id = ? AND von >= (NOW() - (? || ' day')::interval)
 			ORDER BY datum DESC
 		";
 
