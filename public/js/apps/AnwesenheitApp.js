@@ -32,11 +32,6 @@ const router = VueRouter.createRouter({
 			props: true
 		},
 		{
-			path: '/Profil/Scan',
-			name: 'Scan',
-			component: ScanComponent,
-		},
-		{
 			path: '/Profil/Entschuldigung',
 			name: 'Profil',
 			component: LandingPageComponent,
@@ -137,5 +132,10 @@ anwesenheitApp.directive("tooltip", {
 	},
 	...primevue.tooltip,
 });
+
+router.beforeEach((to, from) => {
+	console.log('to', to)
+	console.log('from', from)
+})
 
 anwesenheitApp.mount("#main");

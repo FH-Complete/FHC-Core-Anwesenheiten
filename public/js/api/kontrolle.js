@@ -47,9 +47,9 @@ export default {
 		return this.$fhcApi.post(url, payload, null)
 
 	},
-	async deleteQRCode(anwesenheit_id, lva_id) {
+	async deleteQRCode(anwesenheit_id, lv_id) {
 
-		const payload = {anwesenheit_id, lva_id}
+		const payload = {anwesenheit_id, lv_id}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/deleteQRCode';
 		return this.$fhcApi.post(url, payload, null)
 

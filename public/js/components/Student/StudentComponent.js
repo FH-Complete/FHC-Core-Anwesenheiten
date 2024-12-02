@@ -133,6 +133,14 @@ export const StudentComponent = {
 			// empty method so landing page doesnt break on this tab
 		}
 	},
+	computed: {
+		getTooltipTestphase() {
+			return {
+				value: this.$p.t('global/tooltipStudentTestphase'),
+				class: "custom-tooltip"
+			}
+		},	
+	},
 	created() {
 	},
 	mounted() {
@@ -150,7 +158,11 @@ export const StudentComponent = {
 			<template #main>	
 				<div ref="studentHeaderRow" class="row">
 					<div class="col-6">
-						<h1 class="h4 mb-5">{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} <span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span></h1>
+						<h1 class="h4 mb-5">
+							{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} 
+							<span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span>
+							<i v-tooltip.bottom="getTooltipTestphase" class="fa fa-circle-question" style="margin-left: 12px;"></i>
+						</h1>				
 					</div>
 					<div class="col-4">
 						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
