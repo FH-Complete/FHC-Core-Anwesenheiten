@@ -60,7 +60,7 @@ export const StudentComponent = {
 			// if student is logged in as himself load his own viewData
 			if(!this.$entryParams.selected_student_info) {
 
-					this.$fhcApi.factory.Profil.getProfileViewData(null).then(res => {
+					this.$fhcApi.factory.Anwesenheiten.Profil.getProfileViewData(null).then(res => {
 
 						const data = res.data.retval[0]
 						this.viewDataStudent.vorname = data.vorname
@@ -95,7 +95,7 @@ export const StudentComponent = {
 			// TODO: maybe move into landing page setup if lektor logic can benefit from knowing about semester
 			if(this.$entryParams.permissions.entschuldigungen_enabled) {
 				this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
-					this.$fhcApi.factory.Info.getAktuellesSemester().then(res => {
+					this.$fhcApi.factory.Anwesenheiten.Info.getAktuellesSemester().then(res => {
 						if(res?.meta?.status === 'success') {
 							this.$entryParams.aktuellesSemester = res?.data?.[0]
 							this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
@@ -109,7 +109,7 @@ export const StudentComponent = {
 			this.$refs.tabsStudent._.refs.current.reload()
 
 			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
-			this.$fhcApi.factory.Profil.getProfileViewData(uid).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Profil.getProfileViewData(uid).then(res => {
 
 				if(!res?.data?.retval?.[0]) return
 				const data = res.data.retval[0]

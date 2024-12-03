@@ -14,6 +14,7 @@ class ProfilApi extends FHCAPI_Controller
 		parent::__construct(array(
 				'getProfileViewData' => array ('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getAllAnwByUID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getAllAnwQuotasForLvaByUID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'addEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'deleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
@@ -112,6 +113,48 @@ class ProfilApi extends FHCAPI_Controller
 			} else {
 				$this->terminateWithSuccess(array($result));
 			}
+		}
+	}
+
+	/**
+	 * GET METHOD
+	 * expects parameter 'studiensemester', 'uid'
+	 *
+	 * returns list of all anwesenheiten user entries of student in semester
+	 */
+	public function getAllAnwQuotasForLvaByUID()
+	{
+
+		$studiensemester = $this->_ci->input->get('studiensemester');
+		$uid = $this->_ci->input->get('uid');
+
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+
+		if($studiensemester === null || $studiensemester === 'null') {
+
+			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$aktuellesSem = getData($result)[0];
+			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
+		}
+
+		if (!isEmptyString($studiensemester))
+		{
+			$studiensemester = $this->_ci->StudiensemesterModel->load($studiensemester);
+
+			if (isError($studiensemester) || !hasData($studiensemester))
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+			$studiensemester = getData($studiensemester)[0]->studiensemester_kurzbz;
+
+			$result = $this->_ci->AnwesenheitModel->getAllQuotasForLvaByStudent($uid, $studiensemester);
+			$data = null;
+			if(!isError($result) && hasData($result)) {
+				$data = getData($result);
+			} 
+			
+			$this->terminateWithSuccess($data);
 		}
 	}
 

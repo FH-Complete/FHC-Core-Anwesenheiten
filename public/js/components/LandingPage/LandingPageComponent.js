@@ -150,7 +150,7 @@ export default {
 			this.$entryParams.viewDataStudent.semester = Vue.ref('')
 		},
 		loadLvViewData() {
-			this.$fhcApi.factory.Info.getLvViewDataInfo(this.$entryParams.lv_id).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Info.getLvViewDataInfo(this.$entryParams.lv_id).then(res => {
 				if(res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
 			})
 		},
@@ -189,7 +189,7 @@ export default {
 		},
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
-				this.$fhcApi.factory.Info.getStudentsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
+				this.$fhcApi.factory.Anwesenheiten.Info.getStudentsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.availableStudents = []
 
 					res?.data?.retval?.forEach(e => {
@@ -212,7 +212,7 @@ export default {
 		},
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
-				this.$fhcApi.factory.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
+				this.$fhcApi.factory.Anwesenheiten.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
@@ -242,7 +242,7 @@ export default {
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
 			return new Promise(resolve => {
-				this.$fhcApi.factory.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
+				this.$fhcApi.factory.Anwesenheiten.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
 					// merge entries with same LE
 					const data = []
 

@@ -22,7 +22,7 @@ export const StudiengangDropdown = {
 	},
 	methods: {
 		loadDropdown() {
-			this.$fhcApi.factory.Info.getStudiengaenge(this.allowedStg).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Info.getStudiengaenge(this.allowedStg).then(res => {
 				if(res.meta.status !== "success") return
 				this.options = res.data.retval ?? [];
 

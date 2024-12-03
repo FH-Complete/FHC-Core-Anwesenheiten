@@ -1,4 +1,10 @@
 export default {
+	async getAllAnwQuotasForLvaByUID(studiensemester, uid) {
+		
+		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwQuotasForLvaByUID?studiensemester=${studiensemester}&uid=${uid}`;
+		return this.$fhcApi.get(url, null, null)
+		
+	},
 	async getAllAnwByUID(studiensemester, uid, person_id) {
 
 		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID?studiensemester=${studiensemester}&uid=${uid}&person_id=${person_id}`;

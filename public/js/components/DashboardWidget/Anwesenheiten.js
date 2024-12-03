@@ -1,8 +1,14 @@
 import AbstractWidget from '../../../../../js/components/DashboardWidget/Abstract';
 import anwesenheitenAPI from "../../api/fhcapifactory";
+import ScanComponent from "../Student/ScanComponent";
+import QuotasOverview from "../QuotasOverview";
 
 export default {
 	name: "WidgetsAnwesenheiten",
+	components: {
+		ScanComponent,
+		QuotasOverview
+	},
 	mixins: [AbstractWidget],
 	inject: {
 		viewData: {
@@ -15,7 +21,7 @@ export default {
 		}
 	},
 	data: () => ({
-
+		quotas: null
 	}),
 	methods: {
 
@@ -32,10 +38,13 @@ export default {
 		this.$emit('setConfig', false)
 	},
 	mounted() {
-		this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwByUID(null, this.viewData.uid, this.viewData.person_id)	
+
+		this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id)
+			.then(res => this.quotas = res.data)
 	},
 	template: /*html*/ `
     <div class="widgets-anw w-100 h-100" style="padding: 1rem 1rem;">
-		uid: {{ viewData?.uid }}, person_id {{ viewData?.person_id}}
+		<ScanComponent></ScanComponent>
+		<QuotasOverview :quotas="this.quotas"></QuotasOverview>
     </div>`,
 };

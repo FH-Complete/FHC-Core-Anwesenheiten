@@ -257,6 +257,28 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query, [$root, $prestudent_id, $lva_id, $sem_kurzbz, $prestudent_id]);
 	}
 
+	// quota per lva
+	public function getAllQuotasForLvaByStudent($student, $studiensemester)
+	{
+		$query = '
+			SELECT DISTINCT tbl_lehrveranstaltung.bezeichnung,
+			       lehrveranstaltung_id,
+				extension.get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit
+			FROM extension.tbl_anwesenheit
+				JOIN extension.tbl_anwesenheit_user ON tbl_anwesenheit.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
+				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
+				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+				JOIN public.tbl_prestudent ON tbl_anwesenheit_user.prestudent_id = tbl_prestudent.prestudent_id
+				JOIN public.tbl_person ON tbl_prestudent.person_id = tbl_person.person_id
+				JOIN public.tbl_benutzer ON tbl_person.person_id = tbl_benutzer.person_id
+			WHERE tbl_benutzer.uid = ? AND tbl_lehreinheit.studiensemester_kurzbz = ?
+			ORDER BY tbl_lehrveranstaltung.bezeichnung;
+		';
+
+		return $this->execReadOnlyQuery($query, array($student, $studiensemester));
+	}
+	
+	// get all anw entries for student in semester
 	public function getAllByStudent($student, $studiensemester)
 	{
 		$query = '

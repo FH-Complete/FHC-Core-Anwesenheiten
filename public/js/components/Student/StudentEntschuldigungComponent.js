@@ -107,7 +107,7 @@ export default {
 
 
 
-			this.$fhcApi.factory.Profil.addEntschuldigung(formData).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Profil.addEntschuldigung(formData).then(res => {
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
 					{
@@ -158,7 +158,7 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.factory.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
+			this.$fhcApi.factory.Anwesenheiten.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
 
 				if (response.meta.status === "success")
 				{
@@ -214,7 +214,7 @@ export default {
 		},
 		reload(){
 			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-			this.$fhcApi.factory.Profil.getEntschuldigungenByPersonID(id).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(id).then(res => {
 				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
 			})
 		},
