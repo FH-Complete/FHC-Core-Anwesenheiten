@@ -74,7 +74,7 @@ const anwesenheitApp = Vue.createApp({
 
 	},
 	mounted() {
-		if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.bindKeys({Anwesenheiten: anwesenheitenAPI.factory}, this.$fhcApi.factory)
+		if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 	}
 });
 anwesenheitApp.config.globalProperties.$entryParams = {

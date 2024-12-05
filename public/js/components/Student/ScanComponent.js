@@ -68,7 +68,7 @@ export default {
 		}
 	},
 	template: `
-	<div class="row-cols">
+	<div class="row-cols mb-4">
 		<div class="row-col-4 mt-3 text-center">
 			<core-base-layout
 				:title=getBaseLayoutTitle>
