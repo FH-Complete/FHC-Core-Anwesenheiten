@@ -53,5 +53,12 @@ export default {
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAnwesenheitSumByLva';
 		return this.$fhcApi.post(url, payload, null)
 
-	}
+	},
+	async getAnwesenheitenByLva(sem_kurzbz, lv_id, prestudent_id, uid) {
+		
+		const payload = {sem_kurzbz, lv_id, prestudent_id, uid}
+		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwesenheitenByStudentByLva`;
+		return this.$fhcApi.post(url, payload, null)
+		
+	}	
 }

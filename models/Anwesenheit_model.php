@@ -263,6 +263,7 @@ class Anwesenheit_model extends \DB_Model
 		$query = '
 			SELECT DISTINCT tbl_lehrveranstaltung.bezeichnung,
 			       lehrveranstaltung_id,
+			       tbl_prestudent.prestudent_id,
 				extension.get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit
 			FROM extension.tbl_anwesenheit
 				JOIN extension.tbl_anwesenheit_user ON tbl_anwesenheit.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id

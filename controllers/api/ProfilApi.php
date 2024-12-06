@@ -15,6 +15,7 @@ class ProfilApi extends FHCAPI_Controller
 				'getProfileViewData' => array ('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getAllAnwByUID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
 				'getAllAnwQuotasForLvaByUID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_student:rw'),
 				'addEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'deleteEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
 				'getEntschuldigungenByPersonID' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
@@ -156,6 +157,37 @@ class ProfilApi extends FHCAPI_Controller
 			
 			$this->terminateWithSuccess($data);
 		}
+	}
+
+	/**
+	 * GET METHOD
+	 * expects parameter 'studiensemester', 'uid'
+	 *
+	 * returns list of all anwesenheiten user entries of student in semester
+	 */
+	public function getAllAnwesenheitenByStudentByLva() {
+
+		$result = $this->getPostJSON();
+		
+		$prestudent_id = $result->prestudent_id;
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+		$uid = $result->uid;
+
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
+
+			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$aktuellesSem = getData($result)[0];
+			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
+		}
+		
+		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz);
+
+		if(!isSuccess($res)) $this->terminateWithError($res);
+		$this->terminateWithSuccess($res);
 	}
 
 	/**

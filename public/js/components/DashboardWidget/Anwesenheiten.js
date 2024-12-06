@@ -40,7 +40,7 @@ export default {
 		getLink(path) {
 			return (FHC_JS_DATA_STORAGE_OBJECT.app_root +
 				FHC_JS_DATA_STORAGE_OBJECT.ci_router + path)
-		},
+		}
 	},
 	computed: {
 		css() {
@@ -56,6 +56,10 @@ export default {
 		this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id)
 			.then(res => {
 				this.quotas = res.data
+				this.quotas.forEach(q => {
+					q.showDetails = false
+					q.details = Vue.reactive([])
+				})
 			})
 
 		this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(this.viewData.person_id)
@@ -72,7 +76,7 @@ export default {
 					<ScanComponent></ScanComponent>
 				</AccordionTab>
 				<AccordionTab :header="$p.t('global/anwesenheiten')" :pt="tabPassthroughStyle">
-					<QuotasOverview :quotas="this.quotas"></QuotasOverview>
+					<QuotasOverview :quotas="this.quotas" :uid="this.viewData.uid"></QuotasOverview>
 				</AccordionTab>
 				<AccordionTab :header="$p.t('global/entschuldigungen')" :pt="tabPassthroughStyle"> 
 					<template #header>
