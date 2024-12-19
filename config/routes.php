@@ -15,5 +15,7 @@ $route['extensions/FHC-Core-Anwesenheiten/Student/.+'] = 'extensions/FHC-Core-An
 $route['extensions/FHC-Core-Anwesenheiten/student/.+'] = 'extensions/FHC-Core-Anwesenheiten/Profil/index';
 $route['extensions/FHC-Core-Anwesenheiten/Administration/.+'] = 'extensions/FHC-Core-Anwesenheiten/Administration/index';
 $route['extensions/FHC-Core-Anwesenheiten/administration/.+'] = 'extensions/FHC-Core-Anwesenheiten/Administration/index';
+$route['extensions/FHC-Core-Anwesenheiten/Auswertung/.+'] = 'extensions/FHC-Core-Anwesenheiten/Auswertung/index';
+$route['extensions/FHC-Core-Anwesenheiten/auswertung/.+'] = 'extensions/FHC-Core-Anwesenheiten/Auswertung/index';
 $route['extensions/FHC-Core-Anwesenheiten/Assistenz/.+'] = 'extensions/FHC-Core-Anwesenheiten/Administration/index';
 $route['extensions/FHC-Core-Anwesenheiten/assistenz/.+'] = 'extensions/FHC-Core-Anwesenheiten/Administration/index';

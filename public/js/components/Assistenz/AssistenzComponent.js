@@ -4,7 +4,7 @@ import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {studentFormatters} from "../../formatters/formatters.js";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
+import {StudiengangDropdown} from "../Setup/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 
 export const AssistenzComponent = {

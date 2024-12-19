@@ -8,6 +8,7 @@ $includesArray = array(
 	'tabulator5' => true,
 	'vue3' => true,
 	'primevue3' => true,
+	'highcharts' => true,
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',
 		'public/css/components/searchbar.css',
@@ -29,6 +30,7 @@ $includesArray = array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/formatters/formatters.js',
 		'vendor/olifolkerd/tabulator5/src/js/modules/Download/Download.js'
 	)
+
 );
 
 $cis_4 = false;

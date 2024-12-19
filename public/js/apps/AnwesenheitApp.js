@@ -9,6 +9,8 @@ import ScanComponent from "../components/Student/ScanComponent.js";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent.js";
 import fhcapifactory from "../../../../js/api/fhcapifactory.js";
 import anwesenheitenAPI from "../api/fhcapifactory";
+import StatsComponent from "../components/Stats/StatsComponent";
+import highchartsPlugin from "../../../../js/plugin/highchartsVue.js"
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -25,6 +27,11 @@ const router = VueRouter.createRouter({
 			path: `/Administration`,
 			name: 'LandingPage',
 			component: LandingPageComponent,
+		},
+		{
+			path: `/Auswertung`,
+			name: 'Stats',
+			component: StatsComponent,
 		},
 		{
 			path: '/Profil/Scan/:zugangscode?',
@@ -71,10 +78,10 @@ const anwesenheitApp = Vue.createApp({
 	methods: {
 	},
 	created(){
-
+		if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 	},
 	mounted() {
-		if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
+		// if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 	}
 });
 anwesenheitApp.config.globalProperties.$entryParams = {
@@ -115,6 +122,7 @@ anwesenheitApp
 			tooltip: 8000
 		}
 	})
+	.use(highchartsPlugin, {tagName: 'highcharts'})
 	.use(Phrasen)
 
 function getTarget(el) {

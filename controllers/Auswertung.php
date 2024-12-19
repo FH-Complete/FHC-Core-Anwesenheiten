@@ -1,7 +1,7 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-class Anw extends Auth_Controller
+class Auswertung extends Auth_Controller
 {
 	private $_ci;
 	private $_uid;
@@ -12,7 +12,7 @@ class Anw extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_student:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
+				'index' => array('extension/anwesenheit_admin:rw')
 			)
 		);
 
@@ -27,16 +27,16 @@ class Anw extends Auth_Controller
 			array(
 				'global',
 				'ui',
-				'anwesenheiten'
+				'filter'
 			)
 		);
 
 		// Load helpers
 		$this->load->helper('array');
-		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
-
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
+		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
+
 	}
 
 	/**
@@ -45,7 +45,6 @@ class Anw extends Auth_Controller
 	 */
 	public function index()
 	{
-
 		$viewData = array(
 			'permissions' => [
 				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
@@ -64,7 +63,6 @@ class Anw extends Auth_Controller
 				'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),
 				'einheitDauer' => $this->_ci->config->item('EINHEIT_DAUER'),
 				'entschuldigungen_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
-				'stats_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
 				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
 				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
 				'controller' => get_class($this)

@@ -6,7 +6,7 @@ import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
 import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
-
+import StatsComponent from "../Stats/StatsComponent.js"
 export default {
 	name: 'LandingPageComponent',
 	components: {
@@ -16,7 +16,8 @@ export default {
 		BsModal,
 		StudentComponent,
 		LektorComponent,
-		AssistenzComponent
+		AssistenzComponent,
+		StatsComponent
 	},
 	data: function() {
 		return {
@@ -58,6 +59,10 @@ export default {
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
 				tabs.push({key: 'Admin', title: 'Admin', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+			}
+			
+			if((permissions.admin || permissions.assistenz) && permissions.stats_enabled) {
+				tabs.push({key: 'Stats', title: 'Auswertungen', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Stats/StatsComponent.js'})
 			}
 
 			const ret = {}
