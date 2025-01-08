@@ -184,6 +184,36 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query, [$sem_kurzbz, $lv_id]);
 	}
 
+	public function getAllAnwesenheitenByLvaMultiple($lv_ids, $sem_kurzbzs)
+	{
+		$params = [];
+		$query ="
+		SELECT
+			extension.tbl_anwesenheit_user.status,
+			ta.von, ta.bis
+		FROM
+			extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
+			JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)";
+		if(!empty($lv_ids) || !empty($sem_kurzbzs)) {
+			$query.= " WHERE ";
+		}
+		if(!empty($lv_ids)) {
+			$params[] = $lv_ids;
+			$query.= "lehrveranstaltung_id IN ? ";
+		}
+		if(!empty($lv_ids) && !empty($sem_kurzbzs)) {
+			$query.= " AND ";
+		}
+		if(!empty($sem_kurzbzs)) {
+			$params[] = $sem_kurzbzs;
+			$query.= "studiensemester_kurzbz IN ? ";
+		}
+		
+		
+		
+		return $this->execQuery($query, $params);
+	}
+
 	public function getAllPersonIdsForLE($le_id)
 	{
 		$query = "
@@ -401,7 +431,9 @@ class Anwesenheit_model extends \DB_Model
 					public.tbl_studiengang.studiengang_kz,
 					public.tbl_studiengang.bezeichnung,
 					public.tbl_studiengang.kurzbzlang,
-					public.tbl_studiengang.orgform_kurzbz
+					public.tbl_studiengang.orgform_kurzbz,
+					public.tbl_studiengang.max_semester,
+					public.tbl_studiengang.oe_kurzbz
 				FROM public.tbl_studiengang JOIN lehre.tbl_studienordnung USING(studiengang_kz)
 					JOIN lehre.tbl_studienplan USING(studienordnung_id)
 					JOIN lehre.tbl_studienplan_semester USING(studienplan_id)
@@ -417,7 +449,9 @@ class Anwesenheit_model extends \DB_Model
 					public.tbl_studiengang.studiengang_kz,
 					public.tbl_studiengang.bezeichnung,
 					public.tbl_studiengang.kurzbzlang,
-					public.tbl_studiengang.orgform_kurzbz
+					public.tbl_studiengang.orgform_kurzbz,
+					public.tbl_studiengang.max_semester,
+					public.tbl_studiengang.oe_kurzbz
 				FROM public.tbl_studiengang JOIN lehre.tbl_studienordnung USING(studiengang_kz)
 					JOIN lehre.tbl_studienplan USING(studienordnung_id)
 					JOIN lehre.tbl_studienplan_semester USING(studienplan_id)

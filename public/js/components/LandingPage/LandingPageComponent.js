@@ -220,6 +220,11 @@ export default {
 				this.$fhcApi.factory.Anwesenheiten.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
 					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
+					if(!res?.data?.retval?.length) { // no lektors assigned to lva, hence no attendance checks possible
+						this.$fhcAlert.alertError('Keine Lektoren für LVA gefunden!');
+						return 
+					}
+					
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
 					const lektor = found ?? res.data.retval[0]

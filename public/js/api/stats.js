@@ -1,8 +1,8 @@
 export default {
 
-	async fetchStatsData(lv_id, sem_kurzbz, le_id, ma_uid, date) {
+	async fetchStatsData(lva, semester, le) {
 
-		const payload = {lv_id, sem_kurzbz, le_id, ma_uid, date}
+		const payload = {lva, semester, le}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/StatsApi/fetchStatsData';
 		return this.$fhcApi.post(url, payload, null)
 
