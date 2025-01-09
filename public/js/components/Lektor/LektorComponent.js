@@ -189,7 +189,7 @@ export const LektorComponent = {
 			return valueFormatted
 		},
 		getExistingQRCode(){
-			this.$fhcApi.factory.Kontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value)
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value)
 				.then(res => {
 				if(res.data.svg) {
 					this.showQR(res.data)
@@ -197,7 +197,7 @@ export const LektorComponent = {
 			})
 		},
 		pollAnwesenheit() {
-			this.$fhcApi.factory.Kontrolle.pollAnwesenheiten(this.anwesenheit_id, this.lv_id).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.pollAnwesenheiten(this.anwesenheit_id, this.lv_id).then(res => {
 				this.checkInCount = res.data.anwesend
 				this.abwesendCount = res.data.abwesend
 				this.entschuldigtCount = res.data.entschuldigt
@@ -313,7 +313,7 @@ export const LektorComponent = {
 			// js months 0-11, php months 1-12
 			const date = {year: this.selectedDate.getFullYear(), month: this.selectedDate.getMonth() + 1, day: this.selectedDate.getDate()}
 
-			this.$fhcApi.factory.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende, date).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende, date).then(res => {
 				if(res.data) {
 					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
@@ -325,7 +325,7 @@ export const LektorComponent = {
 			this.setTimespanForKontrolleTermin(this.$entryParams.selected_termin.value)
 		},
 		regenerateQR() {
-			this.$fhcApi.factory.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(async (res) => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(async (res) => {
 				const oldCode = this.code
 				this.qr = res.data.svg
 				this.url = res.data.url
@@ -333,7 +333,7 @@ export const LektorComponent = {
 
 				await this.wait(200)
 
-				this.$fhcApi.factory.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
+				this.$fhcApi.factory.Anwesenheiten.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 			})
 		},
 		progressCounter() {
@@ -346,7 +346,7 @@ export const LektorComponent = {
 		async saveChanges () {
 
 			const changedStudents = new Set(this.changedData.map(e => e.prestudent_id))
-			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, this.changedData).then((res) => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, this.changedData).then((res) => {
 
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
@@ -355,7 +355,7 @@ export const LektorComponent = {
 				}
 
 				const changedStudentsArr = [...changedStudents]
-				this.$fhcApi.factory.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
+				this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
 					.then(res => {
 						this.updateSumData(res.data.retval)
 						this.changes = true
@@ -379,7 +379,7 @@ export const LektorComponent = {
 			this.code = null
 
 			// attempt to degenerate one last time to not leave any codes in db
-			this.$fhcApi.factory.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 		},
 		setTimespanForKontrolleTermin(termin, setDate = true) {
 			if(setDate) this.selectedDate = new Date(termin.datum)
@@ -432,14 +432,14 @@ export const LektorComponent = {
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
-			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
 				if(res.meta.status !== "success") return
 				this.setupData(res.data)
 			}).finally(() => {
 				this.loading = false
 			})
 
-			this.$fhcApi.factory.Kontrolle.deleteQRCode(this.anwesenheit_id, this.lv_id).then(
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.deleteQRCode(this.anwesenheit_id, this.lv_id).then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwKontrolleBeendet'))
@@ -474,12 +474,12 @@ export const LektorComponent = {
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
-			this.$fhcApi.factory.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date).then(res => {
 				if(res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
 					this.loading = true
-					this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat).then((res)=>{
+					this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat).then((res)=>{
 						if(res.meta.status !== "success") return
 						this.setupData(res.data)
 					}).finally(()=> {
@@ -793,7 +793,7 @@ export const LektorComponent = {
 			if(this.$entryParams.lektorState) {
 				this.setupLektorState()
 			} else {
-				this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
+				this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
 					this.setupData(res.data)
 				}).finally(() => {
 					this.loading = false
@@ -806,7 +806,7 @@ export const LektorComponent = {
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
-			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
 				this.setupData(res.data)
 			}).finally(() => {
 				this.loading = false
@@ -815,7 +815,7 @@ export const LektorComponent = {
 			this.getExistingQRCode()
 		},
 		loadStunden() {
-			this.$fhcApi.factory.Info.getStunden().then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Info.getStunden().then(res => {
 				this.stunden = res.data
 
 			})
