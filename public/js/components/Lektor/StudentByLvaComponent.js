@@ -70,7 +70,7 @@ export const StudentByLvaComponent = {
 				event: "cellEdited",
 				handler: (cell) => {
 					const data = cell.getData()
-					this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
+					this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
 						if(res.meta.status === "success") {
 
 
@@ -196,14 +196,14 @@ export const StudentByLvaComponent = {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			this.$fhcApi.factory.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData).then(res => {
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
 				} else {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
-				this.$fhcApi.factory.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
+				this.$fhcApi.factory.Anwesenheiten.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
@@ -300,7 +300,7 @@ export const StudentByLvaComponent = {
 		async setupMounted() {
 			this.tableBuiltPromise = new Promise(this.tableResolve)
 			await this.tableBuiltPromise
-			this.$fhcApi.factory.Kontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz).then(res => {
 				if (res.meta.status !== "success" || !res.data) {
 					return []
 				} else {
@@ -320,7 +320,7 @@ export const StudentByLvaComponent = {
 
 			})
 
-			this.$fhcApi.factory.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
 				if (res.meta.status !== "success" || !res.data) return
 
 				this.prestudent_id = res.data[0].prestudent_id

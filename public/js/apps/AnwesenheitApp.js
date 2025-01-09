@@ -7,7 +7,8 @@ import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenhei
 import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent.js";
 import ScanComponent from "../components/Student/ScanComponent.js";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent.js";
-import fhcapifactory from "../api/fhcapifactory.js";
+import fhcapifactory from "../../../../js/api/fhcapifactory.js";
+import anwesenheitenAPI from "../api/fhcapifactory";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -73,7 +74,7 @@ const anwesenheitApp = Vue.createApp({
 
 	},
 	mounted() {
-
+		if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 	}
 });
 anwesenheitApp.config.globalProperties.$entryParams = {
