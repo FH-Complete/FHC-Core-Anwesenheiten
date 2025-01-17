@@ -67,7 +67,7 @@ class Entschuldigung_model extends \DB_Model
 	}
 	public function getAllEntschuldigungen()
 	{
-		$query = 'SELECT DISTINCT ON (dms_id,
+		$query = "SELECT DISTINCT ON (dms_id,
 							von,
 							bis,
 							public.tbl_person.person_id,
@@ -87,7 +87,9 @@ class Entschuldigung_model extends \DB_Model
 						studiengang_kz,
 						bezeichnung,
 						kurzbzlang,
-						orgform_kurzbz
+						orgform_kurzbz,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY') as uploaddatum,
+						public.tbl_studiengang.oe_kurzbz as oe
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
@@ -96,7 +98,7 @@ class Entschuldigung_model extends \DB_Model
 					JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
 					WHERE tbl_benutzer.aktiv = TRUE
 					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
-					';
+					";
 
 		return $this->execReadOnlyQuery($query);
 	}
@@ -104,7 +106,7 @@ class Entschuldigung_model extends \DB_Model
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{
 		$params = [$stg_kz_arr];
-		$query = 'SELECT DISTINCT ON (dms_id,
+		$query = "SELECT DISTINCT ON (dms_id,
 							von,
 							bis,
 							public.tbl_person.person_id,
@@ -124,14 +126,16 @@ class Entschuldigung_model extends \DB_Model
 						studiengang_kz,
 						bezeichnung,
 						kurzbzlang,
-						orgform_kurzbz
+						orgform_kurzbz,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY') as uploaddatum,
+						public.tbl_studiengang.oe_kurzbz as oe
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ';
+					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 
 		if($von) {
 			$query.= 'AND Date(von) >= ? ';
