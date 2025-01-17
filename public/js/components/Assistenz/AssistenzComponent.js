@@ -76,7 +76,10 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', minWidth: 150},
-					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform', minWidth: 50},
+					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform', minWidth: 50,
+						headerFilter: true,
+						tooltip: false
+					},
 					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
