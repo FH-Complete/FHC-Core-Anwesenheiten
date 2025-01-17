@@ -133,7 +133,7 @@ export default {
 		},
 		processAnw(data) {
 			const anw = data[0].retval
-
+			this.sums = {}
 			// calc sum for each lva to display percentage
 			anw.forEach(entry => {
 				if(!this.sums[entry.lehrveranstaltung_id]) {
