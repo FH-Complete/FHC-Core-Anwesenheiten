@@ -76,7 +76,7 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', minWidth: 150},
-					{title: this.$capitalize(this.$p.t('lehre/organisationseinheit')), field: 'oe', minWidth: 150},
+					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform', minWidth: 150},
 					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
@@ -261,7 +261,7 @@ export const AssistenzComponent = {
 			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$capitalize(this.$p.t('ui/aktion'))})
 			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$capitalize(this.$p.t('global/begruendungAnw'))})
 			cols.find(e => e.getField() === 'uploaddatum').updateDefinition({title: this.$capitalize(this.$p.t('global/uploaddatum'))})
-			cols.find(e => e.getField() === 'oe').updateDefinition({title: this.$capitalize(this.$p.t('lehre/organisationseinheit'))})
+			cols.find(e => e.getField() === 'studentorgform').updateDefinition({title: this.$capitalize(this.$p.t('lehre/organisationsform'))})
 
 			
 		},
