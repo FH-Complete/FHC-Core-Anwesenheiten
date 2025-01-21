@@ -18,7 +18,7 @@ export default {
 	inject: {
 		viewData: {
 			type: Object,
-			default: null
+			default: {}
 		},
 		editModeIsActive: {
 			type: Boolean,
@@ -40,6 +40,21 @@ export default {
 		getLink(path) {
 			return (FHC_JS_DATA_STORAGE_OBJECT.app_root +
 				FHC_JS_DATA_STORAGE_OBJECT.ci_router + path)
+		},
+		fetchData(){
+			this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id)
+				.then(res => {
+					this.quotas = res.data
+					this.quotas.forEach(q => {
+						q.showDetails = false
+						q.details = Vue.reactive([])
+					})
+				})
+
+			this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(this.viewData.person_id)
+				.then(res => {
+					this.entschuldigungen = res.data?.retval
+				})
 		}
 	},
 	computed: {
@@ -47,26 +62,19 @@ export default {
 			return ['dashboard-widget-default', this.config.css];
 		}
 	},
-	created() {
+	async created() {
 		if (!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
-
+		if (!this.viewData.uid || !this.viewData.person_id) {
+			await this.$fhcApi.factory.Anwesenheiten.Info.getViewDataStudent().then((res) => {
+				this.viewData.uid = res.data.uid
+				this.viewData.person_id = res.data.person_id
+				
+				this.fetchData()
+			})
+		} else {
+			this.fetchData()
+		}
 		this.$emit('setConfig', false)
-	},
-	mounted() {
-		this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id)
-			.then(res => {
-				this.quotas = res.data
-				this.quotas.forEach(q => {
-					q.showDetails = false
-					q.details = Vue.reactive([])
-				})
-			})
-
-		this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(this.viewData.person_id)
-			.then(res => {
-				this.entschuldigungen = res.data?.retval
-			})
-
 	},
 	template: /*html*/ `
     <div class="widgets-anw w-100 h-100">
