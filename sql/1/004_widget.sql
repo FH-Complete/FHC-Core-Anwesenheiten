@@ -1,4 +1,5 @@
-CREATE OR REPLACE FUNCTION extension.insert_cis4_anw_widget () LANGUAGE plpgsql AS
+CREATE OR REPLACE FUNCTION extension.insert_cis4_anw_widget () returns float
+	LANGUAGE plpgsql AS
 $$ BEGIN
 	IF EXISTS (
 		SELECT 1 
