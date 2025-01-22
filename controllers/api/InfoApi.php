@@ -19,7 +19,8 @@ class InfoApi extends FHCAPI_Controller
 				'getLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
 				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getAktuellesSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
+				'getAktuellesSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
+				'getViewDataStudent' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
 			)
 		);
 
@@ -64,6 +65,14 @@ class InfoApi extends FHCAPI_Controller
 		$this->terminateWithSuccess($aktuell);
 	}
 
+	/**
+	 * GET METHOD
+	 * returns students own uid and person_id -> used in cis4 anwesenheiten widget
+	 */
+	public function getViewDataStudent() {
+		$this->terminateWithSuccess(array('uid' => getAuthUID(), 'person_id' => getAuthPersonId()));
+	}
+	
 	/**
 	 * GET METHOD
 	 * returns List of all studiensemester as well as current one

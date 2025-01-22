@@ -3,6 +3,10 @@ export default {
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getAktuellesSemester';
 		return this.$fhcApi.get(url, null, null)
 	},
+	async getViewDataStudent() {
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getViewDataStudent';
+		return this.$fhcApi.get(url, null, null)
+	},
 	async getEntschuldigungFile(dms_id) {
 
 		const url = `extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile?dms_id=${dms_id}`;
