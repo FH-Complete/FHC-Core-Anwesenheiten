@@ -232,6 +232,29 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
 	}
 
+	// similar to "getAllAnwesenheitenByStudentByLva" but with less data fetched
+	public function getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz)
+	{
+		$query = "
+			SELECT
+			DISTINCT ON (extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von))
+				extension.tbl_anwesenheit_user.anwesenheit_user_id,
+			   Date(extension.tbl_anwesenheit.von) as datum,
+			   extension.tbl_anwesenheit_user.status,
+			   extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis
+			FROM extension.tbl_anwesenheit
+					 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
+					 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+					 JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+			WHERE studiensemester_kurzbz = ?
+				AND prestudent_id = ?
+				AND lehre.tbl_lehreinheit.lehrveranstaltung_id = ?
+				ORDER BY datum DESC;
+		";
+
+		return $this->execQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
+	}
+	
 	public function getAllForKontrolle($anwesenheit_id)
 	{
 		$query = "

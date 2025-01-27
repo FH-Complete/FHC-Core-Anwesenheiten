@@ -1,4 +1,10 @@
 export default {
+	async getAllAnwQuotasForLvaByUID(studiensemester, uid) {
+		
+		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwQuotasForLvaByUID?studiensemester=${studiensemester}&uid=${uid}`;
+		return this.$fhcApi.get(url, null, null)
+		
+	},
 	async getAllAnwByUID(studiensemester, uid, person_id) {
 
 		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID?studiensemester=${studiensemester}&uid=${uid}&person_id=${person_id}`;
@@ -47,5 +53,12 @@ export default {
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAnwesenheitSumByLva';
 		return this.$fhcApi.post(url, payload, null)
 
-	}
+	},
+	async getAnwesenheitenByLva(sem_kurzbz, lv_id, prestudent_id, uid) {
+		
+		const payload = {sem_kurzbz, lv_id, prestudent_id, uid}
+		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwesenheitenByStudentByLva`;
+		return this.$fhcApi.post(url, payload, null)
+		
+	}	
 }

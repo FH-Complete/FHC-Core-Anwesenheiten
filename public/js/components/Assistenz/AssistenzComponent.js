@@ -102,7 +102,7 @@ export const AssistenzComponent = {
 						const data = cell.getData()
 						if((data.notiz === '' || data.notiz === null) && (this.editCellValue === '' || this.editCellValue === null)) return
 
-						this.$fhcApi.factory.Administration.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz).then(res => {
+						this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz).then(res => {
 							if (res.meta.status === "success")
 							{
 								this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
@@ -153,7 +153,7 @@ export const AssistenzComponent = {
 			const entschuldigung_id = cell.getData().entschuldigung_id
 			const existingNotiz = cell.getData().notiz
 			const notiz = notizParam !== '' ? notizParam : (existingNotiz !== null && existingNotiz !== undefined) ? existingNotiz : ''
-			this.$fhcApi.factory.Administration.updateEntschuldigung(String(entschuldigung_id), status, notiz).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(entschuldigung_id), status, notiz).then(res => {
 
 				if (res.meta.status === "success")
 				{
@@ -276,7 +276,7 @@ export const AssistenzComponent = {
 				this.$entryParams.permissions.studiengaengeAssistenz :
 				this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
 
-			this.$fhcApi.factory.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
+			this.$fhcApi.factory.Anwesenheiten.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
 				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
 			})
 		},
