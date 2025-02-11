@@ -74,7 +74,7 @@ const anwesenheitApp = Vue.createApp({
 
 	},
 	mounted() {
-		if(!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
+		if(!this.$fhcApi.factory.Anwesenheiten && this.$fhcApi.factory.addEndpoints) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 	}
 });
 anwesenheitApp.config.globalProperties.$entryParams = {
@@ -105,17 +105,38 @@ anwesenheitApp.config.globalProperties.$formatTime = (timeStamp, delimiter = '-'
 	}
 }
 
-anwesenheitApp
-	.use(router)
-	.use(FhcApi, fhcapifactory)
-	.use(primevue.config.default, {
+anwesenheitApp.use(router)
+
+const checkForCis4Tag = () =>  {
+	const container = document.getElementById('main')
+	return container?.getAttribute('cis4') === 'true'
+}
+
+const isCis4 = checkForCis4Tag()
+if(isCis4) {
+	anwesenheitApp.use(FhcApi, fhcapifactory) // Cis4
+} else {
+	anwesenheitApp.use(FhcApi, {
+		factory:
+			{
+				Anwesenheiten: {
+					"Kontrolle": anwesenheitenAPI.factory.Kontrolle,
+					"Profil": anwesenheitenAPI.factory.Profil,
+					"Info": anwesenheitenAPI.factory.Info,
+					"Administration": anwesenheitenAPI.factory.Administration
+				}
+			}
+	})
+}
+
+anwesenheitApp.use(primevue.config.default, {
 		// TODO: set primevue locale with language
 		zIndex: {
 			overlay: 9000,
 			tooltip: 8000
 		}
 	})
-	.use(Phrasen)
+anwesenheitApp.use(Phrasen)
 
 function getTarget(el) {
 
