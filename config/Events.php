@@ -21,6 +21,7 @@ Events::on('lvMenuBuild', function ($menu_reference, $params) {
 			'id'=>'core_menu_digitale_anwesenheitslisten',
 			'position'=>'50',
 			'name'=> $ci_p->t('global', 'digitalesAnwManagement'),
+			'phrase' => 'global/digitalesAnwManagement',
 			'c4_icon'=> APP_ROOT."/skin/images/button_kreuzerltool.png",
 			'c4_icon2' => 'fa-solid fa-graduation-cap',
 			'c4_link'=>$link,
