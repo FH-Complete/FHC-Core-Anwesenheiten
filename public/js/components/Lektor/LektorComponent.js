@@ -510,6 +510,9 @@ export const LektorComponent = {
 			if(entry.bisio_id && entry.studienstatus !== 'Incoming'
 				&& entry.bis > stsemdatumvon && entry.von < stsemdatumbis && ((entry.bis.getTime()-entry.von.getTime())/1000*3600*24) >= 30) {
 				zusatz = ' (o) (ab ' + entry.von + ')'
+			} else if (entry.bisio_id && entry.studienstatus !== 'Incoming' && entry.von && entry.von > stsemdatumvon ) {
+				// if bis datum is not yet known but von is available already
+				zusatz = ' (o) (ab ' + entry.von + ')'
 			}
 
 			if(entry.lkt_ueberschreibbar === false) zusatz = ' ('+entry.anmerkung+')'
@@ -517,7 +520,12 @@ export const LektorComponent = {
 			if(entry.stg_kz_student == this.lektorState.a_o_kz) {
 				zusatz = ' (a.o.)'
 			}
-			if(entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) zusatz = ' (d.d.)'
+			if(entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) {
+				zusatz = ' (d.d.'
+				if(entry.ddtype == 'Intern') zusatz += 'i.)';
+				else if (entry.ddtype == 'Extern') zusatz +='o.)';
+				else zusatz += ')';
+			}
 
 			return zusatz
 		},

@@ -24,7 +24,7 @@ export default {
 				bis: Vue.ref({ hours: 23, minutes: 59 }),
 				files: []
 			},
-			minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.entschuldigungMaxReach))),
+			minDate: this.calcMinDate(),
 			tableBuiltPromise: null,
 			entschuldigungsViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
@@ -76,6 +76,16 @@ export default {
 		};
 	},
 	methods: {
+		calcMinDate(){
+			// calc max reach offset into workdays
+			let d = new Date();
+			for (let x = this.$entryParams.permissions.entschuldigungMaxReach; x > 0; x--) {
+				// step 3 times on monday, else step once per counter
+				d.setDate(d.getDate() - (d.getDay() === 1 ? 3 : 1));
+			}
+
+			return d
+		},
 		entschuldigungstatusFormatter(cell) {
 			let data = cell.getValue()
 			if (data == null) {

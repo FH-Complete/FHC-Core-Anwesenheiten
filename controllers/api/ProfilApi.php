@@ -275,8 +275,11 @@ class ProfilApi extends FHCAPI_Controller
 		if($entryToUpdate) {
 
 			if($entryToUpdate->status !== $this->_ci->config->item('ENTSCHULDIGT_STATUS')) {
-				$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, array(
-					'status' => $this->_ci->config->item('ANWESEND_STATUS'),
+				$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, 
+					array(
+					'status' => $this->_ci->config->item('ANWESEND_STATUS'), 
+					'updateamum' => date('Y-m-d H:i:s'),
+					'updatevon' => getAuthUID()
 				));
 
 				if (isError($result)) {
@@ -393,8 +396,7 @@ class ProfilApi extends FHCAPI_Controller
 		} elseif ($isAdmin || $isAssistenz) {
 			$result = $this->EntschuldigungModel->getMailInfoForStudent($person_id_param);
 		}
-
-
+		
 		if (isError($result))
 			$this->terminateWithError(getError($result));
 
@@ -408,7 +410,7 @@ class ProfilApi extends FHCAPI_Controller
 		$studentname = $data->vorname.' '.$data->nachname;
 		$student_uid = $data->student_uid;
 		$stg = $data->kurzbzlang.' - '.$data->bezeichnung;
-		$orgform = $data->orgform_kurzbz;
+		$orgform = $data->dual ? 'DUAL' : $data->orgform_kurzbz;
 		$sem = $data->semester.'. Semester';
 
 
@@ -500,6 +502,7 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
+		// todo: alternatively lookup gethAuthUid in students table
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
 		$person_id = $result->person_id;
 

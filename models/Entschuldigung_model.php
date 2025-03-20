@@ -187,13 +187,12 @@ class Entschuldigung_model extends \DB_Model
 
 	public function getMailInfoForStudent($person_id) {
 		$query = "SELECT tbl_person.vorname, tbl_person.nachname, tbl_student.student_uid, tbl_studiengang.email,
-				   tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_studiengang.orgform_kurzbz, tbl_student.semester
-			FROM tbl_person
-				JOIN tbl_prestudent USING (person_id)
-				JOIN tbl_studiengang USING (studiengang_kz)
-				JOIN tbl_student USING(prestudent_id)
-			WHERE person_id = ? AND tbl_student.semester > 0
-		";
+			   tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_studiengang.orgform_kurzbz, tbl_student.semester, tbl_prestudent.dual
+		FROM public.tbl_person
+				 JOIN public.tbl_prestudent USING (person_id)
+				 JOIN public.tbl_studiengang USING (studiengang_kz)
+				 JOIN public.tbl_student USING(prestudent_id)
+		WHERE public.tbl_student.semester > 0 AND person_id = ?";
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
 	}
