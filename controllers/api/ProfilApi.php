@@ -456,7 +456,6 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
-		$this->terminateWithSuccess($zuordnung);
 
 		if (hasData($zuordnung))
 		{

@@ -67,7 +67,7 @@ class Entschuldigung_model extends \DB_Model
 	}
 	public function getAllEntschuldigungen()
 	{
-		$query = 'SELECT DISTINCT ON (dms_id,
+		$query = "SELECT DISTINCT ON (dms_id,
 							von,
 							bis,
 							public.tbl_person.person_id,
@@ -82,21 +82,26 @@ class Entschuldigung_model extends \DB_Model
 						tbl_anwesenheit_entschuldigung.entschuldigung_id,
 						vorname,
 						nachname,
-						akzeptiert,
-						notiz,
-						studiengang_kz,
-						bezeichnung,
-						kurzbzlang,
-						orgform_kurzbz
+						extension.tbl_anwesenheit_entschuldigung.akzeptiert as akzeptiert,
+						extension.tbl_anwesenheit_entschuldigung.notiz as notiz,
+						public.tbl_studiengang.studiengang_kz as studiengang_kz,
+						public.tbl_studiengang.bezeichnung as bezeichnung,
+						public.tbl_studiengang.kurzbzlang as kurzbzlang,
+						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
+						status.orgform_kurzbz as studentorgform,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI:SS') as uploaddatum
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
-					JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
+						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
+						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
 					WHERE tbl_benutzer.aktiv = TRUE
 					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
-					';
+					";
 
 		return $this->execReadOnlyQuery($query);
 	}
@@ -104,7 +109,7 @@ class Entschuldigung_model extends \DB_Model
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{
 		$params = [$stg_kz_arr];
-		$query = 'SELECT DISTINCT ON (dms_id,
+		$query = "SELECT DISTINCT ON (dms_id,
 							von,
 							bis,
 							public.tbl_person.person_id,
@@ -117,21 +122,26 @@ class Entschuldigung_model extends \DB_Model
 						bis,
 						public.tbl_person.person_id,
 						tbl_anwesenheit_entschuldigung.entschuldigung_id,
-						notiz,
 						vorname,
 						nachname,
-						akzeptiert,
-						studiengang_kz,
-						bezeichnung,
-						kurzbzlang,
-						orgform_kurzbz
+						extension.tbl_anwesenheit_entschuldigung.akzeptiert as akzeptiert,
+						extension.tbl_anwesenheit_entschuldigung.notiz as notiz,
+						public.tbl_studiengang.studiengang_kz as studiengang_kz,
+						public.tbl_studiengang.bezeichnung as bezeichnung,
+						public.tbl_studiengang.kurzbzlang as kurzbzlang,
+						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
+						status.orgform_kurzbz as studentorgform,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI:SS') as uploaddatum
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
+						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
+						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ';
+					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 
 		if($von) {
 			$query.= 'AND Date(von) >= ? ';

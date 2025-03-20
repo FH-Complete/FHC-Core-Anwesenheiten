@@ -10,7 +10,8 @@ $config['USE_REGENERATE_QR'] = true;
 // used in deleteOldQR Cronjob
 $config['QR_EXPIRATION_TIMER'] = 3600000; // 1 hour
 // frist welche entscheidet wie weit in die Vergangenheit eine neue Entschuldigung reichen darf
-$config['ENTSCHULDIGUNG_MAX_REACH'] = 7; // 7 days
+$config['ENTSCHULDIGUNG_MAX_REACH'] = 3; // 3 days
+// https://media-hp.technikum-wien.at/media/20220818073147/Version-17-vom-07.06.2022.pdf §8 Abs 14
 // frist welche entscheidet wie weit in die Vergangenheit alte Kontrollen gelöscht werden dürfen
 $config['KONTROLLE_DELETE_MAX_REACH'] = 1; // 1 day
 $config['ANWESEND_STATUS'] = 'anwesend';

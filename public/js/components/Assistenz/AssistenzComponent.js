@@ -75,6 +75,11 @@ export const AssistenzComponent = {
 					},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
+					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', minWidth: 150},
+					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform', minWidth: 50,
+						headerFilter: true,
+						tooltip: false
+					},
 					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
 					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
@@ -258,15 +263,10 @@ export const AssistenzComponent = {
 			cols.find(e => e.getField() === 'studiengang_kz').updateDefinition({title: this.$capitalize(this.$p.t('lehre/studiengang'))})
 			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$capitalize(this.$p.t('ui/aktion'))})
 			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$capitalize(this.$p.t('global/begruendungAnw'))})
+			cols.find(e => e.getField() === 'uploaddatum').updateDefinition({title: this.$capitalize(this.$p.t('global/uploaddatum'))})
+			cols.find(e => e.getField() === 'studentorgform').updateDefinition({title: this.$capitalize(this.$p.t('lehre/organisationsform'))})
 
-			this.assistenzViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('person/vorname'))
-			this.assistenzViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('person/nachname'))
-			this.assistenzViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/status'))
-			this.assistenzViewTabulatorOptions.columns[3].title = this.$capitalize(this.$p.t('ui/von'))
-			this.assistenzViewTabulatorOptions.columns[4].title = this.$capitalize(this.$p.t('global/bis'))
-			this.assistenzViewTabulatorOptions.columns[5].title = this.$capitalize(this.$p.t('lehre/studiengang'))
-			this.assistenzViewTabulatorOptions.columns[6].title = this.$capitalize(this.$p.t('ui/aktion'))
-			this.assistenzViewTabulatorOptions.columns[7].title = this.$capitalize(this.$p.t('global/begruendungAnw'))
+			
 		},
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
