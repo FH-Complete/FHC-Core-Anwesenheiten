@@ -386,8 +386,7 @@ export const StudentByLvaComponent = {
 					@uuidDefined="handleUuidDefined"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
-					@nw-new-entry="newSideMenuEntryHandler"
-					:tableOnly
+					:tableOnly="true"
 					:sideMenu="false" 
 					noColumnFilter>
 					<template #actions>

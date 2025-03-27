@@ -248,9 +248,8 @@ export default {
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="studentViewTabulatorOptions"
 				:tabulator-events="studentViewTabulatorEventHandlers"
-				:table-only=true
-				:hideTopMenu=false
-				:sideMenu=false
+				:tableOnly="true"
+				:sideMenu="false"
 			></core-filter-cmpt>
 		</template>
 

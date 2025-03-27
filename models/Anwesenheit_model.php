@@ -343,7 +343,7 @@ class Anwesenheit_model extends \DB_Model
 		$this->execQuery($query, [$anwesenheiten_user_ids]);
 
 		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1
-					WHERE anwesenheit_user_id IN ?';
+					WHERE anwesenheit_user_id IN ? ';
 		$resultUpdate = $this->execQuery($query, [$updateStatus, $anwesenheiten_user_ids]);
 
 		return $resultUpdate;

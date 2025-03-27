@@ -17,7 +17,10 @@ export const StudiengangDropdown = {
 		this.loadDropdown();
 	},
 	props: {
-		allowedStg: [],
+		allowedStg: {
+			type: Array,
+			default: null
+		},
 		isAdmin: false,
 	},
 	methods: {

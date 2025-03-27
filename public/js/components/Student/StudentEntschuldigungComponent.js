@@ -168,7 +168,7 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.factory.Anwesenheiten.Profil.deleteEntschuldigung(entschuldigung_id).then(response => {
+			this.$fhcApi.factory.Anwesenheiten.Profil.deleteEntschuldigung(entschuldigung_id, this.$entryParams.selected_student_info?.person_id).then(response => {
 
 				if (response.meta.status === "success")
 				{
@@ -193,13 +193,8 @@ export default {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
 				return false
 			}
-			if (!this.entschuldigung.von || !this.entschuldigung.bis || this.entschuldigung.files.length === 0)
-			{
-				return false
-			}
 
 			// javaScript Date objects are 0-indexed, subtract 1 from the month
-
 			const vonParts = this.entschuldigung.von.split(/[ .:]/); // Split by dot, space, or colon
 			const vonDate = new Date(vonParts[2], vonParts[1] - 1, vonParts[0], vonParts[3], vonParts[4]);
 
@@ -322,15 +317,15 @@ export default {
 							<datepicker
 								id="von"
 								v-model="entschuldigung.von"
-								clearable="false"
+								:clearable="false"
 								auto-apply
 								:enable-time-picker="true"
 								:start-time="entschuldigung.von"
 								format="dd.MM.yyyy HH:mm"
 								model-type="dd.MM.yyyy HH:mm"
-								:min-date="minDate"
-								:start-date="minDate"
-								:max-date="$entryParams.maxDate">
+								:min-date="new Date(minDate)"
+								:start-date="new Date(minDate)"
+								:max-date="new Date($entryParams.maxDate)">
 							</datepicker>
 						</div>
 					</div>
@@ -340,15 +335,15 @@ export default {
 							<datepicker
 								id="bis"
 								v-model="entschuldigung.bis"
-								clearable="false"
+								:clearable="false"
 								auto-apply
 								:enable-time-picker="true"
 								:start-time="entschuldigung.bis"
 								format="dd.MM.yyyy HH:mm"
 								model-type="dd.MM.yyyy HH:mm"
-								:min-date="minDate"
-								:start-date="minDate"
-								:max-date="$entryParams.maxDate">
+								:min-date="new Date(minDate)"
+								:start-date="new Date(minDate)"
+								:max-date="new Date($entryParams.maxDate)">
 							</datepicker>
 						</div>
 					</div>
@@ -366,12 +361,11 @@ export default {
 				ref="entschuldigungsTable"
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="entschuldigungsViewTabulatorOptions"
-				:table-only=true
-				:hideTopMenu=false
-				newBtnShow=true
+				:table-only="true"
+				:newBtnShow="true"
 				:newBtnLabel="$p.t('global/entschuldigungHochladen')"
-				@click:new=startUploadEntschuldigung
-				:sideMenu=false
+				@click:new="startUploadEntschuldigung"
+				:sideMenu="false"
 			></core-filter-cmpt>
 		</template>
 	</core-base-layout>

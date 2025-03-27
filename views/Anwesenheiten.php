@@ -22,6 +22,8 @@ $includesArray = array(
 		'vendor/npm-asset/primevue/divider/divider.js',
 		'vendor/npm-asset/primevue/tooltip/tooltip.js',
 		'vendor/npm-asset/primevue/panel/panel.js',
+		'vendor/npm-asset/primevue/textarea/textarea.js',
+		'vendor/npm-asset/primevue/tristatecheckbox/tristatecheckbox.js',
 		'vendor/npm-asset/primevue/progressspinner/progressspinner.js'
 	),
 	'customJSModules' => array(
@@ -41,7 +43,7 @@ if(defined('CIS4') && CIS4) {
 
 ?>
 
-<div id="main" permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>' style="overflow: hidden;">
+<div id="main" permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>'>
 	<router-view permissions='<?php echo json_encode($permissions) ?>' cis4='<?php echo json_encode($cis_4) ?>'>
 	
 	</router-view>

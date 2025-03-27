@@ -91,18 +91,6 @@ export const StudentComponent = {
 				}
 
 			})
-
-			// TODO: maybe move into landing page setup if lektor logic can benefit from knowing about semester
-			if(this.$entryParams.permissions.entschuldigungen_enabled) {
-				this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
-					this.$fhcApi.factory.Anwesenheiten.Info.getAktuellesSemester().then(res => {
-						if(res?.meta?.status === 'success') {
-							this.$entryParams.aktuellesSemester = res?.data?.[0]
-							this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
-						}
-					})
-				})
-			}
 		},
 		studentChangedHandler() {
 

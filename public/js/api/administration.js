@@ -7,9 +7,9 @@ export default {
 		return this.$fhcApi.post(url, payload, null)
 
 	},
-	async updateEntschuldigung(entschuldigung_id, status, notiz) {
+	async updateEntschuldigung(entschuldigung_id, status, notiz, von, bis) {
 
-		const payload = {entschuldigung_id, status, notiz}
+		const payload = {entschuldigung_id, status, notiz, von, bis}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/updateEntschuldigung';
 		return this.$fhcApi.post(url, payload, null)
 

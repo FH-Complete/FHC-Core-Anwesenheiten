@@ -84,7 +84,9 @@ class AdministrationApi extends FHCAPI_Controller
 		$entschuldigung_id = $data['entschuldigung_id'];
 		$status = $data['status'];
 		$notiz = $data['notiz'];
-
+		$vonParam = $this->input->post('von');
+		$bisParam = $this->input->post('bis');
+		
 		if (isEmptyString($entschuldigung_id) || !in_array($status, [true, false]))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
@@ -97,30 +99,39 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$entschuldigung = getData($entschuldigung)[0];
 
-		$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
+		// check if status is being updated at all
+		$statusChanged = $status !== $entschuldigung->akzeptiert;
+		
+		if($statusChanged) {
+			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
 
-		$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
-		if (isError($result))
-			$this->terminateWithError($result);
-		$anwesenheit_user_idsArr = getData($result);
+			$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
+			if (isError($result))
+				$this->terminateWithError($result);
+			$anwesenheit_user_idsArr = getData($result);
 
-		if($anwesenheit_user_idsArr) {
-			$funcAUID = function ($value) {
-				return $value->anwesenheit_user_id;
-			};
+			if($anwesenheit_user_idsArr) {
+				$funcAUID = function ($value) {
+					return $value->anwesenheit_user_id;
+				};
 
-			$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
+				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
 
-			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
+				$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
 
-			if (isError($updateAnwesenheit))
-				$this->terminateWithError($updateAnwesenheit);
+				if (isError($updateAnwesenheit))
+					$this->terminateWithError($updateAnwesenheit);
+			}
 		}
-
+		
 		// check notiz size and trim to char varying 255 if it is too big
 		$notiz = substr($notiz, 0, 255);
 		$version = $entschuldigung->version + 1;
-
+		
+		// check if von/bis are being sent, else retrieve previeous values
+		$von = isset($vonParam) ? $vonParam : $entschuldigung->von;
+		$bis = isset($bisParam) ? $bisParam : $entschuldigung->bis;
+		
 		// add old version to history table
 		$this->_ci->EntschuldigungHistoryModel->insert(
 			array(
@@ -150,13 +161,53 @@ class AdministrationApi extends FHCAPI_Controller
 				'statussetamum' => date('Y-m-d H:i:s'),
 				'akzeptiert' => $status,
 				'notiz' => $notiz,
-				'version' => $version
+				'version' => $version,
+				'von' => $von,
+				'bis' => $bis
 			)
 		);
 
 		if (isError($update))
 			$this->terminateWithError($this->p->t('global', 'errorUpdateEntschuldigung'), 'general');
 
+		if($statusChanged) { // send mail to student
+
+			$result = $this->_ci->EntschuldigungModel->getMailInfoForStudent($entschuldigung->person_id);
+			$data = getData($result)[0];
+			
+			// Link to Entschuldigungsmanagement
+			$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung';
+			$student_uid = $data->student_uid;
+			
+			// Prepare mail content
+			$body_fields = array(
+				'von' => $von,
+				'bis' => $bis,
+				'akzeptiert' => $status,
+				'linkEntschuldigungen' => $url
+			);
+
+			$email = $student_uid . "@" . DOMAIN;
+
+			// TODO: test vorlage properly
+			if (!isEmptyString($notiz)) { // send template with anmerkung/begründung
+				$body_fields[] = $notiz;
+				
+				sendSanchoMail(
+					'AnwEntUpdateNotiz',
+					$body_fields,
+					$email,
+					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
+				);
+			} else {
+				sendSanchoMail(
+					'AnwEntUpdate',
+					$body_fields,
+					$email,
+					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
+				);
+			}
+		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
 	}

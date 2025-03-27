@@ -401,7 +401,7 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 
 		$data = getData($result)[0];
-
+		
 		//emailTo usually is 1 address, sometimes several seperated by ','
 		$emails = explode(', ', $data->email);
 
@@ -452,33 +452,45 @@ class ProfilApi extends FHCAPI_Controller
 		}
 
 		$data = json_decode($this->input->raw_input_stream, true);
-		$entschuldigung_id = $data['entschuldigung_id'];
+		$entschuldigung_id = (string)$data['entschuldigung_id'];
 
-		if (isEmptyString($entschuldigung_id))
+		if (isEmptyString($entschuldigung_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
 
-		$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
-
+		$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		
+		if($isStudent) {
+			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
+		} else if($isAdmin) {
+			$person_id_param = (string)$data['person_id'];
+			
+			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, $person_id_param);
+		}
+		
 		if (hasData($zuordnung))
 		{
 			$entschuldigung = getData($zuordnung)[0];
-
-			$isStudent = $this->permissionlib->isBerechtigt('extension/anwesenheit_student');
+			
 			$person_id = $entschuldigung->person_id;
 
 			// students are only allowed to fetch their own entschuldigungen
 			if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
-
+			
 			if (isError($deletedEntschuldigung))
 				$this->terminateWithError(getError($deletedEntschuldigung));
 
 			$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
+
 			if (isError($deletedFile))
 				$this->terminateWithError(getError($deletedFile));
 
 			$this->terminateWithSuccess($this->p->t('global', 'successDeleteEnschuldigung'));
+		} else {
+			$this->terminateWithError('Keine Zuordnung gefunden');
 		}
 	}
 

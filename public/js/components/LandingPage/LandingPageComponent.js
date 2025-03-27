@@ -30,7 +30,10 @@ export default {
 		};
 	},
 	props: {
-		permissions: [],
+		permissions: {
+			default: '',
+			type: String
+		},
 		activetabstudent: null
 	},
 	methods: {
@@ -97,8 +100,7 @@ export default {
 		},
 		async createdSetup () {
 			await new Promise (resolve => {
-
-				// TODO: auf app function auslagern
+				
 				const queryString = window.location.search;
 				const searchParams = new URLSearchParams(queryString)
 				this.$entryParams.lv_id = searchParams.get('lvid')
@@ -123,6 +125,17 @@ export default {
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
 				// console.log('$entryParams', this.$entryParams)
+
+				if(this.$entryParams.permissions.entschuldigungen_enabled) {
+					this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
+						this.$fhcApi.factory.Anwesenheiten.Info.getAktuellesSemester().then(res => {
+							if(res?.meta?.status === 'success') {
+								this.$entryParams.aktuellesSemester = res?.data?.[0]
+								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
+							}
+						})
+					})
+				}
 
 				el.removeAttribute('permissions')
 
@@ -287,6 +300,7 @@ export default {
 				})
 			})
 		},
+		
 		setLvViewData(data) {
 			this.$entryParams.viewDataLv.benotung = data.benotung
 			this.$entryParams.viewDataLv.bezeichnung = data.bezeichnung

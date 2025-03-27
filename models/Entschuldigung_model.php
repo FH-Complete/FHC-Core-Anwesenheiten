@@ -89,7 +89,8 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_studiengang.kurzbzlang as kurzbzlang,
 						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
 						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI:SS') as uploaddatum
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI:SS') as uploaddatum,
+						public.tbl_student.semester as semester
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
@@ -131,7 +132,8 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_studiengang.kurzbzlang as kurzbzlang,
 						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
 						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI:SS') as uploaddatum
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI') as uploaddatum,
+						public.tbl_student.semester as semester
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
@@ -184,7 +186,7 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, array($entschuldigung_id, $person_id));
 	}
-
+	
 	public function getMailInfoForStudent($person_id) {
 		$query = "SELECT tbl_person.vorname, tbl_person.nachname, tbl_student.student_uid, tbl_studiengang.email,
 			   tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_studiengang.orgform_kurzbz, tbl_student.semester, tbl_prestudent.dual

@@ -6,6 +6,7 @@ import {studentFormatters} from "../../formatters/formatters.js";
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
+import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
 
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
@@ -16,10 +17,13 @@ export const AssistenzComponent = {
 		CoreFilterCmpt,
 		CoreRESTClient,
 		Datepicker: VueDatePicker,
-		StudiengangDropdown
+		StudiengangDropdown,
+		EntschuldigungEdit
 	},
 	data: function() {
 		return {
+			selectedEntschuldigung: null,
+			selectedEntschuldigungValid: false,
 			tabulatorUuid: Vue.ref(0),
 			headerMenuEntries: {},
 			sideMenuEntries: {},
@@ -43,8 +47,8 @@ export const AssistenzComponent = {
 						'Content-Type': 'application/json'
 					},
 					body:()=> {
-						const berechtigungenArrayAdmin = this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
-						const berechtigungenArrayAssistenz = this.$entryParams.permissions.assistenz ? this.$entryParams.permissions.studiengaengeAssistenz : []
+						const berechtigungenArrayAdmin = this.$entryParams.permissions.admin && Array.isArray(this.$entryParams.permissions.studiengaengeAdmin) ? this.$entryParams.permissions.studiengaengeAdmin : []
+						const berechtigungenArrayAssistenz = this.$entryParams.permissions.assistenz && Array.isArray(this.$entryParams.permissions.studiengaengeAssistenz) ? this.$entryParams.permissions.studiengaengeAssistenz : []
 						const joined = [... new Set([... berechtigungenArrayAssistenz, ... berechtigungenArrayAdmin])]
 						return JSON.stringify({
 							stg_kz_arr: joined,
@@ -53,7 +57,7 @@ export const AssistenzComponent = {
 						})
 					}
 				},
-				layout: 'fitDataStretch',
+				layout: 'fitData',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
 				pagination: true,
@@ -61,10 +65,16 @@ export const AssistenzComponent = {
 				height: this.$entryParams.tabHeights.assistenz,
 				columns: [
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname',
-						headerFilter: true
+						headerFilter: true,
+						tooltip:false
 					},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname',
-						headerFilter: true
+						headerFilter: true,
+						tooltip:false
+					},
+					{title: this.$capitalize(this.$p.t('lehre/ausbildungssemester')), field: 'semester',
+						headerFilter: true,
+						tooltip:false
 					} ,
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert',
 						headerFilter:'list',
@@ -73,25 +83,18 @@ export const AssistenzComponent = {
 						formatter: this.entschuldigungstatusFormatter,
 						tooltip: false
 					},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', minWidth: 150, formatter: studentFormatters.formDate},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', minWidth: 150, formatter: studentFormatters.formDate},
-					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', minWidth: 150},
-					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform', minWidth: 50,
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilter: true},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilter: true},
+					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', headerFilter: true},
+					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform',
 						headerFilter: true,
 						tooltip: false
 					},
 					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
-					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 135, maxWidth: 135},
-					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, minWidth: 150}
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false},
+					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
-				persistence: {
-					sort: false,
-					filter: true,
-					headerFilter: false,
-					group: true,
-					page: true,
-					columns: false,
-				},
+				persistence: true,
 				persistenceID: "assistenzTable"
 			},
 			assistenzViewTabulatorEventHandlers: [
@@ -124,7 +127,6 @@ export const AssistenzComponent = {
 				}
 			],
 			notiz: '',
-			entschuldigung_id: null,
 			studiengang: null,
 			titleText: ''
 		};
@@ -133,6 +135,36 @@ export const AssistenzComponent = {
 		permissions: []
 	},
 	methods: {
+		saveEditEntschuldigung() {
+			if(!this.selectedEntschuldigung) return
+			
+			this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(this.selectedEntschuldigung.entschuldigung_id), this.selectedEntschuldigung.akzeptiert, this.selectedEntschuldigung.notiz, this.selectedEntschuldigung.von, this.selectedEntschuldigung.bis).then(res => {
+				if (res.meta.status === "success")
+				{
+					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
+					
+					Object.keys(this.selectedEntschuldigung).forEach(key => {
+						this.selectedEntschuldigungCellRef[key] = this.selectedEntschuldigung[key];
+					});
+					
+				}
+			}).finally(()=>{
+				this.$refs.modalContainerEditEntschuldigung.hide()
+				this.selectedEntschuldigung = null
+				this.selectedEntschuldigungCellRef = null
+			});
+		},
+		cancelEdit() {
+			this.$refs.modalContainerEditEntschuldigung.hide()
+			this.selectedEntschuldigung = null
+			this.selectedEntschuldigungCellRef = null
+		},
+		openEditEntschuldigungModal(data) {
+			this.selectedEntschuldigungCellRef = data
+			this.selectedEntschuldigung = {...data}
+
+			this.$refs.modalContainerEditEntschuldigung.show()
+		},
 		akzeptiertFilterFunc(filterVal, rowVal) {
 			// 400 iq code
 			if(filterVal === 'null') return rowVal === null
@@ -173,32 +205,38 @@ export const AssistenzComponent = {
 		},
 		formAction: function(cell)
 		{
-			let download = document.createElement('div');
-			download.className = "d-flex gap-3";
+			let actionwrapper = document.createElement('div');
+			actionwrapper.className = "d-flex gap-3";
 
 			let button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
-
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
 			button.title = this.$p.t('table/download');
-			download.append(button);
+			actionwrapper.append(button);
+
+			button = document.createElement('button');
+			button.className = 'btn btn-outline-secondary';
+			button.innerHTML = '<i class="fa fa-pen-to-square"></i>';
+			button.addEventListener('click', () => this.openEditEntschuldigungModal(cell.getData()));
+			button.title = this.$p.t('global/entschuldigungEditieren');
+			actionwrapper.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-check"></i>';
 			button.title = this.$p.t('global/entschuldigungAkzeptieren');
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
-			download.append(button);
+			actionwrapper.append(button);
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
 			button.title = this.$p.t('global/entschuldigungAblehnen');
 			button.addEventListener('click', () => this.openRejectionModal(cell));
-			download.append(button);
+			actionwrapper.append(button);
 
-			return download;
+			return actionwrapper;
 		},
 		bisFilter: function (data, filterParams) {
 			return new Date(data.bis).getTime() <= new Date(filterParams.bis).getTime()
@@ -257,6 +295,8 @@ export const AssistenzComponent = {
 			// phrasen bandaid
 			cols.find(e => e.getField() === 'vorname').updateDefinition({title: this.$capitalize(this.$p.t('person/vorname'))})
 			cols.find(e => e.getField() === 'nachname').updateDefinition({title: this.$capitalize(this.$p.t('person/nachname'))})
+			cols.find(e => e.getField() === 'semester').updateDefinition({title: this.$capitalize(this.$p.t('lehre/ausbildungssemester'))})
+
 			cols.find(e => e.getField() === 'akzeptiert').updateDefinition({title: this.$capitalize(this.$p.t('global/status'))})
 			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
 			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
@@ -285,6 +325,9 @@ export const AssistenzComponent = {
 		},
 		redrawTable() {
 			if(this.$refs.assistenzTable?.tabulator) this.$refs.assistenzTable.tabulator.redraw(true)
+		},
+		handleSelectedEntschuldigungValidate(valid) {
+			this.selectedEntschuldigungValid = valid
 		}
 	},
 	mounted() {
@@ -350,58 +393,74 @@ export const AssistenzComponent = {
 				</template>
 			</bs-modal>
 
-				<div class="row">
-				
-					<div class="col-6" style="display: flex; align-items: center;">
-						<h1 class="h4 mb-5" style="max-width: 50%; margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
-						<div style="max-width: 25%; align-self: normal;" v-tooltip.bottom="getTooltipObj">
-							<h4 style="margin: 0;"><i class="fa fa-circle-question"></i></h4>
-						</div>
+			<bs-modal ref="modalContainerEditEntschuldigung" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>
+					<div>
+						{{ $p.t('global/entschuldigungEdit') }}
 					</div>
-				
-					<div class="col-2">
-						<div class="row mb-3 align-items-center">
-							<StudiengangDropdown
-								:allowedStg="getAllowedStg" @sgChanged="sgChangedHandler">
-							</StudiengangDropdown>
-						</div>
-					</div>
-					<div class="col-2">
-						<div class="row mb-3 align-items-center">
-							<datepicker
-								v-model="zeitraum.von"
-								:placeholder="$capitalize($p.t('ui/von'))"
-								:clearable="false"
-								auto-apply
-								:enable-time-picker="false"
-								format="dd.MM.yyyy"
-								model-type="yyyy-MM-dd"
-							></datepicker>
-						</div>
-					</div>
-					<div class="col-2 mr-4">
-						<div class="row mb-3 align-items-center">
-							<datepicker
-								v-model="zeitraum.bis"
-								:placeholder="$capitalize($p.t('global/bis'))"
-								:clearable="false"
-								auto-apply
-								:enable-time-picker="false"
-								format="dd.MM.yyyy"
-								model-type="yyyy-MM-dd"
-							></datepicker>
-						</div>
+				</template>
+				<template v-slot:default>
+					
+					<EntschuldigungEdit v-model="selectedEntschuldigung" @validate="handleSelectedEntschuldigungValidate"></EntschuldigungEdit>
+					
+				</template>
+				<template v-slot:footer>
+					<button type="button" class="btn btn-outline-secondary " @click="cancelEdit">{{$p.t('ui','cancel')}}</button>    
+					<button type="button" class="btn btn-primary" :disabled="!selectedEntschuldigungValid" @click="saveEditEntschuldigung">{{ $p.t('ui', 'speichern') }}</button>
+				</template>
+			</bs-modal>	
+
+			<div class="row">
+			
+				<div class="col-6" style="display: flex; align-items: center;">
+					<h1 class="h4 mb-5" style="max-width: 50%; margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+					<div style="max-width: 25%; align-self: normal;" v-tooltip.bottom="getTooltipObj">
+						<h4 style="margin: 0;"><i class="fa fa-circle-question"></i></h4>
 					</div>
 				</div>
-				<core-filter-cmpt
-					ref="assistenzTable"
-					@uuidDefined="handleUuidDefined"
-					:tabulator-options="assistenzViewTabulatorOptions"
-					:tabulator-events="assistenzViewTabulatorEventHandlers"
-					:sideMenu=false
-					:table-only=true
-					:hideTopMenu=false
-				></core-filter-cmpt>
+			
+				<div class="col-2">
+					<div class="row mb-3 align-items-center">
+						<StudiengangDropdown
+							:allowedStg="getAllowedStg" @sgChanged="sgChangedHandler">
+						</StudiengangDropdown>
+					</div>
+				</div>
+				<div class="col-2">
+					<div class="row mb-3 align-items-center">
+						<datepicker
+							v-model="zeitraum.von"
+							:placeholder="$capitalize($p.t('ui/von'))"
+							:clearable="false"
+							auto-apply
+							:enable-time-picker="false"
+							format="dd.MM.yyyy"
+							model-type="yyyy-MM-dd"
+						></datepicker>
+					</div>
+				</div>
+				<div class="col-2">
+					<div class="row mb-3 align-items-center">
+						<datepicker
+							v-model="zeitraum.bis"
+							:placeholder="$capitalize($p.t('global/bis'))"
+							:clearable="false"
+							auto-apply
+							:enable-time-picker="false"
+							format="dd.MM.yyyy"
+							model-type="yyyy-MM-dd"
+						></datepicker>
+					</div>
+				</div>
+			</div>
+			<core-filter-cmpt
+				ref="assistenzTable"
+				@uuidDefined="handleUuidDefined"
+				:tabulator-options="assistenzViewTabulatorOptions"
+				:tabulator-events="assistenzViewTabulatorEventHandlers"
+				:sideMenu="false"
+				:table-only="true"
+			></core-filter-cmpt>
 		</template>
 	</core-base-layout>
 `
