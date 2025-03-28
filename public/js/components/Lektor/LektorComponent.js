@@ -467,17 +467,6 @@ export const LektorComponent = {
 			
 			this.lektorState.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
 		},
-		findClosestTermin() {
-			const todayTime = new Date(Date.now()).getTime()
-
-			this.$entryParams.available_termine.value.forEach((termin) => {
-				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
-
-			})
-
-			return this.$entryParams.available_termine.value.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, this.$entryParams.available_termine.value[0]);
-
-		},
 		startNewAnwesenheitskontrolle() {
 			if (!this.lektorState.beginn || !this.lektorState.ende) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorAnwStartAndEndSet'))
@@ -661,7 +650,7 @@ export const LektorComponent = {
 			})
 
 			if (this.$entryParams.available_termine.value.length) {
-				const closestTermin = this.findClosestTermin();
+				const closestTermin = this.$entryParams.findClosestTermin(this.$entryParams.available_termine.value);
 				const termin = new Date(closestTermin.datum)
 				const closestTerminSameDay = this.selectedDate.getDate() === termin.getDate() && this.selectedDate.getMonth() === termin.getMonth && this.selectedDate.getFullYear() === termin.getFullYear()
 				closestTermin.isSameDay = closestTerminSameDay
@@ -1295,12 +1284,12 @@ export const LektorComponent = {
 						<div class="col-6">
 							<div class="row">
 								<div class="col-1"></div>
-									<div class="col-5">
-										<MaUIDDropdown v-if="$entryParams?.permissions?.admin" :title="$capitalize($p.t('lehre/lektor') )" 
+									<div class="col-5" v-if="$entryParams?.permissions?.admin" >
+										<MaUIDDropdown  :title="$capitalize($p.t('lehre/lektor') )" 
 										 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
 										</MaUIDDropdown>
 									</div>
-									<div class="col-5">
+									<div :class=" $entryParams?.permissions?.admin ? 'col-5' : 'col-10'">
 										<LehreinheitenDropdown id="lehreinheit" :title="$capitalize($p.t('lehre/lehreinheit'))" ref="LEDropdown" @leChanged="handleLEChanged">
 										</LehreinheitenDropdown>
 									</div>

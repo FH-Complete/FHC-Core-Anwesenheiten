@@ -7,6 +7,7 @@ import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
+import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
 
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
@@ -83,9 +84,9 @@ export const AssistenzComponent = {
 						formatter: this.entschuldigungstatusFormatter,
 						tooltip: false
 					},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilter: true},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilter: true},
-					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', headerFilter: true},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform',
 						headerFilter: true,
 						tooltip: false

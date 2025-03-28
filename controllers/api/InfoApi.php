@@ -138,7 +138,32 @@ class InfoApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
 
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
-		else $this->terminateWithSuccess(getData($result));
+		$leForLvaAndMA = getData($result);
+		
+		// filter for unique le_id keys
+		$distinctLeId = array_values(array_reduce($leForLvaAndMA, function ($carry, $leRow) {
+			// use the name as a key to ensure uniqueness
+			$carry[$leRow->lehreinheit_id] = $leRow;
+			return $carry;
+		}, []));
+		
+		$this->addMeta('distinctLeId', $distinctLeId);
+		
+		$allLeTermine = [];
+		
+		forEach($distinctLeId as $leRow) 
+		{
+			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
+			if(!isSuccess($result)) $this->terminateWithError(getError($result));
+			$leTermine = getData($result);
+		
+			$allLeTermine[$leRow->lehreinheit_id] = $leTermine;
+		}
+
+
+//		$this->terminateWithSuccess($leForLvaAndMA);
+
+		$this->terminateWithSuccess(array($leForLvaAndMA, $allLeTermine));
 
 	}
 
