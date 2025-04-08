@@ -26,3 +26,47 @@
 	border: 1px solid #ddd;
 	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
+
+.timeline-overlay {
+	position: absolute;
+	height: 80px;
+	border-radius: 4px;
+	box-sizing: border-box;
+	transition: all 0.3s ease;
+	z-index: 9001;
+}
+
+.timeline-overlay:hover {
+	transform: translateY(-20px);
+	background-color: rgba(0, 0, 0, 0.1) !important;
+	z-index: 9002;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.time-marker {
+	position: absolute;
+	top: 4px;
+	background: rgba(0, 0, 0, 0.6);
+	color: white;
+	font-size: 0.7rem;
+	padding: 2px 6px;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+
+.time-marker.start {
+	left: 4px;
+}
+
+.time-marker.end {
+	right: 4px;
+}
+
+.custom-timeline {
+	pointer-events: none;
+}
+
+.custom-timeline-scroll-wrapper {
+	overflow-x: auto;
+	width: 100%;
+}

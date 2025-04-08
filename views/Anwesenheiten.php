@@ -24,7 +24,8 @@ $includesArray = array(
 		'vendor/npm-asset/primevue/panel/panel.js',
 		'vendor/npm-asset/primevue/textarea/textarea.js',
 		'vendor/npm-asset/primevue/tristatecheckbox/tristatecheckbox.js',
-		'vendor/npm-asset/primevue/progressspinner/progressspinner.js'
+		'vendor/npm-asset/primevue/progressspinner/progressspinner.js',
+		'vendor/npm-asset/primevue/timeline/timeline.js'
 	),
 	'customJSModules' => array(
 		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',

@@ -139,15 +139,17 @@ class InfoApi extends FHCAPI_Controller
 
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
 		$leForLvaAndMA = getData($result);
-		
+
+		if(is_null($leForLvaAndMA)) 
+		{
+			$this->terminateWithSuccess(array([], []));
+		}
 		// filter for unique le_id keys
 		$distinctLeId = array_values(array_reduce($leForLvaAndMA, function ($carry, $leRow) {
 			// use the name as a key to ensure uniqueness
 			$carry[$leRow->lehreinheit_id] = $leRow;
 			return $carry;
 		}, []));
-		
-		$this->addMeta('distinctLeId', $distinctLeId);
 		
 		$allLeTermine = [];
 		
@@ -160,8 +162,6 @@ class InfoApi extends FHCAPI_Controller
 			$allLeTermine[$leRow->lehreinheit_id] = $leTermine;
 		}
 
-
-//		$this->terminateWithSuccess($leForLvaAndMA);
 
 		$this->terminateWithSuccess(array($leForLvaAndMA, $allLeTermine));
 

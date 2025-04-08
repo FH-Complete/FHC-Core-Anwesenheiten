@@ -19,6 +19,7 @@ export default {
 			studiensemester: [],
 			tableBuiltPromise: null,
 			studentViewTabulatorOptions: {
+				debugInvalidComponentFuncs:false,
 				layout: 'fitDataStretch',
 				selectable: false,
 				height: this.$entryParams.tabHeights.studentAnw,

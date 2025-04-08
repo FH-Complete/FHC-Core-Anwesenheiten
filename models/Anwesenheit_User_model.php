@@ -252,7 +252,33 @@ class Anwesenheit_User_model extends \DB_Model
 				ORDER BY datum DESC;
 		";
 
-		return $this->execQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
+		return $this->execReadOnlyQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
+	}
+	
+	public function getAllAnwesenheitenByPersonId($person_id) {
+		$query = "
+			SELECT 
+				lehrveranstaltung_id, lehreinheit_id, anwesenheit_id, anwesenheit_user_id, prestudent_id,
+				von, bis, status, statussetvon, statussetamum, notiz, version, studiensemester_kurzbz, tbl_lehreinheit.lehrform_kurzbz,
+				bezeichnung as le_bezeichnung,
+			extension.tbl_anwesenheit_user.insertamum as anwinsam, extension.tbl_anwesenheit_user.insertvon as anwinsvon,
+			extension.tbl_anwesenheit_user.updateamum as anwupdam, extension.tbl_anwesenheit_user.updatevon as anwupdvon,
+			
+			extension.tbl_anwesenheit_user.insertamum as koninsam, extension.tbl_anwesenheit_user.insertvon as koninsvon,
+			extension.tbl_anwesenheit_user.updateamum as konupdam, extension.tbl_anwesenheit_user.updatevon as konupdvon
+			
+			FROM extension.tbl_anwesenheit
+				JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
+				JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+			WHERE prestudent_id IN (
+				SELECT tbl_prestudent.prestudent_id
+				FROM tbl_prestudent JOIN tbl_student USING (prestudent_id)
+				WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
+			AND person_id = ? )
+			ORDER BY von ASC";
+
+		return $this->execReadOnlyQuery($query, [$person_id]);
 	}
 	
 	public function getAllForKontrolle($anwesenheit_id)
@@ -265,6 +291,8 @@ class Anwesenheit_User_model extends \DB_Model
 
 		return $this->execQuery($query, [$anwesenheit_id]);
 	}
+	
+	
 
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
 	{

@@ -8,7 +8,8 @@ class AdministrationApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				'getEntschuldigungen' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
+				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
+				'getTimeline' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
 			)
 		);
 
@@ -101,6 +102,9 @@ class AdministrationApi extends FHCAPI_Controller
 
 		// check if status is being updated at all
 		$statusChanged = $status !== $entschuldigung->akzeptiert;
+		$this->addMeta('$statusChanged', $statusChanged);
+		$this->addMeta('$status', $status);
+		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
 		
 		if($statusChanged) {
 			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
@@ -109,14 +113,32 @@ class AdministrationApi extends FHCAPI_Controller
 			if (isError($result))
 				$this->terminateWithError($result);
 			$anwesenheit_user_idsArr = getData($result);
-
+			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
+			
 			if($anwesenheit_user_idsArr) {
 				$funcAUID = function ($value) {
 					return $value->anwesenheit_user_id;
 				};
 
 				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
+				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
+				
+				// if anw is from exam kontrolle and entschuldigung was uploaded past that date it does not count, even though
+				// the kontroll entry was in the time range
+				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids);
+				$this->addMeta('examCheck', $result);
+				
+				if(count($result->retval) > 0) { // filter exam ids
+					$exam_ids = array_map($funcAUID, $result->retval);
+					
+					$anwesenheit_user_ids = array_filter($anwesenheit_user_ids, function($anwId) use ($exam_ids) {
+						return !in_array($anwId, $exam_ids);
+					});
 
+					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
+				}
+				
+				
 				$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
 
 				if (isError($updateAnwesenheit))
@@ -183,15 +205,14 @@ class AdministrationApi extends FHCAPI_Controller
 			$body_fields = array(
 				'von' => $von,
 				'bis' => $bis,
-				'akzeptiert' => $status,
+				'akzeptiert' => $status == true ? 'akzeptiert' : 'abgelehnt',
 				'linkEntschuldigungen' => $url
 			);
 
 			$email = $student_uid . "@" . DOMAIN;
-
-			// TODO: test vorlage properly
+			
 			if (!isEmptyString($notiz)) { // send template with anmerkung/begründung
-				$body_fields[] = $notiz;
+				$body_fields['notiz'] = $notiz;
 				
 				sendSanchoMail(
 					'AnwEntUpdateNotiz',
@@ -207,11 +228,36 @@ class AdministrationApi extends FHCAPI_Controller
 					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
 				);
 			}
+			$this->addMeta('emailfields', $body_fields);
 		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
 	}
 
+	/**
+	 * POST METHOD
+	 * Expects parameter 'person_id'
+	 * Loads every anw_user_entry linked to person_ids prestudents and every entschuldigung to visualize a timeline.
+	 */
+	public function getTimeline() {
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
+		$result = $this->getPostJSON();
+		$person_id = $result->person_id;
+
+		// fetch all anw_user entries for persons prestudent_ids
+		$anw = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByPersonId($person_id);
+		
+		// fetch all entschuldigungen
+		$ent = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+		
+		$this->terminateWithSuccess(array($anw, $ent));
+	}
+	
 	private function _setAuthUID()
 	{
 		$this->_uid = getAuthUID();

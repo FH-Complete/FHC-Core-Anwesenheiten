@@ -14,6 +14,10 @@ export default {
 		return this.$fhcApi.post(url, payload, null)
 
 	},
-
+	async getTimeline(entschuldigung_id, person_id) {
+		const payload = {entschuldigung_id, person_id}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getTimeline';
+		return this.$fhcApi.post(url, payload, null)
+	}
 
 }

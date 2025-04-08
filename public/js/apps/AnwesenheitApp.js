@@ -23,7 +23,7 @@ const router = VueRouter.createRouter({
 		},
 		{
 			path: `/Administration`,
-			name: 'LandingPage',
+			name: 'Administration',
 			component: LandingPageComponent,
 		},
 		{

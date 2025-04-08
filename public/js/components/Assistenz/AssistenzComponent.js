@@ -8,6 +8,7 @@ import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
 import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
+import AnwTimeline from "./AnwTimeline";
 
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
@@ -19,12 +20,15 @@ export const AssistenzComponent = {
 		CoreRESTClient,
 		Datepicker: VueDatePicker,
 		StudiengangDropdown,
-		EntschuldigungEdit
+		EntschuldigungEdit,
+		AnwTimeline
 	},
 	data: function() {
 		return {
 			selectedEntschuldigung: null,
 			selectedEntschuldigungValid: false,
+			selectedAnwArray: null,
+			selectedEntArray: null,
 			tabulatorUuid: Vue.ref(0),
 			headerMenuEntries: {},
 			sideMenuEntries: {},
@@ -58,6 +62,7 @@ export const AssistenzComponent = {
 						})
 					}
 				},
+				debugInvalidComponentFuncs:false,
 				layout: 'fitData',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
@@ -166,6 +171,35 @@ export const AssistenzComponent = {
 
 			this.$refs.modalContainerEditEntschuldigung.show()
 		},
+		closeTimelineModal() {
+			this.selectedAnwArray = null
+			this.selectedEntArray = null
+			
+			this.$refs.modalContainerTimeline.hide()
+		},
+		savePersonIdDataArr(person_id, data) {
+			// for given person_id save data in an array to avoid redundant fetches if different timelines are being looked at
+		},
+		openTimelineModal(data) {
+			this.selectedEntschuldigungCellRef = data
+			this.selectedEntschuldigung = {...data}
+
+			// TODO: save fetched anw and check if we already fetched timeline for person_id
+			// if that is the case just open modal with saved anwArray and overlay selected entschuldigung together with all others
+			
+			// keep track of ent updates for that person -> if ent was updated fetch again
+			this.$fhcApi.factory.Anwesenheiten.Administration.getTimeline(this.selectedEntschuldigung.entschuldigung_id, this.selectedEntschuldigung.person_id).then(
+				(res) => {
+					
+					this.savePersonIdDataArr(this.selectedEntschuldigung.person_id, res.data)
+					
+					this.selectedAnwArray = res.data[0].retval
+					this.selectedEntArray = res.data[1].retval
+				}
+			)
+			
+			this.$refs.modalContainerTimeline.show()
+		},
 		akzeptiertFilterFunc(filterVal, rowVal) {
 			// 400 iq code
 			if(filterVal === 'null') return rowVal === null
@@ -208,9 +242,11 @@ export const AssistenzComponent = {
 		{
 			let actionwrapper = document.createElement('div');
 			actionwrapper.className = "d-flex gap-3";
-
+			const minwidth = '40px';
+			
 			let button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-download"></i>';
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
 			button.title = this.$p.t('table/download');
@@ -218,6 +254,7 @@ export const AssistenzComponent = {
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-pen-to-square"></i>';
 			button.addEventListener('click', () => this.openEditEntschuldigungModal(cell.getData()));
 			button.title = this.$p.t('global/entschuldigungEditieren');
@@ -225,6 +262,15 @@ export const AssistenzComponent = {
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
+			button.innerHTML = '<i class="fa fa-timeline"></i>';
+			button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
+			button.title = this.$p.t('global/anwTimeline');
+			actionwrapper.append(button);
+
+			button = document.createElement('button');
+			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-check"></i>';
 			button.title = this.$p.t('global/entschuldigungAkzeptieren');
 			button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
@@ -232,6 +278,7 @@ export const AssistenzComponent = {
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
 			button.title = this.$p.t('global/entschuldigungAblehnen');
 			button.addEventListener('click', () => this.openRejectionModal(cell));
@@ -393,6 +440,23 @@ export const AssistenzComponent = {
 					<button type="button" class="btn btn-primary" :disabled="!notiz" @click="rejectEntschuldigung">{{ $p.t('global/reject') }}</button>
 				</template>
 			</bs-modal>
+
+
+			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" dialogClass="modal-dialog modal-fullscreen">
+				<template v-slot:title>
+					<div>
+						{{ $p.t('global/anwTimeline') }}
+					</div>
+				</template>
+				<template v-slot:default>
+					
+					<AnwTimeline v-model="selectedEntschuldigung" :anwArray="selectedAnwArray" :entArray="selectedEntArray"></AnwTimeline>
+					
+				</template>
+				<template v-slot:footer>
+					<button type="button" class="btn btn-outline-secondary " @click="closeTimelineModal">{{$p.t('ui','cancel')}}</button>    
+				</template>
+			</bs-modal>	
 
 			<bs-modal ref="modalContainerEditEntschuldigung" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>

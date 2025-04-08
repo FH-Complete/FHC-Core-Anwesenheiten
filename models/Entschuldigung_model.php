@@ -14,15 +14,15 @@ class Entschuldigung_model extends \DB_Model
     }
 
 	public function getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $person_id, $von, $bis) {
+		
 		$query = 'SELECT anwesenheit_user_id FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_user USING (anwesenheit_id)
 				WHERE von >= ?
 					AND bis <= ?
-					AND prestudent_id = (
+					AND prestudent_id IN (
 						SELECT tbl_prestudent.prestudent_id
 						FROM tbl_prestudent JOIN tbl_student USING (prestudent_id)
 						WHERE tbl_prestudent.prestudent_id = tbl_student.prestudent_id
 					  	AND person_id = ?
-						LIMIT 1
 				)
 				EXCEPT
 				SELECT anwesenheit_user_id
@@ -197,5 +197,22 @@ class Entschuldigung_model extends \DB_Model
 		WHERE public.tbl_student.semester > 0 AND person_id = ?";
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
+	}
+
+	/**
+	 * Expects parameter '$anw_user_ids'
+	 * Checks if anw_user_entries are linked to an exam kontrolle that has been held in the past.
+	 */
+	public function checkForExam($anw_user_ids) {
+		// TODO: maybe use entschuldigung uploaddatum? instertamum?
+		$query = "SELECT anwesenheit_user_id
+				  FROM extension.tbl_anwesenheit_user 
+						JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
+						JOIN lehre.tbl_lehreinheit USING(lehreinheit_id) 
+				  WHERE lehrform_kurzbz = 'EXAM' AND anwesenheit_user_id IN ? AND DATE(von) < DATE(now())";
+
+		$result = $this->execReadOnlyQuery($query, [$anw_user_ids]);
+		
+		return $result;
 	}
 }

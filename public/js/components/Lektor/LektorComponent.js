@@ -61,6 +61,7 @@ export const LektorComponent = {
 				rowFormatter: this.entschuldigtColoring,
 				height: this.$entryParams.tabHeights.lektor,
 				index: 'prestudent_id',
+				debugInvalidComponentFuncs:false,
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
@@ -190,7 +191,7 @@ export const LektorComponent = {
 			if(sameDay) {
 				return String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
 			} else {
-				return von.getMonth() + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + bis.getMonth() + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return (von.getMonth() + 1) + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + (bis.getMonth() + 1) + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
 			}
 		},
 		formatAkzeptiertStatus(akzeptiert) {
@@ -781,6 +782,18 @@ export const LektorComponent = {
 			this.lektorState.viewData = this.$entryParams.lektorState.viewData
 			this.lektorState.a_o_kz = this.$entryParams.lektorState.a_o_kz
 			this.lektorState.gruppen = new Set()
+			
+			// put query params back into url for expected f5 behaviour
+			function updateQueryParam(key, value) {
+				const url = new URL(window.location);
+				url.searchParams.set(key, value);
+				window.history.replaceState({}, '', url);
+			}
+			
+			updateQueryParam('stg_kz', this.$entryParams.stg_kz);
+			updateQueryParam('sem', this.$entryParams.sem);
+			updateQueryParam('lvid', this.$entryParams.lv_id);
+			updateQueryParam('sem_kurzbz', this.$entryParams.sem_kurzbz);
 
 			this.$entryParams.lektorState = null
 			this.setupLektorComponent()
@@ -792,11 +805,21 @@ export const LektorComponent = {
 			this.lektorState.entschuldigtStati = data[3] ?? []
 			this.lektorState.kontrollen = data[4] ?? []
 			this.lektorState.viewData = data[5] ?? []
-			this.$entryParams.available_termine.value = data[6] ?? []
+			// todo: check for edge cases
+
+			this.$entryParams.available_termine.value = this.getAvailableTermine(data)
 			this.lektorState.a_o_kz = data[7] ?? []
 			this.lektorState.gruppen = new Set()
 
 			this.setupLektorComponent()
+		},
+		getAvailableTermine(data) {
+			if(this.$entryParams.allLeTermine && this.$entryParams.allLeTermine[this.$entryParams.selected_le_id.value]) {
+				return this.$entryParams.allLeTermine[this.$entryParams.selected_le_id.value] ?? []
+			} else {
+				// this should never happen since we always have termine setup before LE but still handling the odd case
+				return  []
+			}
 		},
 		async maUIDchangedHandler() {
 			this.$refs.anwesenheitenTable.tabulator.clearSort()

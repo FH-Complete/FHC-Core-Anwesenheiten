@@ -44,6 +44,7 @@ export default {
 					}
 				},
 				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
+				debugInvalidComponentFuncs:false,
 				layout:"fitDataStretch",
 				pagination: true,
 				paginationSize: 100,
