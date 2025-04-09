@@ -142,8 +142,10 @@ export default {
 
 			let button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
-
+			const minwidth = '40px';
+			
 			button.innerHTML = '<i class="fa fa-download"></i>';
+			button.style.minWidth = minwidth;
 			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
 			button.title = this.$p.t('table/download');
 			download.append(button);
@@ -152,6 +154,7 @@ export default {
 			{
 				button = document.createElement('button');
 				button.className = 'btn btn-outline-secondary';
+				button.style.minWidth = minwidth;
 				button.innerHTML = '<i class="fa fa-xmark"></i>';
 				button.title = this.$p.t('global/entschuldigungLöschen');
 				button.addEventListener('click', () => this.deleteEntschuldigung(cell, 'decline'));

@@ -9,8 +9,8 @@ export const AnwTimeline = {
 	},
 	data () {
 		return {
-			timelineStart: new Date(2025, 0, 1, 0, 0, 0, 0),
-			timelineEnd: new Date(2025, 3, 30, 0, 0, 0, 0),
+			timelineStart: new Date(new Date(Date.now()).getFullYear(), 0, 1, 0, 0, 0, 0),
+			timelineEnd: new Date(new Date(Date.now()).getFullYear(), 12, 31, 0, 0, 0, 0),
 			hourWidth: 20,
 			selectedRange: null // when clicking anw or ent assign this and show their fields
 		};
@@ -20,13 +20,32 @@ export const AnwTimeline = {
 		anwArray: null,
 		entArray: null
 	},
-	created() {
-
-	},
-
 	methods: {
+		formatDateTimelineStart(date) {
+			const day = date.getDate();
+			const month = date.getMonth() + 1;
+			const year = date.getFullYear();
+
+			return `Timeline Start: ${day}.${month}.${year}`;
+		},
+		formatDateTimelineEnd(date) {
+			const day = date.getDate();
+			const month = date.getMonth() + 1;
+			const year = date.getFullYear();
+
+			return `Timeline End: ${day}.${month}.${year}`;
+		},
+		formatEntTime(ent) {
+			return this.formatDate(ent.von) + ' - ' + this.formatDate(ent.bis)
+		},
 		highlightEntschuldigung(ent) {
-			// TODO: implement
+			// check if date is in current range, if not expand range and then scrollIntoView nextTick
+			
+			const id = 'entRange-' + ent.entschuldigung_id
+			const el = document.getElementById(id)
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			}
 		},
 		showRangeDetails(range) {
 			this.selectedRange = range	
@@ -56,6 +75,8 @@ export const AnwTimeline = {
 			const rangeTime =  (end.getHours() + (end.getMinutes() / 60)) - (start.getHours() + (start.getMinutes() / 60))
 			const offsetHours = start.getHours() + (start.getMinutes() / 60)
 				
+			const zOffset = Math.round(10000 / (rangeLength * 24 + rangeTime))
+			
 			return {
 				position: 'absolute',
 				top: '0',
@@ -64,7 +85,7 @@ export const AnwTimeline = {
 				height: '100%',
 				transform: 'translateY(-20px)',
 				backgroundColor: color,
-				zIndex: 9999,
+				zIndex: 9999 + zOffset,
 				borderRadius: '6px'
 			}
 		},
@@ -76,7 +97,9 @@ export const AnwTimeline = {
 			const rangeLength = this.getDaysBetweenDates(start, end)
 			const rangeTime =  (end.getHours() + (end.getMinutes() / 60)) - (start.getHours() + (start.getMinutes() / 60))
 			const offsetHours = start.getHours() + (start.getMinutes() / 60)
-
+			
+			const zOffset = Math.round(10000 / (rangeLength * 24 + rangeTime))
+			
 			return {
 				position: 'absolute',
 				top: '0',
@@ -85,7 +108,7 @@ export const AnwTimeline = {
 				height: '100%',
 				transform: 'translateY(20px)',
 				backgroundColor: color,
-				zIndex: 9999,
+				zIndex: 9999 + zOffset,
 				borderRadius: '6px'
 			}
 		},
@@ -104,10 +127,9 @@ export const AnwTimeline = {
 			const hours = padZero(date.getHours());
 			const minutes = padZero(date.getMinutes());
 
-			return `${month}/${day}/${year}, ${hours}:${minutes}`;
+			return `${day}.${month}.${year} ${hours}:${minutes}`;
 		},
 		getTimelineEventStyle() {
-
 			return {
 				width: `${this.dayWidth}px`,
 				transform: `translateX(-${this.dayWidth / 2}px)`,
@@ -125,13 +147,19 @@ export const AnwTimeline = {
 	watch:{
 		modelValue: {
 			handler(newVal) {
-				console.log(newVal)
+				setTimeout(() => {
+					const id = 'entRange-' + newVal.entschuldigung_id
+					const el = document.getElementById(id)
+					if (el) {
+						el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					}
+				}, 200)
 			},
 			deep: true
 		},
 		anwArray: {
 			handler(newVal) {
-				console.log(newVal)
+
 			},
 			deep: true
 		}
@@ -190,89 +218,90 @@ export const AnwTimeline = {
 		}
 	},
 	template: `
-		<div v-if="modelValue && anwArray && entArray" class="row">
-			<div class="col-4"> 
-				<div class=" h-100" style="overflow: auto;">
-					<template v-for="ent in entArray" :key="'menu-'+ent.entschuldigung_id">
-						<div class="position-relative" @click="highlightEntschuldigung(ent)">
-							<span>{{ent.entschuldigung_id}}: {{ent.von}} - {{ent.bis}}</span>
-						</div>
-					</template>
-				</div>
-			</div>
-			<div class="col-8">
-				<div class="row">
-					<Range v-model="selectedRange">
-				</div>
-				
-				<div class="row mt-4">
-					<div class="col-6">
-						<datepicker
-							id="timelineStart"
-							v-model="timelineStart"
-							:clearable="false"
-							auto-apply
-							:time-picker="false">
-						</datepicker>
+	<div v-if="modelValue && anwArray && entArray" class="row" style="padding: 0px; margin: 0px;">
+		<div class="col-3"> 
+			<div class="max-height: 400px;" style="overflow: auto;">
+				<template v-for="ent in entArray" :key="'menu-'+ent.entschuldigung_id">
+					<div class="position-relative" >
+						<button type="button" class="btn btn-light" @click="highlightEntschuldigung(ent)"><span>{{ent.entschuldigung_id}}: {{formatEntTime(ent)}}</span></button>
 					</div>
-					<div class="col-6">
-						<datepicker
-							id="timelineEnd"
-							v-model="timelineEnd"
-							:clearable="false"
-							auto-apply
-							:time-picker="false">
-						</datepicker>
-					</div>
-				</div>
+				</template>
 			</div>
+		</div>
+		<div class="col-9">
 			<div class="row">
-				<div @wheel="handleScrollTimeline" class="custom-timeline-scroll-wrapper p-5" style="margin-left: 12px; margin-right:12px;">
-					<div class="timeline-container position-relative" :style="getTimelineStyle">
-						<!-- Ent Range Overlays -->
-						<div
-						  v-for="(range, index) in entTimeRanges"
-						  :key="'entRange-' + index"
-						  class="timeline-overlay"
-						  :style="getOverlayStyleEnt(range)"
-						  @click="showRangeDetails(range)"
-						>
-							<div class="time-marker start">{{ formatDate(range.von) }}</div>
-							<div class="time-marker end" style="transform: translateY(20px)">{{ formatDate(range.bis) }}</div>
-						</div>
-						
-						<!-- Anw Overlays -->
-						<div
-						  v-for="(range, index) in anwTimeRanges"
-						  :key="'anwRange-' + index"
-						  class="timeline-overlay"
-						  :style="getOverlayStyleAnw(range)"
-						  @click="showRangeDetails(range)"
-						>
-							<div class="time-marker start">{{ formatDate(range.von) }}</div>
-							<div class="time-marker end" style="transform: translateY(20px)">{{ formatDate(range.bis) }}</div>
-						</div>
-					
-						<!-- Timeline -->
-						<Timeline :value="events" layout="horizontal" :unstyled="true">
-							<template #content="slotProps">
-								<div
-								class="event-card text-center p-2"
-								:style="getTimelineEventStyle(slotProps.item)"
-								>
-									<h6>{{ slotProps.item.title }}</h6>
-									<small>{{ slotProps.item.date }}</small>
-								</div>
-							</template>
-						</Timeline>
-					</div>
-					
+				<Range v-model="selectedRange">
+			</div>
+			<div class="row mt-2">
+				<div class="col-6">
+					<datepicker
+						id="timelineStart"
+						v-model="timelineStart"
+						:clearable="false"
+						:format="formatDateTimelineStart"
+						auto-apply
+						:time-picker="false">
+					</datepicker>
+				</div>
+				<div class="col-6">
+					<datepicker
+						id="timelineEnd"
+						v-model="timelineEnd"
+						:clearable="false"
+						:format="formatDateTimelineEnd"
+						auto-apply
+						:time-picker="false">
+					</datepicker>
 				</div>
 			</div>
 		</div>
-		<div v-else class="text-center">
-			<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
+		<div class="row" style="padding: 0px; margin: 0px;">
+			<div @wheel.prevent="handleScrollTimeline" class="custom-timeline-scroll-wrapper p-5" style="margin-left: 12px; margin-right:12px;">
+				<div class="timeline-container position-relative" :style="getTimelineStyle">
+					<!-- Ent Range Overlays -->
+					<div
+					  v-for="(range, index) in entTimeRanges"
+					  :key="'entRange-' + index"
+					  :id="'entRange-' + range.entschuldigung_id"
+					  class="timeline-overlay"
+					  :style="getOverlayStyleEnt(range)"
+					  @click="showRangeDetails(range)"
+					>
+						<div class="time-marker start">{{ formatDate(range.von) }}</div>
+						<div class="time-marker end" style="transform: translateY(20px)">{{ formatDate(range.bis) }}</div>
+					</div>
+					
+					<!-- Anw Overlays -->
+					<div
+					  v-for="(range, index) in anwTimeRanges"
+					  :key="'anwRange-' + index"
+					  :id="'anwRange-' + range.anwesenheit_user_id"
+					  class="timeline-overlay"
+					  :style="getOverlayStyleAnw(range)"
+					  @click="showRangeDetails(range)"
+					>
+						<div class="time-marker start">{{ formatDate(range.von) }}</div>
+						<div class="time-marker end" style="transform: translateY(20px)">{{ formatDate(range.bis) }}</div>
+					</div>
+				
+					<!-- Timeline -->
+					<Timeline :value="events" layout="horizontal" :unstyled="true">
+						<template #content="slotProps">
+							<div
+							class="event-card text-center p-2"
+							:style="getTimelineEventStyle(slotProps.item)"
+							>
+								<h6>{{ slotProps.item.title }}</h6>
+							</div>
+						</template>
+					</Timeline>
+				</div>	
+			</div>
 		</div>
+	</div>
+	<div v-else class="text-center">
+		<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
+	</div>
 	`
 }
 

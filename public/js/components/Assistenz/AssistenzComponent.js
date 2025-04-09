@@ -442,7 +442,7 @@ export const AssistenzComponent = {
 			</bs-modal>
 
 
-			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" dialogClass="modal-dialog modal-fullscreen">
+			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" bodyClass="px-4 py-0" dialogClass="modal-dialog modal-fullscreen">
 				<template v-slot:title>
 					<div>
 						{{ $p.t('global/anwTimeline') }}

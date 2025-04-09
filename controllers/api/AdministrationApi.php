@@ -125,7 +125,7 @@ class AdministrationApi extends FHCAPI_Controller
 				
 				// if anw is from exam kontrolle and entschuldigung was uploaded past that date it does not count, even though
 				// the kontroll entry was in the time range
-				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids);
+				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids, $entschuldigung->uploaddatum);
 				$this->addMeta('examCheck', $result);
 				
 				if(count($result->retval) > 0) { // filter exam ids

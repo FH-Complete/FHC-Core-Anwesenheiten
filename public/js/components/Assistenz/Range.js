@@ -26,9 +26,9 @@ export const Range = {
 		}
 	},
 	template: `
-		<div v-if="modelValue" style="max-height: 400px; overflow-y: auto;">
+		<div v-if="modelValue" style="max-height: 400px; overflow-y: auto; display: flex; gap: 2px;">
 			<template v-for="key in modelKeys">
-				<p>{{key}}: {{modelValue[key]}}</p>
+				<span style="display: inline-block; margin-right: 2px;"><span style="font-weight: bold">{{key}}</span>: {{modelValue[key]}} </span>
 			</template>
 		</div>
 	`

@@ -58,7 +58,7 @@ class Entschuldigung_model extends \DB_Model
 
 	public function getEntschuldigungenByPerson($person_id)
 	{
-		$query = 'SELECT dms_id, von, bis, akzeptiert, entschuldigung_id, notiz
+		$query = 'SELECT dms_id, von, bis, akzeptiert, entschuldigung_id, notiz, person_id, statussetvon, statussetamum, version, insertamum, insertvon, updateamum, updatevon
 					FROM extension.tbl_anwesenheit_entschuldigung
 					WHERE person_id = ?
 					ORDER by von DESC, akzeptiert DESC NULLS LAST';
@@ -201,17 +201,16 @@ class Entschuldigung_model extends \DB_Model
 
 	/**
 	 * Expects parameter '$anw_user_ids'
-	 * Checks if anw_user_entries are linked to an exam kontrolle that has been held in the past.
+	 * Checks if anw_user_entries are linked to an exam kontrolle that has been held in the past relative to entschuldigung uploaddatum.
 	 */
-	public function checkForExam($anw_user_ids) {
-		// TODO: maybe use entschuldigung uploaddatum? instertamum?
+	public function checkForExam($anw_user_ids, $uploaddatum) {
 		$query = "SELECT anwesenheit_user_id
 				  FROM extension.tbl_anwesenheit_user 
 						JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
 						JOIN lehre.tbl_lehreinheit USING(lehreinheit_id) 
-				  WHERE lehrform_kurzbz = 'EXAM' AND anwesenheit_user_id IN ? AND DATE(von) < DATE(now())";
+				  WHERE lehrform_kurzbz = 'EXAM' AND anwesenheit_user_id IN ? AND DATE(von) < DATE(?)";
 
-		$result = $this->execReadOnlyQuery($query, [$anw_user_ids]);
+		$result = $this->execReadOnlyQuery($query, [$anw_user_ids, $uploaddatum]);
 		
 		return $result;
 	}
