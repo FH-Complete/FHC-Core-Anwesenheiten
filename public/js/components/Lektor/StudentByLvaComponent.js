@@ -361,7 +361,6 @@ export const StudentByLvaComponent = {
 	},
 	created(){
 		// TODO: app whide permissions setup OR kübel the link to studentByAnw
-		debugger
 		if(!this.$entryParams.permissions) {// missing setup -> redirect on landing page
 			this.$router.push({name: 'LandingPage'})
 		}

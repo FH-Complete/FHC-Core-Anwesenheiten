@@ -70,3 +70,27 @@
 	overflow-x: auto;
 	width: 100%;
 }
+
+.select-container {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+}
+
+.select-container select {
+	width: 100%;
+	appearance: none; /* Remove default arrow */
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	padding-right: 2rem; /* make room for icon */
+}
+
+.dropdown-icon {
+	position: absolute;
+	right: 1rem;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none; /* let clicks go through */
+	color: #555;
+	font-size: 0.8rem;
+}

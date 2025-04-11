@@ -1,5 +1,8 @@
 export const KontrollenDropdown = {
 	name: "KontrollenDropdown",
+	components: {
+		Dropdown: primevue.dropdown,
+	},
 	emits: [
 		'kontrolleChanged'
 	],
@@ -18,22 +21,23 @@ export const KontrollenDropdown = {
 			this.$emit('kontrolleChanged', this.internal_selected_kontrolle)
 		},
 		kontrolleChanged(e) {
-			const selected = e.target.selectedOptions
-
-			this.internal_selected_kontrolle = selected[0]._value
+			this.internal_selected_kontrolle = e.value
 			this.$emit('kontrolleChanged', this.internal_selected_kontrolle)
 		},
+		getOptionLabel(option) {
+			return option.datum + ': ' + option.von + ' - ' + option.bis
+		}
 	},
 	mounted() {
 	},
 	template: `
 		<div class="mt-2">
-			<label for="kontrolleSelect">{{ $p.t('global/deletableKontrollen') }}</label>
-			<select id="kontrolleSelect" v-model="internal_selected_kontrolle" @change="kontrolleChanged" class="form-control">
-				<option v-for="kontrolle in internal_available_kontrolle" :value="kontrolle" >
-					{{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}}
-				</option>
-			</select>
+			<Dropdown @change="kontrolleChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
+			v-model="internal_selected_kontrolle" :options="internal_available_kontrolle">
+				<template #optionsgroup="slotProps">
+					<div> {{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}} </div>
+				</template>
+			</Dropdown>
 		</div>
 	`
 }

@@ -14,10 +14,13 @@ export default {
 		CoreFilterCmpt,
 		BsModal,
 		Upload,
-		"datepicker": VueDatePicker
+		"datepicker": VueDatePicker,
+		Checkbox: primevue.checkbox
 	},
 	data: function() {
 		return {
+			noFileUpload: false,
+			editEntschuldigung: null,
 			tabulatorUuid: Vue.ref(0),
 			entschuldigung: {
 				von: Vue.ref({ hours: 0, minutes: 0 }),
@@ -77,6 +80,17 @@ export default {
 		};
 	},
 	methods: {
+		formatDateEntschuldigungEdit(date) {
+			const padZero = (num) => String(num).padStart(2, '0');
+
+			const month = padZero(date.getMonth() + 1);
+			const day = padZero(date.getDate());
+			const year = date.getFullYear();
+			const hours = padZero(date.getHours());
+			const minutes = padZero(date.getMinutes());
+
+			return `${day}.${month}.${year} ${hours}:${minutes}`;
+		},
 		calcMinDate(){
 			// calc max reach offset into workdays
 			let d = new Date();
@@ -100,15 +114,52 @@ export default {
 				return this.$p.t('global/entschuldigungAbgelehnt')
 			}
 		},
+		triggerEdit() {
+			debugger
+
+			if(!this.entschuldigung.files.length) {
+				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
+				return false
+			}
+			
+			const formData = new FormData();
+			
+			for (let i = 0; i < this.entschuldigung.files.length; i++) {
+				formData.append('files', this.entschuldigung.files[i]);
+			}
+
+			formData.append('von', this.editEntschuldigung.von);
+			formData.append('bis', this.editEntschuldigung.bis);
+			formData.append('entschuldigung_id', this.editEntschuldigung.entschuldigung_id)
+			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
+
+			formData.append('person_id', person_id);
+
+
+			this.$fhcApi.factory.Anwesenheiten.Profil.editEntschuldigung(formData)
+				.then(response => {
+				console.log(response)
+				if (response.meta.status === "success")
+				{
+
+				}
+			});
+
+		},
 		triggerUpload() {
 			if (!this.validate())
 			{
 				return false;
 			}
 			const formData = new FormData();
-			for (let i = 0; i < this.entschuldigung.files.length; i++) {
-				formData.append('files', this.entschuldigung.files[i]);
+			if(!this.noFileUpload) {
+				for (let i = 0; i < this.entschuldigung.files.length; i++) {
+					formData.append('files', this.entschuldigung.files[i]);
+				}
+			} else {
+				formData.append('noFileUpload', this.noFileUpload)
 			}
+			
 			formData.append('von', this.entschuldigung.von);
 			formData.append('bis', this.entschuldigung.bis);
 
@@ -144,11 +195,19 @@ export default {
 			button.className = 'btn btn-outline-secondary';
 			const minwidth = '40px';
 			
-			button.innerHTML = '<i class="fa fa-download"></i>';
-			button.style.minWidth = minwidth;
-			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-			button.title = this.$p.t('table/download');
-			download.append(button);
+			if(cell.getData().dms_id) {
+				button.innerHTML = '<i class="fa fa-download"></i>';
+				button.style.minWidth = minwidth;
+				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
+				button.title = this.$p.t('table/download');
+				download.append(button);
+			} else {
+				button.innerHTML = '<i class="fa fa-upload"></i>';
+				button.style.minWidth = minwidth;
+				button.addEventListener('click', () => this.addEntschuldigungFile(cell.getData()));
+				button.title = this.$p.t('table/upload');
+				download.append(button);
+			}
 
 			if (cell.getData().akzeptiert == null)
 			{
@@ -162,6 +221,12 @@ export default {
 			}
 
 			return download;
+		},
+		addEntschuldigungFile(entschuldigung) {
+			console.log('addEntschuldigungFile', entschuldigung)
+
+			this.editEntschuldigung = entschuldigung
+			this.$refs.modalContainerEntschuldigungEdit.show()
 		},
 		downloadEntschuldigung: function(dms_id)
 		{
@@ -185,6 +250,7 @@ export default {
 			this.$refs.modalContainerEntschuldigungUpload.show()
 		},
 		validate: function() {
+			// todo: check for von/bis input never toched => von still exists as initialized hours minutes object
 			if(!this.entschuldigung.von) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
 				return false
@@ -193,7 +259,7 @@ export default {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
 				return false
 			}
-			if(!this.entschuldigung.files.length) {
+			if(!this.entschuldigung.files.length && !this.noFileUpload) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
 				return false
 			}
@@ -354,13 +420,67 @@ export default {
 		
 					
 					<div class="row">
-						<Upload ref="uploadComponent" accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
+						<div class="col-8">
+							<Upload :disabled="noFileUpload" accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
+						</div>
+						<div class="col-4">
+							<Checkbox v-model="noFileUpload" :binary="true"></Checkbox><span>Entschuldigung ohne Datei beantragen</span>
+						</div>
 					</div>
 				</template>
 				<template v-slot:footer>
 					<button class="btn btn-primary" @click="triggerUpload">{{$p.t('ui/hochladen')}}</button>
 				</template>
 			</bs-modal>
+			
+			<bs-modal ref="modalContainerEntschuldigungEdit" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>
+					<div v-tooltip.bottom="getTooltipObj">
+						{{$p.t('global/editEntschuldigung')}}
+						<i class="fa fa-circle-question"></i>
+					</div>
+				</template>
+				<template v-slot:default v-if="editEntschuldigung">
+					<div class="row mb-3 align-items-center" >
+						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label></div>
+						<div class="col-10">
+							<datepicker
+								id="vonEdit"
+								v-model="editEntschuldigung.von"
+								:clearable="false"
+								:format="formatDateEntschuldigungEdit"
+								auto-apply
+								:disabled="true">
+							</datepicker>
+						</div>
+					</div>
+					<div class="row mb-3 align-items-center">
+						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('global/bis'))}}</label></div>
+						<div class="col-10">
+							<datepicker
+								id="bisEdit"
+								v-model="editEntschuldigung.bis"
+								:clearable="false"
+								:format="formatDateEntschuldigungEdit"
+								auto-apply
+								:disabled="true"
+								>
+							</datepicker>
+						</div>
+					</div>
+		
+					
+					<div class="row">
+						<div class="col-12">
+							<Upload accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
+						</div>
+					</div>
+				</template>
+				<template v-slot:footer>
+					<button class="btn btn-primary" @click="triggerEdit">{{$p.t('ui/hochladen')}}</button>
+				</template>
+			</bs-modal>
+			
 			<core-filter-cmpt
 				ref="entschuldigungsTable"
 				@uuidDefined="handleUuidDefined"

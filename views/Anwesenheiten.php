@@ -22,6 +22,7 @@ $includesArray = array(
 		'vendor/npm-asset/primevue/divider/divider.js',
 		'vendor/npm-asset/primevue/tooltip/tooltip.js',
 		'vendor/npm-asset/primevue/panel/panel.js',
+		'vendor/npm-asset/primevue/checkbox/checkbox.js',
 		'vendor/npm-asset/primevue/textarea/textarea.js',
 		'vendor/npm-asset/primevue/tristatecheckbox/tristatecheckbox.js',
 		'vendor/npm-asset/primevue/progressspinner/progressspinner.js',
