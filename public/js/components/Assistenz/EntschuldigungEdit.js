@@ -115,11 +115,13 @@ export const EntschuldigungEdit = {
 			</div>
 			
 			<div class="row">
-				<div class="d-flex align-items-center">
+				<div class="col-6 d-flex align-items-center">
 					<Tristate v-model="modelValue.akzeptiert" :disabled="true"></Tristate>
 					<span class="ms-2">{{getStatusLabel}}</span>
 				</div>
-				
+				<div v-if="!modelValue.dms_id" class="col-6">
+					<span class="ms-2" style="color: red">{{$p.t('global/missingEntschuldigungFile')}}</span>
+				</div>
 			</div>
 			<div class="row mt-4">
 				<div class="col-6">

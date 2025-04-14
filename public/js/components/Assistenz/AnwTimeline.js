@@ -147,6 +147,7 @@ export const AnwTimeline = {
 	watch:{
 		modelValue: {
 			handler(newVal) {
+				if(!newVal) return
 				setTimeout(() => {
 					const id = 'entRange-' + newVal.entschuldigung_id
 					const el = document.getElementById(id)

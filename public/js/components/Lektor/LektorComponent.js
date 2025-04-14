@@ -54,7 +54,8 @@ export const LektorComponent = {
 				tabulatorCols: null,
 				gruppen: null
 			},
-			kontrollZeitSourceStundenplan: false,
+			kontrollZeitSourceStundenplanBeginn: false,
+			kontrollZeitSourceStundenplanEnde: false,
 			kontrollDatumSourceStundenplan: false,
 			anwesenheitenTabulatorOptions: {
 				rowHeight: 44, // foto max-height + 2x padding
@@ -438,15 +439,22 @@ export const LektorComponent = {
 			// attempt to degenerate one last time to not leave any codes in db
 			this.$fhcApi.factory.Anwesenheiten.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
 		},
-		handleChangeDatum() {
-			// TODO: actually check if newly selected date is found in termin liste
-			this.kontrollDatumSourceStundenplan = false
+		handleChangeDatum(date) {
+			const padZero = (num) => String(num).padStart(2, '0');
+			const month = padZero(date.getMonth() + 1); // Months are zero-based
+			const day = padZero(date.getDate());
+			const year = date.getFullYear();
+			const searchStr = year + '-' + month + '-' + day
+			
+			const terminFound = this.$entryParams.available_termine.value.find(termin => termin.datum == searchStr)
+			if(terminFound) this.kontrollDatumSourceStundenplan = true
+			else this.kontrollDatumSourceStundenplan = false
 		},
-		handleChangeEnde() {
-			this.kontrollZeitSourceStundenplan = false
+		handleChangeEnde(date) {
+			this.kontrollZeitSourceStundenplanEnde = false
 		},
-		handleChangeBeginn() {
-			this.kontrollZeitSourceStundenplan = false
+		handleChangeBeginn(e) {
+			this.kontrollZeitSourceStundenplanBeginn = false
 		},
 		setTimespanForKontrolleTermin(termin, setDate = true) {
 			if (setDate) {
@@ -462,11 +470,12 @@ export const LektorComponent = {
 				minutes: beginn.getMinutes(),
 				seconds: beginn.getSeconds()
 			}
-			
-			this.kontrollZeitSourceStundenplan = true
+			this.kontrollZeitSourceStundenplanBeginn = true
 			this.kontrollDatumSourceStundenplan = (termin.isSameDay || setDate) ?? false
 			
 			this.lektorState.ende = {hours: ende.getHours(), minutes: ende.getMinutes(), seconds: ende.getSeconds()}
+			
+			this.kontrollZeitSourceStundenplanEnde = true
 		},
 		startNewAnwesenheitskontrolle() {
 			if (!this.lektorState.beginn || !this.lektorState.ende) {
@@ -1020,8 +1029,6 @@ export const LektorComponent = {
 	},
 	mounted() {
 		this.setupMounted()
-
-		console.log('$entryParams', this.$entryParams)
 		
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
@@ -1034,8 +1041,6 @@ export const LektorComponent = {
 	unmounted(){
 		// anwesenheitskontrolle could be active
 		this.stopPollingAnwesenheiten()
-		
-		// todo: close external window if open
 	},
 	watch: {
 		'lektorState.beginn'(newVal) {
@@ -1110,13 +1115,13 @@ export const LektorComponent = {
 		},
 		getTooltipZeitFromStundenplan() {
 			return {
-				value: 'Zeiten wurden aus dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
+				value: this.$p.t('global/tooltipUnterrichtZeitCustom'),//'Zeiten wurden aus dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
 				class: "custom-tooltip"
 			}
 		},
 		getTooltipDatumFromStundenplan() {
 			return {
-				value: 'Datum wurde dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
+				value: this.$p.t('global/tooltipUnterrichtDatumCustom'),//'Datum wurde dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
 				class: "custom-tooltip"
 			}
 		},
@@ -1167,10 +1172,10 @@ export const LektorComponent = {
 									
 									<h5>{{ $p.t('global/unterrichtzeit') }}</h5>
 									<div class="row align-items-center">
-										<div class="col-2" style="align-items: center; justify-items: center;">
-											<label for="beginn" class="form-label col-sm-1">{{ $capitalize($p.t('ui/von')) }}</label>
+										<div class="col-3" style="align-items: center; justify-items: center;">
+											<label for="beginn" class="form-label">{{ $p.t('global/anwKontrolleVon') }}</label>
 										</div>
-										<div class="col-6">
+										<div class="col-5">
 											<datepicker
 												v-model="lektorState.beginn"
 												@update:model-value="handleChangeBeginn"
@@ -1181,16 +1186,16 @@ export const LektorComponent = {
 											</datepicker>
 											
 										</div>
-										<div class="col-4" v-show="kontrollZeitSourceStundenplan" v-tooltip.bottom="getTooltipZeitFromStundenplan">
-											<i class="fa-solid fa-square-check"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/zeitAusStundenplan') }}</i>
+										<div class="col-4" v-show="!kontrollZeitSourceStundenplanBeginn" v-tooltip.bottom="getTooltipZeitFromStundenplan">
+											<i class="fa-solid fa-triangle-exclamation"></i>
+											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanBeginn') }}</i>
 										</div>
 									</div>
 									<div class="row align-items-center mt-2">
-										<div class="col-2" style="align-items: center; justify-items: center;">
-											<label for="von" class="form-label">{{ $capitalize($p.t('global/bis')) }}</label>
+										<div class="col-3" style="align-items: center; justify-items: center;">
+											<label for="von" class="form-label">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
 										</div>
-										<div class="col-6">
+										<div class="col-5">
 											<datepicker
 												v-model="lektorState.ende"
 												@update:model-value="handleChangeEnde"
@@ -1201,14 +1206,14 @@ export const LektorComponent = {
 											</datepicker>
 											
 										</div>
-										<div class="col-4" v-show="kontrollZeitSourceStundenplan" v-tooltip.bottom="getTooltipZeitFromStundenplan">
-											<i class="fa-solid fa-square-check"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/zeitAusStundenplan') }}</i>
+										<div class="col-4" v-show="!kontrollZeitSourceStundenplanEnde" v-tooltip.bottom="getTooltipZeitFromStundenplan">
+											<i class="fa-solid fa-triangle-exclamation"></i>
+											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanEnde') }}</i>
 										</div>
 									</div>
 									<div class="row mt-2">
-										<div class="col-2 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
-										<div class="col-6" style="height: 40px">
+										<div class="col-3 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatum') }}</label></div>
+										<div class="col-5" style="height: 40px">
 											<datepicker
 												v-model="selectedDate"
 												@update:model-value="handleChangeDatum"
@@ -1222,9 +1227,9 @@ export const LektorComponent = {
 											</datepicker>
 											
 										</div>
-										<div class="col-4" v-show="kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
-											<i class="fa-solid fa-square-check"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/datumAusStundenplan') }}</i>
+										<div class="col-4" v-show="!kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
+											<i class="fa-solid fa-triangle-exclamation"></i>
+											<i style="margin-left: 4px;">{{ $p.t('global/datumNichtAusStundenplan') }}</i>
 										</div>
 									</div>
 									

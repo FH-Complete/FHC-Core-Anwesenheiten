@@ -333,7 +333,7 @@ class ProfilApi extends FHCAPI_Controller
 		$vonTimestamp = strtotime($_POST['von']);
 		$bisTimestamp = strtotime($_POST['bis']);
 		$person_id = $_POST['person_id'];
-		$noFileUpload = $_POST['noFileUpload'];
+		$noFileUpload = $_POST['noFileUpload'] ?? false;
 
 		if ($vonTimestamp === false || $bisTimestamp === false)
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
@@ -590,7 +590,7 @@ class ProfilApi extends FHCAPI_Controller
 		$person_id = $result->person_id;
 
 		// students are only allowed to fetch their own entschuldigungen
-		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($isStudent, 'general');
+		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('ui', 'keineBerechtigung'), 'general');
 
 		if(is_object($person_id) || isEmptyString($person_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');

@@ -216,8 +216,7 @@ export default {
 							infoString
 						})
 					})
-
-
+					
 					this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
 
 				}).finally(()=>{resolve()})
@@ -262,12 +261,17 @@ export default {
 					if(res.data[1]) {
 						Object.keys(res.data[1]).forEach(key => {
 							const val = res.data[1][key]
-							if(val && val.length) val.forEach(v => v.le_id = key)
+							if(val && val.length) {
+								val.forEach(v => v.le_id = key)
+								val.push({le_id: key, datum: '2025-04-22', beginn: '13:37:42', ende: '23:42:17'})
+							}
 						}) 
 					}
 					
 					this.$entryParams.allLeTermine = res.data[1] ?? []
 
+					
+					
 					
 					res.data[0].forEach(entry => {
 
@@ -344,7 +348,6 @@ export default {
 			})
 
 			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
-
 		}
 	},
 	created(){

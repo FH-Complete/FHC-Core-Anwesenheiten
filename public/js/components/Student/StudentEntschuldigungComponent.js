@@ -22,11 +22,7 @@ export default {
 			noFileUpload: false,
 			editEntschuldigung: null,
 			tabulatorUuid: Vue.ref(0),
-			entschuldigung: {
-				von: Vue.ref({ hours: 0, minutes: 0 }),
-				bis: Vue.ref({ hours: 23, minutes: 59 }),
-				files: []
-			},
+			entschuldigung: this.initEntschuldigungForm(),
 			minDate: this.calcMinDate(),
 			tableBuiltPromise: null,
 			entschuldigungsViewTabulatorOptions: {
@@ -52,11 +48,11 @@ export default {
 				pagination: true,
 				paginationSize: 100,
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip: false, minWidth: 200, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false, minWidth: 80, maxWidth: 85},
-					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', tooltip:false, minWidth: 150}
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip: false, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate,  widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false},
+					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', tooltip:false}
 				],
 				persistence: {
 					sort: false,
@@ -80,6 +76,26 @@ export default {
 		};
 	},
 	methods: {
+		initEntschuldigungForm() {
+			return{
+				von: new Date(new Date(Date.now()).getFullYear(), new Date(Date.now()).getMonth(), new Date(Date.now()).getDate(), 0, 0, 0, 0),
+				bis: new Date(new Date(Date.now()).getFullYear(), new Date(Date.now()).getMonth(), new Date(Date.now()).getDate() + 1, 23, 59, 0, 0),
+				files: []
+			}
+		},
+		formatDate(dateParam) {
+			const date = new Date(dateParam)
+			// handle missing leading 0
+			const padZero = (num) => String(num).padStart(2, '0');
+
+			const month = padZero(date.getMonth() + 1); // Months are zero-based
+			const day = padZero(date.getDate());
+			const year = date.getFullYear();
+			const hours = padZero(date.getHours());
+			const minutes = padZero(date.getMinutes());
+
+			return `${day}.${month}.${year} ${hours}:${minutes}`;
+		},
 		formatDateEntschuldigungEdit(date) {
 			const padZero = (num) => String(num).padStart(2, '0');
 
@@ -101,6 +117,9 @@ export default {
 
 			return d
 		},
+		isValidDateObj(date) {
+			return date instanceof Date && !isNaN(date.getTime());
+		},
 		entschuldigungstatusFormatter(cell) {
 			let data = cell.getValue()
 			if (data == null) {
@@ -115,7 +134,6 @@ export default {
 			}
 		},
 		triggerEdit() {
-			debugger
 
 			if(!this.entschuldigung.files.length) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
@@ -128,8 +146,8 @@ export default {
 				formData.append('files', this.entschuldigung.files[i]);
 			}
 
-			formData.append('von', this.editEntschuldigung.von);
-			formData.append('bis', this.editEntschuldigung.bis);
+			formData.append('von', this.isValidDateObj(this.editEntschuldigung.von) ? this.editEntschuldigung.von.toISOString() : this.editEntschuldigung.von);
+			formData.append('bis', this.isValidDateObj(this.editEntschuldigung.bis) ? this.editEntschuldigung.bis.toISOString() : this.editEntschuldigung.bis);
 			formData.append('entschuldigung_id', this.editEntschuldigung.entschuldigung_id)
 			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
@@ -138,11 +156,21 @@ export default {
 
 			this.$fhcApi.factory.Anwesenheiten.Profil.editEntschuldigung(formData)
 				.then(response => {
-				console.log(response)
+
 				if (response.meta.status === "success")
 				{
+					const rows = this.$refs.entschuldigungsTable.tabulator.getRows()
 
+					let targetRow = rows.find(row => row.getData().entschuldigung_id == response.data.entschuldigung_id);
+
+					if (targetRow) {
+						targetRow.update({dms_id: response.data.dms_id});
+					}
+
+					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
 				}
+			}).finally(()=> {
+				this.$refs.modalContainerEntschuldigungEdit.hide()
 			});
 
 		},
@@ -160,14 +188,12 @@ export default {
 				formData.append('noFileUpload', this.noFileUpload)
 			}
 			
-			formData.append('von', this.entschuldigung.von);
-			formData.append('bis', this.entschuldigung.bis);
+			formData.append('von', this.entschuldigung.von.toISOString());
+			formData.append('bis', this.entschuldigung.bis.toISOString());
 
 			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
 			formData.append('person_id', person_id);
-
-
 
 			this.$fhcApi.factory.Anwesenheiten.Profil.addEntschuldigung(formData).then(res => {
 				let rowData = res.data
@@ -181,7 +207,7 @@ export default {
 					}
 					, true);
 				this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
-				this.resetFormData();
+				this.entschuldigung = this.initEntschuldigungForm();
 
 			})
 
@@ -223,8 +249,6 @@ export default {
 			return download;
 		},
 		addEntschuldigungFile(entschuldigung) {
-			console.log('addEntschuldigungFile', entschuldigung)
-
 			this.editEntschuldigung = entschuldigung
 			this.$refs.modalContainerEntschuldigungEdit.show()
 		},
@@ -263,29 +287,14 @@ export default {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
 				return false
 			}
-
-			// javaScript Date objects are 0-indexed, subtract 1 from the month
-			const vonParts = this.entschuldigung.von.split(/[ .:]/); // Split by dot, space, or colon
-			const vonDate = new Date(vonParts[2], vonParts[1] - 1, vonParts[0], vonParts[3], vonParts[4]);
-
-			const bisParts = this.entschuldigung.bis.split(/[ .:]/); // Split by dot, space, or colon
-			const bisDate = new Date(bisParts[2], bisParts[1] - 1, bisParts[0], bisParts[3], bisParts[4]);
-
-			if (bisDate < vonDate)
+			
+			if (this.entschuldigung.bis < this.entschuldigung.von)
 			{
 				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateTimes'));
 				return false
 			}
 
 			return true;
-		},
-		resetFormData: function()
-		{
-			this.entschuldigung = {
-				von: Vue.ref({ hours: 0, minutes: 0 }),
-				bis: Vue.ref({ hours: 23, minutes: 59 }),
-				files: []
-			};
 		},
 		reload(){
 			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
@@ -391,8 +400,7 @@ export default {
 								auto-apply
 								:enable-time-picker="true"
 								:start-time="entschuldigung.von"
-								format="dd.MM.yyyy HH:mm"
-								model-type="dd.MM.yyyy HH:mm"
+								:format="formatDate"
 								:min-date="new Date(minDate)"
 								:start-date="new Date(minDate)"
 								:max-date="new Date($entryParams.maxDate)">
@@ -409,8 +417,7 @@ export default {
 								auto-apply
 								:enable-time-picker="true"
 								:start-time="entschuldigung.bis"
-								format="dd.MM.yyyy HH:mm"
-								model-type="dd.MM.yyyy HH:mm"
+								:format="formatDate"
 								:min-date="new Date(minDate)"
 								:start-date="new Date(minDate)"
 								:max-date="new Date($entryParams.maxDate)">
@@ -424,7 +431,11 @@ export default {
 							<Upload :disabled="noFileUpload" accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
 						</div>
 						<div class="col-4">
-							<Checkbox v-model="noFileUpload" :binary="true"></Checkbox><span>Entschuldigung ohne Datei beantragen</span>
+							<div class="row">
+								<div class="col-2"></div>
+								<div class="col-2"><Checkbox v-model="noFileUpload" :binary="true"></Checkbox></div>
+								<div class="col-8"><span>{{$p.t('global/excuseUploadNoFile')}}</span></div>
+							</div>
 						</div>
 					</div>
 				</template>

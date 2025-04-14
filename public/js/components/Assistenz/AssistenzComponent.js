@@ -243,14 +243,18 @@ export const AssistenzComponent = {
 			let actionwrapper = document.createElement('div');
 			actionwrapper.className = "d-flex gap-3";
 			const minwidth = '40px';
+			const cellData = cell.getData()
+			let button = null
 			
-			let button = document.createElement('button');
-			button.className = 'btn btn-outline-secondary';
-			button.style.minWidth = minwidth;
-			button.innerHTML = '<i class="fa fa-download"></i>';
-			button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-			button.title = this.$p.t('table/download');
-			actionwrapper.append(button);
+			if(cellData.dms_id){
+				button = document.createElement('button');
+				button.className = 'btn btn-outline-secondary';
+				button.style.minWidth = minwidth;
+				button.innerHTML = '<i class="fa fa-download"></i>';
+				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
+				button.title = this.$p.t('table/download');
+				actionwrapper.append(button);
+			}
 
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
@@ -260,22 +264,24 @@ export const AssistenzComponent = {
 			button.title = this.$p.t('global/entschuldigungEditieren');
 			actionwrapper.append(button);
 
-			button = document.createElement('button');
-			button.className = 'btn btn-outline-secondary';
-			button.style.minWidth = minwidth;
-			button.innerHTML = '<i class="fa fa-timeline"></i>';
-			button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
-			button.title = this.$p.t('global/anwTimeline');
-			actionwrapper.append(button);
+			// button = document.createElement('button');
+			// button.className = 'btn btn-outline-secondary';
+			// button.style.minWidth = minwidth;
+			// button.innerHTML = '<i class="fa fa-timeline"></i>';
+			// button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
+			// button.title = this.$p.t('global/anwTimeline');
+			// actionwrapper.append(button);
 
-			button = document.createElement('button');
-			button.className = 'btn btn-outline-secondary';
-			button.style.minWidth = minwidth;
-			button.innerHTML = '<i class="fa fa-check"></i>';
-			button.title = this.$p.t('global/entschuldigungAkzeptieren');
-			button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
-			actionwrapper.append(button);
-
+			if(cellData.dms_id) {
+				button = document.createElement('button');
+				button.className = 'btn btn-outline-secondary';
+				button.style.minWidth = minwidth;
+				button.innerHTML = '<i class="fa fa-check"></i>';
+				button.title = this.$p.t('global/entschuldigungAkzeptieren');
+				button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
+				actionwrapper.append(button);
+			}
+			
 			button = document.createElement('button');
 			button.className = 'btn btn-outline-secondary';
 			button.style.minWidth = minwidth;
