@@ -1,7 +1,7 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {lektorFormatters} from "../../formatters/formatters";
+import {lektorFormatters} from "../../formatters/formatters.js";
 
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
@@ -16,6 +16,7 @@ export const StudentByLvaComponent = {
 			appSideMenuEntries: {},
 			headerMenuEntries: {},
 			tableBuiltPromise: null,
+			cellEditing: null,
 			anwesenheitenByStudentByLvaTabulatorOptions: {
 				height: this.$entryParams?.tabHeights?.studentByLva ?? 400,
 				index: 'datum',
@@ -23,6 +24,7 @@ export const StudentByLvaComponent = {
 				placeholder: this.$p.t('global/noDataAvailable'),
 				selectableCheck: this.selectableCheck,
 				rowFormatter: this.unselectableFormatter,
+				debugInvalidComponentFuncs:false,
 				selectable: true,
 				columns: [
 					{
@@ -67,17 +69,29 @@ export const StudentByLvaComponent = {
 				}
 			},
 			{
+				event: "cellEditing",
+				handler: (cell) => {
+					const data = cell.getData()
+					this.cellEditing = {...data}
+				}
+			},
+			{
 				event: "cellEdited",
 				handler: (cell) => {
 					const data = cell.getData()
-					this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
-						if(res.meta.status === "success") {
+					
+					if(this.cellEditing?.notiz === null && data?.notiz === '') {
+						// do nothing when just clicking edit input and not typing
+						
+					} else {
+						this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
+							if(res.meta.status === "success") {
+								this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
+							}
+						})
+					}
 
-
-
-							this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
-						}
-					})
+					this.cellEditing = null
 				}
 			},
 			{
@@ -312,6 +326,7 @@ export const StudentByLvaComponent = {
 						row.anteil = (row.dauer / sum * 100).toFixed(2)
 					})
 
+					console.log(res.data.retval)
 					this.tableData = res.data.retval
 					this.initialTableData = [...res.data.retval]
 					this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(res.data.retval)
@@ -386,8 +401,7 @@ export const StudentByLvaComponent = {
 					@uuidDefined="handleUuidDefined"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
-					@nw-new-entry="newSideMenuEntryHandler"
-					:tableOnly
+					:tableOnly="true"
 					:sideMenu="false" 
 					noColumnFilter>
 					<template #actions>

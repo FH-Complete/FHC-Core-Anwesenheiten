@@ -8,7 +8,8 @@ class AdministrationApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				'getEntschuldigungen' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
+				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
+				'getTimeline' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
 			)
 		);
 
@@ -84,7 +85,9 @@ class AdministrationApi extends FHCAPI_Controller
 		$entschuldigung_id = $data['entschuldigung_id'];
 		$status = $data['status'];
 		$notiz = $data['notiz'];
-
+		$vonParam = $this->input->post('von');
+		$bisParam = $this->input->post('bis');
+		
 		if (isEmptyString($entschuldigung_id) || !in_array($status, [true, false]))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
@@ -97,30 +100,60 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$entschuldigung = getData($entschuldigung)[0];
 
-		$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
+		// check if status is being updated at all
+		$statusChanged = $status !== $entschuldigung->akzeptiert;
+//		$this->addMeta('$statusChanged', $statusChanged);
+//		$this->addMeta('$status', $status);
+//		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
+		
+		if($statusChanged) {
+			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
 
-		$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
-		if (isError($result))
-			$this->terminateWithError($result);
-		$anwesenheit_user_idsArr = getData($result);
+			$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
+			if (isError($result))
+				$this->terminateWithError($result);
+			$anwesenheit_user_idsArr = getData($result);
+//			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
+			
+			if($anwesenheit_user_idsArr) {
+				$funcAUID = function ($value) {
+					return $value->anwesenheit_user_id;
+				};
 
-		if($anwesenheit_user_idsArr) {
-			$funcAUID = function ($value) {
-				return $value->anwesenheit_user_id;
-			};
+				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
+//				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
+				
+				// if anw is from exam kontrolle and entschuldigung was uploaded past that date it does not count, even though
+				// the kontroll entry was in the time range
+				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids, $entschuldigung->insertamum);
+//				$this->addMeta('examCheck', $result);
+				
+				if(count($result->retval) > 0) { // filter exam ids
+					$exam_ids = array_map($funcAUID, $result->retval);
+					
+					$anwesenheit_user_ids = array_filter($anwesenheit_user_ids, function($anwId) use ($exam_ids) {
+						return !in_array($anwId, $exam_ids);
+					});
 
-			$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
+//					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
+				}
+				
+				
+				$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
 
-			$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
-
-			if (isError($updateAnwesenheit))
-				$this->terminateWithError($updateAnwesenheit);
+				if (isError($updateAnwesenheit))
+					$this->terminateWithError($updateAnwesenheit);
+			}
 		}
-
+		
 		// check notiz size and trim to char varying 255 if it is too big
 		$notiz = substr($notiz, 0, 255);
 		$version = $entschuldigung->version + 1;
-
+		
+		// check if von/bis are being sent, else retrieve previeous values
+		$von = isset($vonParam) ? $vonParam : $entschuldigung->von;
+		$bis = isset($bisParam) ? $bisParam : $entschuldigung->bis;
+		
 		// add old version to history table
 		$this->_ci->EntschuldigungHistoryModel->insert(
 			array(
@@ -150,17 +183,81 @@ class AdministrationApi extends FHCAPI_Controller
 				'statussetamum' => date('Y-m-d H:i:s'),
 				'akzeptiert' => $status,
 				'notiz' => $notiz,
-				'version' => $version
+				'version' => $version,
+				'von' => $von,
+				'bis' => $bis
 			)
 		);
 
 		if (isError($update))
 			$this->terminateWithError($this->p->t('global', 'errorUpdateEntschuldigung'), 'general');
 
+		if($statusChanged) { // send mail to student
+
+			$result = $this->_ci->EntschuldigungModel->getMailInfoForStudent($entschuldigung->person_id);
+			$data = getData($result)[0];
+			
+			// Link to Entschuldigungsmanagement
+			$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung';
+			$student_uid = $data->student_uid;
+			
+			// Prepare mail content
+			$body_fields = array(
+				'von' => $von,
+				'bis' => $bis,
+				'akzeptiert' => $status == true ? 'akzeptiert' : 'abgelehnt',
+				'linkEntschuldigungen' => $url
+			);
+
+			$email = $student_uid . "@" . DOMAIN;
+			
+			if (!isEmptyString($notiz)) { // send template with anmerkung/begründung
+				$body_fields['notiz'] = $notiz;
+				
+				sendSanchoMail(
+					'AnwEntUpdateNotiz',
+					$body_fields,
+					$email,
+					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
+				);
+			} else {
+				sendSanchoMail(
+					'AnwEntUpdate',
+					$body_fields,
+					$email,
+					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
+				);
+			}
+//			$this->addMeta('emailfields', $body_fields);
+		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
 	}
 
+	/**
+	 * POST METHOD
+	 * Expects parameter 'person_id'
+	 * Loads every anw_user_entry linked to person_ids prestudents and every entschuldigung to visualize a timeline.
+	 */
+	public function getTimeline() {
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
+		$result = $this->getPostJSON();
+		$person_id = $result->person_id;
+
+		// fetch all anw_user entries for persons prestudent_ids
+		$anw = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByPersonId($person_id);
+		
+		// fetch all entschuldigungen
+		$ent = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+		
+		$this->terminateWithSuccess(array($anw, $ent));
+	}
+	
 	private function _setAuthUID()
 	{
 		$this->_uid = getAuthUID();

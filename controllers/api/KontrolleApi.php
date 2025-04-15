@@ -151,15 +151,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $date);
 		$lektorLehreinheitData = getData($result);
 
-		$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
-		$leTermine = getData($result);
-
 		$result = $this->_ci->ErhalterModel->load();
 		$erhalter = getData($result)[0];
 
 		$a_o_kz = '9' . sprintf("%03s", $erhalter->erhalter_kz);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, $leTermine, $a_o_kz));
+		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, null, $a_o_kz));
 
 	}
 
@@ -393,6 +390,7 @@ class KontrolleApi extends FHCAPI_Controller
 			$insert = $this->_ci->AnwesenheitModel->insert(array(
 				'lehreinheit_id' => $le_id,
 				'insertamum' => date('Y-m-d H:i:s'),
+				'insertvon' => getAuthUID(),
 				'von' => $von,
 				'bis' => $bis
 			));
@@ -408,7 +406,8 @@ class KontrolleApi extends FHCAPI_Controller
 			// update time of kontrolle
 			$update = $this->_ci->AnwesenheitModel->update($anwesenheit_id, array(
 				'lehreinheit_id' => $le_id,
-				'insertamum' => date('Y-m-d H:i:s'),
+				'updateamum' => date('Y-m-d H:i:s'),
+				'updatevon' => getAuthUID(),
 				'von' => $von,
 				'bis' => $bis
 			));

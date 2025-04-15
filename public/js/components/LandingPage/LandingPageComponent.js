@@ -30,7 +30,10 @@ export default {
 		};
 	},
 	props: {
-		permissions: [],
+		permissions: {
+			default: '',
+			type: String
+		},
 		activetabstudent: null
 	},
 	methods: {
@@ -97,8 +100,7 @@ export default {
 		},
 		async createdSetup () {
 			await new Promise (resolve => {
-
-				// TODO: auf app function auslagern
+				
 				const queryString = window.location.search;
 				const searchParams = new URLSearchParams(queryString)
 				this.$entryParams.lv_id = searchParams.get('lvid')
@@ -107,7 +109,7 @@ export default {
 				this.$entryParams.sem = searchParams.get('sem')
 
 				this.$entryParams.handleLeSetup = this.handleLeSetup
-
+				this.$entryParams.findClosestTermin = this.findClosestTermin
 				this.$entryParams.notMissingParams = !!(this.$entryParams.lv_id && this.$entryParams.stg_kz && this.$entryParams.sem_kurzbz)
 
 				this.setupViewDataRefs()
@@ -123,6 +125,17 @@ export default {
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
 				// console.log('$entryParams', this.$entryParams)
+
+				if(this.$entryParams.permissions.entschuldigungen_enabled) {
+					this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
+						this.$fhcApi.factory.Anwesenheiten.Info.getAktuellesSemester().then(res => {
+							if(res?.meta?.status === 'success') {
+								this.$entryParams.aktuellesSemester = res?.data?.[0]
+								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
+							}
+						})
+					})
+				}
 
 				el.removeAttribute('permissions')
 
@@ -203,8 +216,7 @@ export default {
 							infoString
 						})
 					})
-
-
+					
 					this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
 
 				}).finally(()=>{resolve()})
@@ -246,7 +258,22 @@ export default {
 					// merge entries with same LE
 					const data = []
 
-					res.data?.forEach(entry => {
+					if(res.data[1]) {
+						Object.keys(res.data[1]).forEach(key => {
+							const val = res.data[1][key]
+							if(val && val.length) {
+								val.forEach(v => v.le_id = key)
+								val.push({le_id: key, datum: '2025-04-22', beginn: '13:37:42', ende: '23:42:17'})
+							}
+						}) 
+					}
+					
+					this.$entryParams.allLeTermine = res.data[1] ?? []
+
+					
+					
+					
+					res.data[0].forEach(entry => {
 
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if (existing) {
@@ -274,8 +301,9 @@ export default {
 							data.push(entry)
 						}
 					})
+					
 
-					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? data[0] : null
+					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
 					this.$entryParams.available_le_info.value = [...data]
 					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 
@@ -287,6 +315,7 @@ export default {
 				})
 			})
 		},
+		
 		setLvViewData(data) {
 			this.$entryParams.viewDataLv.benotung = data.benotung
 			this.$entryParams.viewDataLv.bezeichnung = data.bezeichnung
@@ -298,6 +327,27 @@ export default {
 		},
 		handleTabChanged(key) {
 			if(this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
+		},
+		findLeWithClosestTermin(leChoices, leTermine) {
+			const flat = Object.values(leTermine).filter(Array.isArray).flat();
+			
+			if(flat && flat.length) {
+				const closest = this.findClosestTermin(flat)
+
+				const choiceFound = leChoices.find(choice => choice.lehreinheit_id == closest.le_id)
+				return choiceFound
+				
+			} else return null
+		},
+		findClosestTermin(termine) {
+			const todayTime = new Date(Date.now()).getTime()
+
+			termine.forEach((termin) => {
+				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
+
+			})
+
+			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
 		}
 	},
 	created(){

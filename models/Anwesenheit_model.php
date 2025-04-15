@@ -65,8 +65,8 @@ class Anwesenheit_model extends \DB_Model
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root)
 	{
 		$query = "SELECT
-				distinct on(nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id,
-				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || person_id as foto   
+				distinct on(nachname, vorname, public.tbl_benutzer.person_id) vorname, nachname, prestudent_id, public.tbl_benutzer.person_id,
+				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || public.tbl_benutzer.person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
 			   	extension.get_anwesenheiten_by_time(prestudent_id, $lv_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
@@ -76,7 +76,8 @@ class Anwesenheit_model extends \DB_Model
 			   tbl_mitarbeiter.mitarbeiter_uid,
 			   tbl_note.lkt_ueberschreibbar, tbl_note.anmerkung,
 			   tbl_mobilitaet.mobilitaetstyp_kurzbz,
-			   (CASE WHEN bis.tbl_mobilitaet.studiensemester_kurzbz = vw_student_lehrveranstaltung.studiensemester_kurzbz THEN 1 ELSE 0 END) as doubledegree
+			   (CASE WHEN bis.tbl_mobilitaet.studiensemester_kurzbz = vw_student_lehrveranstaltung.studiensemester_kurzbz THEN 1 ELSE 0 END) as doubledegree,
+			   public.tbl_prestudent.gsstudientyp_kurzbz as ddtype
 			
 			 FROM
 				 campus.vw_student_lehrveranstaltung
@@ -92,6 +93,7 @@ class Anwesenheit_model extends \DB_Model
 					LEFT JOIN bis.tbl_bisio ON(uid=tbl_bisio.student_uid)
 					LEFT JOIN public.tbl_studiengang ON(tbl_student.studiengang_kz=tbl_studiengang.studiengang_kz)
 			 		LEFT JOIN bis.tbl_mobilitaet USING(prestudent_id)
+			 		LEFT JOIN public.tbl_prestudent USING(prestudent_id)
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id=?	AND
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz=? AND 
@@ -233,7 +235,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStundenPlanEntriesForLEandLektorOnDate($le_id, $ma_uid, $date)
 	{
-		$query = "SELECT Distinct mitarbeiter_uid, beginn, ende, lehreinheit_id
+		$query = "SELECT DISTINCT mitarbeiter_uid, beginn, ende, lehreinheit_id
 			FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
 			WHERE mitarbeiter_uid = ?
 			AND datum = ? AND lehreinheit_id = ?";
@@ -340,9 +342,9 @@ class Anwesenheit_model extends \DB_Model
 
 		$this->execQuery($query, [$anwesenheiten_user_ids]);
 
-		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1
-					WHERE anwesenheit_user_id IN ?';
-		$resultUpdate = $this->execQuery($query, [$updateStatus, $anwesenheiten_user_ids]);
+		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1, updatevon = ?, updateamum = ?
+					WHERE anwesenheit_user_id IN ? ';
+		$resultUpdate = $this->execQuery($query, [$updateStatus, getAuthUID(), date('Y-m-d H:i:s'), $anwesenheiten_user_ids]);
 
 		return $resultUpdate;
 	}

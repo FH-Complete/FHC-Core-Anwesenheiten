@@ -8,7 +8,7 @@ import StudentEntschuldigungComponent from "../components/Student/StudentEntschu
 import ScanComponent from "../components/Student/ScanComponent.js";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent.js";
 import fhcapifactory from "../../../../js/api/fhcapifactory.js";
-import anwesenheitenAPI from "../api/fhcapifactory";
+import anwesenheitenAPI from "../api/fhcapifactory.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -23,7 +23,7 @@ const router = VueRouter.createRouter({
 		},
 		{
 			path: `/Administration`,
-			name: 'LandingPage',
+			name: 'Administration',
 			component: LandingPageComponent,
 		},
 		{

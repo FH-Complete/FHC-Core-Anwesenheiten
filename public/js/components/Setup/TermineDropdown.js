@@ -1,27 +1,30 @@
 export const TermineDropdown = {
 	name: "TermineDropdown",
+	components: {
+		Dropdown: primevue.dropdown,
+	},
 	emits: [
 		'terminChanged'
 	],
 	methods: {
 		terminChanged(e) {
-			const selected = e.target.selectedOptions
-
-			this.$entryParams.selected_termin.value = selected[0]._value
+			this.$entryParams.selected_termin.value = e.value
 			this.$emit('terminChanged')
+		},
+		getOptionLabel(option) {
+			return option.datumFrontend + ': ' + option.beginn + ' - ' + option.ende
 		}
 	},
 	mounted() {
 	},
 	template: `
 		<div class="mt-2">
-			<label for="terminSelect">{{ $p.t('global/termineLautStundenplan') }}</label>
-			
-			<select id="terminSelect" @change="terminChanged" class="form-control" v-model="$entryParams.selected_termin.value">
-				<option v-for="option in $entryParams.available_termine.value" :value="option" :disabled="option.disabled">
-					<a>{{option.datumFrontend}}: {{option.beginn}} - {{option.ende}}</a>
-				</option>
-			</select>
+			<Dropdown @change="terminChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
+			v-model="this.$entryParams.selected_termin.value" :options="$entryParams.available_termine.value" :placeholder="$p.t('global/termineAusStundenplan')">
+				<template #optionsgroup="slotProps">
+					<div> {{option.datumFrontend}}: {{option.beginn}} - {{option.ende}} </div>
+				</template>
+			</Dropdown>
 		</div>
 	`
 }

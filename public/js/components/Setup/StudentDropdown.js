@@ -1,5 +1,8 @@
 export const StudentDropdown = {
 	name: "StudentDropdown",
+	components: {
+		Dropdown: primevue.dropdown,
+	},
 	emits: [
 		'studentChanged'
 	],
@@ -15,9 +18,9 @@ export const StudentDropdown = {
 	},
 	methods: {
 		studentChanged(e) {
-			const selected = e.target.selectedOptions
-			this.$entryParams.selected_student = selected[0]._value
-			this.$entryParams.selected_student_info = this.$entryParams.availableStudents.find(s => s.prestudent_id === this.$entryParams.selected_student.prestudent_id)
+
+			this.$entryParams.selected_student = e.value
+			this.$entryParams.selected_student_info = this.$entryParams.availableStudents.find(s => s.prestudent_id === e.value.prestudent_id)
 			this.$emit('studentChanged', e)
 		},
 		async setupData() {
@@ -26,11 +29,15 @@ export const StudentDropdown = {
 			}
 			await this.$entryParams.setupPromise.then(() => {
 				this.internal_available_student_info =  this.$entryParams.availableStudents
+				this.internal_selected_student_info =  this.$entryParams.selected_student_info
 			})
 		},
 		resetData() {
 			this.internal_available_student_info =  this.$entryParams.availableStudents
 			this.internal_selected_student_info =  this.$entryParams.selected_student_info
+		},
+		getOptionLabel(option) {
+			return option.semester + option.verband + option.gruppe + ' ' + option.vorname + ' ' + option.nachname
 		}
 	},
 	mounted() {
@@ -40,11 +47,18 @@ export const StudentDropdown = {
 		<div class="row">
 			<div class="col-3 d-flex align-items-center"><label for="leSelect">{{ $p.t('global/students') }}</label></div>
 			<div class="col-8">
-				<select id="leSelect" @change="studentChanged" class="form-control">
-					<option v-for="option in internal_available_student_info" :value="option" >
-						<a> {{option.infoString}} </a>
-					</option>
-				</select>
+				<Dropdown @change="studentChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
+				v-model="internal_selected_student_info" :options="internal_available_student_info">
+					<template #optionsgroup="slotProps">
+						<div class="row">
+							<div class="col-2">{{option.semester}}{{option.verband}}{{option.gruppe}}</div>
+							<div class="col-10 d-flex justify-content-between align-items-center">
+								<div>{{option.vorname}}</div>
+								<div>{{option.nachname}}</div>
+							</div>
+						</div>				
+					</template>
+				</Dropdown>
 			</div>
 		</div>
 	`

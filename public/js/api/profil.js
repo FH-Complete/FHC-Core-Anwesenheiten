@@ -32,9 +32,14 @@ export default {
 		return this.$fhcApi.post(url, formData, headers)
 
 	},
-	async deleteEntschuldigung(entschuldigung_id) {
+	async editEntschuldigung(formData) {
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/editEntschuldigung';
+		const headers = {Headers: { "Content-Type": "multipart/form-data" }}
+		return this.$fhcApi.post(url, formData, headers)	
+	},
+	async deleteEntschuldigung(entschuldigung_id, person_id) {
 
-		const payload = {entschuldigung_id}
+		const payload = {entschuldigung_id, person_id}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/deleteEntschuldigung';
 		const headers = {Headers: { "Content-Type": "multipart/form-data" }}
 		return this.$fhcApi.post(url, payload, headers)

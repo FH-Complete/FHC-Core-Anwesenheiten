@@ -1,6 +1,6 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {lektorFormatters, studentFormatters} from "../../formatters/formatters";
+import {lektorFormatters, studentFormatters} from "../../formatters/formatters.js";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
@@ -19,6 +19,7 @@ export default {
 			studiensemester: [],
 			tableBuiltPromise: null,
 			studentViewTabulatorOptions: {
+				debugInvalidComponentFuncs:false,
 				layout: 'fitDataStretch',
 				selectable: false,
 				height: this.$entryParams.tabHeights.studentAnw,
@@ -248,9 +249,8 @@ export default {
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="studentViewTabulatorOptions"
 				:tabulator-events="studentViewTabulatorEventHandlers"
-				:table-only=true
-				:hideTopMenu=false
-				:sideMenu=false
+				:tableOnly="true"
+				:sideMenu="false"
 			></core-filter-cmpt>
 		</template>
 
