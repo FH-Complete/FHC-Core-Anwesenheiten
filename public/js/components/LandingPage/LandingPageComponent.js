@@ -263,7 +263,8 @@ export default {
 							const val = res.data[1][key]
 							if(val && val.length) {
 								val.forEach(v => v.le_id = key)
-								val.push({le_id: key, datum: '2025-04-22', beginn: '13:37:42', ende: '23:42:17'})
+								// spoof le termine to test with
+								// val.push({le_id: key, datum: '2023-04-22', beginn: '13:37:42', ende: '23:42:17'})
 							}
 						}) 
 					}

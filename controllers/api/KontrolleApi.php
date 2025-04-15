@@ -373,7 +373,16 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
 		}
 
-		$dateString = $date->year.'-'.$date->month.'-'.$date->day;
+		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
+		$dateTime = strtotime($dateString);
+		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
+		$dateLimit = strtotime("-$reach day");
+
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		if ($dateTime < $dateLimit && !$isAdmin) {
+			$this->terminateWithError("Provided date is older than allowed date");
+		}
+		
 		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $dateString);
 		$existsKontrolle = hasData($resultKontrolle);
 		$options = new QROptions([
@@ -565,7 +574,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLE($le_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 
-		$dateString = $date->year.'-'.$date->month.'-'.$date->day;
+		// if von is before the limit date and user is not admin, send them home with an error
+
+
+
 		// find anwesenheitkontrolle by le_id and date
 		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $dateString);
 
