@@ -489,9 +489,9 @@ class ProfilApi extends FHCAPI_Controller
 		// Get STG mail address for the uploading student
 		$result = null;
 		if($isStudent) {
-			$result = $this->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
+			$result = $this->_ci->EntschuldigungModel->getMailInfoForStudent(getAuthPersonId());
 		} elseif ($isAdmin || $isAssistenz) {
-			$result = $this->EntschuldigungModel->getMailInfoForStudent($person_id_param);
+			$result = $this->_ci->EntschuldigungModel->getMailInfoForStudent($person_id_param);
 		}
 		
 		if (isError($result))

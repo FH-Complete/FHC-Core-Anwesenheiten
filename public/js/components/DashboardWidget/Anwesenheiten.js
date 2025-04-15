@@ -3,6 +3,8 @@ import anwesenheitenAPI from "../../api/fhcapifactory.js";
 import ScanComponent from "../Student/ScanComponent.js";
 import QuotasOverview from "../QuotasOverview.js";
 import EntschuldigungOverview from "../EntschuldigungOverview.js";
+
+
 export default {
 	name: "WidgetsAnwesenheiten",
 	components: {
