@@ -9,6 +9,7 @@ import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
 import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {Stundenliste} from "./Stundenliste.js";
+import {Statuslegende} from "./Statuslegende.js";
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -24,7 +25,8 @@ export const LektorComponent = {
 		KontrollenDropdown,
 		AnwCountDisplay,
 		Stundenliste,
-		"datepicker": VueDatePicker
+		"datepicker": VueDatePicker,
+		Statuslegende
 	},
 	data() {
 		return {
@@ -552,6 +554,9 @@ export const LektorComponent = {
 		openDeleteModal() {
 			this.$refs.modalContainerDeleteKontrolle.show()
 		},
+		openLegend() {
+			this.$refs.modalContainerLegende.show()
+		},
 		async deleteAnwesenheitskontrolle() {
 			if (await this.$fhcAlert.confirmDelete() === false) return;
 
@@ -1036,6 +1041,7 @@ export const LektorComponent = {
 		this.ma_uid = this.$entryParams.permissions.authID
 	},
 	mounted() {
+		console.log(this.$entryParams)
 		this.setupMounted()
 		
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
@@ -1272,6 +1278,20 @@ export const LektorComponent = {
 						</template>
 					</bs-modal>				
 	
+					<bs-modal ref="modalContainerLegende" class="bootstrap-prompt" dialogClass="modal-lg">
+						<template v-slot:title>
+							<div>
+								{{ $p.t('global/statusLegende') }}
+	
+							</div>
+						</template>
+						<template v-slot:default>
+							
+							<Statuslegende></Statuslegende>
+							
+						</template>
+					</bs-modal>
+					
 					<div id="qrwrap">
 						<bs-modal ref="modalContainerQR" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
 						 :keyboard=false :noCloseBtn="true">
@@ -1380,6 +1400,10 @@ export const LektorComponent = {
 								
 								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2">
 									<i class="fa fa-file-csv"></i>
+								</button>
+								
+								<button @click="openLegend" role="button" class="btn btn-secondary ml-2">
+									{{ $p.t('global/statusLegende') }} <i class="fa fa-book"></i>
 								</button>
 							</template>
 					</core-filter-cmpt>	
