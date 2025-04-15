@@ -8,7 +8,7 @@ import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
 import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
-import AnwTimeline from "./AnwTimeline";
+import AnwTimeline from "./AnwTimeline.js";
 
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',

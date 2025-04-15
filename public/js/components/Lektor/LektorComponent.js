@@ -7,7 +7,6 @@ import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown.js";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown.js";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
 import {TermineDropdown} from "../Setup/TermineDropdown.js";
-import {TermineOverview} from "./TermineOverview.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {Stundenliste} from "./Stundenliste.js";
 
@@ -23,7 +22,6 @@ export const LektorComponent = {
 		LehreinheitenDropdown,
 		MaUIDDropdown,
 		KontrollenDropdown,
-		TermineOverview,
 		AnwCountDisplay,
 		Stundenliste,
 		"datepicker": VueDatePicker
@@ -413,14 +411,24 @@ export const LektorComponent = {
 				}
 
 				const changedStudentsArr = [...changedStudents]
+				// find and overwrite each entry in studentsData map from which showAll retrieves its values
+				this.changedData.forEach(change => {
+					const values = this.lektorState.studentsData.get(change.prestudent_id)
+					const valueToChange = values?.find(val => val.anwesenheit_user_id == change.anwesenheit_user_id)
+					
+					if(valueToChange) valueToChange.status = change.status
+				})
+				
 				this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
 					.then(res => {
 						this.updateSumData(res.data.retval)
 						this.changes = true
 					})
-			}).finally(() => this.setCurrentCountsFromTableData())
-
-			this.changedData = []
+			}).finally(() =>  {
+				this.changedData = []
+				this.setCurrentCountsFromTableData()
+			})
+			
 		},
 		startRegenerateQR() {
 			this.progressTimerID = setInterval(this.boundProgressCounter, this.progressTimerInterval) // track time passed for regenerate

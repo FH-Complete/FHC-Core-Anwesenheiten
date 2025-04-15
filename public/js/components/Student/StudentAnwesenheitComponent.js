@@ -1,6 +1,6 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {lektorFormatters, studentFormatters} from "../../formatters/formatters";
+import {lektorFormatters, studentFormatters} from "../../formatters/formatters.js";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';

@@ -1,7 +1,7 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-import {lektorFormatters} from "../../formatters/formatters";
+import {lektorFormatters} from "../../formatters/formatters.js";
 
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',

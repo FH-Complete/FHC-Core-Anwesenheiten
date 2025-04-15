@@ -235,7 +235,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStundenPlanEntriesForLEandLektorOnDate($le_id, $ma_uid, $date)
 	{
-		$query = "SELECT Distinct mitarbeiter_uid, beginn, ende, lehreinheit_id
+		$query = "SELECT DISTINCT mitarbeiter_uid, beginn, ende, lehreinheit_id
 			FROM lehre.tbl_stundenplan JOIN lehre.tbl_stunde USING(stunde)
 			WHERE mitarbeiter_uid = ?
 			AND datum = ? AND lehreinheit_id = ?";
@@ -342,9 +342,9 @@ class Anwesenheit_model extends \DB_Model
 
 		$this->execQuery($query, [$anwesenheiten_user_ids]);
 
-		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1
+		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1, updatevon = ?, updateamum = ?
 					WHERE anwesenheit_user_id IN ? ';
-		$resultUpdate = $this->execQuery($query, [$updateStatus, $anwesenheiten_user_ids]);
+		$resultUpdate = $this->execQuery($query, [$updateStatus, getAuthUID(), date('Y-m-d H:i:s'), $anwesenheiten_user_ids]);
 
 		return $resultUpdate;
 	}
