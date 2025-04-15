@@ -347,7 +347,14 @@ class ProfilApi extends FHCAPI_Controller
 		if($isAdmin || $isAssistenz) $berechtigt = true;
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
-
+		
+		$dateLimit = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'));
+		
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		if ($vonTimestamp < $dateLimit && !$isAdmin) {
+			$this->terminateWithError("Provided date is older than allowed date");
+		}
+		
 		if(!$noFileUpload) {
 			$file = array(
 				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
@@ -369,7 +376,6 @@ class ProfilApi extends FHCAPI_Controller
 		} else {
 			$dmsId = null;
 		}
-		
 
 		$von = date('Y-m-d H:i:s', $vonTimestamp);
 		$bis = date('Y-m-d H:i:s', $bisTimestamp);
@@ -388,6 +394,27 @@ class ProfilApi extends FHCAPI_Controller
 		$this->sendEmailToAssistenz($person_id);
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
+	}
+
+	/**
+	 * private utility function
+	 * Expects parameter $workdaysAgo which is essentially ENTSCHULDIGUNG_CREATE_MAX_REACH config item
+	 * calculates the date x workdays ago by skipping 3 days backwards on monday, else 1 day
+	 */
+	private function calcMinDate($workdaysAgo) {
+		$date = new DateTime(); // today
+
+		while ($workdaysAgo > 0) {
+			// On Monday (1), subtract 3 days (skip Sat/Sun)
+			if ((int) $date->format('N') === 1) {
+				$date->modify('-3 days');
+			} else {
+				$date->modify('-1 day');
+			}
+			$workdaysAgo--;
+		}
+
+		return $date;
 	}
 
 	public function editEntschuldigung() {
@@ -435,8 +462,7 @@ class ProfilApi extends FHCAPI_Controller
 		$dmsFile = getData($dmsFile);
 
 		$dmsId = $dmsFile['dms_id'];
-
-
+		
 		$result = $this->_ci->EntschuldigungModel->update(
 			$entschuldigung->entschuldigung_id,
 			array(
