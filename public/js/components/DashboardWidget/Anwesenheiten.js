@@ -1,8 +1,8 @@
-import AbstractWidget from '../../../../../js/components/DashboardWidget/Abstract';
-import anwesenheitenAPI from "../../api/fhcapifactory";
-import ScanComponent from "../Student/ScanComponent";
-import QuotasOverview from "../QuotasOverview";
-import EntschuldigungOverview from "../EntschuldigungOverview";
+import AbstractWidget from '../../../../../js/components/DashboardWidget/Abstract.js';
+import anwesenheitenAPI from "../../api/fhcapifactory.js";
+import ScanComponent from "../Student/ScanComponent.js";
+import QuotasOverview from "../QuotasOverview.js";
+import EntschuldigungOverview from "../EntschuldigungOverview.js";
 
 
 export default {
