@@ -1,5 +1,5 @@
-import {Kontrolle} from "./Kontrolle";
-import {Termin} from "./Termin";
+import {Kontrolle} from "./Kontrolle.js";
+import {Termin} from "./Termin.js";
 
 
 export const TermineOverview = {
