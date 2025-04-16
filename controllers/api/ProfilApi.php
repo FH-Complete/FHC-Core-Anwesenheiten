@@ -280,7 +280,9 @@ class ProfilApi extends FHCAPI_Controller
 					array(
 					'status' => $this->_ci->config->item('ANWESEND_STATUS'), 
 					'updateamum' => date('Y-m-d H:i:s'),
-					'updatevon' => getAuthUID()
+					'updatevon' => getAuthUID(),
+					'statussetamum' => date('Y-m-d H:i:s'),
+					'statussetvon' => getAuthUID()
 				));
 
 				if (isError($result)) {

@@ -8,7 +8,6 @@ import {MaUIDDropdown} from "../Setup/MaUIDDropdown.js";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
 import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
-import {Stundenliste} from "./Stundenliste.js";
 import {Statuslegende} from "./Statuslegende.js";
 
 export const LektorComponent = {
@@ -24,7 +23,6 @@ export const LektorComponent = {
 		MaUIDDropdown,
 		KontrollenDropdown,
 		AnwCountDisplay,
-		Stundenliste,
 		"datepicker": VueDatePicker,
 		Statuslegende
 	},
