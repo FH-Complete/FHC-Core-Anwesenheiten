@@ -1403,7 +1403,7 @@ export const LektorComponent = {
 								</button>
 								
 								<button @click="openLegend" role="button" class="btn btn-secondary ml-2">
-									{{ $p.t('global/statusLegende') }} <i class="fa fa-book"></i>
+									<i class="fa fa-book"></i>
 								</button>
 							</template>
 					</core-filter-cmpt>	
