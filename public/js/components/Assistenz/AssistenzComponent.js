@@ -91,7 +91,7 @@ export const AssistenzComponent = {
 					},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
-					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform',
 						headerFilter: true,
 						tooltip: false
