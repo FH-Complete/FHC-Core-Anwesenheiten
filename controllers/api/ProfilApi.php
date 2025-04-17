@@ -238,9 +238,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($timeDiffInMilliseconds > ($this->_ci->config->item('REGENERATE_QR_TIMER')) * 2) {
 			$this->terminateWithError(
-				array($this->p->t('global', 'errorCodeTooOld'),
-					$interval, $timeDiffInMilliseconds, $this->_ci->config->item('REGENERATE_QR_TIMER')),
-				'general'
+				$this->p->t('global', 'errorCodeTooOld'), 'general'
 			);
 		}
 
@@ -350,10 +348,14 @@ class ProfilApi extends FHCAPI_Controller
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 		
-		$dateLimit = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'));
+		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'));
 		
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
-		if ($vonTimestamp < $dateLimit && !$isAdmin) {
+		
+//		$this->addMeta('$dateLimit', $dateLimitTimestamp);
+//		$this->addMeta('$vonTimestamp', $vonTimestamp);
+		
+		if ($vonTimestamp < $dateLimitTimestamp && !$isAdmin) {
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
 		
@@ -416,7 +418,7 @@ class ProfilApi extends FHCAPI_Controller
 			$workdaysAgo--;
 		}
 
-		return $date;
+		return $date->getTimeStamp();
 	}
 
 	public function editEntschuldigung() {
@@ -500,7 +502,7 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 
 		$data = getData($result)[0];
-		
+		$this->addMeta('emailData', $data);
 		//emailTo usually is 1 address, sometimes several seperated by ','
 		$emails = explode(', ', $data->email);
 

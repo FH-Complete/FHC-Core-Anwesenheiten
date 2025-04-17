@@ -132,7 +132,7 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_studiengang.kurzbzlang as kurzbzlang,
 						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
 						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI') as uploaddatum,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as uploaddatum,
 						public.tbl_student.semester as semester
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
