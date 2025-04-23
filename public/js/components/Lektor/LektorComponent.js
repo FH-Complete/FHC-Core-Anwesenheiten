@@ -173,7 +173,7 @@ export const LektorComponent = {
 			name.innerText = data.vorname + ' ' + data.nachname
 			el.appendChild(name)
 			
-			data.entschuldigungen.forEach(ent => {
+			data?.entschuldigungen?.forEach(ent => {
 				const entschuldigung = document.createElement('p')
 
 				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
