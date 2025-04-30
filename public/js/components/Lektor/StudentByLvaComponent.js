@@ -3,6 +3,10 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {lektorFormatters} from "../../formatters/formatters.js";
 
+import ApiKontrolle from '../../api/factory/kontrolle.js';
+import ApiProfil from '../../api/factory/profil.js';
+import ApiInfo from '../../api/factory/info.js';
+
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
@@ -84,7 +88,8 @@ export const StudentByLvaComponent = {
 						// do nothing when just clicking edit input and not typing
 						
 					} else {
-						this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
+						this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]))
+							.then(res => {
 							if(res.meta.status === "success") {
 								this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
 							}
@@ -210,14 +215,15 @@ export const StudentByLvaComponent = {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData).then(res => {
+			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData)).then(res => {
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
 				} else {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
-				this.$fhcApi.factory.Anwesenheiten.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
+				this.$api.call(ApiProfil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id))
+					.then(res => {
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
@@ -314,7 +320,8 @@ export const StudentByLvaComponent = {
 		async setupMounted() {
 			this.tableBuiltPromise = new Promise(this.tableResolve)
 			await this.tableBuiltPromise
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz).then(res => {
+			this.$api.call(ApiKontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz))
+				.then(res => {
 				if (res.meta.status !== "success" || !res.data) {
 					return []
 				} else {
@@ -326,7 +333,6 @@ export const StudentByLvaComponent = {
 						row.anteil = (row.dauer / sum * 100).toFixed(2)
 					})
 
-					console.log(res.data.retval)
 					this.tableData = res.data.retval
 					this.initialTableData = [...res.data.retval]
 					this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(res.data.retval)
@@ -335,7 +341,8 @@ export const StudentByLvaComponent = {
 
 			})
 
-			this.$fhcApi.factory.Anwesenheiten.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
+			this.$api.call(ApiInfo.getStudentInfo(this.id, this.lv_id, this.sem_kz))
+				.then(res => {
 				if (res.meta.status !== "success" || !res.data) return
 
 				this.prestudent_id = res.data[0].prestudent_id

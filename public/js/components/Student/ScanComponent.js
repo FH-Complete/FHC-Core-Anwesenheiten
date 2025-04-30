@@ -2,6 +2,8 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 
+import ApiProfil from '../../api/factory/profil.js';
+
 export default {
 	name: 'ScanComponent',
 	components: {
@@ -27,7 +29,8 @@ export default {
 		},
 		processAnwesenheit() {
 
-			this.$fhcApi.factory.Anwesenheiten.Profil.checkInAnwesenheit(this.internalZugangscode).then(
+			this.$api.call(ApiProfil.checkInAnwesenheit(this.internalZugangscode))
+				.then(
 				res => {
 					if(res.meta.status === "success" && res.data) {
 

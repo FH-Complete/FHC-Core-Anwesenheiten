@@ -5,6 +5,8 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
 
+import ApiProfil from '../../api/factory/profil.js';
+
 export default {
 	name: 'StudentAnwesenheitComponent',
 	components: {
@@ -119,7 +121,8 @@ export default {
 			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
 			if(!uid) return
-			this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwByUID(this.studiensemester, uid, person_id).then(res => {
+				this.$api.call(ApiProfil.getAllAnwByUID(this.studiensemester, uid, person_id))
+				.then(res => {
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {

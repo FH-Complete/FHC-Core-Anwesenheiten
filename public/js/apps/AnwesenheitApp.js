@@ -1,5 +1,4 @@
 import LektorComponent from "../components/Lektor/LektorComponent.js";
-import FhcApi from '../../../../js/plugin/FhcApi.js';
 import Phrasen from "../../../../js/plugin/Phrasen.js";
 import {StudentByLvaComponent} from "../components/Lektor/StudentByLvaComponent.js";
 import StudentComponent from "../components/Student/StudentComponent.js";
@@ -7,8 +6,6 @@ import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenhei
 import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent.js";
 import ScanComponent from "../components/Student/ScanComponent.js";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent.js";
-import fhcapifactory from "../../../../js/api/fhcapifactory.js";
-import anwesenheitenAPI from "../api/fhcapifactory.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -72,9 +69,6 @@ const anwesenheitApp = Vue.createApp({
 	},
 	created(){
 
-	},
-	mounted() {
-		if(!this.$fhcApi.factory.Anwesenheiten && this.$fhcApi.factory.addEndpoints) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 	}
 });
 anwesenheitApp.config.globalProperties.$entryParams = {
@@ -106,28 +100,6 @@ anwesenheitApp.config.globalProperties.$formatTime = (timeStamp, delimiter = '-'
 }
 
 anwesenheitApp.use(router)
-
-const checkForCis4Tag = () =>  {
-	const container = document.getElementById('main')
-	return container?.getAttribute('cis4') === 'true'
-}
-
-const isCis4 = checkForCis4Tag()
-if(isCis4) {
-	anwesenheitApp.use(FhcApi, fhcapifactory) // Cis4
-} else {
-	anwesenheitApp.use(FhcApi, {
-		factory:
-			{
-				Anwesenheiten: {
-					"Kontrolle": anwesenheitenAPI.factory.Kontrolle,
-					"Profil": anwesenheitenAPI.factory.Profil,
-					"Info": anwesenheitenAPI.factory.Info,
-					"Administration": anwesenheitenAPI.factory.Administration
-				}
-			}
-	})
-}
 
 anwesenheitApp.use(primevue.config.default, {
 		// TODO: set primevue locale with language

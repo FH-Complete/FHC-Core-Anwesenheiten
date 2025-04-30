@@ -10,6 +10,8 @@ import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {Stundenliste} from "./Stundenliste.js";
 import {Statuslegende} from "./Statuslegende.js";
+import ApiKontrolle from '../../api/factory/kontrolle.js';
+import ApiInfo from '../../api/factory/info.js';
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -62,7 +64,7 @@ export const LektorComponent = {
 				rowFormatter: this.entschuldigtColoring,
 				height: this.$entryParams.tabHeights.lektor,
 				index: 'prestudent_id',
-				debugInvalidComponentFuncs:false,
+				debugInvalidComponentFuncs: false,
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
@@ -244,7 +246,7 @@ export const LektorComponent = {
 			return valueFormatted
 		},
 		getExistingQRCode() {
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value)
+			this.$api.call(ApiKontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value))
 				.then(res => {
 					if (res.data.svg) {
 						this.showQR(res.data)
@@ -252,7 +254,8 @@ export const LektorComponent = {
 				})
 		},
 		pollAnwesenheit() {
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.pollAnwesenheiten(this.anwesenheit_id, this.lv_id).then(res => {
+			this.$api.call(ApiKontrolle.pollAnwesenheiten(this.anwesenheit_id, this.lv_id))
+				.then(res => {
 				this.checkInCount = res.data.anwesend
 				this.abwesendCount = res.data.abwesend
 				this.entschuldigtCount = res.data.entschuldigt
@@ -372,19 +375,22 @@ export const LektorComponent = {
 				day: this.selectedDate.getDate()
 			}
 
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende, date).then(res => {
+			this.$api.call(ApiKontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende, date))
+				.then(res => {
 				if (res.data) {
 					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
 			})
+			
 		},
 		handleTerminChanged() {
 			this.setTimespanForKontrolleTermin(this.$entryParams.selected_termin.value)
 		},
 		regenerateQR() {
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.regenerateQRCode(this.anwesenheit_id).then(async (res) => {
+			this.$api.call(ApiKontrolle.regenerateQRCode(this.anwesenheit_id))
+				.then(async (res) => {
 				const oldCode = this.code
 				this.qr = res.data.svg
 				this.url = res.data.url
@@ -392,7 +398,7 @@ export const LektorComponent = {
 
 				await this.wait(5000)
 
-				this.$fhcApi.factory.Anwesenheiten.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
+					this.$api.call(ApiKontrolle.degenerateQRCode(this.anwesenheit_id, oldCode))
 			})
 		},
 		progressCounter() {
@@ -405,7 +411,8 @@ export const LektorComponent = {
 		async saveChanges() {
 
 			const changedStudents = new Set(this.changedData.map(e => e.prestudent_id))
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, this.changedData).then((res) => {
+			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, this.changedData))
+				.then((res) => {
 				if (res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
 				} else {
@@ -421,7 +428,7 @@ export const LektorComponent = {
 					if(valueToChange) valueToChange.status = change.status
 				})
 				
-				this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz)
+				this.$api.call(ApiKontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz))
 					.then(res => {
 						this.updateSumData(res.data.retval)
 						this.changes = true
@@ -447,7 +454,7 @@ export const LektorComponent = {
 			this.code = null
 
 			// attempt to degenerate one last time to not leave any codes in db
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.degenerateQRCode(this.anwesenheit_id, oldCode)
+			this.$api.call(ApiKontrolle.degenerateQRCode(this.anwesenheit_id, oldCode))
 		},
 		handleChangeDatum(date) {
 			const padZero = (num) => String(num).padStart(2, '0');
@@ -521,14 +528,15 @@ export const LektorComponent = {
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
+			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
 				if (res.meta.status !== "success") return
 				this.setupData(res.data)
 			}).finally(() => {
 				this.loading = false
 			})
 
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.deleteQRCode(this.anwesenheit_id, this.lv_id).then(
+			this.$api.call(ApiKontrolle.deleteQRCode(this.anwesenheit_id, this.lv_id))
+				.then(
 				res => {
 					if (res.meta.status === "success" && res.data) {
 						this.$fhcAlert.alertSuccess(this.$p.t('global/anwKontrolleBeendet'))
@@ -566,12 +574,13 @@ export const LektorComponent = {
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date).then(res => {
+				this.$api.call(ApiKontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date))
+				.then(res => {
 				if (res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
 					this.loading = true
-					this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat).then((res) => {
+					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat)).then((res) => {
 						if (res.meta.status !== "success") return
 						this.setupData(res.data)
 					}).finally(() => {
@@ -942,7 +951,7 @@ export const LektorComponent = {
 			if (this.$entryParams.lektorState) {
 				this.setupLektorState()
 			} else {
-				this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
+					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
 					this.setupData(res.data)
 				}).finally(() => {
 					this.loading = false
@@ -955,7 +964,7 @@ export const LektorComponent = {
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date).then(res => {
+			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
 				this.setupData(res.data)
 			}).finally(() => {
 				this.loading = false
@@ -964,7 +973,8 @@ export const LektorComponent = {
 			this.getExistingQRCode()
 		},
 		loadStunden() {
-			this.$fhcApi.factory.Anwesenheiten.Info.getStunden().then(res => {
+			this.$api.call(ApiInfo.getStunden())
+				.then(res => {
 				this.stunden = res.data
 
 			})

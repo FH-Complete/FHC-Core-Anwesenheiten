@@ -9,6 +9,7 @@ import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
 import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
 import AnwTimeline from "./AnwTimeline.js";
+import ApiAdmin from '../../api/factory/administration.js';
 
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
@@ -116,7 +117,8 @@ export const AssistenzComponent = {
 						const data = cell.getData()
 						if((data.notiz === '' || data.notiz === null) && (this.editCellValue === '' || this.editCellValue === null)) return
 
-						this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz).then(res => {
+						this.$api.call(ApiAdmin.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz))
+							.then(res => {
 							if (res.meta.status === "success")
 							{
 								this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
@@ -144,7 +146,10 @@ export const AssistenzComponent = {
 		saveEditEntschuldigung() {
 			if(!this.selectedEntschuldigung) return
 			
-			this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(this.selectedEntschuldigung.entschuldigung_id), this.selectedEntschuldigung.akzeptiert, this.selectedEntschuldigung.notiz, this.selectedEntschuldigung.von, this.selectedEntschuldigung.bis).then(res => {
+				this.$api.call(ApiAdmin.updateEntschuldigung(String(this.selectedEntschuldigung.entschuldigung_id),
+					this.selectedEntschuldigung.akzeptiert, this.selectedEntschuldigung.notiz,
+					this.selectedEntschuldigung.von, this.selectedEntschuldigung.bis))
+			.then(res => {
 				if (res.meta.status === "success")
 				{
 					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
@@ -188,7 +193,8 @@ export const AssistenzComponent = {
 			// if that is the case just open modal with saved anwArray and overlay selected entschuldigung together with all others
 			
 			// keep track of ent updates for that person -> if ent was updated fetch again
-			this.$fhcApi.factory.Anwesenheiten.Administration.getTimeline(this.selectedEntschuldigung.entschuldigung_id, this.selectedEntschuldigung.person_id).then(
+			this.$api.call(ApiAdmin.getTimeline(this.selectedEntschuldigung.entschuldigung_id, this.selectedEntschuldigung.person_id))
+				.then(
 				(res) => {
 					
 					this.savePersonIdDataArr(this.selectedEntschuldigung.person_id, res.data)
@@ -225,7 +231,8 @@ export const AssistenzComponent = {
 			const entschuldigung_id = cell.getData().entschuldigung_id
 			const existingNotiz = cell.getData().notiz
 			const notiz = notizParam !== '' ? notizParam : (existingNotiz !== null && existingNotiz !== undefined) ? existingNotiz : ''
-			this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(entschuldigung_id), status, notiz).then(res => {
+			this.$api.call(ApiAdmin.updateEntschuldigung(String(entschuldigung_id), status, notiz))
+				.then(res => {
 
 				if (res.meta.status === "success")
 				{
@@ -370,7 +377,8 @@ export const AssistenzComponent = {
 				this.$entryParams.permissions.studiengaengeAssistenz :
 				this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
 
-			this.$fhcApi.factory.Anwesenheiten.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
+				this.$api.call(ApiAdmin.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis))
+					.then(res => {
 				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
 			})
 		},
