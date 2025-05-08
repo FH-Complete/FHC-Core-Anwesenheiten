@@ -10,7 +10,7 @@ export const Statuslegende = {
 
 				<div v-if="this.$entryParams.permissions.entschuldigungen_enabled" class="row" style="color: #0335f5;"><h3>{{$capitalize($p.t('global/entschuldigt'))}} = <i class="fa-solid fa-user-shield"></i></h3></div>
 
-			</divclass>
+			</div>
 		</div>
 	
 	`

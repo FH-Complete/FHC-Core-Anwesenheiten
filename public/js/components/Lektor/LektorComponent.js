@@ -8,7 +8,6 @@ import {MaUIDDropdown} from "../Setup/MaUIDDropdown.js";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
 import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
-import {Stundenliste} from "./Stundenliste.js";
 import {Statuslegende} from "./Statuslegende.js";
 
 export const LektorComponent = {
@@ -24,7 +23,6 @@ export const LektorComponent = {
 		MaUIDDropdown,
 		KontrollenDropdown,
 		AnwCountDisplay,
-		Stundenliste,
 		"datepicker": VueDatePicker,
 		Statuslegende
 	},
@@ -175,7 +173,7 @@ export const LektorComponent = {
 			name.innerText = data.vorname + ' ' + data.nachname
 			el.appendChild(name)
 			
-			data.entschuldigungen.forEach(ent => {
+			data?.entschuldigungen?.forEach(ent => {
 				const entschuldigung = document.createElement('p')
 
 				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
@@ -461,10 +459,18 @@ export const LektorComponent = {
 			else this.kontrollDatumSourceStundenplan = false
 		},
 		handleChangeEnde(date) {
-			this.kontrollZeitSourceStundenplanEnde = false
+			const padZero = (num) => String(num).padStart(2, '0');
+			const searchStr = `${padZero(date.hours)}:${padZero(date.minutes)}:${padZero(date.seconds)}`
+			const terminFound = this.$entryParams.available_termine.value.find(termin => termin.ende == searchStr)
+			if(terminFound) this.kontrollZeitSourceStundenplanEnde = true
+			else this.kontrollZeitSourceStundenplanEnde = false
 		},
-		handleChangeBeginn(e) {
-			this.kontrollZeitSourceStundenplanBeginn = false
+		handleChangeBeginn(date) {
+			const padZero = (num) => String(num).padStart(2, '0');
+			const searchStr = `${padZero(date.hours)}:${padZero(date.minutes)}:${padZero(date.seconds)}`
+			const terminFound = this.$entryParams.available_termine.value.find(termin => termin.beginn == searchStr)
+			if(terminFound) this.kontrollZeitSourceStundenplanBeginn = true
+			else this.kontrollZeitSourceStundenplanBeginn = false
 		},
 		setTimespanForKontrolleTermin(termin, setDate = true) {
 			if (setDate) {
@@ -677,7 +683,7 @@ export const LektorComponent = {
 				const termin = new Date(closestTermin.datum)
 				const closestTerminSameDay = this.selectedDate.getDate() === termin.getDate() && this.selectedDate.getMonth() === termin.getMonth && this.selectedDate.getFullYear() === termin.getFullYear()
 				closestTermin.isSameDay = closestTerminSameDay
-				this.setTimespanForKontrolleTermin(closestTermin, false)
+				this.setTimespanForKontrolleTermin(closestTermin, true)
 
 				this.$entryParams.available_termine.value.forEach(t => this.lektorState.dates.push(t.datum))
 
@@ -1041,7 +1047,6 @@ export const LektorComponent = {
 		this.ma_uid = this.$entryParams.permissions.authID
 	},
 	mounted() {
-		console.log(this.$entryParams)
 		this.setupMounted()
 		
 		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
@@ -1103,6 +1108,8 @@ export const LektorComponent = {
 				
 			})
 			this.setCurrentCountsFromTableData()
+			
+			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
@@ -1230,7 +1237,6 @@ export const LektorComponent = {
 										<div class="col-5" style="height: 40px">
 											<datepicker
 												v-model="selectedDate"
-												@update:model-value="handleChangeDatum"
 												:clearable="false"
 												locale="de"
 												format="dd.MM.yyyy"

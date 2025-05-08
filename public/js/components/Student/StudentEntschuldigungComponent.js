@@ -225,13 +225,13 @@ export default {
 				button.innerHTML = '<i class="fa fa-download"></i>';
 				button.style.minWidth = minwidth;
 				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-				button.title = this.$p.t('table/download');
+				button.title = this.$p.t('global/download');
 				download.append(button);
 			} else {
 				button.innerHTML = '<i class="fa fa-upload"></i>';
 				button.style.minWidth = minwidth;
 				button.addEventListener('click', () => this.addEntschuldigungFile(cell.getData()));
-				button.title = this.$p.t('table/upload');
+				button.title = this.$p.t('global/upload');
 				download.append(button);
 			}
 
