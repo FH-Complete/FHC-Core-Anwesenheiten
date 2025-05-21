@@ -201,11 +201,16 @@ class AdministrationApi extends FHCAPI_Controller
 			// Link to Entschuldigungsmanagement
 			$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung';
 			$student_uid = $data->student_uid;
+
+			$vonDate = new DateTime($von);
+			$vonFormatted = $vonDate->format('d.m.Y H:i');
+			$bisDate = new DateTime($bis);
+			$bisFormatted = $bisDate->format('d.m.Y H:i');
 			
 			// Prepare mail content
 			$body_fields = array(
-				'von' => $von,
-				'bis' => $bis,
+				'von' => $vonFormatted,
+				'bis' => $bisFormatted,
 				'akzeptiert' => $status == true ? 'akzeptiert' : 'abgelehnt',
 				'linkEntschuldigungen' => $url
 			);
@@ -229,7 +234,7 @@ class AdministrationApi extends FHCAPI_Controller
 					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
 				);
 			}
-//			$this->addMeta('emailfields', $body_fields);
+			$this->addMeta('emailfields', $body_fields);
 		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));

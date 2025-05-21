@@ -120,7 +120,7 @@ class Anwesenheit_model extends \DB_Model
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id=?	AND
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz=?
-			ORDER BY semester, verband, gruppe, nachname;";
+			ORDER BY nachname, semester, verband, gruppe;";
 
 		return $this->execReadOnlyQuery($query, [$lv_id, $sem_kurzbz]);
 	}
