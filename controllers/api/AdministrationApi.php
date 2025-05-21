@@ -138,11 +138,12 @@ class AdministrationApi extends FHCAPI_Controller
 //					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
 				}
 				
-				
-				$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
+				if(count($anwesenheit_user_ids) > 0) {
+					$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
 
-				if (isError($updateAnwesenheit))
-					$this->terminateWithError($updateAnwesenheit);
+					if (isError($updateAnwesenheit))
+						$this->terminateWithError($updateAnwesenheit);
+				}
 			}
 		}
 		

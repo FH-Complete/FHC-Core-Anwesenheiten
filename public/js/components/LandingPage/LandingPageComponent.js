@@ -259,12 +259,14 @@ export default {
 					const data = []
 
 					if(res.data[1]) {
+						// res.data[1] = null
 						Object.keys(res.data[1]).forEach(key => {
 							const val = res.data[1][key]
+							
 							if(val && val.length) {
 								val.forEach(v => v.le_id = key)
 								// spoof le termine to test with
-								// val.push({le_id: key, datum: '2023-04-22', beginn: '13:37:42', ende: '23:42:17'})
+								// val.push({le_id: key, datum: '2025-04-17', beginn: '13:37:42', ende: '23:42:17'})
 							}
 						}) 
 					}
@@ -316,7 +318,6 @@ export default {
 				})
 			})
 		},
-		
 		setLvViewData(data) {
 			this.$entryParams.viewDataLv.benotung = data.benotung
 			this.$entryParams.viewDataLv.bezeichnung = data.bezeichnung
@@ -338,7 +339,11 @@ export default {
 				const choiceFound = leChoices.find(choice => choice.lehreinheit_id == closest.le_id)
 				return choiceFound
 				
-			} else return null
+			} else if(leChoices && leChoices.length) { // no termine to determine closest le by
+				return leChoices[0]
+			} else { // no termine and no le found
+				return null
+			}
 		},
 		findClosestTermin(termine) {
 			const todayTime = new Date(Date.now()).getTime()
