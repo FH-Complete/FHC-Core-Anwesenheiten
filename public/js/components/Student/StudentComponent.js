@@ -5,6 +5,8 @@ import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {StudentDropdown} from "../Setup/StudentDropdown.js"
 import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
 
+import ApiProfil from '../../api/factory/profil.js';
+
 export const StudentComponent = {
 	name: 'StudentComponent',
 	components: {
@@ -60,7 +62,8 @@ export const StudentComponent = {
 			// if student is logged in as himself load his own viewData
 			if(!this.$entryParams.selected_student_info) {
 
-					this.$fhcApi.factory.Anwesenheiten.Profil.getProfileViewData(null).then(res => {
+				this.$api.call(ApiProfil.getProfileViewData(null))
+						.then(res => {
 
 						const data = res.data.retval[0]
 						this.viewDataStudent.vorname = data.vorname
@@ -97,7 +100,8 @@ export const StudentComponent = {
 			this.$refs.tabsStudent._.refs.current.reload()
 
 			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
-			this.$fhcApi.factory.Anwesenheiten.Profil.getProfileViewData(uid).then(res => {
+				this.$api.call(ApiProfil.getProfileViewData(uid))
+				.then(res => {
 
 				if(!res?.data?.retval?.[0]) return
 				const data = res.data.retval[0]

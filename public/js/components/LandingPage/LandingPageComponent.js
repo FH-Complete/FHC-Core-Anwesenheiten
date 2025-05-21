@@ -7,6 +7,8 @@ import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
 import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
 
+import ApiInfo from '../../api/factory/info.js';
+
 export default {
 	name: 'LandingPageComponent',
 	components: {
@@ -128,7 +130,8 @@ export default {
 
 				if(this.$entryParams.permissions.entschuldigungen_enabled) {
 					this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
-						this.$fhcApi.factory.Anwesenheiten.Info.getAktuellesSemester().then(res => {
+							this.$api.call(ApiInfo.getAktuellesSemester())
+							.then(res => {
 							if(res?.meta?.status === 'success') {
 								this.$entryParams.aktuellesSemester = res?.data?.[0]
 								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
@@ -163,7 +166,8 @@ export default {
 			this.$entryParams.viewDataStudent.semester = Vue.ref('')
 		},
 		loadLvViewData() {
-			this.$fhcApi.factory.Anwesenheiten.Info.getLvViewDataInfo(this.$entryParams.lv_id).then(res => {
+			this.$api.call(ApiInfo.getLvViewDataInfo(this.$entryParams.lv_id))
+				.then(res => {
 				if(res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
 			})
 		},
@@ -202,7 +206,8 @@ export default {
 		},
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
-				this.$fhcApi.factory.Anwesenheiten.Info.getStudentsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
+					this.$api.call(ApiInfo.getStudentsForLvaInSemester(lv_id, sem_kurzbz))
+					.then(res => {
 					this.$entryParams.availableStudents = []
 
 					res?.data?.retval?.forEach(e => {
@@ -224,7 +229,8 @@ export default {
 		},
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
-				this.$fhcApi.factory.Anwesenheiten.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
+				this.$api.call(ApiInfo.getLektorsForLvaInSemester(lv_id, sem_kurzbz))
+					.then(res => {
 					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
@@ -254,7 +260,8 @@ export default {
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
 			return new Promise(resolve => {
-				this.$fhcApi.factory.Anwesenheiten.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
+				this.$api.call(ApiInfo.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz))
+					.then(res => {
 					// merge entries with same LE
 					const data = []
 

@@ -5,7 +5,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-
+import ApiProfil from '../../api/factory/profil.js'
 export default {
 	name: 'StudentEntschuldigungComponent',
 	components: {
@@ -154,7 +154,7 @@ export default {
 			formData.append('person_id', person_id);
 
 
-			this.$fhcApi.factory.Anwesenheiten.Profil.editEntschuldigung(formData)
+			this.$api.call(ApiProfil.editEntschuldigung)
 				.then(response => {
 
 				if (response.meta.status === "success")
@@ -195,7 +195,8 @@ export default {
 
 			formData.append('person_id', person_id);
 
-			this.$fhcApi.factory.Anwesenheiten.Profil.addEntschuldigung(formData).then(res => {
+			this.$api.call(ApiProfil.addEntschuldigung(formData))
+				.then(res => {
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
 					{
@@ -261,7 +262,8 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.factory.Anwesenheiten.Profil.deleteEntschuldigung(entschuldigung_id, this.$entryParams.selected_student_info?.person_id).then(response => {
+			this.$api.call(ApiProfil.deleteEntschuldigung(entschuldigung_id, this.$entryParams.selected_student_info?.person_id))
+				.then(response => {
 
 				if (response.meta.status === "success")
 				{
@@ -298,7 +300,8 @@ export default {
 		},
 		reload(){
 			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-			this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(id).then(res => {
+			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(id))
+				.then(res => {
 				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
 			})
 		},

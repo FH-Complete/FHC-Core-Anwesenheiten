@@ -1,3 +1,5 @@
+import ApiProfil from '../api/factory/profil.js';
+
 export default {
 	name: 'QuotasOverview',
 	props: {
@@ -13,7 +15,7 @@ export default {
 	methods: {
 		showLvaAnw(quota){
 			if(!quota.showDetails && !quota.detailsLoaded) {
-				this.$fhcApi.factory.Anwesenheiten.Profil.getAnwesenheitenByLva(null, quota.lehrveranstaltung_id, quota.prestudent_id, this.uid)
+				this.$api.call(ApiProfil.getAnwesenheitenByLva(null, quota.lehrveranstaltung_id, quota.prestudent_id, this.uid))
 					.then(res => {
 						quota.showDetails = true
 						quota.detailsLoaded = true

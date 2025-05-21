@@ -12,7 +12,7 @@ class KontrolleApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
 				'updateAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
 				'regenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
@@ -87,7 +87,7 @@ class KontrolleApi extends FHCAPI_Controller
 	 *    7. termine for lehreinheit in stundenplan
 	 * )
 	 */
-	public function getAllAnwesenheitenByLvaAssigned()
+	public function fetchAllAnwesenheitenByLvaAssigned()
 	{
 
 		$result = $this->getPostJSON();
