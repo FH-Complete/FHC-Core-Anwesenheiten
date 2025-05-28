@@ -113,7 +113,6 @@ export const LektorComponent = {
 						formatter: this.anwesenheitFormatterValue,
 						hozAlign:"center",
 						widthGrow: 1,
-						// tooltip: this.anwTooltip,
 						tooltip: this.tooltipTableRow,
 						minWidth: 150
 						
@@ -367,9 +366,27 @@ export const LektorComponent = {
 					const dateParts = date.split("-")
 					const colTitle = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
 					newCols.push({
-						title: colTitle, field: date
-						, formatter: this.anwesenheitFormatterValue
-						, hozAlign: "center", widthGrow: 1, tooltip: false, minWidth: 150
+						title: colTitle,
+						field: date,
+						editor: 'list',
+						editorParams: {
+							values: Vue.computed(()=> {
+								if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+									return [this.$entryParams.permissions.anwesend_status,
+										this.$entryParams.permissions.abwesend_status,
+										this.$entryParams.permissions.entschuldigt_status]
+								} else if (this.$entryParams.permissions.lektor) {
+									return [this.$entryParams.permissions.anwesend_status,
+										this.$entryParams.permissions.abwesend_status]
+								}
+							})
+						},
+						editable: this.checkCellEditability,
+						formatter: this.anwesenheitFormatterValue,
+						hozAlign:"center",
+						widthGrow: 1,
+						tooltip: this.tooltipTableRow,
+						minWidth: 150
 					})
 				})
 				newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
