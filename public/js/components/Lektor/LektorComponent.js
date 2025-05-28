@@ -77,10 +77,55 @@ export const LektorComponent = {
 							autocomplete: true,
 						},
 						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, minWidth: 150},
-					{title: this.$capitalize(this.$p.t('global/datum')), field: 'status', formatter: this.anwesenheitFormatterValue, hozAlign:"center",widthGrow: 1, 
+					// {title: Vue.computed(() => this.$p.t('benotungstool/c4note')), field: 'note_vorschlag',
+					// 	editor: 'list',
+					// 	editorParams: {
+					// 		values: Vue.computed(()=>this.notenOptions.map(opt => {
+					// 			return {
+					// 				label: opt.bezeichnung,
+					// 				value: opt.note
+					// 			}
+					// 		}))
+					// 	},
+					// 	formatter: (cell) => {
+					// 		const value = cell.getValue()
+					// 		const match = this.notenOptions.find(opt => opt.note === value)
+					// 		return match ? match.bezeichnung : value
+					// 	},
+					// 	widthGrow: 1},
+					{
+						title: this.$capitalize(this.$p.t('global/datum')),
+						field: 'status',
+						editor: 'list',
+						editorParams: {
+							values: Vue.computed(()=> {
+								if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+									return [this.$entryParams.permissions.anwesend_status,
+										this.$entryParams.permissions.abwesend_status,
+										this.$entryParams.permissions.entschuldigt_status]
+								} else if (this.$entryParams.permissions.lektor) {
+									return [this.$entryParams.permissions.anwesend_status,
+										this.$entryParams.permissions.abwesend_status]
+								}
+							})	
+						},
+						editable: this.checkCellEditability,
+						formatter: this.anwesenheitFormatterValue,
+						hozAlign:"center",
+						widthGrow: 1,
 						// tooltip: this.anwTooltip,
 						tooltip: this.tooltipTableRow,
-						minWidth: 150},
+						minWidth: 150
+						
+						// title: this.$capitalize(this.$p.t('global/datum')),
+						// field: 'status',
+						// formatter: this.anwesenheitFormatterValue,
+						// hozAlign:"center",
+						// widthGrow: 1, 
+						// // tooltip: this.anwTooltip,
+						// tooltip: this.tooltipTableRow,
+						// minWidth: 150
+					},
 					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: this.percentFormatter,widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
 				],
 				persistence: {
@@ -124,9 +169,35 @@ export const LektorComponent = {
 							name: 'StudentByLva',
 							params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
 						})
-					} else { // on date fields toggle state edit
-						this.toggleAnwStatus(e, cell, prestudent_id)
 					}
+					// else { // on date fields toggle state edit
+					// 	this.toggleAnwStatus(e, cell, prestudent_id)
+					// 	const el = cell.getElement()
+					//	
+					// 	if(this.changedData.find(d => d.prestudent_id === prestudent_id)) {
+					// 		el.style.backgroundColor = "#E0BBE4"
+					// 	} else {
+					// 		el.style.backgroundColor = null
+					// 	}
+					// }
+				}
+			},
+			{
+				event: "cellEdited",
+				handler: async (cell) => {
+					
+					const row = cell.getRow()
+					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
+
+					this.changeAnwStatus(cell, prestudent_id)
+					const el = cell.getElement()
+
+					if(this.changedData.find(d => d.prestudent_id === prestudent_id)) {
+						el.style.backgroundColor = "#E0BBE4"
+					} else {
+						el.style.backgroundColor = null
+					}
+					
 				}
 			},
 			{
@@ -165,6 +236,10 @@ export const LektorComponent = {
 		}
 	},
 	methods: {
+		checkCellEditability(cell) {
+			const val = cell.getValue()
+			return val !== '-' // dont allow edit on empty cols 
+		},
 		tooltipTableRow(e, cell, onRendered) { // tooltip formatter for whole row but used on every cell
 			const el = document.createElement('div')
 
@@ -842,8 +917,6 @@ export const LektorComponent = {
 			this.lektorState.entschuldigtStati = data[3] ?? []
 			this.lektorState.kontrollen = data[4] ?? []
 			this.lektorState.viewData = data[5] ?? []
-			// todo: check for edge cases
-
 			this.$entryParams.available_termine.value = this.getAvailableTermine(data)
 			this.lektorState.a_o_kz = data[7] ?? []
 			this.lektorState.gruppen = new Set()
@@ -868,7 +941,7 @@ export const LektorComponent = {
 		openNewAnwesenheitskontrolleModal() {
 			this.$refs.modalContainerNewKontrolle.show()
 		},
-		toggleAnwStatus(e, cell, prestudent_id) {
+		changeAnwStatus(cell, prestudent_id) {
 			const value = cell.getValue()
 			if (value === undefined) return
 			let date = cell.getColumn().getField() // '2024-10-16' or 'status'
@@ -879,46 +952,51 @@ export const LektorComponent = {
 			const arrWrapped = this.lektorState.studentsData.get(prestudent_id)
 			const arr = JSON.parse(JSON.stringify(arrWrapped))
 			const found = arr.find(e => e.datum === date)
-
 			const anwesenheit_user_id = found?.anwesenheit_user_id
-
-			if (value === this.$entryParams.permissions.abwesend_status) {
-
-				const newEntry = {
-					prestudent_id, date, status: this.$entryParams.permissions.anwesend_status, anwesenheit_user_id
-				}
-
-				this.handleChange(newEntry)
-				cell.setValue(this.$entryParams.permissions.anwesend_status)
-
-			} else if (value === this.$entryParams.permissions.anwesend_status) {
-				const newEntry = {
-					prestudent_id, date, status: this.$entryParams.permissions.abwesend_status, anwesenheit_user_id
-				}
-				this.handleChange(newEntry)
-				cell.setValue(this.$entryParams.permissions.abwesend_status)
+			const newEntry = {
+				prestudent_id, date, status: value, anwesenheit_user_id
 			}
+			this.handleChange(newEntry)
 		},
 		handleChange(newEntry) {
-			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
-			if (updateFoundIndex >= 0) this.changedData.splice(updateFoundIndex, 1)
-			else this.changedData.push(newEntry)
 
+			// check if the entry is in the original tableData with the same status
+			const student = this.lektorState.studentsData.get(newEntry.prestudent_id)
+			const original = student.find(v => Reflect.get(v, 'datum') === newEntry.date)
+			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
+			if (updateFoundIndex >= 0) {
+				this.changedData.splice(updateFoundIndex, 1)
+			}
+				
+			if (newEntry.status !== original.status) {
+				this.changedData.push(newEntry)
+			}
+			
 		},
 		validateTimespan() {
 			const vonDate = new Date(1995, 10, 16, this.lektorState.beginn.hours, this.lektorState.beginn.minutes, this.lektorState.beginn.seconds)
 			const bisDate = new Date(1995, 10, 16, this.lektorState.ende.hours, this.lektorState.ende.minutes, this.lektorState.ende.seconds)
-
+			
 			if (bisDate <= vonDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
 				return false
 			} else if(bisDate > vonDate) {
+				// timespan from von to bis needs to be 3/4 of a teaching unit
 				const minDiff = (bisDate - vonDate) / (1000 * 60)
 				const threshold = (this.$entryParams.permissions.einheitDauer ?? 0.75 ) * 60
 				if(minDiff <= threshold) {
 					this.$fhcAlert.alertError(this.$p.t('global/kontrollDauerUnterMindestwert', [threshold]));
 					return false
 				}
+			}
+			
+			// date of kontrolle needs to be in range or a stundenplantermin
+			if(!this.kontrollDatumSourceStundenplan && this.selectedDate <= this.minDate) {
+				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
+				return false
+			} else if(!this.kontrollDatumSourceStundenplan && this.selectedDate > this.maxDate) {
+				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
+				return false
 			}
 
 			return true;
@@ -967,6 +1045,7 @@ export const LektorComponent = {
 
 		},
 		handleLEChanged() {
+			console.log('handleLEChanged')
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
@@ -974,6 +1053,8 @@ export const LektorComponent = {
 				this.setupData(res.data)
 			}).finally(() => {
 				this.loading = false
+				
+				this.checkForBetreuungAndAlert()
 			})
 
 			this.getExistingQRCode()
@@ -1048,6 +1129,12 @@ export const LektorComponent = {
 			this.externalWindow.close();
 			this.externalWindow = null;
 			this.externalModalContainer = null;
+		},
+		checkForBetreuungAndAlert() {
+			// throw an alert when Betreuung is selected which usually should not be attendance checked
+			if(this.$entryParams.selected_le_info?.value?.lehrform_kurzbz === "BE") {
+				this.$fhcAlert.alertWarning(this.$p.t('global/alertBetreuungSelected'))
+			}
 		}
 	},
 	created(){
@@ -1066,6 +1153,8 @@ export const LektorComponent = {
 
 		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
 		this.$entryParams.tabHeights['lektor'].value = screenY - rect.top
+		
+		console.log(this.$entryParams)
 	},
 	unmounted(){
 		// anwesenheitskontrolle could be active
@@ -1121,6 +1210,10 @@ export const LektorComponent = {
 			
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 
+			
+			if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+			else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+			
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
@@ -1179,6 +1272,21 @@ export const LektorComponent = {
 			str += '_'+ this.$entryParams?.viewDataLv?.bezeichnung + '_'
 			str += this.lektorState.showAllVar ? 'AllDates' : this.selectedDate.toDateString()
 			return str
+		},
+		highlights() {
+			const highlights = []
+			const current = new Date(this.minDate)
+
+			while (current <= this.maxDate) {
+				highlights.push(new Date(current))
+				current.setDate(current.getDate() + 1)
+			}
+
+			if(this.$entryParams.available_termine.value) this.$entryParams.available_termine.value.forEach(v => {
+				highlights.push(new Date(v.datum))
+			})
+
+			return highlights
 		}
 	},
 	template:`
@@ -1252,8 +1360,7 @@ export const LektorComponent = {
 												format="dd.MM.yyyy"
 												:text-input="true"
 												:auto-apply="true"
-												:min-date="new Date(minDate)"
-												:max-date="new Date(maxDate)">
+												:highlight="highlights">
 											</datepicker>
 											
 										</div>
@@ -1310,7 +1417,7 @@ export const LektorComponent = {
 					
 					<div id="qrwrap">
 						<bs-modal ref="modalContainerQR" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
-						 :keyboard=false :noCloseBtn="true">
+						 :keyboard=false :noCloseBtn="true" :allowFullscreenExpand="true">
 							<template v-slot:title>{{ $p.t('global/zugangscode') }}
 							
 							</template>
@@ -1378,8 +1485,7 @@ export const LektorComponent = {
 											format="dd.MM.yyyy"
 											:text-input="true"
 											:auto-apply="true"
-											:min-date="new Date(minDate)"
-											:max-date="new Date(maxDate)">
+											:highlight="highlights">
 										</datepicker>
 									</div>
 									<div class="col-5 d-flex " style="height: 40px; align-items: center;">

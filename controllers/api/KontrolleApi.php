@@ -246,9 +246,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$anwesenheit_id = $resultQR->retval[0]->anwesenheit_id;
 		$shortHash = $resultQR->retval[0]->zugangscode;
 		if($shortHash) { // resend existing qr
-
-			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
-
+			$url = $this->getQRURLLink($shortHash);
 			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
 				$this->_ci->config->item('ANWESEND_STATUS'),
 				$this->_ci->config->item('ABWESEND_STATUS'),
@@ -292,7 +290,7 @@ class KontrolleApi extends FHCAPI_Controller
 			$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
 			$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
 
-			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
+			$url = $this->getQRURLLink($shortHash);
 
 			$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
 		} while(hasData($check));
@@ -308,6 +306,13 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError('Fehler beim Speichern', 'general');
 
 		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+	}
+	
+	private function getQRURLLink($shortHash) {
+		if(defined('CIS4') && CIS4) {
+			$ci3BootstrapFilePath = "cis.php";
+		}
+		return APP_ROOT.$ci3BootstrapFilePath."/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 	}
 
 	/**
@@ -438,7 +443,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 			$shortHash = $resultQR->retval[0]->zugangscode;
 
-			$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
+			$url = $this->getQRURLLink($shortHash);
 
 
 			$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
@@ -455,7 +460,7 @@ class KontrolleApi extends FHCAPI_Controller
 				$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
 				$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
 
-				$url = APP_ROOT."index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
+				$url = $this->getQRURLLink($shortHash);
 
 				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
 			} while(hasData($check));

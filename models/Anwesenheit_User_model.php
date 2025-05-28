@@ -211,23 +211,26 @@ class Anwesenheit_User_model extends \DB_Model
 	{
 		$query = "
 			SELECT
-			DISTINCT ON (extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von))
+				DISTINCT extension.tbl_anwesenheit_user.anwesenheit_user_id,
 				extension.tbl_anwesenheit_user.anwesenheit_user_id,
-			   Date(extension.tbl_anwesenheit.von) as datum,
-			   extension.tbl_anwesenheit_user.status,
-			   extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
-			   extension.tbl_anwesenheit_user.notiz,
-			   CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
+				Date(extension.tbl_anwesenheit.von) as datum,
+				extension.tbl_anwesenheit_user.status,
+				lehre.tbl_lehreinheit.lehreinheit_id,
+				campus.vw_stundenplan.lehrform,
+				campus.vw_stundenplan.lektor,
+				campus.vw_stundenplan.lehrfach_bez,
+				extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
+				extension.tbl_anwesenheit_user.notiz,
+				CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
 			FROM extension.tbl_anwesenheit
 					 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 					 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 					 JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
 					 JOIN campus.vw_stundenplan USING (lehreinheit_id)
 			WHERE studiensemester_kurzbz = ?
-				AND prestudent_id = ?
-				AND lehre.tbl_lehreinheit.lehrveranstaltung_id = ?
-				ORDER BY datum DESC;
-		";
+			  AND prestudent_id = ?
+			  AND lehre.tbl_lehreinheit.lehrveranstaltung_id = ?
+			ORDER BY datum DESC";
 
 		return $this->execQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
 	}
@@ -236,21 +239,27 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz)
 	{
 		$query = "
-			SELECT
-			DISTINCT ON (extension.tbl_anwesenheit_user.anwesenheit_user_id, Date(extension.tbl_anwesenheit.von))
-				extension.tbl_anwesenheit_user.anwesenheit_user_id,
-			   Date(extension.tbl_anwesenheit.von) as datum,
-			   extension.tbl_anwesenheit_user.status,
-			   extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis
-			FROM extension.tbl_anwesenheit
-					 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
-					 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
-					 JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
-			WHERE studiensemester_kurzbz = ?
-				AND prestudent_id = ?
-				AND lehre.tbl_lehreinheit.lehrveranstaltung_id = ?
-				ORDER BY datum DESC;
-		";
+			SELECT DISTINCT
+			extension.tbl_anwesenheit_user.anwesenheit_user_id,
+			Date(extension.tbl_anwesenheit.von) as datum,
+			extension.tbl_anwesenheit_user.status,
+			lehre.tbl_lehreinheit.lehreinheit_id,
+			campus.vw_stundenplan.lehrform,
+			campus.vw_stundenplan.lektor,
+			extension.tbl_anwesenheit.insertvon,
+			extension.tbl_anwesenheit.updatevon,
+			extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
+			extension.tbl_anwesenheit_user.notiz,
+			CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
+		FROM extension.tbl_anwesenheit
+				 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
+				 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
+				 JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
+				 JOIN campus.vw_stundenplan USING (lehreinheit_id)
+		WHERE studiensemester_kurzbz = ?
+		  AND prestudent_id = ?
+		  AND lehre.tbl_lehreinheit.lehrveranstaltung_id = ?
+		ORDER BY datum DESC;";
 
 		return $this->execReadOnlyQuery($query, [$sem_kurzbz, $prestudent_id, $lv_id]);
 	}

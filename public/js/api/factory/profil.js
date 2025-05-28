@@ -13,7 +13,8 @@ export default {
 	},
 	getAllAnwByUID(studiensemester, uid, person_id) {
 
-		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID?studiensemester=${studiensemester}&uid=${uid}&person_id=${person_id}`;
+		const params = { studiensemester, uid, person_id}
+		const url = `extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAllAnwByUID`//?studiensemester=${studiensemester}&uid=${uid}&person_id=${person_id}`;
 
 		return {
 			method: 'get',
@@ -24,7 +25,7 @@ export default {
 	},
 	getProfileViewData(uid) {
 
-		const payload = {uid}
+		const params = {uid}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getProfileViewData';
 
 		return {

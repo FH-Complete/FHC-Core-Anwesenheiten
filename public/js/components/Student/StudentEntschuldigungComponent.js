@@ -154,7 +154,7 @@ export default {
 			formData.append('person_id', person_id);
 
 
-			this.$api.call(ApiProfil.editEntschuldigung)
+			this.$api.call(ApiProfil.editEntschuldigung(formData))
 				.then(response => {
 
 				if (response.meta.status === "success")
