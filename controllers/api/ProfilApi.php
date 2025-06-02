@@ -395,7 +395,7 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id);
+		$this->sendEmailToAssistenz($person_id, $dmsId, 'add');
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
 	}
@@ -478,12 +478,12 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id);
+		$this->sendEmailToAssistenz($person_id, $dmsId, 'edit');
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'entschuldigung_id' => getData($result)]);
 	}
 
-	private function sendEmailToAssistenz($person_id_param)
+	private function sendEmailToAssistenz($person_id_param, $dmsId, $type)
 	{
 
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
@@ -502,7 +502,7 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 
 		$data = getData($result)[0];
-		$this->addMeta('emailData', $data);
+//		$this->addMeta('emailData', $data);
 		//emailTo usually is 1 address, sometimes several seperated by ','
 		$emails = explode(', ', $data->email);
 
@@ -514,6 +514,16 @@ class ProfilApi extends FHCAPI_Controller
 		$orgform = $data->dual ? 'DUAL' : $data->orgform_kurzbz;
 		$sem = $data->semester.'. Semester';
 
+		if($dmsId && $type == 'add' ) { // neue ent mit datei hochgeladen
+			$vorlage = 'AnwesenheitSanchoEntschuldigung';
+			$betreff = $this->p->t('global', 'entFullEmailBetreff');
+		} else if($dmsId && $type == 'edit') { // datei für alte ent hochgeladen
+			$vorlage = 'AnwEntFileAfter';
+			$betreff = $this->p->t('global', 'entEditEmailBetreff');
+		} else if(!$dmsId && $type == 'add') { // entschuldigung ohne datei uploaded
+			$vorlage = 'AnwEntNoFile';
+			$betreff = $this->p->t('global', 'entNewEmailBetreff');
+		}
 
 		foreach ($emails as $email)
 		{
@@ -529,10 +539,10 @@ class ProfilApi extends FHCAPI_Controller
 
 			// Send mail
 			sendSanchoMail(
-				'AnwesenheitSanchoEntschuldigung',
+				$vorlage,
 				$body_fields,
 				$email,
-				$this->p->t('global', 'entschuldigungAutoEmailBetreff')
+				$betreff
 			);
 		}
 
