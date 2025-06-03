@@ -211,19 +211,32 @@ export default {
 
 			return cell.getValue()
 		},
+		calculateTableHeight() {
+
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+
+			const collapsables = document.getElementById('filterCollapsables' + tableID);
+			const rect = tableDataSet.getBoundingClientRect();
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+			this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight
+
+			if(this.$refs.uebersichtTable.tabulator) this.$refs.uebersichtTable.tabulator.redraw(true)
+
+		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		// TODO: test collapsables behaviour in nested tabs and without
-		const collapsables = document.getElementById('filterCollapsables' + tableID);
-		const rect = tableDataSet.getBoundingClientRect();
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-		this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 	},
 	computed: {
 		getTooltipObj() {

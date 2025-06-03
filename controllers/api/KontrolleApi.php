@@ -311,6 +311,8 @@ class KontrolleApi extends FHCAPI_Controller
 	private function getQRURLLink($shortHash) {
 		if(defined('CIS4') && CIS4) {
 			$ci3BootstrapFilePath = "cis.php";
+		} else {
+			$ci3BootstrapFilePath = "index.ci.php";
 		}
 		return APP_ROOT.$ci3BootstrapFilePath."/extensions/FHC-Core-Anwesenheiten/Profil/Scan/$shortHash";
 	}

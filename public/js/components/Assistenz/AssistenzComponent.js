@@ -390,27 +390,34 @@ export const AssistenzComponent = {
 		},
 		handleSelectedEntschuldigungValidate(valid) {
 			this.selectedEntschuldigungValid = valid
+		},
+		calculateTableHeight() {
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+			this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
 		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.checkEntryParamPermissions()
 		this.setup()
-
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-		this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
+		
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 	},
 	beforeMounted() {
 		if(!this.$entryParams?.permissions?.entschuldigungen_enabled) {
-
 			// TODO: route to some 404 page or show entschuldigung disabled status
 			this.$router.back()
-
 		}
 	},
 	watch: {

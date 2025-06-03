@@ -1051,17 +1051,15 @@ export const LektorComponent = {
 			if (this.$entryParams.lektorState) {
 				this.setupLektorState()
 			} else {
-					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
+				this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
 					this.setupData(res.data)
 				}).finally(() => {
 					this.loading = false
 				})
 			}
 
-
 		},
 		handleLEChanged() {
-			console.log('handleLEChanged')
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
@@ -1144,6 +1142,18 @@ export const LektorComponent = {
 			if(this.$entryParams.selected_le_info?.value?.lehrform_kurzbz === "BE") {
 				this.$fhcAlert.alertWarning(this.$p.t('global/alertBetreuungSelected'))
 			}
+		},
+		calculateTableHeight() {
+			
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
+			this.$entryParams.tabHeights['lektor'].value = screenY - rect.top
+
+			if(this.$refs.anwesenheitenTable.tabulator) this.$refs.anwesenheitenTable.tabulator.redraw(true)
 		}
 	},
 	created(){
@@ -1154,17 +1164,13 @@ export const LektorComponent = {
 	mounted() {
 		this.setupMounted()
 		
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
-		this.$entryParams.tabHeights['lektor'].value = screenY - rect.top
-		
-		console.log(this.$entryParams)
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
 	},
 	unmounted(){
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 		// anwesenheitskontrolle could be active
 		this.stopPollingAnwesenheiten()
 	},

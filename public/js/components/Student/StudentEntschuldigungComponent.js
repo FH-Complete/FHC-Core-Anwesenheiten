@@ -334,6 +334,19 @@ export default {
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
+		},
+		calculateTableHeight() {
+
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+			this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
+
+			if(this.$refs.entschuldigungsTable.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
+
 		}
 	},
 	mounted() {
@@ -341,13 +354,13 @@ export default {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-		this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {

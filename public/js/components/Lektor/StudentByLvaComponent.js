@@ -370,6 +370,19 @@ export const StudentByLvaComponent = {
 			const img = new Image()
 			img.src = imgSrc
 			return img.width < 150 || img.height < 200
+		},
+		calculateTableHeight() {
+
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
+			this.$entryParams.tabHeights['studentByLva'].value = screenY - rect.top - 100 // approx for calc row on bottom
+
+			if(this.$refs.anwesenheitenByStudentByLvaTable.tabulator) this.$refs.anwesenheitenByStudentByLvaTable.tabulator.redraw(true)
+
 		}
 	},
 	created(){
@@ -381,13 +394,13 @@ export const StudentByLvaComponent = {
 	mounted() {
 		this.setupMounted()
 
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
-		this.$entryParams.tabHeights['studentByLva'].value = screenY - rect.top - 100 // approx for calc row on bottom
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)	
 	},
 	computed: {
 		dataChanged() {

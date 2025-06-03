@@ -293,7 +293,7 @@ class Anwesenheit_model extends \DB_Model
 				(tbl_anwesenheit.von) as von,
 				(tbl_anwesenheit.bis) as bis,
 				extension.get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,
-				CAST(EXTRACT(EPOCH FROM (tbl_anwesenheit.bis::timestamp - tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
+				CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
 			FROM extension.tbl_anwesenheit
 				JOIN extension.tbl_anwesenheit_user ON tbl_anwesenheit.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
