@@ -48,9 +48,10 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/lehreinheit_id')), field: 'lehreinheit_id', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('lehre/lehrform')), field: 'lehrform', widthGrow: 1, visible: false},
-					{title: this.$capitalize(this.$p.t('lehre/lektor')), field: 'lektor', widthGrow: 1, visible: false},
-					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/insertvon')), field: 'insertvon', widthGrow: 1, visible: false},
-					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/updatevon')), field: 'updatevon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/insertvon')), field: 'kinsertvon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/updatevon')), field: 'kupdatevon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/insertvon')), field: 'ainsertvon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/updatevon')), field: 'aupdatevon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', visible: false, bottomCalc: this.einheitenCalc, formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 250},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
@@ -399,14 +400,9 @@ export const StudentByLvaComponent = {
 			}
 		}
 	},
-	template:`	
-		<core-base-layout
-			:title=""
-			:subtitle=""
-			:main-cols=[10]
-			:aside-cols=[2]
-			>
-			<template #main>
+	template:`
+		<div class="row">
+			<div class="col-10">
 				<core-filter-cmpt
 					ref="anwesenheitenByStudentByLvaTable"
 					:title="filterTitle"
@@ -431,14 +427,11 @@ export const StudentByLvaComponent = {
 						</div>
 					</template>
 				</core-filter-cmpt>
-					
-			</template>
-			<template #aside >
+			</div>
+			<div class="col-2">
 				<img v-if="foto" :src="foto" :class="isLowResolution(foto) ? 'image-low-resolution' : ''" style="width: 100%"/>
-				<div v-else></div>
-			</template>
-		</core-base-layout>
-	</div>`
+			</div>
+		</div>`
 };
 
 export default StudentByLvaComponent

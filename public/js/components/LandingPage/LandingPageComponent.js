@@ -279,9 +279,6 @@ export default {
 					}
 					
 					this.$entryParams.allLeTermine = res.data[1] ?? []
-
-					
-					
 					
 					res.data[0].forEach(entry => {
 
@@ -311,7 +308,6 @@ export default {
 							data.push(entry)
 						}
 					})
-					
 
 					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
 					this.$entryParams.available_le_info.value = [...data]

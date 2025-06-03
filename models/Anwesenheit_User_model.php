@@ -212,16 +212,18 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "
 			SELECT
 				DISTINCT extension.tbl_anwesenheit_user.anwesenheit_user_id,
-				extension.tbl_anwesenheit_user.anwesenheit_user_id,
 				Date(extension.tbl_anwesenheit.von) as datum,
 				extension.tbl_anwesenheit_user.status,
 				lehre.tbl_lehreinheit.lehreinheit_id,
 				campus.vw_stundenplan.lehrform,
-				campus.vw_stundenplan.lektor,
 				campus.vw_stundenplan.lehrfach_bez,
+				extension.tbl_anwesenheit.insertvon as kinsertvon,
+				extension.tbl_anwesenheit.updatevon as kupdatevon,
+				extension.tbl_anwesenheit_user.insertvon as ainservon,
+				extension.tbl_anwesenheit_user.updateamum as aupdatevon,
 				extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
 				extension.tbl_anwesenheit_user.notiz,
-				CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
+				CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
 			FROM extension.tbl_anwesenheit
 					 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 					 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
@@ -245,12 +247,14 @@ class Anwesenheit_User_model extends \DB_Model
 			extension.tbl_anwesenheit_user.status,
 			lehre.tbl_lehreinheit.lehreinheit_id,
 			campus.vw_stundenplan.lehrform,
-			campus.vw_stundenplan.lektor,
-			extension.tbl_anwesenheit.insertvon,
-			extension.tbl_anwesenheit.updatevon,
+			campus.vw_stundenplan.lehrfach_bez,
+			extension.tbl_anwesenheit.insertvon as kinsertvon,
+			extension.tbl_anwesenheit.updatevon as kupdatevon,
 			extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
 			extension.tbl_anwesenheit_user.notiz,
-			CAST(EXTRACT(EPOCH FROM (extension.tbl_anwesenheit.bis::timestamp - extension.tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
+			extension.tbl_anwesenheit_user.insertvon as ainservon,
+			extension.tbl_anwesenheit_user.updatevon as aupdatevon,
+			CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
 		FROM extension.tbl_anwesenheit
 				 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 				 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)

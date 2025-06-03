@@ -10,7 +10,6 @@ import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {Statuslegende} from "./Statuslegende.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
-import ApiInfo from '../../api/factory/info.js';
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -1076,13 +1075,6 @@ export const LektorComponent = {
 
 			this.getExistingQRCode()
 		},
-		loadStunden() {
-			this.$api.call(ApiInfo.getStunden())
-				.then(res => {
-				this.stunden = res.data
-
-			})
-		},
 		downloadCSV() {
 			this.$refs.anwesenheitenTable.tabulator.download('csv', this.getCSVFilename, {bom: true})
 		},
@@ -1155,7 +1147,6 @@ export const LektorComponent = {
 		}
 	},
 	created(){
-		this.loadStunden()
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.$entryParams.permissions.authID
