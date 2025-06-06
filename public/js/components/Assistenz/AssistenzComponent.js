@@ -102,7 +102,7 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
 				persistence: true,
-				persistenceID: "assistenzTable"
+				persistenceID: this.$entryParams.patchdate + "-assistenzTable"
 			},
 			assistenzViewTabulatorEventHandlers: [
 				{

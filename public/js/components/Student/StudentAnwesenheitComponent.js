@@ -48,7 +48,7 @@ export default {
 					page: true,
 					columns: true,
 				},
-				persistenceID: "studentAnwTable"
+				persistenceID: this.$entryParams.patchdate + "-studentAnwTable"
 			},
 			studentViewTabulatorEventHandlers: [{
 				event: "tableBuilt",

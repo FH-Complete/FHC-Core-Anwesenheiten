@@ -47,7 +47,7 @@ export const LektorComponent = {
 				dates: [], // all
 				termine: [], // stundenplan
 				showAllVar: false,
-				tableStudentsData: [],
+				tableStudentData: [],
 				beginn: null,
 				ende: null,
 				tabulatorCols: null,
@@ -65,7 +65,7 @@ export const LektorComponent = {
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, download: false, tooltip: this.tooltipTableRow},
+					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 80, maxWidth: 80, download: false, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('global/prestudentID')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false, minWidth: 150, download: true, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1,  minWidth: 150, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
@@ -75,7 +75,7 @@ export const LektorComponent = {
 							clearable: true,
 							autocomplete: true,
 						},
-						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, minWidth: 150},
+						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, minWidth: 100},
 					// {title: Vue.computed(() => this.$p.t('benotungstool/c4note')), field: 'note_vorschlag',
 					// 	editor: 'list',
 					// 	editorParams: {
@@ -134,7 +134,7 @@ export const LektorComponent = {
 					page: true,
 					columns: false,
 				},
-				persistenceID: "lektorOverviewLe"
+				persistenceID: this.$entryParams.patchdate + "-lektorOverviewLe"
 			},
 			anwesenheitenTabulatorEventHandlers: [{
 				event: "cellClick",
@@ -234,6 +234,19 @@ export const LektorComponent = {
 		}
 	},
 	methods: {
+		anwColTitleFormatter(cell) {
+			const title = cell.getColumn().getDefinition().title;
+			const titleParts = title.split("|")
+			
+			const titledate = titleParts[0].trimEnd()
+			const dateParts = titledate.split("-")
+			const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
+
+			const container = document.createElement("div");
+			container.style.textAlign = "center";
+			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span style="color: gray;">${titleParts[1]}</span>`;
+			return container;
+		},
 		checkCellEditability(cell) {
 			const val = cell.getValue()
 			return val !== '-' // dont allow edit on empty cols 
@@ -291,6 +304,7 @@ export const LektorComponent = {
 		},
 		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()
+			
 			if (data === this.$entryParams.permissions.anwesend_status) {
 				cell.getElement().style.color = "#28a745";
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
@@ -352,6 +366,7 @@ export const LektorComponent = {
 			this.loading = false
 		},
 		async setAllColsAndData() {
+			console.log('setAllColsAndData')
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
@@ -362,10 +377,8 @@ export const LektorComponent = {
 			if (!this.lektorState.showAllVar) {
 				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
 				this.lektorState.dates.forEach(date => {
-					const dateParts = date.split("-")
-					const colTitle = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
 					newCols.push({
-						title: colTitle,
+						title: date,
 						field: date,
 						editor: 'list',
 						editorParams: {
@@ -382,6 +395,7 @@ export const LektorComponent = {
 						},
 						editable: this.checkCellEditability,
 						formatter: this.anwesenheitFormatterValue,
+						titleFormatter: this.anwColTitleFormatter,
 						hozAlign:"center",
 						widthGrow: 1,
 						tooltip: this.tooltipTableRow,
@@ -421,7 +435,10 @@ export const LektorComponent = {
 				}
 				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				studentDataEntry.forEach(entry => {
-					row[entry.datum] = entry.status
+					this.lektorState.dates.forEach(d => {
+						row[d] = entry.status
+					})
+					
 				})
 
 				data.push(row)
@@ -569,6 +586,17 @@ export const LektorComponent = {
 			const terminFound = this.$entryParams.available_termine.value.find(termin => termin.beginn == searchStr)
 			if(terminFound) this.kontrollZeitSourceStundenplanBeginn = true
 			else this.kontrollZeitSourceStundenplanBeginn = false
+		},
+		setTimespanForKontrolleNow() {
+			// no termine found to fill starting fields from, set to current hour + 1
+			const now = new Date()
+
+			this.lektorState.beginn = {
+				hours: now.getHours(),
+				minutes: now.getMinutes(),
+				seconds: now.getSeconds()
+			}
+			this.lektorState.ende = {hours: now.getHours() + 1, minutes: now.getMinutes(), seconds: now.getSeconds()}
 		},
 		setTimespanForKontrolleTermin(termin, setDate = true) {
 			if (setDate) {
@@ -746,33 +774,36 @@ export const LektorComponent = {
 			})
 
 		},
-		setDates(anwEntries) {
+		setEntries(anwEntries, kontrollen) {
 
 			// from anw entries
 			anwEntries.forEach(entry => {
-				// search for distinct kontrolle dates to use for show all columns
+				const kontrolle = kontrollen.find(k => k.anwesenheit_id === entry.anwesenheit_id)
+				// search for distinct kontrollento use for show all columns
 				this.lektorState.studentsData.get(entry.prestudent_id).push({
 					datum: entry.datum,
 					status: entry.status,
-					anwesenheit_user_id: entry.anwesenheit_user_id
+					anwesenheit_user_id: entry.anwesenheit_user_id,
+					anwesenheit_id: entry.anwesenheit_id,
+					von: kontrolle?.von,
+					bis: kontrolle?.bis
 				})
 
-				const datum = entry.datum
+				const datum = entry.datum + ' | ' + kontrolle.von + ' - ' + kontrolle.bis
 				if (this.lektorState.dates.indexOf(datum) < 0) {
 					this.lektorState.dates.push(datum)
 				}
 			})
-
+			
 			// sort dates and termine
 			this.lektorState.dates.sort((a, b) => {
-				const as = a.split('-')
-				const bs = b.split('-')
+				const as = a.split('|')
+				const bs = b.split('|')
 				return as > bs ? 1 : a < b ? -1 : 0
 			})
 		},
 		async setupLektorComponent() {
-			// use this to show actual entries with should be entries from stundenplan merged
-			// this.lektorState.dates = []
+
 			this.$entryParams.available_termine.value.forEach(termin => {
 				const dateParts = termin.datum.split("-")
 				termin.datumFrontend = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
@@ -787,60 +818,56 @@ export const LektorComponent = {
 
 				this.$entryParams.available_termine.value.forEach(t => this.lektorState.dates.push(t.datum))
 
+			} else {
+				this.setTimespanForKontrolleNow()	
 			}
-			// use this to only show dates with actual entries
+			
 			this.lektorState.dates = []
-
 			this.lektorState.studentsData = new Map()
-
+			// format student zusatz and prepare entry map for anw data
 			this.lektorState.students.forEach(entry => {
 				entry.zusatz = this.formatZusatz(entry, this.lektorState.stsem)
 				this.lektorState.studentsData.set(entry.prestudent_id, [])
 			})
 
-			this.setDates(this.lektorState.anwEntries)
-
-
+			
+			this.setEntries(this.lektorState.anwEntries, this.lektorState.kontrollen)
 			this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
-
-			// date string formatting
-			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
-			const dateParts = selectedDateDBFormatted.split("-")
-			const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
-
-
-			this.$refs.anwesenheitenTable.tabulator.updateColumnDefinition("status", {title: selectedDateFrontendFormatted})
+			
+			// datepicker only allows to select for distinct days but one day can lead to several
+			// kontrollen on that day during different timespans -> find all from that date and postfix the von - bis times
+			
+			
+			// determine if table goes with all available dates - kontrollen
+			// or all kontrollen of a selected date if one or more are found
+			const dates = this.determineDates()
+			
+			// define tabulator columns with dynamic columns
+			const anwCols = this.buildColsForDates(dates)
 
 			this.lektorState.tableStudentData = []
 			this.studentCount = this.lektorState.students.length
+			
+			// build together the tableData by iterating over each student and look for the status of every (datum | von - bis) entry
 			this.lektorState.students.forEach(student => {
-
-				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-
-				// bind entschuldigungen info into table data
-				// TODO: filtert auf aktuelle Uhrzeit, zeigt eventuell frühere/spätere entschuldigungen am selben datum nicht an
+				
 				const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
 					const vonDate = new Date(status.von)
 					const bisDate = new Date(status.bis)
 					if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
 					else return false
 				})
-
-				
 				// foundEntry.hasEntschuldigung = !!entschuldigungEntryStudent
+				
 				let isEntschuldigt = null
 				allEntStudentForCurrentDate.forEach(entCurDate => {
 					if(entCurDate.akzeptiert === true) isEntschuldigt = true
 				})
-
-				// const studentEntschuldigungen = this.lektorState.entschuldigtStati.filter(entschuldigung => entschuldigung.person_id === student.person_id)
-
+				
+				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				const nachname = student.nachname + student.zusatz
 				const gruppe = student.semester + student.verband + student.gruppe
-				this.lektorState.gruppen.add(gruppe)
-				this.lektorState.tableStudentData.push({
+				const newRow = {
 					prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
@@ -848,20 +875,37 @@ export const LektorComponent = {
 					gruppe: gruppe,
 					entschuldigt: isEntschuldigt,
 					entschuldigungen: allEntStudentForCurrentDate,
-					status: status ?? '-',
 					sum: student.sum
-				});
-			})
+				}
+				
+				dates.forEach(dCol => {
+					const entries = studentDataEntry.filter(sD => (sD.datum + " | " + sD.von + ' - ' + sD.bis) === dCol)
+					entries.forEach(e => {
+						newRow[dCol] = e.status
+					})
+				})
+				// const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
+				// const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
 
-			// get current counts for selectedDate
-			this.setCurrentCountsFromTableData()
+				// bind entschuldigungen info into table data
+				// TODO: filtert auf aktuelle Uhrzeit, zeigt eventuell frühere/spätere entschuldigungen am selben datum nicht an
+
+				// const studentEntschuldigungen = this.lektorState.entschuldigtStati.filter(entschuldigung => entschuldigung.person_id === student.person_id)
+				
+				this.lektorState.gruppen.add(gruppe)
+				this.lektorState.tableStudentData.push(newRow);
+				
+				
+			})
+			
+			// // get current counts for selectedDate
+			// this.setCurrentCountsFromTableData()
 
 			// this.linkKontrollData()
 
 			if (this.lektorState.showAllVar) {
 				this.showAll()
 			} else {
-				const cols = this.$refs.anwesenheitenTable.tabulator.getColumns()
 
 				this.anwesenheitenTabulatorOptions.columns[0].title = this.$capitalize(await this.$p.t('global/foto'))
 				this.anwesenheitenTabulatorOptions.columns[1].title = this.$capitalize(await this.$p.t('global/prestudentID'))
@@ -869,10 +913,11 @@ export const LektorComponent = {
 				this.anwesenheitenTabulatorOptions.columns[3].title = this.$capitalize(await this.$p.t('person/nachname'))
 				this.anwesenheitenTabulatorOptions.columns[4].title = this.$capitalize(await this.$p.t('lehre/gruppe'))
 				this.anwesenheitenTabulatorOptions.columns[6].title = this.$capitalize(await this.$p.t('global/summe'))
-
-				this.lektorState.tabulatorCols = cols
+				
+				this.lektorState.tabulatorCols = anwCols
 				this.$refs.anwesenheitenTable.tabulator.clearSort()
-				this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
+				this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
+				
 				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			}
 
@@ -958,6 +1003,7 @@ export const LektorComponent = {
 			this.$refs.modalContainerNewKontrolle.show()
 		},
 		changeAnwStatus(cell, prestudent_id) {
+			debugger
 			const value = cell.getValue()
 			if (value === undefined) return
 			let date = cell.getColumn().getField() // '2024-10-16' or 'status'
@@ -967,7 +1013,7 @@ export const LektorComponent = {
 
 			const arrWrapped = this.lektorState.studentsData.get(prestudent_id)
 			const arr = JSON.parse(JSON.stringify(arrWrapped))
-			const found = arr.find(e => e.datum === date)
+			const found = arr.find(e => (e.datum + ' | ' + e.von + ' - ' + e.bis) === date)
 			const anwesenheit_user_id = found?.anwesenheit_user_id
 			const newEntry = {
 				prestudent_id, date, status: value, anwesenheit_user_id
@@ -978,7 +1024,7 @@ export const LektorComponent = {
 
 			// check if the entry is in the original tableData with the same status
 			const student = this.lektorState.studentsData.get(newEntry.prestudent_id)
-			const original = student.find(v => Reflect.get(v, 'datum') === newEntry.date)
+			const original = student.find(v => (Reflect.get(v, 'datum') + ' | ' + Reflect.get(v, 'von') + ' - ' + Reflect.get(v, 'bis')) === newEntry.date)
 			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
 			if (updateFoundIndex >= 0) {
 				this.changedData.splice(updateFoundIndex, 1)
@@ -1000,7 +1046,9 @@ export const LektorComponent = {
 				// timespan from von to bis needs to be 3/4 of a teaching unit
 				const minDiff = (bisDate - vonDate) / (1000 * 60)
 				const threshold = (this.$entryParams.permissions.einheitDauer ?? 0.75 ) * 60
-				if(minDiff <= threshold) {
+				if(minDiff < threshold) {
+					console.log('minDiff', minDiff)
+					console.log('threshold', threshold)
 					this.$fhcAlert.alertError(this.$p.t('global/kontrollDauerUnterMindestwert', [threshold]));
 					return false
 				}
@@ -1026,11 +1074,11 @@ export const LektorComponent = {
 			await this.$entryParams.setupPromise
 			await this.tableBuiltPromise
 
-			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
-			const dateParts = selectedDateDBFormatted.split("-")
-			const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
-			const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
-			found.title = selectedDateFrontendFormatted
+			// const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
+			// const dateParts = selectedDateDBFormatted.split("-")
+			// const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
+			// const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
+			// found.title = selectedDateFrontendFormatted
 
 			this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 			this.boundRegenerateQR = this.regenerateQR.bind(this)
@@ -1154,6 +1202,51 @@ export const LektorComponent = {
 			this.$entryParams.tabHeights['lektor'].value = screenY - rect.top
 
 			if(this.$refs.anwesenheitenTable.tabulator) this.$refs.anwesenheitenTable.tabulator.redraw(true)
+		},
+		determineDates() {
+			// date string formatting
+			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
+			const dateParts = selectedDateDBFormatted.split("-")
+			const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
+
+			// standard -> show all termine of a certain date
+			const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
+
+			// fall back to all termine if on selected date none are found
+			if(!datesFiltered.length) return this.lektorState.dates
+			return datesFiltered
+		},
+		buildColsForDates(dates) {
+			const anwCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
+
+			dates.forEach(d => {
+				anwCols.push({
+					title: d,
+					field: d,
+					editor: 'list',
+					editorParams: {
+						values: Vue.computed(()=> {
+							if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+								return [this.$entryParams.permissions.anwesend_status,
+									this.$entryParams.permissions.abwesend_status,
+									this.$entryParams.permissions.entschuldigt_status]
+							} else if (this.$entryParams.permissions.lektor) {
+								return [this.$entryParams.permissions.anwesend_status,
+									this.$entryParams.permissions.abwesend_status]
+							}
+						})
+					},
+					editable: this.checkCellEditability,
+					formatter: this.anwesenheitFormatterValue,
+					titleFormatter: this.anwColTitleFormatter,
+					hozAlign:"center",
+					widthGrow: 1,
+					tooltip: this.tooltipTableRow,
+					minWidth: 150
+				})
+			})
+			anwCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+			return anwCols
 		}
 	},
 	created(){
@@ -1163,6 +1256,8 @@ export const LektorComponent = {
 	},
 	mounted() {
 		this.setupMounted()
+		
+		console.log(this.$entryParams)
 		
 		this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
@@ -1187,55 +1282,75 @@ export const LektorComponent = {
 				return
 			}
 
-			this.lektorState.showAllVar = false
-			const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
-			const dateParts = selectedDateDBFormatted.split( "-")
-			const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+			// this.lektorState.showAllVar = false
 
-			this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
-
-			this.lektorState.students.forEach((student) => {
-				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-				const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-				const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-
-				const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
-
-				// bind entschuldigungen info into table data
-				const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
-					const vonDate = new Date(status.von)
-					const bisDate = new Date(status.bis)
-					if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
-					else return false
-				})
-
-				let isEntschuldigt = null
-				allEntStudentForCurrentDate.forEach(entCurDate => {
-					if(entCurDate.akzeptiert === true) isEntschuldigt = true
-				})
-
-				foundEntry.entschuldigt = isEntschuldigt
-				foundEntry.entschuldigungen = allEntStudentForCurrentDate
-				foundEntry.status = status
-				
-				
-			})
-			this.setCurrentCountsFromTableData()
 			
+			
+			//TODO: TOGGLE SHOW ALL BUTTON WHEN ALL DATES ARE FALLEN BACK TO
+			const dates = this.determineDates()
+			
+			const anwCols = this.buildColsForDates(dates)
+			// const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
+			// const dateParts = selectedDateDBFormatted.split( "-")
+			// const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
+			//
+			// // standard -> show all termine of a certain date
+			// const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
+			// let dates = null
+			// // fall back to all termine if on selected date none are found
+			// if(!datesFiltered.length) dates = this.lektorState.dates
+			// else dates = datesFiltered
+
+
+			// this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
+
+			// this.lektorState.students.forEach((student) => {
+			// 	const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
+			// 	const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
+			// 	const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
+			//
+			// 	const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
+			//
+			// 	// bind entschuldigungen info into table data
+			// 	const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
+			// 		const vonDate = new Date(status.von)
+			// 		const bisDate = new Date(status.bis)
+			// 		if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
+			// 		else return false
+			// 	})
+			//
+			// 	let isEntschuldigt = null
+			// 	allEntStudentForCurrentDate.forEach(entCurDate => {
+			// 		if(entCurDate.akzeptiert === true) isEntschuldigt = true
+			// 	})
+			//
+			// 	foundEntry.entschuldigt = isEntschuldigt
+			// 	foundEntry.entschuldigungen = allEntStudentForCurrentDate
+			// 	foundEntry.status = status
+			//
+			//
+			// })
+			// this.setCurrentCountsFromTableData()
+
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 
-			
+
 			if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
 			else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+
+			this.lektorState.tabulatorCols = anwCols
 			
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
-			this.$refs.anwesenheitenTable.tabulator.setColumns(this.anwesenheitenTabulatorOptions.columns)
-			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
-			this.$refs.showAllTickbox.checked = false
+			this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
+			// this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
+			// this.$refs.showAllTickbox.checked = false
 
 		},
 	},
 	computed: {
+		getTitle() {
+			return this.$entryParams.selected_le_info?.value?.infoString ?? ''
+		},
 		getTabulatorStyle(){
 			return "transform: translateY(-"+this.translateOffset+"px); overflow: hidden;"
 		},
@@ -1467,7 +1582,7 @@ export const LektorComponent = {
 					
 						<div class="col-6">				
 							<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-								<h1 class="h4">{{ $entryParams.selected_le_info?.value?.infoString ?? '' }}</h1>
+								<h1 class="h4">{{ $entryParams.selected_le_info?.value?.infoString ? getTitle : '' }}</h1>
 								<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>		
 								<AnwCountDisplay  v-if="!lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
 							</div>

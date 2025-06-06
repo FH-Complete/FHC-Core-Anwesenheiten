@@ -62,7 +62,7 @@ export default {
 					page: true,
 					columns: true,
 				},
-				persistenceID: "studentEntschuldigungenTable"
+				persistenceID: this.$entryParams.patchdate + "-studentEntschuldigungenTable"
 			},
 			entschuldigungsViewTabulatorEventHandlers: [{
 				event: "tableBuilt",

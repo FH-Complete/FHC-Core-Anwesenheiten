@@ -231,7 +231,7 @@ export const AnwTimeline = {
 		</div>
 		<div class="col-9">
 			<div class="row">
-				<Range v-model="selectedRange">
+				<Range v-model="selectedRange"/>
 			</div>
 			<div class="row mt-2">
 				<div class="col-6">

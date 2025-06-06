@@ -281,7 +281,7 @@ export default {
 					this.$entryParams.allLeTermine = res.data[1] ?? []
 					
 					res.data[0].forEach(entry => {
-
+						
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if (existing) {
 							// supplement info
@@ -304,9 +304,13 @@ export default {
 									+ (entry.verband ? entry.verband : '')
 									+ (entry.gruppe ? entry.gruppe : '')
 							}
-
+							
 							data.push(entry)
 						}
+					})
+						
+					res.data[0].forEach(entry => {
+						entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
 					})
 
 					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null

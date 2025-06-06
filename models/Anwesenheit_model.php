@@ -359,7 +359,9 @@ class Anwesenheit_model extends \DB_Model
 						tbl_lehreinheitgruppe.gruppe, 
 						tbl_lehreinheitgruppe.gruppe_kurzbz,
 						tbl_lehrveranstaltung.kurzbz,
-			 			tbl_studiengang.kurzbzlang
+			 			tbl_studiengang.kurzbzlang,
+			 			(SELECT COUNT(DISTINCT datum) FROM campus.vw_stundenplan WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as termincount,
+						(SELECT COUNT(*) FROM campus.vw_student_lehrveranstaltung WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as studentcount
 		FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
 			JOIN lehre.tbl_lehreinheitgruppe USING(lehreinheit_id)
 			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)

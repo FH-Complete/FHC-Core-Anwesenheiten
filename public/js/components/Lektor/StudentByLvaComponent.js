@@ -63,7 +63,7 @@ export const StudentByLvaComponent = {
 					page: true,
 					columns: true,
 				},
-				persistenceID: "lektorDetailViewStudentByLva"
+				persistenceID: this.$entryParams.patchdate + "-lektorDetailViewStudentByLva"
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
 			{
@@ -332,7 +332,7 @@ export const StudentByLvaComponent = {
 					return []
 				} else {
 					const arr = res?.data?.retval ?? []
-
+					debugger
 					// calculate total time of anw
 					const sum = arr.reduce((acc, cur) => acc + cur.dauer, 0)
 					arr.forEach(row => {
