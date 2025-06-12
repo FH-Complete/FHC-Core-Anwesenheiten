@@ -30,8 +30,13 @@ export const KontrollenDropdown = {
 		checkDisabled(option) {
 			// disable dates older than threshhold if only lektor berechtigung, admin/assistenz can delete all
 			
-			// TODO: calculate against new Date() - $entryParams.permissions.KONTROLLE_DELETE_MAX_REACH
-			return option.datum 
+			if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+				return false
+			}
+			const date = new Date();
+			date.setDate(date.getDate() - this.$entryParams.permissions.kontrolleDeleteMaxReach)
+			const optDate = new Date(option.datum)
+			return optDate < date
 		}
 	},
 	mounted() {
@@ -39,7 +44,7 @@ export const KontrollenDropdown = {
 	template: `
 		<div class="mt-2">
 			<Dropdown @change="kontrolleChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
-			v-model="internal_selected_kontrolle" :options="internal_available_kontrolle" optionDisabled="checkDisabled">
+			v-model="internal_selected_kontrolle" :options="internal_available_kontrolle" :optionDisabled="checkDisabled">
 				<template #optionsgroup="slotProps">
 					<div> {{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}} </div>
 				</template>

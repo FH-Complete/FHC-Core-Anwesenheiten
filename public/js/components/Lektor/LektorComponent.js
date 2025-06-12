@@ -29,6 +29,10 @@ export const LektorComponent = {
 	},
 	data() {
 		return {
+			kontrolleVonBis: null,
+			editKontrolle: null,
+			highlightMode: 'allowed',
+			selectedDateCount: 0,
 			externalModalContainer: null,
 			externalWindow: null,
 			tabulatorUuid: Vue.ref(0),
@@ -234,6 +238,11 @@ export const LektorComponent = {
 		}
 	},
 	methods: {
+		handleAutoApply(date) {
+			this.selectedDate = date
+			this.$refs.outsideDateSelect.closeMenu()	
+			if(this.$refs.insideDateSelect) this.$refs.insideDateSelect.closeMenu()
+		},
 		anwColTitleFormatter(cell) {
 			const title = cell.getColumn().getDefinition().title;
 			const titleParts = title.split("|")
@@ -366,7 +375,7 @@ export const LektorComponent = {
 			this.loading = false
 		},
 		async setAllColsAndData() {
-			console.log('setAllColsAndData')
+			this.selectedDateCount = this.lektorState.dates.length
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
@@ -410,7 +419,6 @@ export const LektorComponent = {
 
 				this.lektorState.showAllVar = true
 			} else {
-
 				this.$refs.anwesenheitenTable.tabulator.clearSort()
 				// use selectedDate watcher to retrieve single column table state
 				this.selectedDate = new Date(this.selectedDate)
@@ -423,7 +431,7 @@ export const LektorComponent = {
 			const data = []
 
 			this.lektorState.students.forEach(student => {
-
+				console.log('student', student)
 				const nachname = student.nachname + student.zusatz
 				const row = {
 					prestudent_id: student.prestudent_id,
@@ -434,11 +442,10 @@ export const LektorComponent = {
 					sum: student.sum
 				}
 				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
+				console.log('studentData', studentDataEntry)
 				studentDataEntry.forEach(entry => {
-					this.lektorState.dates.forEach(d => {
-						row[d] = entry.status
-					})
-					
+					const d = entry.datum + ' | ' + entry.von + ' - ' + entry.bis
+					row[d] = entry.status
 				})
 
 				data.push(row)
@@ -461,10 +468,19 @@ export const LektorComponent = {
 		wait(ms) {
 			return new Promise(resolve => setTimeout(resolve, ms))
 		},
+		formatQRTime(kontrolle) {
+			const vp = kontrolle.von.split(" ")
+			const datumParts = vp[0].split("-")
+			const datum = datumParts[2] + '.' + datumParts[1] + '.' + datumParts[0]
+			const von = vp[1]
+			const bis = kontrolle.bis.split(" ")[1]
+			return datum + ' | ' + von + ' - ' + bis
+		},
 		showQR(data) {
 			this.qr = data.svg
 			this.url = data.url
 			this.code = data.code
+			this.kontrolleVonBis = this.formatQRTime(data.kontrolle)
 			this.checkInCount = data.count.anwesend
 			this.abwesendCount = data.count.abwesend
 			this.entschuldigtCount = data.count.entschuldigt
@@ -684,22 +700,24 @@ export const LektorComponent = {
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 		},
-		openDeleteModal() {
-			this.$refs.modalContainerDeleteKontrolle.show()
+		openEditModal() {
+			this.$refs.modalContainerEditKontrolle.show()
 		},
 		openLegend() {
 			this.$refs.modalContainerLegende.show()
 		},
-		async deleteAnwesenheitskontrolle() {
+		async deleteAnwesenheitskontrolle(kontrolle) {
 			if (await this.$fhcAlert.confirmDelete() === false) return;
 
-			const dataparts = this.deleteData.datum.split('.')
+			const dataparts = kontrolle.datum.split('.')
 			const dateobj = new Date(dataparts[2], dataparts[1] - 1, dataparts[0])
 			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth() + 1, day: dateobj.getDate()}
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
-				this.$api.call(ApiKontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date))
+			
+			
+				this.$api.call(ApiKontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date, kontrolle.anwesenheit_id))
 				.then(res => {
 				if (res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
@@ -715,9 +733,15 @@ export const LektorComponent = {
 					this.$fhcAlert.alertWarning(this.$p.t('global/noAnwKontrolleFoundToDelete'))
 				}
 			})
+			
 
-			this.$refs.modalContainerDeleteKontrolle.hide()
-
+		},
+		editAnwesenheitskontrolle(kontrolle) {
+			const vonSplit = kontrolle.von.split(':')
+			kontrolle.editVon = {hours: vonSplit[0], minutes: vonSplit[1], seconds: vonSplit[2]}
+			const bisSplit = kontrolle.bis.split(':')
+			kontrolle.editBis = {hours: bisSplit[0], minutes: bisSplit[1], seconds: bisSplit[2]}
+			this.editKontrolle = kontrolle
 		},
 		formatDateToDbString(date) {
 			return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
@@ -832,7 +856,7 @@ export const LektorComponent = {
 
 			
 			this.setEntries(this.lektorState.anwEntries, this.lektorState.kontrollen)
-			this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
+			// this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
 			
 			// datepicker only allows to select for distinct days but one day can lead to several
 			// kontrollen on that day during different timespans -> find all from that date and postfix the von - bis times
@@ -842,61 +866,91 @@ export const LektorComponent = {
 			// or all kontrollen of a selected date if one or more are found
 			const dates = this.determineDates()
 			
-			// define tabulator columns with dynamic columns
+			// define VISIBLE tabulator columns with dynamic columns
 			const anwCols = this.buildColsForDates(dates)
 
-			this.lektorState.tableStudentData = []
+			
+			const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
+			this.lektorState.dates.forEach(date => {
+				newCols.push({
+					title: date,
+					field: date,
+					editor: 'list',
+					editorParams: {
+						values: Vue.computed(()=> {
+							if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+								return [this.$entryParams.permissions.anwesend_status,
+									this.$entryParams.permissions.abwesend_status,
+									this.$entryParams.permissions.entschuldigt_status]
+							} else if (this.$entryParams.permissions.lektor) {
+								return [this.$entryParams.permissions.anwesend_status,
+									this.$entryParams.permissions.abwesend_status]
+							}
+						})
+					},
+					editable: this.checkCellEditability,
+					formatter: this.anwesenheitFormatterValue,
+					titleFormatter: this.anwColTitleFormatter,
+					hozAlign:"center",
+					widthGrow: 1,
+					tooltip: this.tooltipTableRow,
+					minWidth: 150
+				})
+			})
+			newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+			// tableData prefilled with all dates & status
+			this.lektorState.tableStudentData = this.setupAllData(newCols)
 			this.studentCount = this.lektorState.students.length
 			
-			// build together the tableData by iterating over each student and look for the status of every (datum | von - bis) entry
-			this.lektorState.students.forEach(student => {
-				
-				const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
-					const vonDate = new Date(status.von)
-					const bisDate = new Date(status.bis)
-					if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
-					else return false
-				})
-				// foundEntry.hasEntschuldigung = !!entschuldigungEntryStudent
-				
-				let isEntschuldigt = null
-				allEntStudentForCurrentDate.forEach(entCurDate => {
-					if(entCurDate.akzeptiert === true) isEntschuldigt = true
-				})
-				
-				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-				const nachname = student.nachname + student.zusatz
-				const gruppe = student.semester + student.verband + student.gruppe
-				const newRow = {
-					prestudent_id: student.prestudent_id,
-					foto: student.foto,
-					vorname: student.vorname,
-					nachname: nachname,
-					gruppe: gruppe,
-					entschuldigt: isEntschuldigt,
-					entschuldigungen: allEntStudentForCurrentDate,
-					sum: student.sum
-				}
-				
-				dates.forEach(dCol => {
-					const entries = studentDataEntry.filter(sD => (sD.datum + " | " + sD.von + ' - ' + sD.bis) === dCol)
-					entries.forEach(e => {
-						newRow[dCol] = e.status
-					})
-				})
-				// const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-				// const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-
-				// bind entschuldigungen info into table data
-				// TODO: filtert auf aktuelle Uhrzeit, zeigt eventuell frühere/spätere entschuldigungen am selben datum nicht an
-
-				// const studentEntschuldigungen = this.lektorState.entschuldigtStati.filter(entschuldigung => entschuldigung.person_id === student.person_id)
-				
-				this.lektorState.gruppen.add(gruppe)
-				this.lektorState.tableStudentData.push(newRow);
-				
-				
-			})
+			// // build together the tableData by iterating over each student and look for the status of every (datum | von - bis) entry
+			// this.lektorState.students.forEach(student => {
+			//	
+			// 	const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
+			// 		const vonDate = new Date(status.von)
+			// 		const bisDate = new Date(status.bis)
+			// 		if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
+			// 		else return false
+			// 	})
+			// 	// foundEntry.hasEntschuldigung = !!entschuldigungEntryStudent
+			//	
+			// 	let isEntschuldigt = null
+			// 	allEntStudentForCurrentDate.forEach(entCurDate => {
+			// 		if(entCurDate.akzeptiert === true) isEntschuldigt = true
+			// 	})
+			//	
+			// 	const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
+			// 	const nachname = student.nachname + student.zusatz
+			// 	const gruppe = student.semester + student.verband + student.gruppe
+			// 	const newRow = {
+			// 		prestudent_id: student.prestudent_id,
+			// 		foto: student.foto,
+			// 		vorname: student.vorname,
+			// 		nachname: nachname,
+			// 		gruppe: gruppe,
+			// 		entschuldigt: isEntschuldigt,
+			// 		entschuldigungen: allEntStudentForCurrentDate,
+			// 		sum: student.sum
+			// 	}
+			//	
+			// 	dates.forEach(dCol => {
+			// 		const entries = studentDataEntry.filter(sD => (sD.datum + " | " + sD.von + ' - ' + sD.bis) === dCol)
+			// 		entries.forEach(e => {
+			// 			newRow[dCol] = e.status
+			// 		})
+			// 	})
+			// 	// const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
+			// 	// const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
+			//
+			// 	// bind entschuldigungen info into table data
+			// 	// TODO: filtert auf aktuelle Uhrzeit, zeigt eventuell frühere/spätere entschuldigungen am selben datum nicht an
+			//
+			// 	// const studentEntschuldigungen = this.lektorState.entschuldigtStati.filter(entschuldigung => entschuldigung.person_id === student.person_id)
+			//	
+			// 	this.lektorState.gruppen.add(gruppe)
+			// 	// this.lektorState.tableStudentData.push(newRow);
+			//	
+			//	
+			// })
 			
 			// // get current counts for selectedDate
 			// this.setCurrentCountsFromTableData()
@@ -1047,8 +1101,6 @@ export const LektorComponent = {
 				const minDiff = (bisDate - vonDate) / (1000 * 60)
 				const threshold = (this.$entryParams.permissions.einheitDauer ?? 0.75 ) * 60
 				if(minDiff < threshold) {
-					console.log('minDiff', minDiff)
-					console.log('threshold', threshold)
 					this.$fhcAlert.alertError(this.$p.t('global/kontrollDauerUnterMindestwert', [threshold]));
 					return false
 				}
@@ -1246,7 +1298,64 @@ export const LektorComponent = {
 				})
 			})
 			anwCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+			
+			this.selectedDateCount = dates.length
+			
 			return anwCols
+		},
+		restartKontrolle(kontrolle) {
+			const kdate = new Date(kontrolle.datum)
+			// js months 0-11, php months 1-12
+			const date = {
+				year: kdate.getFullYear(),
+				month: kdate.getMonth() + 1,
+				day: kdate.getDate()
+			}
+			
+			this.$api.call(ApiKontrolle.restartKontrolle(kontrolle.anwesenheit_id,
+				this.$entryParams.selected_le_id.value,
+				date))
+				.then(res => {
+					if (res.data?.svg) {
+						this.changes = true
+						this.$refs.modalContainerEditKontrolle.hide()
+						this.showQR(res.data)
+					}
+				})
+		},
+		updateKontrolle() {
+			const dataparts = this.editKontrolle.datum.split('.')
+			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
+			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
+			
+			this.loading = true
+			this.$api.call(ApiKontrolle.updateKontrolle(
+				this.editKontrolle.anwesenheit_id,
+				this.editKontrolle.editVon,
+				this.editKontrolle.editBis,
+				this.$entryParams.selected_le_id.value))
+				.then(res => {
+					if (res.meta.status === 'success') {
+						this.$fhcAlert.alertSuccess(this.$p.t('ui/successSave'))
+						
+						const k = this.lektorState.kontrollen.find(k => k.anwesenheit_id === this.editKontrolle.anwesenheit_id)
+						k.von = this.editKontrolle.editVon.hours + ':' + this.editKontrolle.editVon.minutes + ':' + this.editKontrolle.editVon.seconds
+						k.bis = this.editKontrolle.editBis.hours + ':' + this.editKontrolle.editBis.minutes + ':' + this.editKontrolle.editBis.seconds
+						
+						this.editKontrolle = null
+						
+						// reload tableData since different kontroll times means different % for all students
+						this.$api.call(
+							ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(
+								this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat))
+							.then((res) => {
+							if (res.meta.status !== "success") return
+							this.setupData(res.data)
+						}).finally(() => {
+							this.loading = false
+						})
+					}
+				})
 		}
 	},
 	created(){
@@ -1258,6 +1367,7 @@ export const LektorComponent = {
 		this.setupMounted()
 		
 		console.log(this.$entryParams)
+		console.log(this.lektorState)
 		
 		this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
@@ -1281,60 +1391,14 @@ export const LektorComponent = {
 				this.selectedDate = new Date(Date.now())
 				return
 			}
-
-			// this.lektorState.showAllVar = false
-
 			
-			
-			//TODO: TOGGLE SHOW ALL BUTTON WHEN ALL DATES ARE FALLEN BACK TO
 			const dates = this.determineDates()
-			
 			const anwCols = this.buildColsForDates(dates)
-			// const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
-			// const dateParts = selectedDateDBFormatted.split( "-")
-			// const selectedDateFrontendFormatted = dateParts[2] + '.'+ dateParts[1] + '.' + dateParts[0]
-			//
-			// // standard -> show all termine of a certain date
-			// const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
-			// let dates = null
-			// // fall back to all termine if on selected date none are found
-			// if(!datesFiltered.length) dates = this.lektorState.dates
-			// else dates = datesFiltered
-
-
-			// this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status').title = selectedDateFrontendFormatted
-
-			// this.lektorState.students.forEach((student) => {
-			// 	const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-			// 	const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-			// 	const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-			//
-			// 	const foundEntry = this.lektorState.tableStudentData.find(entry => entry.prestudent_id === student.prestudent_id)
-			//
-			// 	// bind entschuldigungen info into table data
-			// 	const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
-			// 		const vonDate = new Date(status.von)
-			// 		const bisDate = new Date(status.bis)
-			// 		if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
-			// 		else return false
-			// 	})
-			//
-			// 	let isEntschuldigt = null
-			// 	allEntStudentForCurrentDate.forEach(entCurDate => {
-			// 		if(entCurDate.akzeptiert === true) isEntschuldigt = true
-			// 	})
-			//
-			// 	foundEntry.entschuldigt = isEntschuldigt
-			// 	foundEntry.entschuldigungen = allEntStudentForCurrentDate
-			// 	foundEntry.status = status
-			//
-			//
-			// })
-			// this.setCurrentCountsFromTableData()
+			
+			this.setCurrentCountsFromTableData()
 
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
-
-
+			
 			if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
 			else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
 
@@ -1342,10 +1406,19 @@ export const LektorComponent = {
 			
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
 			this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
-			// this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
-			// this.$refs.showAllTickbox.checked = false
 
 		},
+		selectedDateCount(newVal, oldVal) {
+			// watch the nr of columns rendered on any given date,
+			// if the amount is equal to all avaialble kontrollen tick the showAll box to avoid confusion
+			if(newVal == this.lektorState.kontrollen.length) {
+				this.$refs.showAllTickbox.checked = true
+				this.lektorState.showAllVar = true
+			} else {
+				this.$refs.showAllTickbox.checked = false
+				this.lektorState.showAllVar = false
+			} 
+		}
 	},
 	computed: {
 		getTitle() {
@@ -1381,8 +1454,8 @@ export const LektorComponent = {
 		getSaveBtnClass() {
 			return !this.changedData.length ? "btn btn-secondary ml-2" : "btn btn-primary ml-2"
 		},
-		getDeleteBtnClass() {
-			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-danger ml-2"
+		getEditBtnClass() {
+			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-success ml-2"
 		},
 		getAnwCountOnCurrentDate() {
 			let fin = 0
@@ -1402,25 +1475,35 @@ export const LektorComponent = {
 			str += this.lektorState.showAllVar ? 'AllDates' : this.selectedDate.toDateString()
 			return str
 		},
-		highlights() {
+		highlights() { // highlight either kontrollen/termine/allowedRange based on setting
 			const highlights = []
-			const current = new Date(this.minDate)
+			if(this.highlightMode === 'allowed') {
+				const current = new Date(this.minDate)
 
-			while (current <= this.maxDate) {
-				highlights.push(new Date(current))
-				current.setDate(current.getDate() + 1)
+				while (current <= this.maxDate) {
+					highlights.push(new Date(current))
+					current.setDate(current.getDate() + 1)
+				}
+
+				if(this.$entryParams.available_termine.value) this.$entryParams.available_termine.value.forEach(v => {
+					highlights.push(new Date(v.datum))
+				})
+			} else if (this.highlightMode === 'kontrollen') {
+				this.lektorState.kontrollen.forEach(v => {
+					highlights.push(new Date(v.datum))
+				})
+			} else if (this.highlightMode === 'termine') {
+				if(this.$entryParams.available_termine.value) this.$entryParams.available_termine.value.forEach(v => {
+					highlights.push(new Date(v.datum))
+				})
 			}
-
-			if(this.$entryParams.available_termine.value) this.$entryParams.available_termine.value.forEach(v => {
-				highlights.push(new Date(v.datum))
-			})
+			
 
 			return highlights
 		}
 	},
 	template:`
-
-		<div v-show="loading" style="position: absolute; width: 100%; height: 100%; background: rgba(255,255,255,0.5); z-index: 8500;"></div>
+		<div v-show="loading" style="position: absolute; width: 100vw; height: 100vh; background: rgba(255,255,255,0.5); z-index: 8500;"></div>
 		
 		<core-base-layout>			
 			<template #main>
@@ -1483,15 +1566,27 @@ export const LektorComponent = {
 										<div class="col-3 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatum') }}</label></div>
 										<div class="col-5" style="height: 40px">
 											<datepicker
+												ref="insideDateSelect"
 												v-model="selectedDate"
 												:clearable="false"
 												locale="de"
 												format="dd.MM.yyyy"
 												:text-input="true"
-												:auto-apply="true"
+												@date-update="handleAutoApply"
 												:highlight="highlights">
-											</datepicker>
 											
+												<template #action-row>
+													<div class="col">
+														<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
+														<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex;">
+															<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">Termine</button>
+															<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">Kontrollen</button>
+															<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">Allowed</button>
+														</div>
+													</div>
+												</template>
+												
+											</datepicker>
 										</div>
 										<div class="col-4" v-show="!kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
@@ -1512,42 +1607,98 @@ export const LektorComponent = {
 						</template>
 					</bs-modal>
 					
-					<bs-modal ref="modalContainerDeleteKontrolle" class="bootstrap-prompt"
+					<bs-modal ref="modalContainerEditKontrolle" class="bootstrap-prompt"
 					dialogClass="modal-lg">
 						<template v-slot:title>
-							<div v-tooltip.bottom="getTooltipKontrolleLoeschen">
-								{{ $p.t('global/deleteAnwKontrolle') }}
-								<i class="fa fa-circle-question"></i>
-							</div>
+								{{ $p.t('global/editAnwKontrolle') }}
+<!--							<div v-tooltip.bottom="getTooltipKontrolleLoeschen">-->
+<!--								{{ $p.t('global/deleteAnwKontrolle') }}-->
+<!--								<i class="fa fa-circle-question"></i>-->
+<!--							</div>-->
 						</template>
 						<template v-slot:default>
-							
-							<KontrollenDropdown ref="kontrolleDropdown" @kontrolleChanged="handleKontrolleChanged"></KontrollenDropdown>
-							
+						
+								<Divider/>
+								<template v-for="kontrolle in lektorState.kontrollen">
+
+									<div class="row p-2">
+										<div class="col-4 d-flex justify-content-center align-items-center">{{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}}</div>
+										<div class="col-8 d-flex justify-content-end">
+											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary">
+												<i class="fa fa-rotate-right"></i>
+											</button>
+											
+											<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger">
+												<i class="fa fa-trash"></i>
+											</button>
+											
+											<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success">
+												<i class="fa fa-pen"></i>
+											</button>
+											
+										</div>
+									</div>
+									
+									<div v-if="editKontrolle && editKontrolle === kontrolle" class="row align-items-center p-4" style="border: 0px;">
+										<div class="col-10">
+											<div class="row align-items-center">
+												<div class="col-3" style="align-items: center; justify-items: center;">
+													<label for="beginn" class="form-label">{{ $p.t('global/anwKontrolleVon') }}</label>
+												</div>
+												<div class="col-9">
+													<datepicker v-if="editKontrolle"
+														v-model="editKontrolle.editVon"
+														@update:model-value="handleChangeBeginn"
+														:clearable="false"
+														:time-picker="true"
+														:text-input="true"
+														:auto-apply="true">
+													</datepicker>
+													
+												</div>
+											</div>
+
+											<div class="row align-items-center mt-2">
+												<div class="col-3" style="align-items: center; justify-items: center;">
+													<label for="von" class="form-label">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
+												</div>
+												<div class="col-9">
+													<datepicker v-if="editKontrolle"
+														v-model="editKontrolle.editBis"
+														@update:model-value="handleChangeEnde"
+														:clearable="false"
+														:time-picker="true"
+														:text-input="true"
+														:auto-apply="true">
+													</datepicker>
+													
+												</div>
+											</div>	
+										</div>
+										<div class="col-2">
+											<button role="button" class="col text-white option-entry text-center w-100 btn" @click="updateKontrolle">Speichern</button>
+										</div>
+									</div>
+									<Divider/>
+								</template>
 						</template>
-						<template v-slot:footer>
-							<button type="button" class="btn btn-primary" :disabled="deleteData === null" @click="deleteAnwesenheitskontrolle">{{ $p.t('global/deleteAnwKontrolle') }}</button>
-						</template>
-					</bs-modal>				
+					</bs-modal>		
 	
 					<bs-modal ref="modalContainerLegende" class="bootstrap-prompt" dialogClass="modal-lg">
 						<template v-slot:title>
 							<div>
 								{{ $p.t('global/statusLegende') }}
-	
 							</div>
 						</template>
 						<template v-slot:default>
-							
 							<Statuslegende></Statuslegende>
-							
 						</template>
 					</bs-modal>
 					
 					<div id="qrwrap">
 						<bs-modal ref="modalContainerQR" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
 						 :keyboard=false :noCloseBtn="true" :allowFullscreenExpand="true">
-							<template v-slot:title>{{ $p.t('global/zugangscode') }}
+							<template v-slot:title>{{ $p.t('global/kontrolle') }}: {{ kontrolleVonBis }}
 							
 							</template>
 							<template v-slot:popoutButton>
@@ -1608,18 +1759,33 @@ export const LektorComponent = {
 									<div class="col-2" style="height: 40px; align-self: start;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
 									<div class="col-3" style="height: 40px;">
 										<datepicker
+											ref="outsideDateSelect"
 											v-model="selectedDate"
 											:clearable="false"
 											locale="de"
 											format="dd.MM.yyyy"
+											@date-update="handleAutoApply"
 											:text-input="true"
-											:auto-apply="true"
 											:highlight="highlights">
+											
+											<template #action-row>
+												<div class="col">
+													<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
+													<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex;">
+														<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">Termine</button>
+														<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">Kontrollen</button>
+														<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">Allowed</button>
+													</div>
+												</div>
+											</template>
+											
 										</datepicker>
 									</div>
-									<div class="col-5 d-flex " style="height: 40px; align-items: center;">
-										<input type="checkbox" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
-										<label for="all" style="margin-left: 12px;">{{ $p.t('global/showAllKontrollen') }}</label>
+									<div class="col-5" style="height: 40px; align-items: center; display: flex;">
+										<div class="row" style="width: 100%;">
+											<input type="checkbox" style="max-width: 15%;" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
+											<label for="all" style="margin-left: 6px; max-width: 80%;">{{ $p.t('global/showAllKontrollen') }} | {{ selectedDateCount }} / {{ lektorState.kontrollen.length }}</label>
+										</div>
 									</div>
 								</div>				
 							</div>
@@ -1645,8 +1811,8 @@ export const LektorComponent = {
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openDeleteModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getDeleteBtnClass">
-									<i class="fa fa-trash"></i>
+								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getEditBtnClass">
+									<i class="fa fa-pen"></i>
 								</button>
 								
 								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2">

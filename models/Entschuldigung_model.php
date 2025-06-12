@@ -65,6 +65,37 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, array($person_id));
 	}
+	
+	// when changing anw kontrolle von - bis zeiten, compare if a student has different entschuldigt
+	// status between to timespans -> update this students anw_user entries 
+	public function compareStatusZeitenForLE($vonNew, $bisNew, $vonOld, $bisOld, $le_id) {
+		$qry = 'SELECT * FROM (
+			SELECT prestudent_id,
+				 (SELECT entschuldigung.akzeptiert
+				  FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+				  WHERE entschuldigung.person_id = public.tbl_prestudent.person_id
+					AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
+				  ORDER BY akzeptiert DESC NULLS LAST
+				  LIMIT 1
+				 ) as statusAkzeptiertNew,
+				 (SELECT entschuldigung.akzeptiert
+				  FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+				  WHERE entschuldigung.person_id = public.tbl_prestudent.person_id
+					AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
+				  ORDER BY akzeptiert DESC NULLS LAST
+				  LIMIT 1
+				 ) as statusAkzeptiertOld
+			FROM campus.vw_student_lehrveranstaltung
+				   JOIN public.tbl_student ON (uid = student_uid)
+				   JOIN public.tbl_prestudent USING(prestudent_id)
+			WHERE lehreinheit_id = ?
+					  ) as alias
+		WHERE statusAkzeptiertNew IS DISTINCT FROM statusAkzeptiertOld';
+
+		return $this->execReadOnlyQuery($qry, array($vonNew, $bisNew, $vonOld, $bisOld, $le_id));
+	}
+	
+	
 
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{

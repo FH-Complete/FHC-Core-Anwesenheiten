@@ -215,8 +215,6 @@ class Anwesenheit_User_model extends \DB_Model
 				Date(extension.tbl_anwesenheit.von) as datum,
 				extension.tbl_anwesenheit_user.status,
 				lehre.tbl_lehreinheit.lehreinheit_id,
-				campus.vw_stundenplan.lehrform,
-				campus.vw_stundenplan.lehrfach_bez,
 				extension.tbl_anwesenheit.insertvon as kinsertvon,
 				extension.tbl_anwesenheit.updatevon as kupdatevon,
 				extension.tbl_anwesenheit_user.insertvon as ainservon,
@@ -228,7 +226,6 @@ class Anwesenheit_User_model extends \DB_Model
 					 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 					 JOIN lehre.tbl_lehreinheit USING(lehreinheit_id)
 					 JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)
-					 JOIN campus.vw_stundenplan USING (lehreinheit_id)
 			WHERE studiensemester_kurzbz = ?
 			  AND prestudent_id = ?
 			  AND lehre.tbl_lehreinheit.lehrveranstaltung_id = ?
@@ -360,4 +357,23 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query, [$anwesenheit_id]);
 	}
 
+	
+	public function findLastDifferentStatus($prestudentIDs, $anwesenheit_id) {
+		$query = "SELECT DISTINCT ON (prestudent_id)
+						alias.prestudent_id as prestudent_id, alias.diff_status as status, alias.anwesenheit_user_id as anwesenheit_user_id, alias.notiz as notiz
+					FROM (
+							 SELECT
+								 hist.prestudent_id,
+								 hist.status AS diff_status,
+								 curr.anwesenheit_user_id,
+								 curr.notiz
+							 FROM extension.tbl_anwesenheit_user_history hist
+									  JOIN extension.tbl_anwesenheit_user curr ON hist.prestudent_id = curr.prestudent_id
+							 WHERE hist.status IS DISTINCT FROM curr.status AND hist.prestudent_id IN ? AND hist.anwesenheit_id = ? AND curr.anwesenheit_id = ?
+							 ORDER BY hist.version DESC
+						 ) as alias";
+
+		return $this->execReadOnlyQuery($query, [$prestudentIDs, $anwesenheit_id, $anwesenheit_id]);
+
+	}
 }

@@ -95,9 +95,9 @@ export default {
 		}
 		
 	},
-	deleteAnwesenheitskontrolle(le_id, date) {
+	deleteAnwesenheitskontrolle(le_id, date, anwesenheit_id) {
 
-		const params = {le_id, date}
+		const params = {le_id, date, anwesenheit_id}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/deleteAnwesenheitskontrolle';
 
 		return {
@@ -123,6 +123,30 @@ export default {
 
 		const params = {ids, lv_id, sem_kurzbz}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getAnwQuoteForPrestudentIds';
+
+		return {
+			method: 'post',
+			url,
+			params
+		}
+		
+	},
+	restartKontrolle(anwesenheit_id, le_id, datum) {
+
+		const params = {anwesenheit_id, le_id, datum}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/restartKontrolle';
+
+		return {
+			method: 'post',
+			url,
+			params
+		}
+		
+	},
+	updateKontrolle(anwesenheit_id, von, bis, le_id) {
+
+		const params = {anwesenheit_id, von, bis, le_id}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/updateKontrolle';
 
 		return {
 			method: 'post',

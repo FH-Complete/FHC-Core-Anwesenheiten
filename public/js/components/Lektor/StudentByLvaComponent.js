@@ -47,7 +47,6 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/lehreinheit_id')), field: 'lehreinheit_id', widthGrow: 1, visible: false},
-					{title: this.$capitalize(this.$p.t('lehre/lehrform')), field: 'lehrform', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/insertvon')), field: 'kinsertvon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/updatevon')), field: 'kupdatevon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/insertvon')), field: 'ainsertvon', widthGrow: 1, visible: false},
@@ -332,7 +331,6 @@ export const StudentByLvaComponent = {
 					return []
 				} else {
 					const arr = res?.data?.retval ?? []
-					debugger
 					// calculate total time of anw
 					const sum = arr.reduce((acc, cur) => acc + cur.dauer, 0)
 					arr.forEach(row => {
@@ -415,7 +413,7 @@ export const StudentByLvaComponent = {
 	},
 	template:`
 		<div class="row">
-			<div class="col-10">
+			<div class="col-10" style="mx-width: 80%">
 				<core-filter-cmpt
 					ref="anwesenheitenByStudentByLvaTable"
 					:title="filterTitle"
