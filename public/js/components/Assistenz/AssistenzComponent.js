@@ -85,7 +85,7 @@ export const AssistenzComponent = {
 					} ,
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert',
 						headerFilter:'list',
-						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Hochgeladen', '':'Alle'}},
+						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Offen', '':'Alle'}},
 						headerFilterFunc: this.akzeptiertFilterFunc,
 						formatter: this.entschuldigungstatusFormatter,
 						tooltip: false
@@ -182,9 +182,6 @@ export const AssistenzComponent = {
 			
 			this.$refs.modalContainerTimeline.hide()
 		},
-		savePersonIdDataArr(person_id, data) {
-			// for given person_id save data in an array to avoid redundant fetches if different timelines are being looked at
-		},
 		openTimelineModal(data) {
 			this.selectedEntschuldigungCellRef = data
 			this.selectedEntschuldigung = {...data}
@@ -196,8 +193,6 @@ export const AssistenzComponent = {
 			this.$api.call(ApiAdmin.getTimeline(this.selectedEntschuldigung.entschuldigung_id, this.selectedEntschuldigung.person_id))
 				.then(
 				(res) => {
-					
-					this.savePersonIdDataArr(this.selectedEntschuldigung.person_id, res.data)
 					
 					this.selectedAnwArray = res.data[0].retval
 					this.selectedEntArray = res.data[1].retval
@@ -216,7 +211,7 @@ export const AssistenzComponent = {
 			let data = cell.getValue()
 			if (data == null) {
 				cell.getElement().style.color = "#17a2b8"
-				return this.$p.t('global/hochgeladen')
+				return this.$p.t('global/offen')
 			} else if (data === true) {
 				cell.getElement().style.color = "#28a745";
 				return this.$p.t('global/akzeptiert')

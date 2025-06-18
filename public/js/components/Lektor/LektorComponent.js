@@ -225,9 +225,17 @@ export const LektorComponent = {
 			abwesendCount: 0,
 			entschuldigtCount: 0,
 			studentCount: 0,
-			minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach))),
-			maxDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach))),
+			// minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach))),
+			// maxDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach))),
 			changes: false // if something could have happened to dataset -> reload on mounted
+		}
+	},
+	inject: {
+		minDate: {
+			type: Object
+		},
+		maxDate: {
+			type: Object
 		}
 	},
 	props: {
@@ -431,7 +439,7 @@ export const LektorComponent = {
 			const data = []
 
 			this.lektorState.students.forEach(student => {
-				console.log('student', student)
+				// console.log('student', student)
 				const nachname = student.nachname + student.zusatz
 				const row = {
 					prestudent_id: student.prestudent_id,
@@ -442,7 +450,7 @@ export const LektorComponent = {
 					sum: student.sum
 				}
 				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-				console.log('studentData', studentDataEntry)
+				// console.log('studentData', studentDataEntry)
 				studentDataEntry.forEach(entry => {
 					const d = entry.datum + ' | ' + entry.von + ' - ' + entry.bis
 					row[d] = entry.status
@@ -641,7 +649,7 @@ export const LektorComponent = {
 				return
 			}
 
-			if (!this.validateTimespan()) {
+			if (!this.validateTimespan(this.lektorState.beginn, this.lektorState.ende)) {
 				return false;
 			}
 
@@ -1032,13 +1040,13 @@ export const LektorComponent = {
 			this.lektorState.entschuldigtStati = data[3] ?? []
 			this.lektorState.kontrollen = data[4] ?? []
 			this.lektorState.viewData = data[5] ?? []
-			this.$entryParams.available_termine.value = this.getAvailableTermine(data)
+			this.$entryParams.available_termine.value = this.getAvailableTermine()
 			this.lektorState.a_o_kz = data[7] ?? []
 			this.lektorState.gruppen = new Set()
 
 			this.setupLektorComponent()
 		},
-		getAvailableTermine(data) {
+		getAvailableTermine() {
 			if(this.$entryParams.allLeTermine && this.$entryParams.allLeTermine[this.$entryParams.selected_le_id.value]) {
 				return this.$entryParams.allLeTermine[this.$entryParams.selected_le_id.value] ?? []
 			} else {
@@ -1057,7 +1065,6 @@ export const LektorComponent = {
 			this.$refs.modalContainerNewKontrolle.show()
 		},
 		changeAnwStatus(cell, prestudent_id) {
-			debugger
 			const value = cell.getValue()
 			if (value === undefined) return
 			let date = cell.getColumn().getField() // '2024-10-16' or 'status'
@@ -1089,19 +1096,46 @@ export const LektorComponent = {
 			}
 			
 		},
-		validateTimespan() {
-			const vonDate = new Date(1995, 10, 16, this.lektorState.beginn.hours, this.lektorState.beginn.minutes, this.lektorState.beginn.seconds)
-			const bisDate = new Date(1995, 10, 16, this.lektorState.ende.hours, this.lektorState.ende.minutes, this.lektorState.ende.seconds)
+		validateTimespan(beginn, ende, anwesenheit_id = null) {
+			const newAnwVonDate = new Date(1995, 10, 16, beginn.hours, beginn.minutes, beginn.seconds)
+			const newAnwBisDate = new Date(1995, 10, 16, ende.hours, ende.minutes, ende.seconds)
 			
-			if (bisDate <= vonDate) {
+			if (newAnwBisDate <= newAnwVonDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
 				return false
-			} else if(bisDate > vonDate) {
+			} else if(newAnwBisDate > newAnwVonDate) {
 				// timespan from von to bis needs to be 3/4 of a teaching unit
-				const minDiff = (bisDate - vonDate) / (1000 * 60)
+				const minDiff = (newAnwBisDate - newAnwVonDate) / (1000 * 60)
 				const threshold = (this.$entryParams.permissions.einheitDauer ?? 0.75 ) * 60
 				if(minDiff < threshold) {
 					this.$fhcAlert.alertError(this.$p.t('global/kontrollDauerUnterMindestwert', [threshold]));
+					return false
+				}
+			}
+
+			// when editing dont compare with overlap with its own timespan
+			let kontrollenToCheck = null
+			if(anwesenheit_id !== null) { 
+				kontrollenToCheck = this.lektorState.kontrollen.filter(k => k.anwesenheit_id !== anwesenheit_id)
+			} else {
+				kontrollenToCheck = this.lektorState.kontrollen
+			}
+			
+			// compare timespans
+			const len = kontrollenToCheck.length
+			for(let i = 0; i < len; i++) {
+				const k = kontrollenToCheck[i]
+				
+				const kVonParts = k.von.split(":")
+				const kBisParts = k.bis.split(":")
+
+				const kVonDate = new Date(1995, 10, 16, kVonParts[0], kVonParts[1], kVonParts[2])
+				const kBisDate = new Date(1995, 10, 16, kBisParts[0], kBisParts[1], kBisParts[2])
+				if((newAnwVonDate < kVonDate && newAnwBisDate > kVonDate) // times overlap at the start of k e.g. k is 09:30 - 11:00 and newAnwDate for 09:00 - 10:45
+					|| (newAnwVonDate > kVonDate && newAnwBisDate < kBisDate) // times overlap at the end of k e.g. k is 09:30 - 11:00 and newAnwDate for 10:45 - 11:30
+					|| (newAnwVonDate < kVonDate && newAnwBisDate > kBisDate) // times envelope k completely e.g. k is 09:30 - 11:00 and newAnwDate for 08:00 - 12:00
+					|| (newAnwVonDate > kVonDate && newAnwBisDate < kBisDate)) { // times are in between k completely e.g. k is 09:30 - 11:00 and newAnwDate for 09:45 - 10:30
+					this.$fhcAlert.alertError(this.$p.t('global/kontrolleTimeOverlap', [k.von, k.bis]));
 					return false
 				}
 			}
@@ -1114,6 +1148,8 @@ export const LektorComponent = {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
 			}
+			
+			// compare with other existing kontrollen of the same day for current LE
 
 			return true;
 		},
@@ -1125,12 +1161,6 @@ export const LektorComponent = {
 			this.tableBuiltPromise = new Promise(this.tableResolve)
 			await this.$entryParams.setupPromise
 			await this.tableBuiltPromise
-
-			// const selectedDateDBFormatted = this.formatDateToDbString(this.selectedDate)
-			// const dateParts = selectedDateDBFormatted.split("-")
-			// const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
-			// const found = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'status')
-			// found.title = selectedDateFrontendFormatted
 
 			this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
 			this.boundRegenerateQR = this.regenerateQR.bind(this)
@@ -1265,7 +1295,10 @@ export const LektorComponent = {
 			const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
 
 			// fall back to all termine if on selected date none are found
-			if(!datesFiltered.length) return this.lektorState.dates
+			if(!datesFiltered.length) {
+				this.$fhcAlert.alertWarning(this.$p.t('global/keineKontrollenAnDatumFallback', [selectedDateFrontendFormatted]))
+				return this.lektorState.dates
+			}
 			return datesFiltered
 		},
 		buildColsForDates(dates) {
@@ -1327,6 +1360,10 @@ export const LektorComponent = {
 			const dataparts = this.editKontrolle.datum.split('.')
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
+
+			if (!this.validateTimespan(this.editKontrolle.editVon, this.editKontrolle.editBis, this.editKontrolle.anwesenheit_id)) {
+				return false;
+			}
 			
 			this.loading = true
 			this.$api.call(ApiKontrolle.updateKontrolle(
@@ -1366,8 +1403,8 @@ export const LektorComponent = {
 	mounted() {
 		this.setupMounted()
 		
-		console.log(this.$entryParams)
-		console.log(this.lektorState)
+		// console.log(this.$entryParams)
+		// console.log(this.lektorState)
 		
 		this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
@@ -1380,12 +1417,6 @@ export const LektorComponent = {
 		this.stopPollingAnwesenheiten()
 	},
 	watch: {
-		'lektorState.beginn'(newVal) {
-			// could set selectedDate time in here or ende watcher and calculate entschuldigt status visualization from
-			// lektors selected attendance check times in order to support status coloring for 'future' Kontrollen.
-		},
-		'lektorState.ende'(newVal) {
-		},
 		selectedDate(newVal) {
 			if(newVal === "") {
 				this.selectedDate = new Date(Date.now())

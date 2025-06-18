@@ -157,12 +157,6 @@ export const AnwTimeline = {
 				}, 200)
 			},
 			deep: true
-		},
-		anwArray: {
-			handler(newVal) {
-
-			},
-			deep: true
 		}
 	},
 	computed: {

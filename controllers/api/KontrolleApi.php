@@ -12,20 +12,31 @@ class KontrolleApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
+				// tableData fetch lektor main page
 				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// tableData fetch lektor-student page
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// changing status or note of anwesenheit user entry
 				'updateAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// requests new code when timer reaches its limit during kontrolle
 				'regenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// deletes old code from db when refreshed is received
 				'degenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// start of a new kontrolle, inserts anw_user entries
 				'getNewQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// requests qr code for existing kontrolle
 				'restartKontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// update von/bis times for existing kontrolle
 				'updateKontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// in case kontrolle was not stopped intentionally jump right back in on startup
 				'getExistingQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// method called by cronjob to clean qr code relics lost due to unlucky edge case
 				'deleteQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// delete kontrolle and all corresponding anw_user entries
 				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// gets checkin & entschuldigt count for ongoing kontrolle
 				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
-				'getAllAnwesenheitenByStudiengang' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
-				'getAllAnwesenheitenByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				// reloads just the sum% when anwesenheiten have been updated to avoid full reload
 				'getAnwQuoteForPrestudentIds' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
 			)
 		);
@@ -810,24 +821,24 @@ class KontrolleApi extends FHCAPI_Controller
 		
 		// find students of le whose entschuldigt status is not anymore valid when times change
 		$resultCompare = $this->_ci->EntschuldigungModel->compareStatusZeitenForLE($vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'), $resultKontrolle->retval[0]->von, $resultKontrolle->retval[0]->bis, $le_id);
-		$this->addMeta('$resultCompare', $resultCompare);
+//		$this->addMeta('$resultCompare', $resultCompare);
 		if(hasData($resultCompare)) {
 			$changed = getData($resultCompare);
-			$this->addMeta('changedEntStati', $changed);
+//			$this->addMeta('changedEntStati', $changed);
 
 			$changedPrestudentIDFunc = function ($value) {
 				return $value->prestudent_id;
 			};
 
 			$changedPrestudentIDarray = array_map($changedPrestudentIDFunc, $changed);
-			$this->addMeta('$changedPrestudentIDarray', $changedPrestudentIDarray);
+//			$this->addMeta('$changedPrestudentIDarray', $changedPrestudentIDarray);
 			
 			// find the last status from history table by version number that does not carry entschuldigt status 
 			$changedAnwesenheiten = $this->AnwesenheitUserModel->findLastDifferentStatus($changedPrestudentIDarray, $anwesenheit_id);
-			$this->addMeta('$changedAnwesenheiten', $changedAnwesenheiten);
+//			$this->addMeta('$changedAnwesenheiten', $changedAnwesenheiten);
 			if(hasData($changedAnwesenheiten)) {
 				$updateAnwesenheit = $this->AnwesenheitUserModel->updateAnwesenheiten(getData($changedAnwesenheiten), true);
-				$this->addMeta('$updateAnwesenheit', $updateAnwesenheit);
+//				$this->addMeta('$updateAnwesenheit', $updateAnwesenheit);
 				if (isError($updateAnwesenheit))
 					$this->terminateWithError($updateAnwesenheit);
 
