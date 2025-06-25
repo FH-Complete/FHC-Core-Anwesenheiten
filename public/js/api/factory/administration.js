@@ -22,8 +22,8 @@ export default {
 		}
 
 	},
-	getTimeline(entschuldigung_id, person_id) {
-		const params = {entschuldigung_id, person_id}
+	getTimeline(person_id) {
+		const params = {person_id}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getTimeline';
 		return {
 			method: 'post',

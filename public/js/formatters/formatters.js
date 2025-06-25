@@ -40,6 +40,16 @@ export const lektorFormatters = {
 }
 
 export const studentFormatters = {
+	formFile: function(cell) {
+		var value = cell.getValue();
+
+		if(value) {
+			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">' +
+				'<a><i class="fa fa-file-pdf" style="color:#00649C"></i></a></div>'
+		} else return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">' +
+			'<a>-</a></div>'
+
+	},
 	formDate: function(cell)
 	{
 		var value = cell.getValue();

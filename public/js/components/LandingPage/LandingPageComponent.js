@@ -64,17 +64,23 @@ export default {
 			const stg_kz = searchParams.get('stg_kz')
 			const sem_kurzbz = searchParams.get('sem_kurzbz')
 			const notMissingParams = (lv_id && stg_kz && sem_kurzbz) || this.$entryParams.notMissingParams
-
+			
+			
 			if((permissions.lektor || permissions.admin) && notMissingParams) {
-				tabs.push({key: 'Kontrolle', title: this.$p.t('global/kontrolle'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/kontrolle') : 'K'})
+				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
 			}
 
 			if((permissions.student || permissions.admin) && notMissingParams)  {
-				tabs.push({key: 'Profil', title: this.$p.t('global/profil'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/profil') : 'P'})
+
+				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
-				tabs.push({key: 'Admin', title: this.$p.t('global/admin'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/admin') : 'A'})
+
+				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
 			}
 
 			const ret = {}
@@ -151,6 +157,7 @@ export default {
 							if(res?.meta?.status === 'success') {
 								this.$entryParams.aktuellesSemester = res?.data?.[0]
 								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
+								resolve()
 							}
 						})
 					})
@@ -382,7 +389,7 @@ export default {
 				termin.time = new Date(termin.datum).getTime()
 			})
 			
-			// TODO: this messes with too much logic, change only when actually required
+			// TODO: this approach messes with too much logic, maybe write method clone for startup logic?
 			// // avoid going for stunplantermine that lie too far back in the past
 			// const eligibleTermine = termine.filter(t => {
 			// 	t.time >= this.anwKontrolleMinDate
@@ -420,6 +427,13 @@ export default {
 	template: `
 
 	<div style="position: relative;" ref="appContainer">
+
+		<div v-if="$entryParams.permissions.show_guide" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+			<a :href="$entryParams.permissions.guide_link" target="_blank" class="ms-auto mb-2">
+				Wiki <i class="fa fa-arrow-up-right-from-square me-1"></i>
+			</a>
+		</div>
+	
 		<template  v-if="permissioncount > 1">
 			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs" @changed="handleTabChanged" ref="tabsMain"></core-tabs>
 		</template>

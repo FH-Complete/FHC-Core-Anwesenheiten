@@ -14,7 +14,6 @@ export const AnwCountDisplay = {
 		entschuldigt: '/'
 	},
 	template:`	
-	
 		<div class="text-center">
 			<div style="display: flex; justify-content: center; align-items: center;">
 				<div @mouseover="anwHovered = true" @mouseleave="anwHovered = false" style="position: relative; display: inline-block; color: #28a745;">

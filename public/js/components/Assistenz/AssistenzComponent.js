@@ -90,6 +90,7 @@ export const AssistenzComponent = {
 						formatter: this.entschuldigungstatusFormatter,
 						tooltip: false
 					},
+					{title: this.$capitalize(this.$p.t('global/file')), field: 'dms_id', formatter: studentFormatters.formFile},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
@@ -131,6 +132,19 @@ export const AssistenzComponent = {
 					handler: async () => {
 						await this.$entryParams.phrasenPromise
 						this.tableBuiltResolve()
+					}
+				},
+				{
+					event: "cellClick",
+					handler: async (e, cell) => {
+
+						if (cell.getColumn().getField() === "dms_id") {
+							const val = cell.getValue()
+
+							if(val !== '-' && val !== null) this.downloadEntschuldigung(val)
+						}
+						e.stopPropagation()
+
 					}
 				}
 			],
@@ -190,7 +204,7 @@ export const AssistenzComponent = {
 			// if that is the case just open modal with saved anwArray and overlay selected entschuldigung together with all others
 			
 			// keep track of ent updates for that person -> if ent was updated fetch again
-			this.$api.call(ApiAdmin.getTimeline(this.selectedEntschuldigung.entschuldigung_id, this.selectedEntschuldigung.person_id))
+			this.$api.call(ApiAdmin.getTimeline(this.selectedEntschuldigung.person_id))
 				.then(
 				(res) => {
 					
@@ -266,13 +280,13 @@ export const AssistenzComponent = {
 			button.title = this.$p.t('global/entschuldigungEditieren');
 			actionwrapper.append(button);
 
-			// button = document.createElement('button');
-			// button.className = 'btn btn-outline-secondary';
-			// button.style.minWidth = minwidth;
-			// button.innerHTML = '<i class="fa fa-timeline"></i>';
-			// button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
-			// button.title = this.$p.t('global/anwTimeline');
-			// actionwrapper.append(button);
+			button = document.createElement('button');
+			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
+			button.innerHTML = '<i class="fa fa-timeline"></i>';
+			button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
+			button.title = this.$p.t('global/anwTimeline');
+			actionwrapper.append(button);
 
 			if(cellData.dms_id) {
 				button = document.createElement('button');

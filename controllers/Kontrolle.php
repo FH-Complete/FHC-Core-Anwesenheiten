@@ -12,7 +12,7 @@ class Kontrolle extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
+				'index' => array('extension/anw_lekt_load:r')
 			)
 		);
 
@@ -47,10 +47,10 @@ class Kontrolle extends Auth_Controller
 	{
 		$viewData = array(
 			'permissions' => [
-				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
-				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_ent_admin'),
-				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
-				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
+				'admin' => $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz'),
+				'lektor' => $this->permissionlib->isBerechtigt('extension/anw_r_lektor'),
+				'student' => $this->permissionlib->isBerechtigt('extension/anw_r_student'),
 				'authID' => getAuthUID(),
 				'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),
 				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
@@ -63,9 +63,11 @@ class Kontrolle extends Auth_Controller
 				'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),
 				'einheitDauer' => $this->_ci->config->item('EINHEIT_DAUER'),
 				'entschuldigungen_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
-				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
-				'controller' => get_class($this)
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_r_ent_assistenz'),
+				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_r_full_assistenz'),
+				'controller' => get_class($this),
+				'show_guide' => $this->_ci->config->item('SHOW_GUIDE'),
+				'guide_link' => $this->_ci->config->item('GUIDE_LINK')
 			]
 		);
 

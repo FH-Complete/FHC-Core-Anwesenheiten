@@ -7,9 +7,14 @@ class AdministrationApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getEntschuldigungen' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'getTimeline' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
+				// fetch table data
+				'getEntschuldigungen' => array('extension/anw_ent_load_assist:rw'),
+				
+				// set status on entschuldigung
+				'updateEntschuldigung' => array('extension/anw_ent_update_assist:rw'),
+				
+				// fetch dates related to students digital anwesenheiten
+				'getTimeline' => array('extension/anw_ent_load_assist:rw')
 			)
 		);
 

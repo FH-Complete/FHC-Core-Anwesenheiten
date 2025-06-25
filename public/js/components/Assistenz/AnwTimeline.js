@@ -47,6 +47,13 @@ export const AnwTimeline = {
 				el.scrollIntoView({ behavior: 'smooth', block: 'center' })
 			}
 		},
+		highlightKontrolle(anw) {
+			const id = 'anwRange-' + anw.anwesenheit_id
+			const el = document.getElementById(id)
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			}
+		},
 		showRangeDetails(range) {
 			this.selectedRange = range	
 		},
@@ -142,6 +149,28 @@ export const AnwTimeline = {
 			} else if (e.wheelDelta < 0) {
 				this.hourWidth = this.hourWidth / 120 * 100
 			}
+		},
+		goToday() {
+			const today = new Date();
+			const yyyy = today.getFullYear();
+			const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+			const dd = String(today.getDate()).padStart(2, '0');
+			
+			this.scrollToDate(`${yyyy}-${mm}-${dd}`)
+		},
+		scrollToDate(datestr) {
+			setTimeout(() => {
+
+				const el = document.getElementById(datestr)
+				if (el) {
+					el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+				}
+			}, 200)
+		},
+		anwDateFormat(anw) {
+			const vonparts = anw.von.split(" ")
+			const bisparts = anw.bis.split(" ")
+			return `${vonparts[0]} | ${vonparts[1]} - ${bisparts[1]}`
 		}
 	},
 	watch:{
@@ -165,15 +194,6 @@ export const AnwTimeline = {
 		},
 		timelineWidth() {
 			return this.getDaysBetweenDates(this.timelineStart, this.timelineEnd) * this.dayWidth	
-		},
-		getStatusLabel() {
-			if(this.modelValue.akzeptiert === null) {
-				return 'Entschuldigung Status offen'
-			} else if (this.modelValue.akzeptiert === true) {
-				return 'Entschuldigung akzeptiert'
-			} else {
-				return 'Entschuldigung abgelehnt'
-			}
 		},
 		entTimeRanges() {
 			if(!this.entArray) return []
@@ -212,23 +232,48 @@ export const AnwTimeline = {
 			}
 		}
 	},
+	mounted() {
+		if(!this.modelValue) {
+			this.goToday()
+		} else {
+			setTimeout(() => {
+				const id = 'entRange-' + newVal.entschuldigung_id
+				const el = document.getElementById(id)
+				if (el) {
+					el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+				}
+			}, 200)
+		}
+		
+	},
 	template: `
-	<div v-if="modelValue && anwArray && entArray" class="row" style="padding: 0px; margin: 0px;">
-		<div class="col-3"> 
-			<div class="max-height: 400px;" style="overflow: auto;">
-				<template v-for="ent in entArray" :key="'menu-'+ent.entschuldigung_id">
+	<div v-if="anwArray && entArray" class="row" style="padding: 0px; margin: 0px;">
+		<div class="col-3">
+			<p>Entschuldigungen</p>
+			<div style="max-height: 400px; overflow: auto;">
+				<template v-for="ent in entArray" :key="'entmenu-'+ent.entschuldigung_id">
 					<div class="position-relative" >
 						<button type="button" class="btn btn-light" @click="highlightEntschuldigung(ent)"><span>{{ent.entschuldigung_id}}: {{formatEntTime(ent)}}</span></button>
 					</div>
 				</template>
 			</div>
 		</div>
-		<div class="col-9">
+		<div class="col-3"> 
+			<div style="max-height: 400px; overflow: auto;">
+				<p>Anwesenheitskontrollen</p>
+				<template v-for="anw in anwArray" :key="'anwmenu-'+anw.anwesenheit_id">
+					<div class="position-relative" >
+						<button type="button" class="btn btn-light" @click="highlightKontrolle(anw)"><span>{{anw.anwesenheit_id}}: {{ anwDateFormat(anw) }}</span></button>
+					</div>
+				</template>
+			</div>
+		</div>
+		<div class="col-6">
 			<div class="row">
 				<Range v-model="selectedRange"/>
 			</div>
 			<div class="row mt-2">
-				<div class="col-6">
+				<div class="col-5">
 					<datepicker
 						id="timelineStart"
 						v-model="timelineStart"
@@ -238,7 +283,7 @@ export const AnwTimeline = {
 						:time-picker="false">
 					</datepicker>
 				</div>
-				<div class="col-6">
+				<div class="col-5">
 					<datepicker
 						id="timelineEnd"
 						v-model="timelineEnd"
@@ -248,6 +293,7 @@ export const AnwTimeline = {
 						:time-picker="false">
 					</datepicker>
 				</div>
+				<div class="col-auto"><button type="button" class="btn btn-primary" @click="goToday">go to today</button></div>
 			</div>
 		</div>
 		<div class="row" style="padding: 0px; margin: 0px;">
@@ -270,7 +316,7 @@ export const AnwTimeline = {
 					<div
 					  v-for="(range, index) in anwTimeRanges"
 					  :key="'anwRange-' + index"
-					  :id="'anwRange-' + range.anwesenheit_user_id"
+					  :id="'anwRange-' + range.anwesenheit_id"
 					  class="timeline-overlay"
 					  :style="getOverlayStyleAnw(range)"
 					  @click="showRangeDetails(range)"
@@ -280,7 +326,10 @@ export const AnwTimeline = {
 					</div>
 				
 					<!-- Timeline -->
-					<Timeline :value="events" layout="horizontal" :unstyled="true">
+					<Timeline :value="events" layout="horizontal" :unstyled="true" dataKey="date">
+						<template #marker="event">
+							<div style="background-color: purple; width: 24px; height: 24px;" :id="event.item.date"></div>
+						</template>
 						<template #content="slotProps">
 							<div
 							class="event-card text-center p-2"

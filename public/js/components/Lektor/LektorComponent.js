@@ -8,6 +8,7 @@ import {MaUIDDropdown} from "../Setup/MaUIDDropdown.js";
 import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
 import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
+import {KontrolleDisplay} from "./KontrolleDisplay.js";
 import {Statuslegende} from "./Statuslegende.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
 
@@ -25,10 +26,12 @@ export const LektorComponent = {
 		KontrollenDropdown,
 		AnwCountDisplay,
 		"datepicker": VueDatePicker,
-		Statuslegende
+		Statuslegende,
+		KontrolleDisplay
 	},
 	data() {
 		return {
+			alertDates: false,
 			kontrolleVonBis: null,
 			editKontrolle: null,
 			highlightMode: 'allowed',
@@ -247,6 +250,7 @@ export const LektorComponent = {
 	},
 	methods: {
 		handleAutoApply(date) {
+			this.alertDates = true;
 			this.selectedDate = date
 			this.$refs.outsideDateSelect.closeMenu()	
 			if(this.$refs.insideDateSelect) this.$refs.insideDateSelect.closeMenu()
@@ -379,7 +383,7 @@ export const LektorComponent = {
 				return
 			}
 			this.loading = true
-			this.showAll()
+			this.toggleShowAll()
 			this.loading = false
 		},
 		async setAllColsAndData() {
@@ -388,46 +392,14 @@ export const LektorComponent = {
 			this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
 		},
-		showAll() {
+		toggleShowAll() {
 			// set tabulator column definition to show every distinct date fetched
 
 			if (!this.lektorState.showAllVar) {
-				const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
-				this.lektorState.dates.forEach(date => {
-					newCols.push({
-						title: date,
-						field: date,
-						editor: 'list',
-						editorParams: {
-							values: Vue.computed(()=> {
-								if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-									return [this.$entryParams.permissions.anwesend_status,
-										this.$entryParams.permissions.abwesend_status,
-										this.$entryParams.permissions.entschuldigt_status]
-								} else if (this.$entryParams.permissions.lektor) {
-									return [this.$entryParams.permissions.anwesend_status,
-										this.$entryParams.permissions.abwesend_status]
-								}
-							})
-						},
-						editable: this.checkCellEditability,
-						formatter: this.anwesenheitFormatterValue,
-						titleFormatter: this.anwColTitleFormatter,
-						hozAlign:"center",
-						widthGrow: 1,
-						tooltip: this.tooltipTableRow,
-						minWidth: 150
-					})
-				})
-				newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
-
-				this.lektorState.tableStudentData = this.setupAllData(newCols)
-				this.lektorState.tabulatorCols = newCols
-				this.setAllColsAndData()
-
-				this.lektorState.showAllVar = true
+				this.setShowAll()
 			} else {
 				this.$refs.anwesenheitenTable.tabulator.clearSort()
+				
 				// use selectedDate watcher to retrieve single column table state
 				this.selectedDate = new Date(this.selectedDate)
 
@@ -435,11 +407,46 @@ export const LektorComponent = {
 			}
 
 		},
+		setShowAll() {
+			const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
+			this.lektorState.dates.forEach(date => {
+				newCols.push({
+					title: date,
+					field: date,
+					editor: 'list',
+					editorParams: {
+						values: Vue.computed(()=> {
+							if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
+								return [this.$entryParams.permissions.anwesend_status,
+									this.$entryParams.permissions.abwesend_status,
+									this.$entryParams.permissions.entschuldigt_status]
+							} else if (this.$entryParams.permissions.lektor) {
+								return [this.$entryParams.permissions.anwesend_status,
+									this.$entryParams.permissions.abwesend_status]
+							}
+						})
+					},
+					editable: this.checkCellEditability,
+					formatter: this.anwesenheitFormatterValue,
+					titleFormatter: this.anwColTitleFormatter,
+					hozAlign:"center",
+					widthGrow: 1,
+					tooltip: this.tooltipTableRow,
+					minWidth: 150
+				})
+			})
+			newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+
+			this.lektorState.tableStudentData = this.setupAllData(newCols)
+			this.lektorState.tabulatorCols = newCols
+			this.setAllColsAndData()
+
+			this.lektorState.showAllVar = true
+		},
 		setupAllData() {
 			const data = []
 
 			this.lektorState.students.forEach(student => {
-				// console.log('student', student)
 				const nachname = student.nachname + student.zusatz
 				const row = {
 					prestudent_id: student.prestudent_id,
@@ -450,7 +457,6 @@ export const LektorComponent = {
 					sum: student.sum
 				}
 				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-				// console.log('studentData', studentDataEntry)
 				studentDataEntry.forEach(entry => {
 					const d = entry.datum + ' | ' + entry.von + ' - ' + entry.bis
 					row[d] = entry.status
@@ -611,6 +617,29 @@ export const LektorComponent = {
 			if(terminFound) this.kontrollZeitSourceStundenplanBeginn = true
 			else this.kontrollZeitSourceStundenplanBeginn = false
 		},
+		queryOnlyKontrolleShown() {
+			// find kontrolle from column date
+			const sYear = this.selectedDate.getFullYear()
+			const sMonth = this.selectedDate.getMonth()
+			const sDate = this.selectedDate.getDate()
+			
+			const kOnDate = this.lektorState.kontrollen.find(k => {
+				const kYear = k.jsDate.getFullYear()
+				const kMonth = k.jsDate.getMonth()
+				const kDate = k.jsDate.getDate()
+				
+				return sYear === kYear && sMonth === kMonth && sDate === kDate
+			})
+
+			if(kOnDate) {
+				this.$api.call(ApiKontrolle.pollAnwesenheiten(kOnDate.anwesenheit_id, this.lv_id))
+					.then(res => {
+						this.checkInCount = res.data.anwesend
+						this.abwesendCount = res.data.abwesend
+						this.entschuldigtCount = res.data.entschuldigt
+					})
+			}
+		},
 		setTimespanForKontrolleNow() {
 			// no termine found to fill starting fields from, set to current hour + 1
 			const now = new Date()
@@ -649,7 +678,7 @@ export const LektorComponent = {
 				return
 			}
 
-			if (!this.validateTimespan(this.lektorState.beginn, this.lektorState.ende)) {
+			if (!this.validateTimespan(this.lektorState.beginn, this.lektorState.ende, this.selectedDate)) {
 				return false;
 			}
 
@@ -835,7 +864,7 @@ export const LektorComponent = {
 			})
 		},
 		async setupLektorComponent() {
-
+			
 			this.$entryParams.available_termine.value.forEach(termin => {
 				const dateParts = termin.datum.split("-")
 				termin.datumFrontend = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
@@ -861,7 +890,6 @@ export const LektorComponent = {
 				entry.zusatz = this.formatZusatz(entry, this.lektorState.stsem)
 				this.lektorState.studentsData.set(entry.prestudent_id, [])
 			})
-
 			
 			this.setEntries(this.lektorState.anwEntries, this.lektorState.kontrollen)
 			// this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
@@ -869,14 +897,12 @@ export const LektorComponent = {
 			// datepicker only allows to select for distinct days but one day can lead to several
 			// kontrollen on that day during different timespans -> find all from that date and postfix the von - bis times
 			
-			
 			// determine if table goes with all available dates - kontrollen
 			// or all kontrollen of a selected date if one or more are found
 			const dates = this.determineDates()
 			
 			// define VISIBLE tabulator columns with dynamic columns
 			const anwCols = this.buildColsForDates(dates)
-
 			
 			const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
 			this.lektorState.dates.forEach(date => {
@@ -966,7 +992,7 @@ export const LektorComponent = {
 			// this.linkKontrollData()
 
 			if (this.lektorState.showAllVar) {
-				this.showAll()
+				this.setShowAll()
 			} else {
 
 				this.anwesenheitenTabulatorOptions.columns[0].title = this.$capitalize(await this.$p.t('global/foto'))
@@ -986,27 +1012,10 @@ export const LektorComponent = {
 			this.loading = false
 		},
 		setCurrentCountsFromTableData() {
-			let tmpCntAnw = 0;
-			let tmpCntAbw = 0;
-			let tmpCntEnt = 0;
-
-			this.lektorState.tableStudentData.forEach(row => {
-				switch (row.status) {
-					case this.$entryParams.permissions.anwesend_status:
-						tmpCntAnw++
-						break;
-					case this.$entryParams.permissions.abwesend_status:
-						tmpCntAbw++
-						break;
-					case this.$entryParams.permissions.entschuldigt_status:
-						tmpCntEnt++
-						break;
-				}
-			})
-
-			this.checkInCount = tmpCntAnw;
-			this.abwesendCount = tmpCntAbw;
-			this.entschuldigtCount = tmpCntEnt;
+			
+			if(this.selectedDateCount === 1) {
+				this.queryOnlyKontrolleShown()
+			}
 		},
 		setupLektorState() {
 			this.lektorState.students = this.$entryParams.lektorState.students
@@ -1039,6 +1048,10 @@ export const LektorComponent = {
 			this.lektorState.stsem = data[2][0] ?? []
 			this.lektorState.entschuldigtStati = data[3] ?? []
 			this.lektorState.kontrollen = data[4] ?? []
+			this.lektorState.kontrollen.forEach(k => {
+				const dateparts = k.datum.split(".")
+				k.jsDate = new Date(dateparts[2],dateparts[1] - 1,dateparts[0])
+			})
 			this.lektorState.viewData = data[5] ?? []
 			this.$entryParams.available_termine.value = this.getAvailableTermine()
 			this.lektorState.a_o_kz = data[7] ?? []
@@ -1096,9 +1109,12 @@ export const LektorComponent = {
 			}
 			
 		},
-		validateTimespan(beginn, ende, anwesenheit_id = null) {
-			const newAnwVonDate = new Date(1995, 10, 16, beginn.hours, beginn.minutes, beginn.seconds)
-			const newAnwBisDate = new Date(1995, 10, 16, ende.hours, ende.minutes, ende.seconds)
+		validateTimespan(beginn, ende, date, anwesenheit_id = null) {
+			const newAnwVonDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), beginn.hours, beginn.minutes, beginn.seconds)
+			const newAnwBisDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), ende.hours, ende.minutes, ende.seconds)
+
+			console.log('newAnwVonDate', newAnwVonDate)
+			console.log('newAnwBisDate',newAnwBisDate)
 			
 			if (newAnwBisDate <= newAnwVonDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
@@ -1112,14 +1128,16 @@ export const LektorComponent = {
 					return false
 				}
 			}
-
-			// when editing dont compare with overlap with its own timespan
+			
+			// when editing dont compare with overlap with its own timespan, but on same date
 			let kontrollenToCheck = null
 			if(anwesenheit_id !== null) { 
-				kontrollenToCheck = this.lektorState.kontrollen.filter(k => k.anwesenheit_id !== anwesenheit_id)
+				kontrollenToCheck = this.lektorState.kontrollen.filter(k => k.anwesenheit_id !== anwesenheit_id && k.jsDate.getFullYear() === date.getFullYear() && k.jsDate.getMonth() === date.getMonth() && k.jsDate.getDate() === date.getDate())
 			} else {
-				kontrollenToCheck = this.lektorState.kontrollen
+				kontrollenToCheck = this.lektorState.kontrollen.filter(k => k.jsDate.getFullYear() === date.getFullYear() && k.jsDate.getMonth() === date.getMonth() && k.jsDate.getDate() === date.getDate())
 			}
+			
+			// TODO: repeat this check on backend
 			
 			// compare timespans
 			const len = kontrollenToCheck.length
@@ -1128,13 +1146,11 @@ export const LektorComponent = {
 				
 				const kVonParts = k.von.split(":")
 				const kBisParts = k.bis.split(":")
+				
+				const kVonDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), kVonParts[0], kVonParts[1], kVonParts[2])
+				const kBisDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), kBisParts[0], kBisParts[1], kBisParts[2])
 
-				const kVonDate = new Date(1995, 10, 16, kVonParts[0], kVonParts[1], kVonParts[2])
-				const kBisDate = new Date(1995, 10, 16, kBisParts[0], kBisParts[1], kBisParts[2])
-				if((newAnwVonDate < kVonDate && newAnwBisDate > kVonDate) // times overlap at the start of k e.g. k is 09:30 - 11:00 and newAnwDate for 09:00 - 10:45
-					|| (newAnwVonDate > kVonDate && newAnwBisDate < kBisDate) // times overlap at the end of k e.g. k is 09:30 - 11:00 and newAnwDate for 10:45 - 11:30
-					|| (newAnwVonDate < kVonDate && newAnwBisDate > kBisDate) // times envelope k completely e.g. k is 09:30 - 11:00 and newAnwDate for 08:00 - 12:00
-					|| (newAnwVonDate > kVonDate && newAnwBisDate < kBisDate)) { // times are in between k completely e.g. k is 09:30 - 11:00 and newAnwDate for 09:45 - 10:30
+				if(newAnwVonDate < kBisDate && newAnwBisDate > kVonDate) {
 					this.$fhcAlert.alertError(this.$p.t('global/kontrolleTimeOverlap', [k.von, k.bis]));
 					return false
 				}
@@ -1190,6 +1206,10 @@ export const LektorComponent = {
 
 		},
 		handleLEChanged() {
+			this.$refs.showAllTickbox.checked = false
+			this.lektorState.showAllVar = false
+			// todo: reset showAll state so logic is intact
+			
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
@@ -1269,6 +1289,7 @@ export const LektorComponent = {
 		},
 		checkForBetreuungAndAlert() {
 			// throw an alert when Betreuung is selected which usually should not be attendance checked
+			// TODO: config list laden & checken
 			if(this.$entryParams.selected_le_info?.value?.lehrform_kurzbz === "BE") {
 				this.$fhcAlert.alertWarning(this.$p.t('global/alertBetreuungSelected'))
 			}
@@ -1295,10 +1316,12 @@ export const LektorComponent = {
 			const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
 
 			// fall back to all termine if on selected date none are found
-			if(!datesFiltered.length) {
+			if(this.alertDates && !datesFiltered.length && this.lektorState.dates.length) { // dont spam alerts when LE just has no kontrollen yet
+				this.alertDates = false
 				this.$fhcAlert.alertWarning(this.$p.t('global/keineKontrollenAnDatumFallback', [selectedDateFrontendFormatted]))
 				return this.lektorState.dates
 			}
+
 			return datesFiltered
 		},
 		buildColsForDates(dates) {
@@ -1361,7 +1384,7 @@ export const LektorComponent = {
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
 
-			if (!this.validateTimespan(this.editKontrolle.editVon, this.editKontrolle.editBis, this.editKontrolle.anwesenheit_id)) {
+			if (!this.validateTimespan(this.editKontrolle.editVon, this.editKontrolle.editBis, this.editKontrolle.jsDate, this.editKontrolle.anwesenheit_id)) {
 				return false;
 			}
 			
@@ -1393,6 +1416,9 @@ export const LektorComponent = {
 						})
 					}
 				})
+		},
+		openKontrolleInfo() {
+			
 		}
 	},
 	created(){
@@ -1448,7 +1474,13 @@ export const LektorComponent = {
 			} else {
 				this.$refs.showAllTickbox.checked = false
 				this.lektorState.showAllVar = false
-			} 
+			}
+			
+			// if just one kontrolle is selected query counts for that kontrolle
+			if(newVal === 1) {
+				
+				this.queryOnlyKontrolleShown()
+			}
 		}
 	},
 	computed: {
@@ -1488,18 +1520,6 @@ export const LektorComponent = {
 		getEditBtnClass() {
 			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-success ml-2"
 		},
-		getAnwCountOnCurrentDate() {
-			let fin = 0
-			const k = this.lektorState.tableStudentData.length
-			for(let i = 0; i < k; i++ ) {
-				if(this.lektorState.tableStudentData[i].status === this.$entryParams.permissions.entschuldigt_status  ||
-					this.lektorState.tableStudentData[i].status === this.$entryParams.permissions.anwesend_status) {
-					fin++
-				}
-			}
-
-			return fin
-		},
 		getCSVFilename() {
 			let str = this.$entryParams.selected_le_info?.value?.infoString ?? ''
 			str += '_'+ this.$entryParams?.viewDataLv?.bezeichnung + '_'
@@ -1521,7 +1541,7 @@ export const LektorComponent = {
 				})
 			} else if (this.highlightMode === 'kontrollen') {
 				this.lektorState.kontrollen.forEach(v => {
-					highlights.push(new Date(v.datum))
+					highlights.push(v.jsDate)
 				})
 			} else if (this.highlightMode === 'termine') {
 				if(this.$entryParams.available_termine.value) this.$entryParams.available_termine.value.forEach(v => {
@@ -1609,10 +1629,10 @@ export const LektorComponent = {
 												<template #action-row>
 													<div class="col">
 														<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
-														<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex;">
-															<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">Termine</button>
-															<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">Kontrollen</button>
-															<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">Allowed</button>
+														<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
+															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termine')}} </button>
+															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
+															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
 														</div>
 													</div>
 												</template>
@@ -1639,7 +1659,7 @@ export const LektorComponent = {
 					</bs-modal>
 					
 					<bs-modal ref="modalContainerEditKontrolle" class="bootstrap-prompt"
-					dialogClass="modal-lg">
+					dialogClass="modal-xl">
 						<template v-slot:title>
 								{{ $p.t('global/editAnwKontrolle') }}
 <!--							<div v-tooltip.bottom="getTooltipKontrolleLoeschen">-->
@@ -1649,12 +1669,16 @@ export const LektorComponent = {
 						</template>
 						<template v-slot:default>
 						
-								<Divider/>
 								<template v-for="kontrolle in lektorState.kontrollen">
 
 									<div class="row p-2">
-										<div class="col-4 d-flex justify-content-center align-items-center">{{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}}</div>
-										<div class="col-8 d-flex justify-content-end">
+										<div class="col-4 d-flex justify-content-center align-items-center">
+											<KontrolleDisplay :kontrolle="kontrolle"></KontrolleDisplay>
+										</div>
+										<div class="col-4">
+											<AnwCountDisplay :anwesend="kontrolle.anwesend" :abwesend="kontrolle.abwesend" :entschuldigt="kontrolle.entschuldigt"/>
+										</div>
+										<div class="col-4 d-flex justify-content-end">
 											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary">
 												<i class="fa fa-rotate-right"></i>
 											</button>
@@ -1732,11 +1756,6 @@ export const LektorComponent = {
 							<template v-slot:title>{{ $p.t('global/kontrolle') }}: {{ kontrolleVonBis }}
 							
 							</template>
-							<template v-slot:popoutButton>
-								<button @click="togglePopOut" class="btn btn-primary">
-								  {{ externalWindow ? "Return Modal to Main Window" : "Pop Out Modal" }}
-								</button>
-							</template>
 							<template v-slot:default>
 								<div id="qrcontent">
 									<h1 class="text-center">Code: {{code}}</h1>
@@ -1766,7 +1785,7 @@ export const LektorComponent = {
 							<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
 								<h1 class="h4">{{ $entryParams.selected_le_info?.value?.infoString ? getTitle : '' }}</h1>
 								<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>		
-								<AnwCountDisplay  v-if="!lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
+								<AnwCountDisplay  v-if="selectedDateCount == 1 & !lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
 							</div>
 						</div>
 						
@@ -1802,10 +1821,10 @@ export const LektorComponent = {
 											<template #action-row>
 												<div class="col">
 													<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
-													<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex;">
-														<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">Termine</button>
-														<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">Kontrollen</button>
-														<button role="button" class="col text-white option-entry text-center w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">Allowed</button>
+													<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
+														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termine')}} </button>
+														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
+														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
 													</div>
 												</div>
 											</template>

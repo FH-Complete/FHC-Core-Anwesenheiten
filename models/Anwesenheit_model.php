@@ -41,25 +41,19 @@ class Anwesenheit_model extends \DB_Model
 	public function getKontrollenForLeId($le_id)
 	{
 		$query = "
-			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis
-			FROM extension.tbl_anwesenheit
+			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis,
+				   COUNT(*) FILTER (WHERE status = 'anwesend') AS anwesend,
+				   COUNT(*) FILTER (WHERE status = 'abwesend') AS abwesend,
+				   COUNT(*) FILTER (WHERE status = 'entschuldigt') AS entschuldigt,
+				   extension.tbl_anwesenheit.insertvon, extension.tbl_anwesenheit.insertamum,
+				   extension.tbl_anwesenheit.updatevon, extension.tbl_anwesenheit.updateamum
+			FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 			WHERE lehreinheit_id =  ?
-			ORDER BY datum DESC
+			GROUP BY (anwesenheit_id, lehreinheit_id, datum, von, bis)
+			ORDER BY MIN(von) DESC;
 		";
 
 		return $this->execQuery($query, [$le_id]);
-	}
-
-	public function getKontrollenForLeIdAndInterval($le_id, $days)
-	{
-		$query = "
-			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis
-			FROM extension.tbl_anwesenheit
-			WHERE lehreinheit_id = ? AND von >= (NOW() - (? || ' day')::interval)
-			ORDER BY datum DESC
-		";
-
-		return $this->execQuery($query, [$le_id, $days]);
 	}
 
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root)

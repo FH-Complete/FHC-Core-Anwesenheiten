@@ -6,10 +6,12 @@ import {StudentDropdown} from "../Setup/StudentDropdown.js"
 import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
 
 import ApiProfil from '../../api/factory/profil.js';
+import AnwTimeline from '../Assistenz/AnwTimeline.js';
 
 export const StudentComponent = {
 	name: 'StudentComponent',
 	components: {
+		AnwTimeline,
 		CoreNavigationCmpt,
 		CoreBaseLayout,
 		CoreTabs,
@@ -32,7 +34,8 @@ export const StudentComponent = {
 				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
 			}
 			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
-
+			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimeline'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'}
+			
 			return tabs
 		},
 		routeToCodeScan() {
@@ -136,6 +139,7 @@ export const StudentComponent = {
 	created() {
 	},
 	mounted() {
+		console.log(this.$entryParams)
 		this.checkEntryParamPermissions()
 		this.setup()
 
@@ -160,6 +164,7 @@ export const StudentComponent = {
 						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
 							 id="studentUID" ref="studentDropdown" @studentChanged="studentChangedHandler">
 						</StudentDropdown>
+						
 					</div>
 					<div class="col-2 text-center">
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>

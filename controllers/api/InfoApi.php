@@ -11,16 +11,16 @@ class InfoApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getStudiensemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getStunden' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getStudentInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anwesenheit_admin:rw', 'extension/anwesenheit_lektor:rw'),
-				'getStudiengaenge' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getLektorsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'getStudentsForLvaInSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'getLvViewDataInfo' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getAktuellesSemester' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw'),
-				'getViewDataStudent' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw', 'extension/anwesenheit_student:rw')
+				'getStudiensemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
+				'getStunden' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
+				'getStudentInfo' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
+				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_lektor:rw'),
+				'getStudiengaenge' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
+				'getLektorsForLvaInSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw'),
+				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw'),
+				'getLvViewDataInfo' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
+				'getAktuellesSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
+				'getViewDataStudent' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw')
 			)
 		);
 
@@ -176,7 +176,7 @@ class InfoApi extends FHCAPI_Controller
 		$result = $this->getPostJSON();
 		$allowed_stg = $result->allowed_stg;
 
-		$admin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$admin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 
 		if($admin) {
 			$result = $this->_ci->AnwesenheitModel->getStudiengaenge();

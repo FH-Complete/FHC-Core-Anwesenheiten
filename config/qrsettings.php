@@ -23,3 +23,6 @@ $config['EINHEIT_DAUER'] = 0.75;
 $config['ENTSCHULDIGUNGEN_ENABLED'] = true;
 $config['KONTROLLE_CREATE_MAX_REACH'] = 14; // days +/- semester beginn bzw ende
 $config['POSITIVE_RATING_THRESHOLD'] = 0.75; // min. 75 % anwesenheit
+// show guide/tutorial link
+$config['SHOW_GUIDE'] = true; // min. 75 % anwesenheit
+$config['GUIDE_LINK'] = "https://wiki.fhcomplete.org/doku.php?id=extension:anwesenheit"; // min. 75 % anwesenheit

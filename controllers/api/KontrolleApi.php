@@ -13,31 +13,43 @@ class KontrolleApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				// tableData fetch lektor main page
-				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anw_lekt_load:r'),
+
 				// tableData fetch lektor-student page
-				'getAllAnwesenheitenByStudentByLva' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_lekt_load:r'),
+				
 				// changing status or note of anwesenheit user entry
-				'updateAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'updateAnwesenheiten' => array('extension/anw_lekt_edit:rw'),
+
 				// requests new code when timer reaches its limit during kontrolle
-				'regenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'regenerateQRCode' => array('extension/anw_lekt_exec:rw'),
+				
 				// deletes old code from db when refreshed is received
-				'degenerateQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'degenerateQRCode' => array('extension/anw_lekt_exec:rw'),
+				
 				// start of a new kontrolle, inserts anw_user entries
-				'getNewQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getNewQRCode' => array('extension/anw_lekt_exec:rw'),
+				
 				// requests qr code for existing kontrolle
-				'restartKontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'restartKontrolle' => array('extension/anw_lekt_exec:rw'),
+
 				// update von/bis times for existing kontrolle
-				'updateKontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'updateKontrolle' => array('extension/anw_lekt_edit:rw'),
+
 				// in case kontrolle was not stopped intentionally jump right back in on startup
-				'getExistingQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
-				// method called by cronjob to clean qr code relics lost due to unlucky edge case
-				'deleteQRCode' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'getExistingQRCode' => array('extension/anw_lekt_exec:rw'),
+
+				// method called at end of kontrolle to clean up qr code
+				'deleteQRCode' => array('extension/anw_lekt_exec:rw'),
+				
 				// delete kontrolle and all corresponding anw_user entries
-				'deleteAnwesenheitskontrolle' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'deleteAnwesenheitskontrolle' => array('extension/anw_lekt_edit:rw'),
+
 				// gets checkin & entschuldigt count for ongoing kontrolle
-				'pollAnwesenheiten' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw'),
+				'pollAnwesenheiten' => array('extension/anw_lekt_exec:rw'),
+
 				// reloads just the sum% when anwesenheiten have been updated to avoid full reload
-				'getAnwQuoteForPrestudentIds' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_lektor:rw')
+				'getAnwQuoteForPrestudentIds' => array('extension/anw_lekt_load:r')
 			)
 		);
 
@@ -149,8 +161,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$studiensemester = getData($result);
 
 		// get kontrollen for le_id and newer than age constant if permission is lektor
-		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isLektor = $this->permissionlib->isBerechtigt('extension/anw_r_lektor');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		$kontrollen = null;
 
 
@@ -397,10 +409,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		if ($dateTime < $dateLimit && !$isAdmin) {
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
+		
+		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $datum, $le_id)) $this->terminateWithError("Times collide with other Kontrolle.");;
 		
 		$options = new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
@@ -428,6 +442,15 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_handleResultQRNew($qrcode, $anwesenheit_id, $le_id, $von, $bis);
 	}
 
+	private function checkTimesAgainstOtherKontrollen($von, $bis, $datum, $le_id) {
+		// kontrollen laden by le & date
+		
+		// check against other von/bis
+		
+		// return a bool
+		return true;
+	}
+	
 	private function _handleResultQRNew($qrcode, $anwesenheit_id, $le_id, $von, $bis)
 	{
 		do {
@@ -548,10 +571,10 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLE($le_id)
 	{
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		if($isAdmin) return true;
 
-		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
+		$isLektor = $this->permissionlib->isBerechtigt('extension/anw_r_lektor');
 		if($isLektor) {
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLE($le_id, $this->_uid);
 			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
@@ -570,10 +593,10 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLva($lva_id)
 	{
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		if($isAdmin) return true;
 
-		$isLektor = $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor');
+		$isLektor = $this->permissionlib->isBerechtigt('extension/anw_r_lektor');
 		if($isLektor) {
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
 			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
@@ -607,7 +630,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		if ($dateTime < $dateLimit && !$isAdmin) {
 			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
 		}
@@ -742,7 +765,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		if ($dateTime < $dateLimit && !$isAdmin) {
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
