@@ -5,7 +5,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-
+import ApiProfil from '../../api/factory/profil.js'
 export default {
 	name: 'StudentEntschuldigungComponent',
 	components: {
@@ -62,7 +62,7 @@ export default {
 					page: true,
 					columns: true,
 				},
-				persistenceID: "studentEntschuldigungenTable"
+				persistenceID: this.$entryParams.patchdate + "-studentEntschuldigungenTable"
 			},
 			entschuldigungsViewTabulatorEventHandlers: [{
 				event: "tableBuilt",
@@ -154,7 +154,7 @@ export default {
 			formData.append('person_id', person_id);
 
 
-			this.$fhcApi.factory.Anwesenheiten.Profil.editEntschuldigung(formData)
+			this.$api.call(ApiProfil.editEntschuldigung(formData))
 				.then(response => {
 
 				if (response.meta.status === "success")
@@ -195,7 +195,8 @@ export default {
 
 			formData.append('person_id', person_id);
 
-			this.$fhcApi.factory.Anwesenheiten.Profil.addEntschuldigung(formData).then(res => {
+			this.$api.call(ApiProfil.addEntschuldigung(formData))
+				.then(res => {
 				let rowData = res.data
 				this.$refs.entschuldigungsTable.tabulator.addRow(
 					{
@@ -225,13 +226,13 @@ export default {
 				button.innerHTML = '<i class="fa fa-download"></i>';
 				button.style.minWidth = minwidth;
 				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-				button.title = this.$p.t('table/download');
+				button.title = this.$p.t('global/download');
 				download.append(button);
 			} else {
 				button.innerHTML = '<i class="fa fa-upload"></i>';
 				button.style.minWidth = minwidth;
 				button.addEventListener('click', () => this.addEntschuldigungFile(cell.getData()));
-				button.title = this.$p.t('table/upload');
+				button.title = this.$p.t('global/upload');
 				download.append(button);
 			}
 
@@ -261,7 +262,8 @@ export default {
 				return;
 
 			let entschuldigung_id = cell.getData().entschuldigung_id;
-			this.$fhcApi.factory.Anwesenheiten.Profil.deleteEntschuldigung(entschuldigung_id, this.$entryParams.selected_student_info?.person_id).then(response => {
+			this.$api.call(ApiProfil.deleteEntschuldigung(entschuldigung_id, this.$entryParams.selected_student_info?.person_id))
+				.then(response => {
 
 				if (response.meta.status === "success")
 				{
@@ -298,7 +300,8 @@ export default {
 		},
 		reload(){
 			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-			this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(id).then(res => {
+			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(id))
+				.then(res => {
 				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
 			})
 		},
@@ -331,6 +334,19 @@ export default {
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
+		},
+		calculateTableHeight() {
+
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+			this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
+
+			if(this.$refs.entschuldigungsTable.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
+
 		}
 	},
 	mounted() {
@@ -338,13 +354,13 @@ export default {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-		this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {

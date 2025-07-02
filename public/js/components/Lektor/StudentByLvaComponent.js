@@ -3,6 +3,10 @@ import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Naviga
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {lektorFormatters} from "../../formatters/formatters.js";
 
+import ApiKontrolle from '../../api/factory/kontrolle.js';
+import ApiProfil from '../../api/factory/profil.js';
+import ApiInfo from '../../api/factory/info.js';
+
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
@@ -42,6 +46,11 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcFormatter: this.sumBottomCalcFormatter, bottomCalc: this.anwCalc, formatter: this.percentFormatter},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/lehreinheit_id')), field: 'lehreinheit_id', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/insertvon')), field: 'kinsertvon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/updatevon')), field: 'kupdatevon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/insertvon')), field: 'ainsertvon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/updatevon')), field: 'aupdatevon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', visible: false, bottomCalc: this.einheitenCalc, formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 250},
 					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
 				],
@@ -53,7 +62,7 @@ export const StudentByLvaComponent = {
 					page: true,
 					columns: true,
 				},
-				persistenceID: "lektorDetailViewStudentByLva"
+				persistenceID: this.$entryParams.patchdate + "-lektorDetailViewStudentByLva"
 			},
 			anwesenheitenByStudentByLvaTabulatorEventHandlers: [
 			{
@@ -84,7 +93,8 @@ export const StudentByLvaComponent = {
 						// do nothing when just clicking edit input and not typing
 						
 					} else {
-						this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]).then(res => {
+						this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]))
+							.then(res => {
 							if(res.meta.status === "success") {
 								this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
 							}
@@ -118,6 +128,10 @@ export const StudentByLvaComponent = {
 			selected: 0
 		}
 	},
+	emits: [
+		'titleSet',
+		'anwesenheitenUpdated'
+	],
 	props: {
 		permissions: [],
 		id: null,
@@ -210,14 +224,16 @@ export const StudentByLvaComponent = {
 			return wrapper;
 		},
 		async saveChanges(changedData){
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData).then(res => {
+			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData)).then(res => {
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
+					this.$emit('anwesenheitenUpdated')
 				} else {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
-				this.$fhcApi.factory.Anwesenheiten.Profil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id).then(res => {
+				this.$api.call(ApiProfil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id))
+					.then(res => {
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
@@ -286,6 +302,8 @@ export const StudentByLvaComponent = {
 				+ this.verband + this.gruppe + ' '
 			this.filterSubtitle = this.$p.t('global/summe')
 				+ ': ' + this.sum+ ' %'
+			
+			this.$emit('titleSet', this.filterTitle)
 		},
 		routeToLandingPage() {
 			this.$router.push({
@@ -312,21 +330,24 @@ export const StudentByLvaComponent = {
 			this.tableBuiltResolve = resolve
 		},
 		async setupMounted() {
-			this.tableBuiltPromise = new Promise(this.tableResolve)
-			await this.tableBuiltPromise
-			this.$fhcApi.factory.Anwesenheiten.Kontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz).then(res => {
+			
+			if(!this.tableBuiltPromise) {
+				this.tableBuiltPromise = new Promise(this.tableResolve)
+				await this.tableBuiltPromise
+			}
+			
+			this.$api.call(ApiKontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz))
+				.then(res => {
 				if (res.meta.status !== "success" || !res.data) {
 					return []
 				} else {
 					const arr = res?.data?.retval ?? []
-
 					// calculate total time of anw
 					const sum = arr.reduce((acc, cur) => acc + cur.dauer, 0)
 					arr.forEach(row => {
 						row.anteil = (row.dauer / sum * 100).toFixed(2)
 					})
 
-					console.log(res.data.retval)
 					this.tableData = res.data.retval
 					this.initialTableData = [...res.data.retval]
 					this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(res.data.retval)
@@ -335,7 +356,8 @@ export const StudentByLvaComponent = {
 
 			})
 
-			this.$fhcApi.factory.Anwesenheiten.Info.getStudentInfo(this.id, this.lv_id, this.sem_kz).then(res => {
+			this.$api.call(ApiInfo.getStudentInfo(this.id, this.lv_id, this.sem_kz))
+				.then(res => {
 				if (res.meta.status !== "success" || !res.data) return
 
 				this.prestudent_id = res.data[0].prestudent_id
@@ -357,24 +379,38 @@ export const StudentByLvaComponent = {
 			const img = new Image()
 			img.src = imgSrc
 			return img.width < 150 || img.height < 200
-		}
-	},
-	created(){
-		// TODO: app whide permissions setup OR kübel the link to studentByAnw
-		if(!this.$entryParams.permissions) {// missing setup -> redirect on landing page
-			this.$router.push({name: 'LandingPage'})
+		},
+		calculateTableHeight() {
+
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
+			this.$entryParams.tabHeights['studentByLva'].value = screenY - rect.top - 100 // approx for calc row on bottom
+
+			if(this.$refs.anwesenheitenByStudentByLvaTable.tabulator) this.$refs.anwesenheitenByStudentByLvaTable.tabulator.redraw(true)
+
+		},
+		load(){
+			this.setupMounted()
+
+			// this.calculateTableHeight()
+			// window.addEventListener('resize', this.calculateTableHeight)
+			// window.addEventListener('orientationchange', this.calculateTableHeight)
 		}
 	},
 	mounted() {
-		this.setupMounted()
-
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
-		this.$entryParams.tabHeights['studentByLva'].value = screenY - rect.top - 100 // approx for calc row on bottom
+		// this.setupMounted()
+		//
+		// this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)	
 	},
 	computed: {
 		dataChanged() {
@@ -387,17 +423,12 @@ export const StudentByLvaComponent = {
 			}
 		}
 	},
-	template:`	
-		<core-base-layout
-			:title=""
-			:subtitle=""
-			:main-cols=[10]
-			:aside-cols=[2]
-			>
-			<template #main>
+	template:`
+		<div class="row">
+			<div class="col-10" style="mx-width: 80%">
 				<core-filter-cmpt
 					ref="anwesenheitenByStudentByLvaTable"
-					:title="filterTitle"
+					title=""
 					@uuidDefined="handleUuidDefined"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
@@ -405,7 +436,6 @@ export const StudentByLvaComponent = {
 					:sideMenu="false" 
 					noColumnFilter>
 					<template #actions>
-						<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
 
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesend')) }}
@@ -419,14 +449,11 @@ export const StudentByLvaComponent = {
 						</div>
 					</template>
 				</core-filter-cmpt>
-					
-			</template>
-			<template #aside >
+			</div>
+			<div class="col-2">
 				<img v-if="foto" :src="foto" :class="isLowResolution(foto) ? 'image-low-resolution' : ''" style="width: 100%"/>
-				<div v-else></div>
-			</template>
-		</core-base-layout>
-	</div>`
+			</div>
+		</div>`
 };
 
 export default StudentByLvaComponent

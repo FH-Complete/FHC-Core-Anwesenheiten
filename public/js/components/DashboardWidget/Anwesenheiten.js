@@ -1,9 +1,10 @@
 import AbstractWidget from '../../../../../js/components/DashboardWidget/Abstract.js';
-import anwesenheitenAPI from "../../api/fhcapifactory.js";
 import ScanComponent from "../Student/ScanComponent.js";
 import QuotasOverview from "../QuotasOverview.js";
 import EntschuldigungOverview from "../EntschuldigungOverview.js";
 
+import ApiProfil from '../../api/factory/profil.js';
+import ApiInfo from '../../api/factory/info.js';
 
 export default {
 	name: "WidgetsAnwesenheiten",
@@ -42,7 +43,7 @@ export default {
 				FHC_JS_DATA_STORAGE_OBJECT.ci_router + path)
 		},
 		fetchData(){
-			this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id)
+			this.$api.call(ApiProfil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id))
 				.then(res => {
 					this.quotas = res.data
 					this.quotas.forEach(q => {
@@ -51,7 +52,7 @@ export default {
 					})
 				})
 
-			this.$fhcApi.factory.Anwesenheiten.Profil.getEntschuldigungenByPersonID(this.viewData.person_id)
+			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(this.viewData.person_id))
 				.then(res => {
 					this.entschuldigungen = res.data?.retval
 				})
@@ -63,9 +64,9 @@ export default {
 		}
 	},
 	async created() {
-		if (!this.$fhcApi.factory.Anwesenheiten) this.$fhcApi.factory.addEndpoints({Anwesenheiten: anwesenheitenAPI.factory})
 		if (!this.viewData.uid || !this.viewData.person_id) {
-			await this.$fhcApi.factory.Anwesenheiten.Info.getViewDataStudent().then((res) => {
+			await this.$api.call(ApiInfo.getViewDataStudent())
+				.then((res) => {
 				this.viewData.uid = res.data.uid
 				this.viewData.person_id = res.data.person_id
 				

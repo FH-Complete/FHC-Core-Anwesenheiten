@@ -14,15 +14,15 @@ class QR_model extends \DB_Model
 		$this->hasSequence = false;
 	}
 
-	public function getActiveCodeForLE($le_id)
+	public function getActiveCodeForLE($le_id, $uid)
 	{
 		$query = "
 			SELECT anwesenheit_id, zugangscode
 			FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_check USING(anwesenheit_id)
-			WHERE lehreinheit_id = ?
+			WHERE lehreinheit_id = ? AND extension.tbl_anwesenheit.insertvon = ?
 		";
 
-		return $this->execQuery($query, [$le_id]);
+		return $this->execQuery($query, [$le_id, $uid]);
 	}
 
 	public function deleteOlderThanMilliseconds($milliseconds)

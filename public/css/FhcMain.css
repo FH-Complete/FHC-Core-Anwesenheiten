@@ -1,3 +1,8 @@
+/*overwrite datepicker action row padding*/
+:root {
+	--dp-action-row-padding: 0px;
+}
+
 /* Subtitle. Use it in span within main title. */
 .fhc-subtitle {
 	--bs-text-opacity: 1;
@@ -110,4 +115,19 @@
 
 .legend-info[v-cloak], .legend-info[style*="display: none"] {
 	opacity: 0;
+}
+
+/* basically same as cis4 sprachen menu css -> refactor when it is available!*/
+.option-entry{
+	/*background-color: var(--fhc-cis-primary-hover);*/
+	background-color: #005585;
+}
+
+[selected="true"].option-entry {
+	/*background-color: var(--fhc-cis-primary);*/
+	background-color: #00649c;
+}
+
+.option-entry.btn {
+	border-radius: 0 !important;
 }

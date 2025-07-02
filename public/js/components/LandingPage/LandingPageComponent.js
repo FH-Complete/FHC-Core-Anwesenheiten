@@ -7,6 +7,9 @@ import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
 import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
 
+import ApiInfo from '../../api/factory/info.js';
+import ApiKontrolle from '../../api/factory/kontrolle.js';
+
 export default {
 	name: 'LandingPageComponent',
 	components: {
@@ -26,7 +29,19 @@ export default {
 			tabs: this.initTabs(),
 			loaded: false,
 			phrasenResolved: false,
-			permissioncount: Vue.ref(0)
+			permissioncount: Vue.ref(0),
+			anwKontrolleMinDate: null,
+			anwKontrolleMaxDate: null,
+		};
+	},
+	provide() {
+		return {
+			minDate: Vue.computed(() =>
+				this.anwKontrolleMinDate ? this.anwKontrolleMinDate : null
+			),
+			maxDate: Vue.computed(() =>
+				this.anwKontrolleMaxDate ? this.anwKontrolleMaxDate : null
+			)
 		};
 	},
 	props: {
@@ -50,17 +65,23 @@ export default {
 			const stg_kz = searchParams.get('stg_kz')
 			const sem_kurzbz = searchParams.get('sem_kurzbz')
 			const notMissingParams = (lv_id && stg_kz && sem_kurzbz) || this.$entryParams.notMissingParams
-
+			
+			
 			if((permissions.lektor || permissions.admin) && notMissingParams) {
-				tabs.push({key: 'Kontrolle', title: 'Kontrolle', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/kontrolle') : 'K'})
+				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
 			}
 
 			if((permissions.student || permissions.admin) && notMissingParams)  {
-				tabs.push({key: 'Profil', title: 'Profil', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/profil') : 'P'})
+
+				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
-				tabs.push({key: 'Admin', title: 'Admin', component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/admin') : 'A'})
+
+				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
 			}
 
 			const ret = {}
@@ -126,12 +147,18 @@ export default {
 
 				// console.log('$entryParams', this.$entryParams)
 
+				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach)))
+				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach)))
+				
+
 				if(this.$entryParams.permissions.entschuldigungen_enabled) {
 					this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
-						this.$fhcApi.factory.Anwesenheiten.Info.getAktuellesSemester().then(res => {
+							this.$api.call(ApiInfo.getAktuellesSemester())
+							.then(res => {
 							if(res?.meta?.status === 'success') {
 								this.$entryParams.aktuellesSemester = res?.data?.[0]
 								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
+								resolve()
 							}
 						})
 					})
@@ -163,7 +190,8 @@ export default {
 			this.$entryParams.viewDataStudent.semester = Vue.ref('')
 		},
 		loadLvViewData() {
-			this.$fhcApi.factory.Anwesenheiten.Info.getLvViewDataInfo(this.$entryParams.lv_id).then(res => {
+			this.$api.call(ApiInfo.getLvViewDataInfo(this.$entryParams.lv_id))
+				.then(res => {
 				if(res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
 			})
 		},
@@ -202,7 +230,8 @@ export default {
 		},
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
-				this.$fhcApi.factory.Anwesenheiten.Info.getStudentsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
+					this.$api.call(ApiInfo.getStudentsForLvaInSemester(lv_id, sem_kurzbz))
+					.then(res => {
 					this.$entryParams.availableStudents = []
 
 					res?.data?.retval?.forEach(e => {
@@ -224,7 +253,8 @@ export default {
 		},
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
-				this.$fhcApi.factory.Anwesenheiten.Info.getLektorsForLvaInSemester(lv_id, sem_kurzbz).then(res => {
+				this.$api.call(ApiInfo.getLektorsForLvaInSemester(lv_id, sem_kurzbz))
+					.then(res => {
 					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
@@ -254,28 +284,28 @@ export default {
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
 			return new Promise(resolve => {
-				this.$fhcApi.factory.Anwesenheiten.Info.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz).then(res => {
+				this.$api.call(ApiKontrolle.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz))
+					.then(res => {
 					// merge entries with same LE
 					const data = []
 
 					if(res.data[1]) {
+						// res.data[1] = null
 						Object.keys(res.data[1]).forEach(key => {
 							const val = res.data[1][key]
+							
 							if(val && val.length) {
 								val.forEach(v => v.le_id = key)
 								// spoof le termine to test with
-								// val.push({le_id: key, datum: '2023-04-22', beginn: '13:37:42', ende: '23:42:17'})
+								// val.push({le_id: key, datum: '2025-04-17', beginn: '13:37:42', ende: '23:42:17'})
 							}
 						}) 
 					}
 					
 					this.$entryParams.allLeTermine = res.data[1] ?? []
-
-					
-					
 					
 					res.data[0].forEach(entry => {
-
+						
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if (existing) {
 							// supplement info
@@ -298,11 +328,14 @@ export default {
 									+ (entry.verband ? entry.verband : '')
 									+ (entry.gruppe ? entry.gruppe : '')
 							}
-
+							
 							data.push(entry)
 						}
 					})
-					
+						
+					res.data[0].forEach(entry => {
+						entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
+					})
 
 					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
 					this.$entryParams.available_le_info.value = [...data]
@@ -316,7 +349,6 @@ export default {
 				})
 			})
 		},
-		
 		setLvViewData(data) {
 			this.$entryParams.viewDataLv.benotung = data.benotung
 			this.$entryParams.viewDataLv.bezeichnung = data.bezeichnung
@@ -335,19 +367,35 @@ export default {
 			if(flat && flat.length) {
 				const closest = this.findClosestTermin(flat)
 
+				if(!closest) { // all possible termine are too far back in the past
+					this.$fhcAlert.alertWarning(this.$p.t('global/noLePreselectTermineTooOld'))
+					
+					return leChoices[0]
+				}
+				
 				const choiceFound = leChoices.find(choice => choice.lehreinheit_id == closest.le_id)
 				return choiceFound
 				
-			} else return null
+			} else if(leChoices && leChoices.length) { // no termine to determine closest le by
+				return leChoices[0]
+			} else { // no termine and no le found
+				return null
+			}
 		},
 		findClosestTermin(termine) {
 			const todayTime = new Date(Date.now()).getTime()
 
-			termine.forEach((termin) => {
+			termine.forEach((termin) => { // calculate time & timediff from today
 				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
-
+				termin.time = new Date(termin.datum).getTime()
 			})
-
+			
+			// TODO: this approach messes with too much logic, maybe write method clone for startup logic?
+			// // avoid going for stunplantermine that lie too far back in the past
+			// const eligibleTermine = termine.filter(t => {
+			// 	t.time >= this.anwKontrolleMinDate
+			// })
+			
 			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
 		}
 	},
@@ -380,6 +428,13 @@ export default {
 	template: `
 
 	<div style="position: relative;" ref="appContainer">
+
+		<div v-if="$entryParams.permissions.show_guide" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+			<a :href="$entryParams.permissions.guide_link" target="_blank" class="ms-auto mb-2">
+				Wiki <i class="fa fa-arrow-up-right-from-square me-1"></i>
+			</a>
+		</div>
+	
 		<template  v-if="permissioncount > 1">
 			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs" @changed="handleTabChanged" ref="tabsMain"></core-tabs>
 		</template>

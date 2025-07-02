@@ -65,47 +65,37 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, array($person_id));
 	}
-	public function getAllEntschuldigungen()
-	{
-		$query = "SELECT DISTINCT ON (dms_id,
-							von,
-							bis,
-							public.tbl_person.person_id,
-							tbl_anwesenheit_entschuldigung.entschuldigung_id,
-							vorname,
-							nachname,
-							akzeptiert)
-						dms_id,
-						von,
-						bis,
-						public.tbl_person.person_id,
-						tbl_anwesenheit_entschuldigung.entschuldigung_id,
-						vorname,
-						nachname,
-						extension.tbl_anwesenheit_entschuldigung.akzeptiert as akzeptiert,
-						extension.tbl_anwesenheit_entschuldigung.notiz as notiz,
-						public.tbl_studiengang.studiengang_kz as studiengang_kz,
-						public.tbl_studiengang.bezeichnung as bezeichnung,
-						public.tbl_studiengang.kurzbzlang as kurzbzlang,
-						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
-						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI:SS') as uploaddatum,
-						public.tbl_student.semester as semester
-					FROM extension.tbl_anwesenheit_entschuldigung
-						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
-						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
-						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
-						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
-						JOIN public.tbl_studiengang USING (studiengang_kz)
-						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
-						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
-						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-					WHERE tbl_benutzer.aktiv = TRUE
-					ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST
-					";
+	
+	// when changing anw kontrolle von - bis zeiten, compare if a student has different entschuldigt
+	// status between to timespans -> update this students anw_user entries 
+	public function compareStatusZeitenForLE($vonNew, $bisNew, $vonOld, $bisOld, $le_id) {
+		$qry = 'SELECT * FROM (
+			SELECT prestudent_id,
+				 (SELECT entschuldigung.akzeptiert
+				  FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+				  WHERE entschuldigung.person_id = public.tbl_prestudent.person_id
+					AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
+				  ORDER BY akzeptiert DESC NULLS LAST
+				  LIMIT 1
+				 ) as statusAkzeptiertNew,
+				 (SELECT entschuldigung.akzeptiert
+				  FROM extension.tbl_anwesenheit_entschuldigung entschuldigung
+				  WHERE entschuldigung.person_id = public.tbl_prestudent.person_id
+					AND ? >= entschuldigung.von AND ? <= entschuldigung.bis
+				  ORDER BY akzeptiert DESC NULLS LAST
+				  LIMIT 1
+				 ) as statusAkzeptiertOld
+			FROM campus.vw_student_lehrveranstaltung
+				   JOIN public.tbl_student ON (uid = student_uid)
+				   JOIN public.tbl_prestudent USING(prestudent_id)
+			WHERE lehreinheit_id = ?
+					  ) as alias
+		WHERE statusAkzeptiertNew IS DISTINCT FROM statusAkzeptiertOld';
 
-		return $this->execReadOnlyQuery($query);
+		return $this->execReadOnlyQuery($qry, array($vonNew, $bisNew, $vonOld, $bisOld, $le_id));
 	}
+	
+	
 
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{
@@ -132,7 +122,7 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_studiengang.kurzbzlang as kurzbzlang,
 						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
 						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'DD.MM.YYYY HH24:MI') as uploaddatum,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as uploaddatum,
 						public.tbl_student.semester as semester
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
@@ -145,12 +135,14 @@ class Entschuldigung_model extends \DB_Model
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
 					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 
+		// $von & $bis are not clearable in UI but once were...
+		// used to be von/bis >=/<= ?
 		if($von) {
-			$query.= 'AND Date(von) >= ? ';
+			$query.= 'AND Date(extension.tbl_anwesenheit_entschuldigung.insertamum) >= ? ';
 			$params[] = $von;
 		}
 		if($bis) {
-			$query.= 'AND Date(bis) <= ? ';
+			$query.= 'AND Date(extension.tbl_anwesenheit_entschuldigung.insertamum) <= ? ';
 			$params[] = $bis;
 		}
 
