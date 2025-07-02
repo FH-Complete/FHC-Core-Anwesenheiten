@@ -13,12 +13,6 @@ const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
 	routes: [
 		{
-			path: `/Kontrolle/anwesenheitByStudent/:id/:lv_id/:sem_kz`,
-			name: 'StudentByLva',
-			component: StudentByLvaComponent,
-			props: true
-		},
-		{
 			path: `/Administration`,
 			name: 'Administration',
 			component: LandingPageComponent,

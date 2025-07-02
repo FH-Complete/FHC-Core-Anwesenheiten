@@ -8,6 +8,7 @@ import LektorComponent from "../Lektor/LektorComponent.js"
 import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
 
 import ApiInfo from '../../api/factory/info.js';
+import ApiKontrolle from '../../api/factory/kontrolle.js';
 
 export default {
 	name: 'LandingPageComponent',
@@ -283,7 +284,7 @@ export default {
 		},
 		handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids) {
 			return new Promise(resolve => {
-				this.$api.call(ApiInfo.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz))
+				this.$api.call(ApiKontrolle.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz))
 					.then(res => {
 					// merge entries with same LE
 					const data = []

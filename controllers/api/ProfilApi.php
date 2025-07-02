@@ -13,31 +13,31 @@ class ProfilApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				// load student data (name, etc) by uid, none => own, uid => further berechtigung check
-				'getProfileViewData' => array ('extension/anw_stud_load:rw'),
+				'getProfileViewData' => array ('extension/anw_r_student:r', 'extension/anw_r_full_assistenz:r'),
 
 				// load student anwesenheiten by uid, none => own, uid => further berechtigung check
-				'getAllAnwByUID' => array ('extension/anw_stud_load:rw'),
+				'getAllAnwByUID' => array ('extension/anw_r_student:r', 'extension/anw_r_full_assistenz:r'),
 				
 				// special function for cis4 widget
-				'getAllAnwQuotasForLvaByUID' => array ('extension/anw_stud_load:rw'),
+				'getAllAnwQuotasForLvaByUID' => array ('extension/anw_r_student:r', 'extension/anw_r_full_assistenz:r'),
 				
 				// adds new entschuldigung with dates & optional file
-				'addEntschuldigung' => array('extension/anw_stud_ent_upload:rw'),
+				'addEntschuldigung' => array('extension/anw_r_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
 
 				// adds file to entschuldigung
-				'editEntschuldigung' => array('extension/anw_stud_ent_upload:rw'),
+				'editEntschuldigung' => array('extension/anw_r_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
 
 				// deletes entschuldigung
-				'deleteEntschuldigung' => array('extension/anw_stud_ent_upload:rw'),
+				'deleteEntschuldigung' => array('extension/anw_r_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
 
 				// load student entschuldigungen by uid
-				'getEntschuldigungenByPersonID' => array('extension/anw_stud_ent_load:rw'),
+				'getEntschuldigungenByPersonID' => array('extension/anw_r_stud_ent:r','extension/anw_r_full_assistenz:rw'),
 				
 				// QR code entry
-				'checkInAnwesenheit' => array('extension/anw_stud_code_entry:rw'),
+				'checkInAnwesenheit' => array('extension/extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
-				'getAnwesenheitSumByLva' => array('extension/anw_stud_load:rw')
+				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
 			)
 		);
 
@@ -46,6 +46,7 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
@@ -481,8 +482,27 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 		}
 
+		// add old version to history table
+		$this->_ci->EntschuldigungHistoryModel->insert(
+			array(
+				'entschuldigung_id' => $entschuldigung->entschuldigung_id,
+				'person_id' => $entschuldigung->person_id,
+				'von' => $entschuldigung->von,
+				'bis' => $entschuldigung->bis,
+				'dms_id' => $entschuldigung->dms_id,
+				'insertvon' => $entschuldigung->insertvon,
+				'insertamum' => $entschuldigung->insertamum,
+				'updatevon' => $entschuldigung->updatevon,
+				'updateamum' => $entschuldigung->updateamum,
+				'statussetvon' => $entschuldigung->statussetvon,
+				'statussetamum' => $entschuldigung->statussetamum,
+				'akzeptiert' => $entschuldigung->akzeptiert,
+				'notiz' => $entschuldigung->notiz,
+				'version' => $entschuldigung->version
+			)
+		);
+		
 		$dmsFile = getData($dmsFile);
-
 		$dmsId = $dmsFile['dms_id'];
 		
 		$result = $this->_ci->EntschuldigungModel->update(
@@ -492,7 +512,7 @@ class ProfilApi extends FHCAPI_Controller
 				'dms_id' => $dmsId,
 				'updatevon' => $this->_uid,
 				'updateamum' => date('Y-m-d H:i:s'),
-				'version' => 1
+				'version' => $entschuldigung->version + 1
 			)
 		);
 

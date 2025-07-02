@@ -154,6 +154,29 @@ export default {
 			params
 		}
 		
+	},
+	getLehreinheitenForLehrveranstaltungAndMaUid(lva_id, ma_uid, sem_kurzbz) {
+
+		const params = { lva_id, ma_uid, sem_kurzbz }
+		const url = `extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getLehreinheitenForLehrveranstaltungAndMaUid`;
+		return {
+			method: 'get',
+			url,
+			params
+		}
+
+	},
+	insertAnwWithoutQR(le_id, datum, beginn, ende) {
+
+		const params = {le_id, datum, beginn, ende}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/insertAnwWithoutQR';
+
+		return {
+			method: 'post',
+			url,
+			params
+		}
+		
 	}
 	
 }

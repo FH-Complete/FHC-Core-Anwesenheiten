@@ -57,17 +57,6 @@ export default {
 		}
 		
 	},
-	getLehreinheitenForLehrveranstaltungAndMaUid(lva_id, ma_uid, sem_kurzbz) {
-		
-		const params = { lva_id, ma_uid, sem_kurzbz }
-		const url = `extensions/FHC-Core-Anwesenheiten/api/InfoApi/getLehreinheitenForLehrveranstaltungAndMaUid`;
-		return {
-			method: 'get',
-			url,
-			params
-		}
-		
-	},
 	getStudiengaenge(allowed_stg = [], admin) {
 		
 		const params = {allowed_stg, admin}

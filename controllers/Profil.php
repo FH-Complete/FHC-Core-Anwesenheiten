@@ -40,7 +40,7 @@ class Profil extends Auth_Controller
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
-
+		$this->load->helper('hlp_language');
 	}
 
 
@@ -69,6 +69,9 @@ class Profil extends Auth_Controller
 				'controller' => get_class($this),
 				'show_guide' => $this->_ci->config->item('SHOW_GUIDE'),
 				'guide_link' => $this->_ci->config->item('GUIDE_LINK'),
+				'no_qr_lehrform' => $this->_ci->config->item('NO_QR_LEHRFORM'),
+				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
+				'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
 			]
 		);
 

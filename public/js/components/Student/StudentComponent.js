@@ -55,7 +55,8 @@ export const StudentComponent = {
 
 		},
 		handleTabChanged (key) {
-			if(this.$refs.tabsStudent?._?.refs?.current) this.$refs.tabsStudent._.refs.current.redrawTable()
+			// check if the current has redrawTable function -> its a tabulator so redraw it to avoid bad things
+			if(this.$refs.tabsStudent?._?.refs?.current?.redrawTable) this.$refs.tabsStudent._.refs.current.redrawTable()
 		},
 		async setup() {
 			await this.$entryParams.setupPromise

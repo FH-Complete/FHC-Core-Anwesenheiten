@@ -14,7 +14,6 @@ class InfoApi extends FHCAPI_Controller
 				'getStudiensemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
 				'getStunden' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
 				'getStudentInfo' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_lektor:rw'),
 				'getStudiengaenge' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
 				'getLektorsForLvaInSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw'),
 				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw'),
@@ -112,59 +111,6 @@ class InfoApi extends FHCAPI_Controller
 		$studentLvaData = $this->_ci->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, APP_ROOT);
 
 		$this->terminateWithSuccess(getData($studentLvaData));
-	}
-
-	/**
-	 * GET METHOD
-	 * expects parameter 'lva_id', 'ma_uid', 'sem_kurzbz'
-	 * returns list of lehreinheiten which given lektor is teaching in given semester
-	 */
-	public function getLehreinheitenForLehrveranstaltungAndMaUid()
-	{
-		$lva_id = $this->input->get('lva_id');
-		$ma_uid = $this->input->get('ma_uid');
-		$sem_kurzbz = $this->input->get('sem_kurzbz');
-
-		if($lva_id === 'null' || $ma_uid === 'null' || $sem_kurzbz === 'null') {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
-
-		if(isEmptyString($lva_id) ||
-			isEmptyString($ma_uid)  ||
-			isEmptyString($sem_kurzbz) ) {
-			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
-		}
-
-		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
-
-		if(!isSuccess($result)) $this->terminateWithError(getError($result));
-		$leForLvaAndMA = getData($result);
-
-		if(is_null($leForLvaAndMA)) 
-		{
-			$this->terminateWithSuccess(array([], []));
-		}
-		// filter for unique le_id keys
-		$distinctLeId = array_values(array_reduce($leForLvaAndMA, function ($carry, $leRow) {
-			// use the name as a key to ensure uniqueness
-			$carry[$leRow->lehreinheit_id] = $leRow;
-			return $carry;
-		}, []));
-		
-		$allLeTermine = [];
-		
-		forEach($distinctLeId as $leRow) 
-		{
-			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
-			if(!isSuccess($result)) $this->terminateWithError(getError($result));
-			$leTermine = getData($result);
-		
-			$allLeTermine[$leRow->lehreinheit_id] = $leTermine;
-		}
-
-
-		$this->terminateWithSuccess(array($leForLvaAndMA, $allLeTermine));
-
 	}
 
 	/**

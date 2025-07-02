@@ -128,6 +128,10 @@ export const StudentByLvaComponent = {
 			selected: 0
 		}
 	},
+	emits: [
+		'titleSet',
+		'anwesenheitenUpdated'
+	],
 	props: {
 		permissions: [],
 		id: null,
@@ -223,6 +227,7 @@ export const StudentByLvaComponent = {
 			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData)).then(res => {
 				if(res.meta.status === "success") {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
+					this.$emit('anwesenheitenUpdated')
 				} else {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
@@ -297,6 +302,8 @@ export const StudentByLvaComponent = {
 				+ this.verband + this.gruppe + ' '
 			this.filterSubtitle = this.$p.t('global/summe')
 				+ ': ' + this.sum+ ' %'
+			
+			this.$emit('titleSet', this.filterTitle)
 		},
 		routeToLandingPage() {
 			this.$router.push({
@@ -323,8 +330,12 @@ export const StudentByLvaComponent = {
 			this.tableBuiltResolve = resolve
 		},
 		async setupMounted() {
-			this.tableBuiltPromise = new Promise(this.tableResolve)
-			await this.tableBuiltPromise
+			
+			if(!this.tableBuiltPromise) {
+				this.tableBuiltPromise = new Promise(this.tableResolve)
+				await this.tableBuiltPromise
+			}
+			
 			this.$api.call(ApiKontrolle.getAllAnwesenheitenByStudentByLva(this.id, this.lv_id, this.sem_kz))
 				.then(res => {
 				if (res.meta.status !== "success" || !res.data) {
@@ -381,18 +392,19 @@ export const StudentByLvaComponent = {
 
 			if(this.$refs.anwesenheitenByStudentByLvaTable.tabulator) this.$refs.anwesenheitenByStudentByLvaTable.tabulator.redraw(true)
 
-		}
-	},
-	created(){
-		// TODO: app whide permissions setup OR kübel the link to studentByAnw
-		if(!this.$entryParams.permissions) {// missing setup -> redirect on landing page
-			this.$router.push({name: 'LandingPage'})
+		},
+		load(){
+			this.setupMounted()
+
+			// this.calculateTableHeight()
+			// window.addEventListener('resize', this.calculateTableHeight)
+			// window.addEventListener('orientationchange', this.calculateTableHeight)
 		}
 	},
 	mounted() {
-		this.setupMounted()
-
-		this.calculateTableHeight()
+		// this.setupMounted()
+		//
+		// this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
 		window.addEventListener('orientationchange', this.calculateTableHeight)
 	},
@@ -416,7 +428,7 @@ export const StudentByLvaComponent = {
 			<div class="col-10" style="mx-width: 80%">
 				<core-filter-cmpt
 					ref="anwesenheitenByStudentByLvaTable"
-					:title="filterTitle"
+					title=""
 					@uuidDefined="handleUuidDefined"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
@@ -424,7 +436,6 @@ export const StudentByLvaComponent = {
 					:sideMenu="false" 
 					noColumnFilter>
 					<template #actions>
-						<button class="btn btn-outline-secondary" @click="routeToLandingPage"><a><i class="fa fa-chevron-left"></i></a></button>
 
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesend')) }}

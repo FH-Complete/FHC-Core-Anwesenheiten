@@ -147,7 +147,7 @@ class Anwesenheit_User_model extends \DB_Model
 
 	}
 
-	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, $abwesend_status, $entschuldigt_status)
+	public function createNewUserAnwesenheitenEntries($le_id, $anwesenheit_id, $von, $bis, $insert_status, $entschuldigt_status)
 	{
 		$this->db->trans_start(false);
 
@@ -175,7 +175,7 @@ class Anwesenheit_User_model extends \DB_Model
 			$now = $this->escape('NOW()');
 
 			foreach ($result->retval as $entry) {
-				$status = $entry->statusakzeptiert ? $entschuldigt_status : $abwesend_status;
+				$status = $entry->statusakzeptiert ? $entschuldigt_status : $insert_status;
 				$result = $this->insert(array(
 					'anwesenheit_id' => $anwesenheit_id,
 					'prestudent_id' => $entry->prestudent_id,
@@ -217,7 +217,7 @@ class Anwesenheit_User_model extends \DB_Model
 				lehre.tbl_lehreinheit.lehreinheit_id,
 				extension.tbl_anwesenheit.insertvon as kinsertvon,
 				extension.tbl_anwesenheit.updatevon as kupdatevon,
-				extension.tbl_anwesenheit_user.insertvon as ainservon,
+				extension.tbl_anwesenheit_user.insertvon as ainsertvon,
 				extension.tbl_anwesenheit_user.updateamum as aupdatevon,
 				extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
 				extension.tbl_anwesenheit_user.notiz,
@@ -249,7 +249,7 @@ class Anwesenheit_User_model extends \DB_Model
 			extension.tbl_anwesenheit.updatevon as kupdatevon,
 			extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
 			extension.tbl_anwesenheit_user.notiz,
-			extension.tbl_anwesenheit_user.insertvon as ainservon,
+			extension.tbl_anwesenheit_user.insertvon as ainsertvon,
 			extension.tbl_anwesenheit_user.updatevon as aupdatevon,
 			CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
 		FROM extension.tbl_anwesenheit

@@ -11,6 +11,7 @@ import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {KontrolleDisplay} from "./KontrolleDisplay.js";
 import {Statuslegende} from "./Statuslegende.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
+import {StudentByLvaComponent} from "./StudentByLvaComponent.js"
 
 export const LektorComponent = {
 	name: 'LektorComponent',
@@ -27,11 +28,12 @@ export const LektorComponent = {
 		AnwCountDisplay,
 		"datepicker": VueDatePicker,
 		Statuslegende,
-		KontrolleDisplay
+		KontrolleDisplay,
+		StudentByLvaComponent
 	},
 	data() {
 		return {
-			alertDates: false,
+			selectedStudent: null,
 			kontrolleVonBis: null,
 			editKontrolle: null,
 			highlightMode: 'allowed',
@@ -170,10 +172,18 @@ export const LektorComponent = {
 						//  in the future when performance is an issue
 						if(!this.changes) this.$entryParams.lektorState = this.lektorState
 
-						this.$router.push({
-							name: 'StudentByLva',
-							params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
+						this.selectedStudent = {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz, title: ''}
+						Vue.nextTick(()=>{
+							this.$refs.studentByLva.load()
+							// just show studentByLva component in a fullscreen modal, avoid the routing shenanigans here
+							this.$refs.modalContainerStudentByLva.show()
 						})
+						
+						
+						// this.$router.push({
+						// 	name: 'StudentByLva',
+						// 	params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
+						// })
 					}
 					// else { // on date fields toggle state edit
 					// 	this.toggleAnwStatus(e, cell, prestudent_id)
@@ -250,7 +260,6 @@ export const LektorComponent = {
 	},
 	methods: {
 		handleAutoApply(date) {
-			this.alertDates = true;
 			this.selectedDate = date
 			this.$refs.outsideDateSelect.closeMenu()	
 			if(this.$refs.insideDateSelect) this.$refs.insideDateSelect.closeMenu()
@@ -511,7 +520,7 @@ export const LektorComponent = {
 				day: this.selectedDate.getDate()
 			}
 
-			this.$api.call(ApiKontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende, date))
+			this.$api.call(ApiKontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende))
 				.then(res => {
 				if (res.data) {
 					this.changes = true
@@ -682,13 +691,48 @@ export const LektorComponent = {
 				return false;
 			}
 
-
 			this.qr = '' // indirectly set start button disabled
 
 			// fetch some data from stundenplan what should be happening rn
 			// if there is no stundenplan entry enter some hours of anwesenheit?
 
 			this.getNewQRCode()
+		},
+		insertAnwWithoutQR() {
+			if (!this.lektorState.beginn || !this.lektorState.ende) {
+				this.$fhcAlert.alertError(this.$p.t('global/errorAnwStartAndEndSet'))
+				return
+			}
+
+			if (!this.validateTimespan(this.lektorState.beginn, this.lektorState.ende, this.selectedDate)) {
+				return false;
+			}
+
+			const date = {
+				year: this.selectedDate.getFullYear(),
+				month: this.selectedDate.getMonth() + 1,
+				day: this.selectedDate.getDate()
+			}
+			
+			this.$refs.modalContainerNewKontrolle.hide()
+			this.loading = true
+			this.$api.call(ApiKontrolle.insertAnwWithoutQR(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende))
+				.then(res => {
+
+					const datefetch = this.formatDateToDbString(this.selectedDate)
+					const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
+					this.loading = true
+					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, datefetch)).then(res => {
+						if (res.meta.status !== "success") return
+						this.setupData(res.data)
+					}).finally(() => {
+						this.loading = false
+					})
+					
+					this.changes = true
+					this.showQR(res.data)
+
+				})
 		},
 		stopAnwesenheitskontrolle() {
 			if(this.externalWindow) { // portal the modal back into our dom and close window
@@ -1064,6 +1108,7 @@ export const LektorComponent = {
 				return this.$entryParams.allLeTermine[this.$entryParams.selected_le_id.value] ?? []
 			} else {
 				// this should never happen since we always have termine setup before LE but still handling the odd case
+				this.$fhcAlert.alertError("Keine Termine gefunden")
 				return  []
 			}
 		},
@@ -1112,9 +1157,6 @@ export const LektorComponent = {
 		validateTimespan(beginn, ende, date, anwesenheit_id = null) {
 			const newAnwVonDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), beginn.hours, beginn.minutes, beginn.seconds)
 			const newAnwBisDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), ende.hours, ende.minutes, ende.seconds)
-
-			console.log('newAnwVonDate', newAnwVonDate)
-			console.log('newAnwBisDate',newAnwBisDate)
 			
 			if (newAnwBisDate <= newAnwVonDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorValidateTimes'));
@@ -1136,8 +1178,6 @@ export const LektorComponent = {
 			} else {
 				kontrollenToCheck = this.lektorState.kontrollen.filter(k => k.jsDate.getFullYear() === date.getFullYear() && k.jsDate.getMonth() === date.getMonth() && k.jsDate.getDate() === date.getDate())
 			}
-			
-			// TODO: repeat this check on backend
 			
 			// compare timespans
 			const len = kontrollenToCheck.length
@@ -1197,7 +1237,8 @@ export const LektorComponent = {
 			if (this.$entryParams.lektorState) {
 				this.setupLektorState()
 			} else {
-				this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
+				this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date))
+					.then(res => {
 					this.setupData(res.data)
 				}).finally(() => {
 					this.loading = false
@@ -1289,9 +1330,11 @@ export const LektorComponent = {
 		},
 		checkForBetreuungAndAlert() {
 			// throw an alert when Betreuung is selected which usually should not be attendance checked
-			// TODO: config list laden & checken
-			if(this.$entryParams.selected_le_info?.value?.lehrform_kurzbz === "BE") {
-				this.$fhcAlert.alertWarning(this.$p.t('global/alertBetreuungSelected'))
+
+			const alertConfig = this.$entryParams.permissions.alert_lehrform.find(a => a.lehrform_kurzbz === this.$entryParams.selected_le_info?.value?.lehrform_kurzbz)
+			if(alertConfig) {
+				const text = this.$entryParams.permissions.lang === 'German' ? alertConfig.german_alert_text : alertConfig.english_alert_text
+				this.$fhcAlert.alertWarning(text)
 			}
 		},
 		calculateTableHeight() {
@@ -1315,12 +1358,12 @@ export const LektorComponent = {
 			// standard -> show all termine of a certain date
 			const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
 
-			// fall back to all termine if on selected date none are found
-			if(this.alertDates && !datesFiltered.length && this.lektorState.dates.length) { // dont spam alerts when LE just has no kontrollen yet
-				this.alertDates = false
-				this.$fhcAlert.alertWarning(this.$p.t('global/keineKontrollenAnDatumFallback', [selectedDateFrontendFormatted]))
-				return this.lektorState.dates
-			}
+			// // fall back to all termine if on selected date none are found
+			// if(!datesFiltered.length && this.lektorState.dates.length) { // dont spam alerts when LE just has no kontrollen yet
+			
+			// 	this.$fhcAlert.alertWarning(this.$p.t('global/keineKontrollenAnDatumFallback', [selectedDateFrontendFormatted]))
+			// 	return this.lektorState.dates
+			// }
 
 			return datesFiltered
 		},
@@ -1419,7 +1462,25 @@ export const LektorComponent = {
 		},
 		openKontrolleInfo() {
 			
+		},
+		handleTitleSet(title) {
+			this.selectedStudent.title = title
+		},
+		handleUpdateAnwesenheit() {
+			const date = this.formatDateToDbString(this.selectedDate)
+			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
+			// reload tableData to get state back
+			this.$api.call(
+				ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(
+					this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date))
+				.then((res) => {
+					if (res.meta.status !== "success") return
+					this.setupData(res.data)
+				}).finally(() => {
+				this.loading = false
+			})
 		}
+		
 	},
 	created(){
 		this.lv_id = this.$entryParams.lv_id
@@ -1428,9 +1489,6 @@ export const LektorComponent = {
 	},
 	mounted() {
 		this.setupMounted()
-		
-		// console.log(this.$entryParams)
-		// console.log(this.lektorState)
 		
 		this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
@@ -1456,8 +1514,9 @@ export const LektorComponent = {
 
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 			
-			if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-			else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+			// todo: range status anzeigen irgendwo
+			// if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+			// else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
 
 			this.lektorState.tabulatorCols = anwCols
 			
@@ -1484,6 +1543,11 @@ export const LektorComponent = {
 		}
 	},
 	computed: {
+		currentLEhasRightToSkipQR() {
+			if(!this.$entryParams.permissions.no_qr_lehrform || !this.$entryParams.permissions.no_qr_lehrform.length) return false
+			if(!this.$entryParams.selected_le_info?.value) return false
+			return this.$entryParams.permissions.no_qr_lehrform.includes(this.$entryParams.selected_le_info?.value?.lehrform_kurzbz)
+		},
 		getTitle() {
 			return this.$entryParams.selected_le_info?.value?.infoString ?? ''
 		},
@@ -1561,8 +1625,7 @@ export const LektorComponent = {
 				<div id="lektorWrap">
 				
 					<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
-						<template v-slot:title>
-							
+						<template v-slot:title>			
 							<div v-tooltip.bottom="getTooltipKontrolleNeu">
 								{{ $p.t('global/neueAnwKontrolle') }}
 								<i class="fa fa-circle-question"></i>
@@ -1654,6 +1717,7 @@ export const LektorComponent = {
 							</div>
 						</template>
 						<template v-slot:footer>
+							<button v-if="currentLEhasRightToSkipQR" type="button" class="btn btn-primary" @click="insertAnwWithoutQR">{{ $p.t('global/kontrolleOhneQR') }}</button>
 							<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
 						</template>
 					</bs-modal>
@@ -1747,6 +1811,23 @@ export const LektorComponent = {
 						</template>
 						<template v-slot:default>
 							<Statuslegende></Statuslegende>
+						</template>
+					</bs-modal>
+					
+					<bs-modal ref="modalContainerStudentByLva" class="bootstrap-prompt" dialogClass="modal-xl" :allowFullscreenExpand="true">
+						<template v-slot:title>
+							<div>
+								{{ selectedStudent?.title }}
+							</div>
+						</template>
+						<template v-slot:default>
+							<StudentByLvaComponent ref="studentByLva" v-if="selectedStudent" 
+								@anwesenheitenUpdated="handleUpdateAnwesenheit"
+								@titleSet="handleTitleSet"
+								:id="selectedStudent.id" 
+								:lv_id="selectedStudent.lv_id"
+								:sem_kz="selectedStudent.sem_kz"
+							></StudentByLvaComponent>
 						</template>
 					</bs-modal>
 					
