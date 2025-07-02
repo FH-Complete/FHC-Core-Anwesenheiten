@@ -539,6 +539,10 @@ class ProfilApi extends FHCAPI_Controller
 		if (isError($result))
 			$this->terminateWithError(getError($result));
 
+		if(!hasData($result)){
+			return;
+		}
+		
 		$data = getData($result)[0];
 //		$this->addMeta('emailData', $data);
 		//emailTo usually is 1 address, sometimes several seperated by ','

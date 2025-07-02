@@ -456,12 +456,18 @@ export const LektorComponent = {
 			const data = []
 
 			this.lektorState.students.forEach(student => {
+				const allEntStudent = this.lektorState.entschuldigtStati.filter(status => {
+					if(status.person_id === student.person_id) return true
+					else return false
+				})
+				
 				const nachname = student.nachname + student.zusatz
 				const row = {
 					prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
 					nachname: nachname,
+					entschuldigungen: allEntStudent,
 					gruppe: student.semester + student.verband + student.gruppe,
 					sum: student.sum
 				}
@@ -1009,31 +1015,6 @@ export const LektorComponent = {
 			// 		entschuldigungen: allEntStudentForCurrentDate,
 			// 		sum: student.sum
 			// 	}
-			//	
-			// 	dates.forEach(dCol => {
-			// 		const entries = studentDataEntry.filter(sD => (sD.datum + " | " + sD.von + ' - ' + sD.bis) === dCol)
-			// 		entries.forEach(e => {
-			// 			newRow[dCol] = e.status
-			// 		})
-			// 	})
-			// 	// const anwesenheit = studentDataEntry.find(entry => Reflect.get(entry, 'datum') === selectedDateDBFormatted)
-			// 	// const status = anwesenheit ? Reflect.get(anwesenheit, 'status') : '-'
-			//
-			// 	// bind entschuldigungen info into table data
-			// 	// TODO: filtert auf aktuelle Uhrzeit, zeigt eventuell frühere/spätere entschuldigungen am selben datum nicht an
-			//
-			// 	// const studentEntschuldigungen = this.lektorState.entschuldigtStati.filter(entschuldigung => entschuldigung.person_id === student.person_id)
-			//	
-			// 	this.lektorState.gruppen.add(gruppe)
-			// 	// this.lektorState.tableStudentData.push(newRow);
-			//	
-			//	
-			// })
-			
-			// // get current counts for selectedDate
-			// this.setCurrentCountsFromTableData()
-
-			// this.linkKontrollData()
 
 			if (this.lektorState.showAllVar) {
 				this.setShowAll()
@@ -1060,6 +1041,7 @@ export const LektorComponent = {
 			if(this.selectedDateCount === 1) {
 				this.queryOnlyKontrolleShown()
 			}
+			
 		},
 		setupLektorState() {
 			this.lektorState.students = this.$entryParams.lektorState.students
@@ -1249,7 +1231,6 @@ export const LektorComponent = {
 		handleLEChanged() {
 			this.$refs.showAllTickbox.checked = false
 			this.lektorState.showAllVar = false
-			// todo: reset showAll state so logic is intact
 			
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
@@ -1276,13 +1257,24 @@ export const LektorComponent = {
 		entschuldigtColoring: function (row) {
 			const data = row.getData()
 			
-			// todo: only count entschuldigungen that are relevant on selected date... filter on startup/select?
 			if(!data.entschuldigungen?.length) return
-			if (data.entschuldigt === true) {
+
+			// filter for entschuldigungen relevant to selected date
+			const entForSelectedDate = data.entschuldigungen.filter(status => {
+				const vonDate = new Date(status.von)
+				const bisDate = new Date(status.bis)
+				if(vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
+				else return false
+			})
+
+			let isEntschuldigt = null
+			entForSelectedDate.forEach(entCurDate => {
+				if(entCurDate.akzeptiert === true) isEntschuldigt = true
+			})
+			
+			if (isEntschuldigt) {
 				row.getElement().style.color = "#0335f5";
-			} else if(data.entschuldigt === false) {
-				row.getElement().style.color = "#ff0404";
-			} else if(data.entschuldigt === null) {
+			} else if(entForSelectedDate.length) {
 				row.getElement().style.color = "#12d5d5";
 			}
 		},
