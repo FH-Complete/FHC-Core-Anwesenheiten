@@ -447,7 +447,7 @@ export const AssistenzComponent = {
 		},
 		getTooltipObj(){
 			return {
-				value: this.$p.t('global/tooltipAssistenz'),
+				value: this.$p.t('global/tooltipAssistenzV2'),
 				class: "custom-tooltip"
 			}
 		}
@@ -508,7 +508,7 @@ export const AssistenzComponent = {
 			<div class="row">
 			
 				<div class="col-6" style="display: flex; align-items: center;">
-					<h1 class="h4 mb-5" style="max-width: 50%; margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+					<h1 class="h4 mb-5" style="margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
 					<div style="max-width: 25%; align-self: normal;" v-tooltip.bottom="getTooltipObj">
 						<h4 style="margin: 0;"><i class="fa fa-circle-question"></i></h4>
 					</div>

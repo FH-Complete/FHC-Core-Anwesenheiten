@@ -727,16 +727,7 @@ export const LektorComponent = {
 
 					const datefetch = this.formatDateToDbString(this.selectedDate)
 					const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-					this.loading = true
-					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, datefetch)).then(res => {
-						if(res.meta.status === 'success') {
-							this.setupData(res.data)
-						}
-					}).catch(() => {
-						if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-					}).finally(() => {
-						this.loading = false
-					})
+					this.reloadState(ma_uid, datefetch)
 					
 					this.changes = true
 					this.showQR(res.data)
@@ -758,16 +749,8 @@ export const LektorComponent = {
 			// maybe only fetch new entries and merge
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-			this.loading = true
-			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
-				if(res.meta.status === 'success') {
-					this.setupData(res.data)
-				}
-			}).catch(() => {
-				if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-			}).finally(() => {
-				this.loading = false
-			})
+			
+			this.reloadState(ma_uid, date)
 
 			this.$api.call(ApiKontrolle.deleteQRCode(this.anwesenheit_id, this.lv_id))
 				.then(
@@ -781,6 +764,18 @@ export const LektorComponent = {
 					if (this.$entryParams.permissions.useRegenerateQR) this.stopRegenerateQR()
 				}
 			)
+		},
+		reloadState(ma_uid, date) {
+			this.loading = true
+			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
+				if(res.meta.status === 'success') {
+					this.setupData(res.data)
+				}
+			}).catch(() => {
+				if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
+			}).finally(() => {
+				this.loading = false
+			})
 		},
 		updateSumData(data) {
 			data.forEach(e => {
@@ -815,16 +810,7 @@ export const LektorComponent = {
 				if (res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
-					this.loading = true
-					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat)).then((res) => {
-						if(res.meta.status === 'success') {
-							this.setupData(res.data)
-						}
-					}).catch(() => {
-						if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-					}).finally(() => {
-						this.loading = false
-					})
+					this.reloadState(ma_uid, dateAnwFormat)
 				} else if (res.meta.status === "success" && !res.data) {
 					this.$fhcAlert.alertWarning(this.$p.t('global/noAnwKontrolleFoundToDelete'))
 				}
@@ -1224,22 +1210,8 @@ export const LektorComponent = {
 			// fetch LE data
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-
-			if (this.$entryParams.lektorState) {
-				this.setupLektorState()
-			} else {
-				this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date))
-					.then(res => {
-						if(res.meta.status === 'success') {
-							this.setupData(res.data)
-						}
-				}).catch(() => {
-					if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-				}).finally(() => {
-					this.loading = false
-				})
-			}
-
+			
+			this.reloadState(ma_uid, date)
 		},
 		handleLEChanged() {
 			this.$refs.showAllTickbox.checked = false
@@ -1247,18 +1219,7 @@ export const LektorComponent = {
 			
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-			this.loading = true
-			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
-				if(res.meta.status === 'success') {
-					this.setupData(res.data)
-				}
-			}).catch(() => {
-				if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-			}).finally(() => {
-				this.loading = false
-				
-				this.checkForBetreuungAndAlert()
-			})
+			this.reloadState(ma_uid, date)
 
 			this.getExistingQRCode()
 		},
@@ -1577,7 +1538,7 @@ export const LektorComponent = {
 		},
 		getTooltipKontrolleNeu() {
 			return {
-				value: this.$p.t('global/tooltipLektorStartKontrolle'),
+				value: this.$p.t('global/tooltipLektorStartKontrolleV2', [(this.$entryParams.permissions.einheitDauer ?? 0.75) * 60]),
 				class: "custom-tooltip"
 			}
 		},
@@ -1655,7 +1616,7 @@ export const LektorComponent = {
 										<div class="col-3" style="align-items: center; justify-items: center;">
 											<label for="beginn" class="form-label">{{ $p.t('global/anwKontrolleVon') }}</label>
 										</div>
-										<div class="col-5">
+										<div class="col-4">
 											<datepicker
 												v-model="lektorState.beginn"
 												@update:model-value="handleChangeBeginn"
@@ -1666,7 +1627,7 @@ export const LektorComponent = {
 											</datepicker>
 											
 										</div>
-										<div class="col-4" v-show="!kontrollZeitSourceStundenplanBeginn" v-tooltip.bottom="getTooltipZeitFromStundenplan">
+										<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn" v-tooltip.bottom="getTooltipZeitFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
 											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanBeginn') }}</i>
 										</div>
@@ -1675,7 +1636,7 @@ export const LektorComponent = {
 										<div class="col-3" style="align-items: center; justify-items: center;">
 											<label for="von" class="form-label">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
 										</div>
-										<div class="col-5">
+										<div class="col-4">
 											<datepicker
 												v-model="lektorState.ende"
 												@update:model-value="handleChangeEnde"
@@ -1686,14 +1647,14 @@ export const LektorComponent = {
 											</datepicker>
 											
 										</div>
-										<div class="col-4" v-show="!kontrollZeitSourceStundenplanEnde" v-tooltip.bottom="getTooltipZeitFromStundenplan">
+										<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde" v-tooltip.bottom="getTooltipZeitFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
 											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanEnde') }}</i>
 										</div>
 									</div>
 									<div class="row mt-2">
 										<div class="col-3 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatum') }}</label></div>
-										<div class="col-5" style="height: 40px">
+										<div class="col-4" style="height: 40px">
 											<datepicker
 												ref="insideDateSelect"
 												v-model="selectedDate"
@@ -1717,7 +1678,7 @@ export const LektorComponent = {
 												
 											</datepicker>
 										</div>
-										<div class="col-4" v-show="!kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
+										<div class="col-5" v-show="!kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
 											<i style="margin-left: 4px;">{{ $p.t('global/datumNichtAusStundenplan') }}</i>
 										</div>
@@ -1741,23 +1702,20 @@ export const LektorComponent = {
 					dialogClass="modal-xl">
 						<template v-slot:title>
 								{{ $p.t('global/editAnwKontrolle') }}
-<!--							<div v-tooltip.bottom="getTooltipKontrolleLoeschen">-->
-<!--								{{ $p.t('global/deleteAnwKontrolle') }}-->
-<!--								<i class="fa fa-circle-question"></i>-->
-<!--							</div>-->
+
 						</template>
 						<template v-slot:default>
 						
 								<template v-for="kontrolle in lektorState.kontrollen">
 
 									<div class="row p-2">
-										<div class="col-4 d-flex justify-content-center align-items-center">
+										<div class="col-5 d-flex align-items-center">
 											<KontrolleDisplay :kontrolle="kontrolle"></KontrolleDisplay>
 										</div>
 										<div class="col-4">
 											<AnwCountDisplay :anwesend="kontrolle.anwesend" :abwesend="kontrolle.abwesend" :entschuldigt="kontrolle.entschuldigt"/>
 										</div>
-										<div class="col-4 d-flex justify-content-end">
+										<div class="col-3 d-flex justify-content-end">
 											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary">
 												<i class="fa fa-rotate-right"></i>
 											</button>
@@ -1928,9 +1886,9 @@ export const LektorComponent = {
 										</datepicker>
 									</div>
 									<div class="col-5" style="height: 40px; align-items: center; display: flex;">
-										<div class="row" style="width: 100%;">
-											<input type="checkbox" style="max-width: 15%;" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
-											<label for="all" style="margin-left: 6px; max-width: 80%;">{{ $p.t('global/showAllKontrollen') }} | {{ selectedDateCount }} / {{ lektorState.kontrollen.length }}</label>
+										<div class="row" style="width: 100%; align-items: center; justify-content: center;">
+											<input type="checkbox" style="max-width: 5%;" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
+											<label for="all" style="max-width: 90%;">{{ $p.t('global/showAllKontrollen') }} | {{ selectedDateCount }} / {{ lektorState.kontrollen.length }}</label>
 										</div>
 									</div>
 								</div>				

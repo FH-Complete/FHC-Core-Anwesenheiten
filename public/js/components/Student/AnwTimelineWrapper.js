@@ -40,7 +40,7 @@ export const AnwTimelineWrapper = {
 	},
 	template: `
 <!-- max-width so faulty cis4 css doesnt mess up beautiful timeline -->
-	<div class="anw-timeline-wrapper" style="max-width: 80vw">
+	<div class="anw-timeline-wrapper" :style="$entryParams.cis4 ? 'max-width: 80vw;' : ''">
 		<AnwTimeline v-model="selectedEntschuldigung" :anwArray="selectedAnwArray" :entArray="selectedEntArray"></AnwTimeline>
 	</div>
 		

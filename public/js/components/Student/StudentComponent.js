@@ -140,7 +140,6 @@ export const StudentComponent = {
 	created() {
 	},
 	mounted() {
-		console.log(this.$entryParams)
 		this.checkEntryParamPermissions()
 		this.setup()
 
@@ -155,7 +154,7 @@ export const StudentComponent = {
 			<template #main>	
 				<div ref="studentHeaderRow" class="row">
 					<div class="col-6">
-						<h1 class="h4 mb-5">
+						<h1 class="h4">
 							{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} 
 							<span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span>
 							<i v-tooltip.bottom="getTooltipTestphase" class="fa fa-circle-question" style="margin-left: 12px;"></i>
