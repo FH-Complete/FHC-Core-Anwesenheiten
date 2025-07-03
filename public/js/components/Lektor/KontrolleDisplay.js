@@ -11,7 +11,7 @@ export const KontrolleDisplay = {
 	},
 	template:`
 		<div v-if="kontrolle" class="row">
-			<div class="col ml-4 d-flex align-items-center">
+			<div class="col-1 ml-4 d-flex align-items-center">
 				<div style="position: relative; display: inline-block;">
 					<h6 @mouseover="hovered = true" @mouseleave="hovered = false">
 						<i class="fa-solid fa-circle-info"></i> 
@@ -26,7 +26,7 @@ export const KontrolleDisplay = {
 					</h6>
 				</div>
 			</div>
-			<div class="col-auto"><h4>{{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}}</h4></div>
+			<div class="col-11"><h4>{{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}}</h4></div>
 			
 		</div>
 		
