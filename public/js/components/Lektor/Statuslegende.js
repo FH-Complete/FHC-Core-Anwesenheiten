@@ -13,9 +13,9 @@ export const Statuslegende = {
 				<div class="row"><h3>{{$capitalize($p.t('global/studentenInLVTeil'))}} = 👥</h3></div>
 				<div class="row"><h3>{{$capitalize($p.t('global/termineAusStundenplan'))}} = 📅</i></h3></div>
 
-
 			</div>
-		</div>
-	
+		</div>	
 	`
 };
+
+export default Statuslegende;
