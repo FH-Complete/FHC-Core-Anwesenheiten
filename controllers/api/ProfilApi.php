@@ -22,19 +22,19 @@ class ProfilApi extends FHCAPI_Controller
 				'getAllAnwQuotasForLvaByUID' => array ('extension/anw_r_student:r', 'extension/anw_r_full_assistenz:r'),
 				
 				// adds new entschuldigung with dates & optional file
-				'addEntschuldigung' => array('extension/anw_r_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
+				'addEntschuldigung' => array('extension/anw_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
 
 				// adds file to entschuldigung
-				'editEntschuldigung' => array('extension/anw_r_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
+				'editEntschuldigung' => array('extension/anw_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
 
 				// deletes entschuldigung
-				'deleteEntschuldigung' => array('extension/anw_r_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
+				'deleteEntschuldigung' => array('extension/anw_stud_ent:rw','extension/anw_r_full_assistenz:rw'),
 
 				// load student entschuldigungen by uid
-				'getEntschuldigungenByPersonID' => array('extension/anw_r_stud_ent:r','extension/anw_r_full_assistenz:rw'),
+				'getEntschuldigungenByPersonID' => array('extension/anw_stud_ent:r','extension/anw_r_full_assistenz:rw'),
 				
 				// QR code entry
-				'checkInAnwesenheit' => array('extension/extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
+				'checkInAnwesenheit' => array('extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
 				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')

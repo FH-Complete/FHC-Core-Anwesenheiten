@@ -1846,19 +1846,17 @@ export const LektorComponent = {
 	
 						<div class="col-6">
 							<div class="row">
-								<div class="col-1"></div>
-									<div class="col-5" v-if="$entryParams?.permissions?.admin" >
-										<MaUIDDropdown  :title="$capitalize($p.t('lehre/lektor') )" 
-										 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
-										</MaUIDDropdown>
-									</div>
-									<div :class=" $entryParams?.permissions?.admin ? 'col-5' : 'col-10'">
-										<LehreinheitenDropdown id="lehreinheit" :title="$capitalize($p.t('lehre/lehreinheit'))" ref="LEDropdown" @leChanged="handleLEChanged">
-										</LehreinheitenDropdown>
-									</div>
-								</div>		
+								<div class="col-5" v-if="$entryParams?.permissions?.admin" >
+									<MaUIDDropdown  :title="$capitalize($p.t('lehre/lektor') )" 
+									 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
+									</MaUIDDropdown>
+								</div>
+								<div :class=" $entryParams?.permissions?.admin ? 'col-5' : 'col-10'">
+									<LehreinheitenDropdown id="lehreinheit" :title="$capitalize($p.t('lehre/lehreinheit'))" ref="LEDropdown" @leChanged="handleLEChanged">
+									</LehreinheitenDropdown>
+								</div>
+										
 								<div class="row mt-4">
-									<div class="col-1"></div>
 		
 									<div class="col-2" style="height: 40px; align-self: start;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
 									<div class="col-3" style="height: 40px;">
@@ -1928,6 +1926,7 @@ export const LektorComponent = {
 								</button>
 							</template>
 					</core-filter-cmpt>	
+				</div>
 
 			</template>
 		</core-base-layout>`

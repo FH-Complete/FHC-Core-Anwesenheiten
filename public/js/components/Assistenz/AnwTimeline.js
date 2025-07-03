@@ -273,7 +273,7 @@ export const AnwTimeline = {
 				<Range v-model="selectedRange"/>
 			</div>
 			<div class="row mt-2">
-				<div class="col-5">
+				<div class="col-4">
 					<datepicker
 						id="timelineStart"
 						v-model="timelineStart"
@@ -283,7 +283,7 @@ export const AnwTimeline = {
 						:time-picker="false">
 					</datepicker>
 				</div>
-				<div class="col-5">
+				<div class="col-4">
 					<datepicker
 						id="timelineEnd"
 						v-model="timelineEnd"
@@ -293,7 +293,7 @@ export const AnwTimeline = {
 						:time-picker="false">
 					</datepicker>
 				</div>
-				<div class="col-auto"><button type="button" class="btn btn-primary" @click="goToday">go to today</button></div>
+				<div class="col-2"><button type="button" class="btn btn-primary" @click="goToday">today</button></div>
 			</div>
 		</div>
 		<div class="row" style="padding: 0px; margin: 0px;">

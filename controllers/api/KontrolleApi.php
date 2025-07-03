@@ -543,9 +543,8 @@ class KontrolleApi extends FHCAPI_Controller
 	}
 
 	private function checkTimesAgainstOtherKontrollen($von, $bis, $datum, $le_id, $anwesenheit_id = null) {
-		
+
 		// kontrollen laden by le & date
-		// TODO: check if this doesnt load itself when editing!
 		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndDate($le_id, $datum);
 		$this->addMeta('getKontrollenForLeIdAndDate$result', $result);
 		
@@ -560,7 +559,7 @@ class KontrolleApi extends FHCAPI_Controller
 		// when editing dont compare with overlap with its own timespan
 		$kontrollenToCheck = null;
 		if($anwesenheit_id !== null) {
-			$kontrollenToCheck =  array_filter($kontrollen, function($item) {
+			$kontrollenToCheck =  array_filter($kontrollen, function($item) use ($anwesenheit_id) {
 				return isset($item->anwesenheit_id) && $item->anwesenheit_id !== null && $item->anwesenheit_id !== $anwesenheit_id;
 			});
 		} else {
@@ -917,10 +916,11 @@ class KontrolleApi extends FHCAPI_Controller
 		$le = new lehreinheit();
 		$le->load($le_id);
 		
-		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
-		if ($dateTime < $dateLimit && !$isAdmin) {
-			$this->terminateWithError("Provided date is older than allowed date");
-		}
+		// remove date check when restarting since adding anew is allowed for all termine right now anyways
+//		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
+//		if ($dateTime < $dateLimit && !$isAdmin) {
+//			$this->terminateWithError("Provided date is older than allowed date");
+//		}
 
 		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 		$existsKontrolle = hasData($resultKontrolle);
@@ -981,7 +981,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$bisDate = new DateTime($resultKontrolle->retval[0]->bis);
 		$bisDate->setTime($bis->hours, $bis->minutes, $bis->seconds);
 
-		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $resultKontrolle->retval[0]->datum, $le_id, $anwesenheit_id)) {
+		$date = new DateTime($resultKontrolle->retval[0]->von);
+		$dateString = $date->format('Y-m-d');
+		
+		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id, $anwesenheit_id)) {
 			$this->terminateWithError("Times collide with other Kontrolle on the same date.");
 		}
 
