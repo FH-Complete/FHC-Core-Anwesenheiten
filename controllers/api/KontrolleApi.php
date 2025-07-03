@@ -145,7 +145,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
 		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
-		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFound'), 'general');
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', [$ma_uid, $le_id]), 'general');
 		$students = getData($result);
 
 		$func = function ($value) {
@@ -1047,15 +1047,9 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
-		// if user has admin rights and is also lektor, load all LE of that lva even if the zuordnung is for another ma_uid
-		// which is likely the case for Studiengangsleiter
-		$isOEAdmin = $this->isAdmin($lva_id) && $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor');
-		$this->addMeta('isOEAdmin', $isOEAdmin);
-		if($isOEAdmin) {
-			$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
-		} else {
-			$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
-		}
+
+		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
+
 
 		if(!isSuccess($result)) $this->terminateWithError(getError($result));
 		$leForLvaAndMA = getData($result);

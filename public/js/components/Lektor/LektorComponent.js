@@ -729,8 +729,11 @@ export const LektorComponent = {
 					const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 					this.loading = true
 					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, datefetch)).then(res => {
-						if (res.meta.status !== "success") return
-						this.setupData(res.data)
+						if(res.meta.status === 'success') {
+							this.setupData(res.data)
+						}
+					}).catch(() => {
+						if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 					}).finally(() => {
 						this.loading = false
 					})
@@ -757,8 +760,11 @@ export const LektorComponent = {
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
 			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
-				if (res.meta.status !== "success") return
-				this.setupData(res.data)
+				if(res.meta.status === 'success') {
+					this.setupData(res.data)
+				}
+			}).catch(() => {
+				if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 			}).finally(() => {
 				this.loading = false
 			})
@@ -811,8 +817,11 @@ export const LektorComponent = {
 
 					this.loading = true
 					this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat)).then((res) => {
-						if (res.meta.status !== "success") return
-						this.setupData(res.data)
+						if(res.meta.status === 'success') {
+							this.setupData(res.data)
+						}
+					}).catch(() => {
+						if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 					}).finally(() => {
 						this.loading = false
 					})
@@ -1221,7 +1230,11 @@ export const LektorComponent = {
 			} else {
 				this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date))
 					.then(res => {
-					this.setupData(res.data)
+						if(res.meta.status === 'success') {
+							this.setupData(res.data)
+						}
+				}).catch(() => {
+					if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 				}).finally(() => {
 					this.loading = false
 				})
@@ -1236,7 +1249,11 @@ export const LektorComponent = {
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.loading = true
 			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.$entryParams.lv_id, this.$entryParams.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
-				this.setupData(res.data)
+				if(res.meta.status === 'success') {
+					this.setupData(res.data)
+				}
+			}).catch(() => {
+				if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 			}).finally(() => {
 				this.loading = false
 				
@@ -1444,8 +1461,11 @@ export const LektorComponent = {
 							ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(
 								this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat))
 							.then((res) => {
-							if (res.meta.status !== "success") return
-							this.setupData(res.data)
+								if(res.meta.status === 'success') {
+									this.setupData(res.data)
+								}
+						}).catch(() => {
+							if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 						}).finally(() => {
 							this.loading = false
 						})
@@ -1466,8 +1486,11 @@ export const LektorComponent = {
 				ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(
 					this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date))
 				.then((res) => {
-					if (res.meta.status !== "success") return
-					this.setupData(res.data)
+					if(res.meta.status === 'success') {
+						this.setupData(res.data)
+					}
+				}).catch(() => {
+					if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
 				}).finally(() => {
 				this.loading = false
 			})
