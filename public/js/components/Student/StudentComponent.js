@@ -160,7 +160,7 @@ export const StudentComponent = {
 							<i v-tooltip.bottom="getTooltipTestphase" class="fa fa-circle-question" style="margin-left: 12px;"></i>
 						</h1>				
 					</div>
-					<div class="col-4">
+					<div class="col-3">
 						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
 							 id="studentUID" ref="studentDropdown" @studentChanged="studentChangedHandler">
 						</StudentDropdown>
