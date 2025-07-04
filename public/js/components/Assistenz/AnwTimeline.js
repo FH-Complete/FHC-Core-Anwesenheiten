@@ -189,6 +189,12 @@ export const AnwTimeline = {
 		}
 	},
 	computed: {
+		getTooltipAnwTimeline() {
+			return {
+				value: this.$p.t('global/tooltipAnwTimeline'),
+				class: "custom-tooltip"
+			}
+		},
 		dayWidth() {
 			return this.hourWidth * 24	
 		},
@@ -294,6 +300,9 @@ export const AnwTimeline = {
 					</datepicker>
 				</div>
 				<div class="col-2"><button type="button" class="btn btn-primary" @click="goToday">today</button></div>
+				<div v-tooltip.bottom="getTooltipAnwTimeline">
+					<i class="fa fa-circle-question"></i>
+				</div>
 			</div>
 		</div>
 		<div class="row" style="padding: 0px; margin: 0px;">
