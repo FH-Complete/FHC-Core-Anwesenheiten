@@ -11,9 +11,9 @@ export const Statuslegende = {
 				<div v-if="this.$entryParams.permissions.entschuldigungen_enabled" class="row" style="color: #0335f5;"><h3>{{$capitalize($p.t('global/entschuldigt'))}} = <i class="fa-solid fa-user-shield"></i></h3></div>
 
 				<div class="row"><h3>{{$capitalize($p.t('global/studentenInLVTeil'))}} = 👥</h3></div>
-				<div class="row"><h3>{{$capitalize($p.t('global/termineAusStundenplan'))}} = 📅</i></h3></div>
-				<div class="row" style="color: #0335f5"><h3>Name -> {{$capitalize($p.t('global/entschuldigtLegendeBlau'))}}</i></h3></div>
-				<div class="row" style="color: #12d5d5"><h3>Name -> {{$capitalize($p.t('global/entschuldigtLegendeTuerkis'))}}</i></h3></div>
+				<div class="row"><h3>{{$capitalize($p.t('global/termineAusStundenplan'))}} = 📅</h3></div>
+				<div class="row" style="color: #0335f5"><h3>Name -> {{$capitalize($p.t('global/entschuldigtLegendeBlau'))}}</h3></div>
+				<div class="row" style="color: #12d5d5"><h3>Name -> {{$capitalize($p.t('global/entschuldigtLegendeTuerkis'))}}</h3></div>
 
 			</div>
 		</div>	

@@ -576,7 +576,16 @@ export const LektorComponent = {
 					const values = this.lektorState.studentsData.get(change.prestudent_id)
 					const valueToChange = values?.find(val => val.anwesenheit_user_id == change.anwesenheit_user_id)
 					
-					if(valueToChange) valueToChange.status = change.status
+					if(valueToChange) {
+						const oldVal = valueToChange.status
+						valueToChange.status = change.status
+
+						const kontrolleToUpdate = this.lektorState.kontrollen.find(k => k.anwesenheit_id == change.anwesenheit_id)
+						kontrolleToUpdate[oldVal]--;
+						kontrolleToUpdate[change.status]++;
+					}
+					
+					
 				})
 				
 				this.$api.call(ApiKontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz))
@@ -1111,8 +1120,9 @@ export const LektorComponent = {
 			const arr = JSON.parse(JSON.stringify(arrWrapped))
 			const found = arr.find(e => (e.datum + ' | ' + e.von + ' - ' + e.bis) === date)
 			const anwesenheit_user_id = found?.anwesenheit_user_id
+			const anwesenheit_id = found?.anwesenheit_id
 			const newEntry = {
-				prestudent_id, date, status: value, anwesenheit_user_id
+				prestudent_id, date, status: value, anwesenheit_user_id, anwesenheit_id
 			}
 			this.handleChange(newEntry)
 		},
