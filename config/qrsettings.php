@@ -24,18 +24,20 @@ $config['ENTSCHULDIGUNGEN_ENABLED'] = true;
 $config['KONTROLLE_CREATE_MAX_REACH'] = 14; // days +/- semester beginn bzw ende
 $config['POSITIVE_RATING_THRESHOLD'] = 0.75; // min. 75 % anwesenheit
 // show guide/tutorial link
-$config['SHOW_GUIDE'] = true; // min. 75 % anwesenheit
-$config['GUIDE_LINK'] = "https://wiki.fhcomplete.org/doku.php?id=extension:anwesenheit"; // min. 75 % anwesenheit
+$config['SHOW_GUIDE'] = true;
+$config['GUIDE_LINK'] = "https://wiki.fhcomplete.org/doku.php?id=extension:anwesenheit";
 // lehrformen to allow to skip the qr scan and insert all anw as positive
-$config['NO_QR_LEHRFORM'] = ['LAB', 'BE'];
+$config['NO_QR_LEHRFORM'] = [
+//	'LAB', 'BE'
+];
 // when selecting certain lehrformen with special teaching situations alert spezialized text
 // on how to handle the attendance check.
 $config['ALERT_LEHRFORM'] = array(
-	array(
-		'lehrform_kurzbz' => 'LAB',
-		'german_alert_text' => 'In der Lehrform Labor können Sie die Anwesenheitskontrolle mit QR Code überspringen und Anwesenheiten direkt eintragen!',
-		'english_alert_text' => 'In the laboratory teaching format, you can skip the attendance check with QR code and enter attendance directly!'
-	),
+//	array(
+//		'lehrform_kurzbz' => 'LAB',
+//		'german_alert_text' => 'In der Lehrform Labor können Sie die Anwesenheitskontrolle mit QR Code überspringen und Anwesenheiten direkt eintragen!',
+//		'english_alert_text' => 'In the laboratory teaching format, you can skip the attendance check with QR code and enter attendance directly!'
+//	),
 //	array(
 //		'lehrform_kurzbz' => 'BE',
 //		'german_alert_text' => 'In der Lehrform Betreuung können Sie die Anwesenheitskontrolle mit QR Code überspringen und Anwesenheiten direkt eintragen!',
