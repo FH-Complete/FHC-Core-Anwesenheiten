@@ -770,23 +770,14 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLE($le_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 		
-		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
-		$dateTime = strtotime($dateString);
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
 		$le = new lehreinheit();
 		$le->load($le_id);
-		
-		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
-		if ($dateTime < $dateLimit && !$isAdmin) {
-			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
-		}
 
-		// find anwesenheitkontrolle by le_id and date
-//		$resultKontrolle = $this->_ci->AnwesenheitModel->getKontrolleForLEOnDate($le_id, $dateString);
 		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
-		
+
 		//$this->p->t('global', 'errorDeletingAnwKontrolle')
 		if(!hasData($resultKontrolle)) {
 			$this->terminateWithError($this->p->t('global', 'errorDeleteKontrolleKeineLEAnDatum', [
@@ -798,6 +789,22 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 		$kontrolle = getData($resultKontrolle)[0];
 		$anwesenheit_id = $kontrolle->anwesenheit_id;
+		
+		// check against kontrolle insert date since nominal von/bis date does not tell about the
+		// actuality of the check
+		$insertamum = $kontrolle->insertamum;
+		$this->addMeta('$insertamum', $insertamum);
+		$dateInsert = new DateTime($insertamum);
+		$insertFormatted = $dateInsert->format('Y-m-d');
+		$insertDateTime = strtotime($insertFormatted);
+		
+		$this->addMeta('$insertDateTime', $insertDateTime);
+		$this->addMeta('$dateLimit', $dateLimit);
+		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
+		if ($insertDateTime < $dateLimit && !$isAdmin) {
+			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
+		}
+
 
 		$result = $this->_ci->AnwesenheitUserModel->getAllForKontrolle($anwesenheit_id);
 		if(isError($result)) {
