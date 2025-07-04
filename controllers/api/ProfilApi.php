@@ -367,7 +367,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 		
-		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'));
+		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH') + 1); // +1 since frontend validates with a 1day larger range currently
 		
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		
