@@ -419,7 +419,9 @@ export default {
 								:format="formatDate"
 								:min-date="new Date(minDate)"
 								:start-date="new Date(minDate)"
-								:max-date="new Date($entryParams.maxDate)">
+								:max-date="new Date($entryParams.maxDate)"
+								:text-input="true"
+								>
 							</datepicker>
 						</div>
 					</div>
@@ -436,7 +438,9 @@ export default {
 								:format="formatDate"
 								:min-date="new Date(minDate)"
 								:start-date="new Date(minDate)"
-								:max-date="new Date($entryParams.maxDate)">
+								:max-date="new Date($entryParams.maxDate)"
+								:text-input="true"
+								>
 							</datepicker>
 						</div>
 					</div>

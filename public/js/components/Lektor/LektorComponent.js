@@ -1571,7 +1571,7 @@ export const LektorComponent = {
 			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-success ml-2"
 		},
 		getCSVFilename() {
-			let str = this.$entryParams.selected_le_info?.value?.infoString ?? ''
+			let str = this.$entryParams.selected_le_info?.value?.csvInfoString ?? ''
 			str += '_'+ this.$entryParams?.viewDataLv?.bezeichnung + '_'
 			str += this.lektorState.showAllVar ? 'AllDates' : this.selectedDate.toDateString()
 			return str

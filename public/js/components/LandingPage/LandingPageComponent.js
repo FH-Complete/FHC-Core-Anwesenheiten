@@ -334,6 +334,7 @@ export default {
 					})
 						
 					res.data[0].forEach(entry => {
+						entry.csvInfoString = entry.infoString
 						entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
 					})
 
