@@ -48,10 +48,10 @@ export default {
 				pagination: true,
 				paginationSize: 100,
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, tooltip: false, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate,  widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, tooltip: false},
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, minWidth: 200, tooltip: false, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 200, tooltip: false},
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', tooltip:false}
 				],
 				persistence: {
@@ -419,7 +419,6 @@ export default {
 								:format="formatDate"
 								:min-date="new Date(minDate)"
 								:start-date="new Date(minDate)"
-								:max-date="new Date($entryParams.maxDate)"
 								:text-input="true"
 								>
 							</datepicker>
@@ -438,7 +437,6 @@ export default {
 								:format="formatDate"
 								:min-date="new Date(minDate)"
 								:start-date="new Date(minDate)"
-								:max-date="new Date($entryParams.maxDate)"
 								:text-input="true"
 								>
 							</datepicker>

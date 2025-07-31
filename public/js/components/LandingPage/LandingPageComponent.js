@@ -149,20 +149,6 @@ export default {
 
 				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach)))
 				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach)))
-				
-
-				if(this.$entryParams.permissions.entschuldigungen_enabled) {
-					this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
-							this.$api.call(ApiInfo.getAktuellesSemester())
-							.then(res => {
-							if(res?.meta?.status === 'success') {
-								this.$entryParams.aktuellesSemester = res?.data?.[0]
-								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
-								resolve()
-							}
-						})
-					})
-				}
 
 				el.removeAttribute('permissions')
 

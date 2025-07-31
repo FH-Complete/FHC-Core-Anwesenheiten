@@ -9,6 +9,9 @@ $config['REGENERATE_QR_TIMER'] = 30000; //30 seconds
 $config['USE_REGENERATE_QR'] = true;
 // used in deleteOldQR Cronjob
 $config['QR_EXPIRATION_TIMER'] = 3600000; // 1 hour
+// size of the generated QR code, development phase was always scale 10,
+// maybe use smaller sizes for old cis or other environments
+$config['QR_SCALE'] = 7;
 // frist welche entscheidet wie weit in die Vergangenheit eine neue Entschuldigung reichen darf
 $config['ENTSCHULDIGUNG_MAX_REACH'] = 3; // 3 days
 // https://media-hp.technikum-wien.at/media/20220818073147/Version-17-vom-07.06.2022.pdf §8 Abs 14

@@ -266,7 +266,7 @@ class KontrolleApi extends FHCAPI_Controller
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
 			'addQuietzone' => true,
 			'quietzoneSize' => 1,
-			'scale' => 10
+			'scale' => $this->_ci->config->item('QR_SCALE')
 		]);
 		$qrcode = new QRCode($options);
 
@@ -309,7 +309,7 @@ class KontrolleApi extends FHCAPI_Controller
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
 			'addQuietzone' => true,
 			'quietzoneSize' => 1,
-			'scale' => 10
+			'scale' => $this->_ci->config->item('QR_SCALE')
 		]);
 		$qrcode = new QRCode($options);
 
@@ -441,7 +441,7 @@ class KontrolleApi extends FHCAPI_Controller
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
 			'addQuietzone' => true,
 			'quietzoneSize' => 1,
-			'scale' => 10
+			'scale' => $this->_ci->config->item('QR_SCALE')
 		]);
 		$qrcode = new QRCode($options);
 
@@ -938,7 +938,7 @@ class KontrolleApi extends FHCAPI_Controller
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
 			'addQuietzone' => true,
 			'quietzoneSize' => 1,
-			'scale' => 10
+			'scale' => $this->_ci->config->item('QR_SCALE')
 		]);
 		$qrcode = new QRCode($options);
 
