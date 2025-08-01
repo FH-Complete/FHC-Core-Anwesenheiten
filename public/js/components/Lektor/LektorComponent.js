@@ -1548,19 +1548,19 @@ export const LektorComponent = {
 		},
 		getTooltipKontrolleNeu() {
 			return {
-				value: this.$p.t('global/tooltipLektorStartKontrolleV2', [(this.$entryParams.permissions.einheitDauer ?? 0.75) * 60]),
+				value: this.$p.t('global/tooltipLektorStartKontrolleV4', [(this.$entryParams.permissions.einheitDauer ?? 0.75) * 60]),
 				class: "custom-tooltip"
 			}
 		},
 		getTooltipZeitFromStundenplan() {
 			return {
-				value: this.$p.t('global/tooltipUnterrichtZeitCustom'),//'Zeiten wurden aus dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
+				value: this.$p.t('global/tooltipUnterrichtZeitCustomV2'),//'Zeiten wurden aus dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
 				class: "custom-tooltip"
 			}
 		},
 		getTooltipDatumFromStundenplan() {
 			return {
-				value: this.$p.t('global/tooltipUnterrichtDatumCustom'),//'Datum wurde dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
+				value: this.$p.t('global/tooltipUnterrichtDatumCustomV2'),//'Datum wurde dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
 				class: "custom-tooltip"
 			}
 		},
@@ -1639,7 +1639,7 @@ export const LektorComponent = {
 										</div>
 										<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn" v-tooltip.bottom="getTooltipZeitFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanBeginn') }}</i>
+											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanBeginnV2') }}</i>
 										</div>
 									</div>
 									<div class="row align-items-center mt-2">
@@ -1659,7 +1659,7 @@ export const LektorComponent = {
 										</div>
 										<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde" v-tooltip.bottom="getTooltipZeitFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanEnde') }}</i>
+											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanEndeV2') }}</i>
 										</div>
 									</div>
 									<div class="row mt-2">
@@ -1679,7 +1679,7 @@ export const LektorComponent = {
 													<div class="col">
 														<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
 														<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
-															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termine')}} </button>
+															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
 															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
 															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
 														</div>
@@ -1690,7 +1690,7 @@ export const LektorComponent = {
 										</div>
 										<div class="col-5" v-show="!kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
 											<i class="fa-solid fa-triangle-exclamation"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/datumNichtAusStundenplan') }}</i>
+											<i style="margin-left: 4px;">{{ $p.t('global/datumNichtAusStundenplanV2') }}</i>
 										</div>
 									</div>
 									
@@ -1884,7 +1884,7 @@ export const LektorComponent = {
 												<div class="col">
 													<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
 													<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
-														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termine')}} </button>
+														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
 														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
 														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
 													</div>
