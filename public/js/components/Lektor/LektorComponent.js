@@ -74,7 +74,7 @@ export const LektorComponent = {
 				layout: 'fitDataStretch',
 				placeholder: this.$p.t('global/noDataAvailable'),
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 80, maxWidth: 80, download: false, tooltip: this.tooltipTableRow},
+					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, download: false, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('global/prestudentID')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false, minWidth: 150, download: true, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1,  minWidth: 150, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
@@ -1663,7 +1663,7 @@ export const LektorComponent = {
 										</div>
 									</div>
 									<div class="row mt-2">
-										<div class="col-3 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatum') }}</label></div>
+										<div class="col-3 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatumV2') }}</label></div>
 										<div class="col-4" style="height: 40px">
 											<datepicker
 												ref="insideDateSelect"
@@ -1868,7 +1868,7 @@ export const LektorComponent = {
 										
 								<div class="row mt-4">
 		
-									<div class="col-2" style="height: 40px; align-self: start;"><label for="datum" class="form-label col-sm-1">{{ $p.t('global/kontrolldatum') }}</label></div>
+									<div class="col-2" style="height: 40px; align-self: start;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatumV2') }}</label></div>
 									<div class="col-3" style="height: 40px;">
 										<datepicker
 											ref="outsideDateSelect"

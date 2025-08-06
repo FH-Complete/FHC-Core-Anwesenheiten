@@ -65,21 +65,27 @@ export default {
 			const stg_kz = searchParams.get('stg_kz')
 			const sem_kurzbz = searchParams.get('sem_kurzbz')
 			const notMissingParams = (lv_id && stg_kz && sem_kurzbz) || this.$entryParams.notMissingParams
+
+			// redeclare function since at this point globalProperties are not ready
+			function capitalize(string) {
+				if(!string) return ''
+				return string[0].toUpperCase() + string.slice(1);
+			}
 			
 			
 			if((permissions.lektor || permissions.admin) && notMissingParams) {
-				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/kontrolle') : 'K'})
+				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'})
 				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
 			}
 
 			if((permissions.student || permissions.admin) && notMissingParams)  {
-				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/profil') : 'P'})
+				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'})
 
 				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
-				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/admin') : 'A'})
+				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
 
 				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
 			}
