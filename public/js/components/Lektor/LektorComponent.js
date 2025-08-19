@@ -1817,7 +1817,7 @@ export const LektorComponent = {
 					<div id="qrwrap">
 						<bs-modal ref="modalContainerQR" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
 						 :keyboard=false :noCloseBtn="true" :allowFullscreenExpand="true">
-							<template v-slot:title>{{ $p.t('global/kontrolle') }}: {{ kontrolleVonBis }}
+							<template v-slot:title>{{ $capitalize($p.t('global/kontrolle')) }}: {{ kontrolleVonBis }}
 							
 							</template>
 							<template v-slot:default>
