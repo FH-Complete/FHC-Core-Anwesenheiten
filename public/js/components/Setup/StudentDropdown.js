@@ -37,7 +37,8 @@ export const StudentDropdown = {
 			this.internal_selected_student_info =  this.$entryParams.selected_student_info
 		},
 		getOptionLabel(option) {
-			return option.semester + option.verband + option.gruppe + ' ' + option.vorname + ' ' + option.nachname
+			const gruppe = ' (' + option.semester + option.verband + option.gruppe + ')'
+			return option.nachname + ' ' + option.vorname + ' ' + gruppe.replace(/\s+/g, '') // remove spaces
 		}
 	},
 	mounted() {
@@ -49,15 +50,6 @@ export const StudentDropdown = {
 			<div class="col-8">
 				<Dropdown @change="studentChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
 				v-model="internal_selected_student_info" :options="internal_available_student_info">
-					<template #optionsgroup="slotProps">
-						<div class="row">
-							<div class="col-2">{{option.semester}}{{option.verband}}{{option.gruppe}}</div>
-							<div class="col-10 d-flex justify-content-between align-items-center">
-								<div>{{option.vorname}}</div>
-								<div>{{option.nachname}}</div>
-							</div>
-						</div>				
-					</template>
 				</Dropdown>
 			</div>
 		</div>

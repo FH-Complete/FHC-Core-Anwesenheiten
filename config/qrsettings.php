@@ -9,6 +9,9 @@ $config['REGENERATE_QR_TIMER'] = 30000; //30 seconds
 $config['USE_REGENERATE_QR'] = true;
 // used in deleteOldQR Cronjob
 $config['QR_EXPIRATION_TIMER'] = 3600000; // 1 hour
+// size of the generated QR code, development phase was always scale 10,
+// maybe use smaller sizes for old cis or other environments
+$config['QR_SCALE'] = 7;
 // frist welche entscheidet wie weit in die Vergangenheit eine neue Entschuldigung reichen darf
 $config['ENTSCHULDIGUNG_MAX_REACH'] = 3; // 3 days
 // https://media-hp.technikum-wien.at/media/20220818073147/Version-17-vom-07.06.2022.pdf §8 Abs 14
@@ -23,3 +26,25 @@ $config['EINHEIT_DAUER'] = 0.75;
 $config['ENTSCHULDIGUNGEN_ENABLED'] = true;
 $config['KONTROLLE_CREATE_MAX_REACH'] = 14; // days +/- semester beginn bzw ende
 $config['POSITIVE_RATING_THRESHOLD'] = 0.75; // min. 75 % anwesenheit
+// show guide/tutorial link
+$config['SHOW_GUIDE'] = false;
+$config['GUIDE_LINK'] = "https://wiki.fhcomplete.org/doku.php?id=extension:anwesenheit";
+// lehrformen to allow to skip the qr scan and insert all anw as positive
+$config['NO_QR_LEHRFORM'] = [
+//	'LAB', 'BE'
+];
+// when selecting certain lehrformen with special teaching situations alert spezialized text
+// on how to handle the attendance check.
+$config['ALERT_LEHRFORM'] = array(
+//	array(
+//		'lehrform_kurzbz' => 'LAB',
+//		'german_alert_text' => 'In der Lehrform Labor können Sie die Anwesenheitskontrolle mit QR Code überspringen und Anwesenheiten direkt eintragen!',
+//		'english_alert_text' => 'In the laboratory teaching format, you can skip the attendance check with QR code and enter attendance directly!'
+//	),
+//	array(
+//		'lehrform_kurzbz' => 'BE',
+//		'german_alert_text' => 'In der Lehrform Betreuung können Sie die Anwesenheitskontrolle mit QR Code überspringen und Anwesenheiten direkt eintragen!',
+//		'english_alert_text' => 'In the supervision teaching format, you can skip the attendance check with QR code and enter attendance directly!'
+//	)
+);
+	

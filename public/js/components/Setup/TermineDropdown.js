@@ -20,7 +20,7 @@ export const TermineDropdown = {
 	template: `
 		<div class="mt-2">
 			<Dropdown @change="terminChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
-			v-model="this.$entryParams.selected_termin.value" :options="$entryParams.available_termine.value" :placeholder="$p.t('global/termineAusStundenplan')">
+			v-model="this.$entryParams.selected_termin.value" :options="$entryParams.available_termine.value" :placeholder="$p.t('global/termineAusStundenplanV2')">
 				<template #optionsgroup="slotProps">
 					<div> {{option.datumFrontend}}: {{option.beginn}} - {{option.ende}} </div>
 				</template>

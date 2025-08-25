@@ -41,25 +41,37 @@ class Anwesenheit_model extends \DB_Model
 	public function getKontrollenForLeId($le_id)
 	{
 		$query = "
-			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis
-			FROM extension.tbl_anwesenheit
+			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis,
+				   COUNT(*) FILTER (WHERE status = 'anwesend') AS anwesend,
+				   COUNT(*) FILTER (WHERE status = 'abwesend') AS abwesend,
+				   COUNT(*) FILTER (WHERE status = 'entschuldigt') AS entschuldigt,
+				   extension.tbl_anwesenheit.insertvon, extension.tbl_anwesenheit.insertamum,
+				   extension.tbl_anwesenheit.updatevon, extension.tbl_anwesenheit.updateamum
+			FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
 			WHERE lehreinheit_id =  ?
-			ORDER BY datum DESC
+			GROUP BY (anwesenheit_id, lehreinheit_id, datum, von, bis)
+			ORDER BY MIN(von) DESC;
 		";
 
 		return $this->execQuery($query, [$le_id]);
 	}
 
-	public function getKontrollenForLeIdAndInterval($le_id, $days)
+	public function getKontrollenForLeIdAndDate($le_id, $date)
 	{
 		$query = "
-			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis
-			FROM extension.tbl_anwesenheit
-			WHERE lehreinheit_id = ? AND von >= (NOW() - (? || ' day')::interval)
-			ORDER BY datum DESC
+			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis,
+				   COUNT(*) FILTER (WHERE status = 'anwesend') AS anwesend,
+				   COUNT(*) FILTER (WHERE status = 'abwesend') AS abwesend,
+				   COUNT(*) FILTER (WHERE status = 'entschuldigt') AS entschuldigt,
+				   extension.tbl_anwesenheit.insertvon, extension.tbl_anwesenheit.insertamum,
+				   extension.tbl_anwesenheit.updatevon, extension.tbl_anwesenheit.updateamum
+			FROM extension.tbl_anwesenheit JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
+			WHERE lehreinheit_id =  ? AND TO_CHAR(CAST(von AS DATE), 'YYYY-MM-DD') = ?
+			GROUP BY (anwesenheit_id, lehreinheit_id, datum, von, bis)
+			ORDER BY MIN(von) DESC;
 		";
 
-		return $this->execQuery($query, [$le_id, $days]);
+		return $this->execQuery($query, [$le_id, $date]);
 	}
 
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root)
@@ -120,7 +132,7 @@ class Anwesenheit_model extends \DB_Model
 			 WHERE
 				 vw_student_lehrveranstaltung.lehrveranstaltung_id=?	AND
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz=?
-			ORDER BY semester, verband, gruppe, nachname;";
+			ORDER BY nachname, semester, verband, gruppe;";
 
 		return $this->execReadOnlyQuery($query, [$lv_id, $sem_kurzbz]);
 	}
@@ -293,7 +305,7 @@ class Anwesenheit_model extends \DB_Model
 				(tbl_anwesenheit.von) as von,
 				(tbl_anwesenheit.bis) as bis,
 				extension.get_anwesenheiten_by_time(tbl_anwesenheit_user.prestudent_id, tbl_lehrveranstaltung.lehrveranstaltung_id, tbl_lehreinheit.studiensemester_kurzbz) as anwesenheit,
-				CAST(EXTRACT(EPOCH FROM (tbl_anwesenheit.bis::timestamp - tbl_anwesenheit.von::timestamp)) / 60 AS INTEGER ) AS dauer
+				CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
 			FROM extension.tbl_anwesenheit
 				JOIN extension.tbl_anwesenheit_user ON tbl_anwesenheit.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
@@ -352,14 +364,15 @@ class Anwesenheit_model extends \DB_Model
 	public function getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz)
 	{
 		$query = "SELECT DISTINCT tbl_lehreinheitmitarbeiter.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
-						tbl_lehreinheitmitarbeiter.mitarbeiter_uid, 
-						tbl_lehreinheitgruppe.studiengang_kz, 
-						tbl_lehreinheitgruppe.semester, 
-						tbl_lehreinheitgruppe.verband, 
-						tbl_lehreinheitgruppe.gruppe, 
+						tbl_lehreinheitmitarbeiter.mitarbeiter_uid,
+						tbl_lehreinheitgruppe.semester,
+						tbl_lehreinheitgruppe.verband,
+						tbl_lehreinheitgruppe.gruppe,
 						tbl_lehreinheitgruppe.gruppe_kurzbz,
 						tbl_lehrveranstaltung.kurzbz,
-			 			tbl_studiengang.kurzbzlang
+			 			tbl_studiengang.kurzbzlang,
+			 			(SELECT COUNT(DISTINCT datum) FROM campus.vw_stundenplan WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as termincount,
+						(SELECT COUNT(*) FROM campus.vw_student_lehrveranstaltung WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as studentcount
 		FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
 			JOIN lehre.tbl_lehreinheitgruppe USING(lehreinheit_id)
 			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
@@ -372,10 +385,22 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getAllLehreinheitenForLva($lva_id, $sem_kurzbz)
 	{
-		$query = "SELECT DISTINCT ON (tbl_stundenplan.lehreinheit_id) tbl_stundenplan.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
-				tbl_stundenplan.mitarbeiter_uid, studiengang_kz, semester, verband, gruppe, gruppe_kurzbz
-				FROM lehre.tbl_lehreinheit LEFT JOIN lehre.tbl_stundenplan USING(lehreinheit_id)
-				WHERE lehrveranstaltung_id = ? AND studiensemester_kurzbz = ? AND tbl_stundenplan.lehreinheit_id IS NOT NULL";
+		$query = "SELECT DISTINCT tbl_lehreinheitmitarbeiter.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
+						tbl_lehreinheitmitarbeiter.mitarbeiter_uid,
+						tbl_lehreinheitgruppe.semester,
+						tbl_lehreinheitgruppe.verband,
+						tbl_lehreinheitgruppe.gruppe,
+						tbl_lehreinheitgruppe.gruppe_kurzbz,
+						tbl_lehrveranstaltung.kurzbz,
+						tbl_studiengang.kurzbzlang,
+						(SELECT COUNT(DISTINCT datum) FROM campus.vw_stundenplan WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as termincount,
+						(SELECT COUNT(*) FROM campus.vw_student_lehrveranstaltung WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as studentcount
+		FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
+								   JOIN lehre.tbl_lehreinheitgruppe USING(lehreinheit_id)
+								   JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+								   JOIN public.tbl_studiengang ON (tbl_lehreinheitgruppe.studiengang_kz = tbl_studiengang.studiengang_kz)
+		WHERE lehrveranstaltung_id = ? AND studiensemester_kurzbz = ?
+		ORDER BY tbl_lehreinheitgruppe.gruppe_kurzbz";
 
 		return $this->execQuery($query, [$lva_id, $sem_kurzbz]);
 	}

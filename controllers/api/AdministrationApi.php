@@ -7,9 +7,14 @@ class AdministrationApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getEntschuldigungen' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'updateEntschuldigung' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw'),
-				'getTimeline' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw')
+				// fetch table data
+				'getEntschuldigungen' => array('extension/anw_r_ent_assistenz:r', 'extension/anw_r_full_assistenz:r'),
+				
+				// set status on entschuldigung
+				'updateEntschuldigung' => array('extension/anw_r_ent_assistenz:rw', 'extension/anw_r_full_assistenz:rw'),
+				
+				// fetch dates related to students digital anwesenheiten
+				'getTimeline' => array('extension/anw_r_ent_assistenz:r', 'extension/anw_r_full_assistenz:r')
 			)
 		);
 
@@ -102,9 +107,9 @@ class AdministrationApi extends FHCAPI_Controller
 
 		// check if status is being updated at all
 		$statusChanged = $status !== $entschuldigung->akzeptiert;
-//		$this->addMeta('$statusChanged', $statusChanged);
-//		$this->addMeta('$status', $status);
-//		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
+		$this->addMeta('$statusChanged', $statusChanged);
+		$this->addMeta('$status', $status);
+		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
 		
 		if($statusChanged) {
 			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
@@ -113,7 +118,7 @@ class AdministrationApi extends FHCAPI_Controller
 			if (isError($result))
 				$this->terminateWithError($result);
 			$anwesenheit_user_idsArr = getData($result);
-//			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
+			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
 			
 			if($anwesenheit_user_idsArr) {
 				$funcAUID = function ($value) {
@@ -121,12 +126,12 @@ class AdministrationApi extends FHCAPI_Controller
 				};
 
 				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
-//				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
+				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
 				
 				// if anw is from exam kontrolle and entschuldigung was uploaded past that date it does not count, even though
 				// the kontroll entry was in the time range
 				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids, $entschuldigung->insertamum);
-//				$this->addMeta('examCheck', $result);
+				$this->addMeta('examCheck', $result);
 				
 				if(count($result->retval) > 0) { // filter exam ids
 					$exam_ids = array_map($funcAUID, $result->retval);
@@ -135,7 +140,7 @@ class AdministrationApi extends FHCAPI_Controller
 						return !in_array($anwId, $exam_ids);
 					});
 
-//					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
+					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
 				}
 				
 				if(count($anwesenheit_user_ids) > 0) {
@@ -143,6 +148,7 @@ class AdministrationApi extends FHCAPI_Controller
 
 					if (isError($updateAnwesenheit))
 						$this->terminateWithError($updateAnwesenheit);
+					
 				}
 			}
 		}
@@ -151,7 +157,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$notiz = substr($notiz, 0, 255);
 		$version = $entschuldigung->version + 1;
 		
-		// check if von/bis are being sent, else retrieve previeous values
+		// check if von/bis are being sent, else retrieve previous values
 		$von = isset($vonParam) ? $vonParam : $entschuldigung->von;
 		$bis = isset($bisParam) ? $bisParam : $entschuldigung->bis;
 		
@@ -199,13 +205,23 @@ class AdministrationApi extends FHCAPI_Controller
 			$data = getData($result)[0];
 			
 			// Link to Entschuldigungsmanagement
-			$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung';
+			if(defined('CIS4') && CIS4) {
+				$ci3BootstrapFilePath = "cis.php";
+			} else {
+				$ci3BootstrapFilePath = "index.ci.php";
+			}
+			$url = APP_ROOT.$ci3BootstrapFilePath.'/extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung';
 			$student_uid = $data->student_uid;
+
+			$vonDate = new DateTime($von);
+			$vonFormatted = $vonDate->format('d.m.Y H:i');
+			$bisDate = new DateTime($bis);
+			$bisFormatted = $bisDate->format('d.m.Y H:i');
 			
 			// Prepare mail content
 			$body_fields = array(
-				'von' => $von,
-				'bis' => $bis,
+				'von' => $vonFormatted,
+				'bis' => $bisFormatted,
 				'akzeptiert' => $status == true ? 'akzeptiert' : 'abgelehnt',
 				'linkEntschuldigungen' => $url
 			);

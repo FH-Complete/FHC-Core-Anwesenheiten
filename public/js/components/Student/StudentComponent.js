@@ -5,9 +5,13 @@ import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {StudentDropdown} from "../Setup/StudentDropdown.js"
 import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
 
+import ApiProfil from '../../api/factory/profil.js';
+import AnwTimeline from '../Assistenz/AnwTimeline.js';
+
 export const StudentComponent = {
 	name: 'StudentComponent',
 	components: {
+		AnwTimeline,
 		CoreNavigationCmpt,
 		CoreBaseLayout,
 		CoreTabs,
@@ -30,7 +34,8 @@ export const StudentComponent = {
 				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
 			}
 			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
-
+			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimeline'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'}
+			
 			return tabs
 		},
 		routeToCodeScan() {
@@ -50,7 +55,8 @@ export const StudentComponent = {
 
 		},
 		handleTabChanged (key) {
-			if(this.$refs.tabsStudent?._?.refs?.current) this.$refs.tabsStudent._.refs.current.redrawTable()
+			// check if the current has redrawTable function -> its a tabulator so redraw it to avoid bad things
+			if(this.$refs.tabsStudent?._?.refs?.current?.redrawTable) this.$refs.tabsStudent._.refs.current.redrawTable()
 		},
 		async setup() {
 			await this.$entryParams.setupPromise
@@ -60,7 +66,8 @@ export const StudentComponent = {
 			// if student is logged in as himself load his own viewData
 			if(!this.$entryParams.selected_student_info) {
 
-					this.$fhcApi.factory.Anwesenheiten.Profil.getProfileViewData(null).then(res => {
+				this.$api.call(ApiProfil.getProfileViewData(null))
+						.then(res => {
 
 						const data = res.data.retval[0]
 						this.viewDataStudent.vorname = data.vorname
@@ -97,7 +104,8 @@ export const StudentComponent = {
 			this.$refs.tabsStudent._.refs.current.reload()
 
 			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
-			this.$fhcApi.factory.Anwesenheiten.Profil.getProfileViewData(uid).then(res => {
+				this.$api.call(ApiProfil.getProfileViewData(uid))
+				.then(res => {
 
 				if(!res?.data?.retval?.[0]) return
 				const data = res.data.retval[0]
@@ -121,14 +129,6 @@ export const StudentComponent = {
 			// empty method so landing page doesnt break on this tab
 		}
 	},
-	computed: {
-		getTooltipTestphase() {
-			return {
-				value: this.$p.t('global/tooltipStudentTestphase'),
-				class: "custom-tooltip"
-			}
-		},	
-	},
 	created() {
 	},
 	mounted() {
@@ -146,16 +146,16 @@ export const StudentComponent = {
 			<template #main>	
 				<div ref="studentHeaderRow" class="row">
 					<div class="col-6">
-						<h1 class="h4 mb-5">
+						<h1 class="h4">
 							{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} 
 							<span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span>
-							<i v-tooltip.bottom="getTooltipTestphase" class="fa fa-circle-question" style="margin-left: 12px;"></i>
 						</h1>				
 					</div>
-					<div class="col-4">
+					<div class="col-3">
 						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
 							 id="studentUID" ref="studentDropdown" @studentChanged="studentChangedHandler">
 						</StudentDropdown>
+						
 					</div>
 					<div class="col-2 text-center">
 						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>

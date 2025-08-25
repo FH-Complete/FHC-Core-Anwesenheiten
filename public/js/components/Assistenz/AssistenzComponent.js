@@ -9,6 +9,7 @@ import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
 import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
 import AnwTimeline from "./AnwTimeline.js";
+import ApiAdmin from '../../api/factory/administration.js';
 
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
@@ -84,11 +85,12 @@ export const AssistenzComponent = {
 					} ,
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert',
 						headerFilter:'list',
-						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Hochgeladen', '':'Alle'}},
+						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Offen', '':'Alle'}},
 						headerFilterFunc: this.akzeptiertFilterFunc,
 						formatter: this.entschuldigungstatusFormatter,
 						tooltip: false
 					},
+					{title: this.$capitalize(this.$p.t('global/file')), field: 'dms_id', formatter: studentFormatters.formFile},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
@@ -101,7 +103,7 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
 				persistence: true,
-				persistenceID: "assistenzTable"
+				persistenceID: this.$entryParams.patchdate + "-assistenzTable"
 			},
 			assistenzViewTabulatorEventHandlers: [
 				{
@@ -116,7 +118,8 @@ export const AssistenzComponent = {
 						const data = cell.getData()
 						if((data.notiz === '' || data.notiz === null) && (this.editCellValue === '' || this.editCellValue === null)) return
 
-						this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz).then(res => {
+						this.$api.call(ApiAdmin.updateEntschuldigung(String(data.entschuldigung_id), data.akzeptiert, data.notiz))
+							.then(res => {
 							if (res.meta.status === "success")
 							{
 								this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
@@ -129,6 +132,19 @@ export const AssistenzComponent = {
 					handler: async () => {
 						await this.$entryParams.phrasenPromise
 						this.tableBuiltResolve()
+					}
+				},
+				{
+					event: "cellClick",
+					handler: async (e, cell) => {
+
+						if (cell.getColumn().getField() === "dms_id") {
+							const val = cell.getValue()
+
+							if(val !== '-' && val !== null) this.downloadEntschuldigung(val)
+						}
+						e.stopPropagation()
+
 					}
 				}
 			],
@@ -144,7 +160,10 @@ export const AssistenzComponent = {
 		saveEditEntschuldigung() {
 			if(!this.selectedEntschuldigung) return
 			
-			this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(this.selectedEntschuldigung.entschuldigung_id), this.selectedEntschuldigung.akzeptiert, this.selectedEntschuldigung.notiz, this.selectedEntschuldigung.von, this.selectedEntschuldigung.bis).then(res => {
+				this.$api.call(ApiAdmin.updateEntschuldigung(String(this.selectedEntschuldigung.entschuldigung_id),
+					this.selectedEntschuldigung.akzeptiert, this.selectedEntschuldigung.notiz,
+					this.selectedEntschuldigung.von, this.selectedEntschuldigung.bis))
+			.then(res => {
 				if (res.meta.status === "success")
 				{
 					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
@@ -177,9 +196,6 @@ export const AssistenzComponent = {
 			
 			this.$refs.modalContainerTimeline.hide()
 		},
-		savePersonIdDataArr(person_id, data) {
-			// for given person_id save data in an array to avoid redundant fetches if different timelines are being looked at
-		},
 		openTimelineModal(data) {
 			this.selectedEntschuldigungCellRef = data
 			this.selectedEntschuldigung = {...data}
@@ -188,10 +204,9 @@ export const AssistenzComponent = {
 			// if that is the case just open modal with saved anwArray and overlay selected entschuldigung together with all others
 			
 			// keep track of ent updates for that person -> if ent was updated fetch again
-			this.$fhcApi.factory.Anwesenheiten.Administration.getTimeline(this.selectedEntschuldigung.entschuldigung_id, this.selectedEntschuldigung.person_id).then(
+			this.$api.call(ApiAdmin.getTimeline(this.selectedEntschuldigung.person_id))
+				.then(
 				(res) => {
-					
-					this.savePersonIdDataArr(this.selectedEntschuldigung.person_id, res.data)
 					
 					this.selectedAnwArray = res.data[0].retval
 					this.selectedEntArray = res.data[1].retval
@@ -210,7 +225,7 @@ export const AssistenzComponent = {
 			let data = cell.getValue()
 			if (data == null) {
 				cell.getElement().style.color = "#17a2b8"
-				return this.$p.t('global/hochgeladen')
+				return this.$p.t('global/offen')
 			} else if (data === true) {
 				cell.getElement().style.color = "#28a745";
 				return this.$p.t('global/akzeptiert')
@@ -225,7 +240,8 @@ export const AssistenzComponent = {
 			const entschuldigung_id = cell.getData().entschuldigung_id
 			const existingNotiz = cell.getData().notiz
 			const notiz = notizParam !== '' ? notizParam : (existingNotiz !== null && existingNotiz !== undefined) ? existingNotiz : ''
-			this.$fhcApi.factory.Anwesenheiten.Administration.updateEntschuldigung(String(entschuldigung_id), status, notiz).then(res => {
+			this.$api.call(ApiAdmin.updateEntschuldigung(String(entschuldigung_id), status, notiz))
+				.then(res => {
 
 				if (res.meta.status === "success")
 				{
@@ -264,13 +280,13 @@ export const AssistenzComponent = {
 			button.title = this.$p.t('global/entschuldigungEditieren');
 			actionwrapper.append(button);
 
-			// button = document.createElement('button');
-			// button.className = 'btn btn-outline-secondary';
-			// button.style.minWidth = minwidth;
-			// button.innerHTML = '<i class="fa fa-timeline"></i>';
-			// button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
-			// button.title = this.$p.t('global/anwTimeline');
-			// actionwrapper.append(button);
+			button = document.createElement('button');
+			button.className = 'btn btn-outline-secondary';
+			button.style.minWidth = minwidth;
+			button.innerHTML = '<i class="fa fa-timeline"></i>';
+			button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
+			button.title = this.$p.t('global/anwTimeline');
+			actionwrapper.append(button);
 
 			if(cellData.dms_id) {
 				button = document.createElement('button');
@@ -370,7 +386,8 @@ export const AssistenzComponent = {
 				this.$entryParams.permissions.studiengaengeAssistenz :
 				this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
 
-			this.$fhcApi.factory.Anwesenheiten.Administration.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis).then(res => {
+				this.$api.call(ApiAdmin.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis))
+					.then(res => {
 				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
 			})
 		},
@@ -382,27 +399,34 @@ export const AssistenzComponent = {
 		},
 		handleSelectedEntschuldigungValidate(valid) {
 			this.selectedEntschuldigungValid = valid
+		},
+		calculateTableHeight() {
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+			const rect = tableDataSet.getBoundingClientRect();
+
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+			this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
 		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.checkEntryParamPermissions()
 		this.setup()
-
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		const rect = tableDataSet.getBoundingClientRect();
-
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-		this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
+		
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 	},
 	beforeMounted() {
 		if(!this.$entryParams?.permissions?.entschuldigungen_enabled) {
-
 			// TODO: route to some 404 page or show entschuldigung disabled status
 			this.$router.back()
-
 		}
 	},
 	watch: {
@@ -423,7 +447,7 @@ export const AssistenzComponent = {
 		},
 		getTooltipObj(){
 			return {
-				value: this.$p.t('global/tooltipAssistenz'),
+				value: this.$p.t('global/tooltipAssistenzV2'),
 				class: "custom-tooltip"
 			}
 		}
@@ -484,7 +508,7 @@ export const AssistenzComponent = {
 			<div class="row">
 			
 				<div class="col-6" style="display: flex; align-items: center;">
-					<h1 class="h4 mb-5" style="max-width: 50%; margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
+					<h1 class="h4 mb-5" style="margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
 					<div style="max-width: 25%; align-self: normal;" v-tooltip.bottom="getTooltipObj">
 						<h4 style="margin: 0;"><i class="fa fa-circle-question"></i></h4>
 					</div>

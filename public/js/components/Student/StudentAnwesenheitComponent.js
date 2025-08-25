@@ -5,6 +5,8 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
 
+import ApiProfil from '../../api/factory/profil.js';
+
 export default {
 	name: 'StudentAnwesenheitComponent',
 	components: {
@@ -46,7 +48,7 @@ export default {
 					page: true,
 					columns: true,
 				},
-				persistenceID: "studentAnwTable"
+				persistenceID: this.$entryParams.patchdate + "-studentAnwTable"
 			},
 			studentViewTabulatorEventHandlers: [{
 				event: "tableBuilt",
@@ -119,7 +121,8 @@ export default {
 			const person_id = this.$entryParams.selected_student_info ? this.$entryParams?.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
 
 			if(!uid) return
-			this.$fhcApi.factory.Anwesenheiten.Profil.getAllAnwByUID(this.studiensemester, uid, person_id).then(res => {
+				this.$api.call(ApiProfil.getAllAnwByUID(this.studiensemester, uid, person_id))
+				.then(res => {
 				if(res.meta.status !== "success") {
 					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
 				} else {
@@ -208,19 +211,32 @@ export default {
 
 			return cell.getValue()
 		},
+		calculateTableHeight() {
+
+			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
+			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
+			if(!tableDataSet) return
+
+			const collapsables = document.getElementById('filterCollapsables' + tableID);
+			const rect = tableDataSet.getBoundingClientRect();
+			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
+			this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight
+
+			if(this.$refs.uebersichtTable.tabulator) this.$refs.uebersichtTable.tabulator.redraw(true)
+
+		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.setup()
 
-		const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
-		const tableDataSet = document.getElementById('filterTableDataset' + tableID);
-		if(!tableDataSet) return
-		// TODO: test collapsables behaviour in nested tabs and without
-		const collapsables = document.getElementById('filterCollapsables' + tableID);
-		const rect = tableDataSet.getBoundingClientRect();
-		const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-		this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight
+		this.calculateTableHeight()
+		window.addEventListener('resize', this.calculateTableHeight)
+		window.addEventListener('orientationchange', this.calculateTableHeight)
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.calculateTableHeight)
+		window.removeEventListener('orientationchange', this.calculateTableHeight)
 	},
 	computed: {
 		getTooltipObj() {

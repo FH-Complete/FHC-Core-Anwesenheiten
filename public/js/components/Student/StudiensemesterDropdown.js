@@ -1,3 +1,4 @@
+import ApiInfo from '../../api/factory/info.js';
 
 export const StudiensemesterDropdown = {
 	name: "StudiensemesterDropdown",
@@ -19,7 +20,8 @@ export const StudiensemesterDropdown = {
 	},
 	methods: {
 		loadDropdown() {
-			this.$fhcApi.factory.Anwesenheiten.Info.getStudiensemester().then(res => {
+			this.$api.call(ApiInfo.getStudiensemester())
+				.then(res => {
 
 				if(res.meta.status !== "success") return
 				this.options = res.data?.[0] ?? [];

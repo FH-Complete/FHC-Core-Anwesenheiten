@@ -1,7 +1,36 @@
-create or replace function extension.get_anwesenheiten_by_time(integer, integer, character varying) returns float
+CREATE OR REPLACE FUNCTION extension.get_epoch_from_anw_times(
+	timestamp_von timestamp,
+	timestamp_bis timestamp
+)
+	RETURNS numeric
+	LANGUAGE plpgsql
+AS $$
+DECLARE
+	validtime RECORD;
+	total_seconds DOUBLE PRECISION := 0;
+BEGIN
+	FOR validtime IN
+		SELECT
+			stunde,
+			GREATEST(date_trunc('day', timestamp_von) + beginn::interval, timestamp_von) AS von,
+			LEAST(date_trunc('day', timestamp_bis) + ende::interval, timestamp_bis) AS bis
+		FROM lehre.tbl_stunde
+		WHERE date_trunc('day', timestamp_von) + ende::interval >= timestamp_von
+		  AND date_trunc('day', timestamp_bis) + beginn::interval <= timestamp_bis
+		ORDER BY stunde ASC
+		LOOP
+			total_seconds := total_seconds + EXTRACT(EPOCH FROM (validtime.bis - validtime.von));
+
+		END LOOP;
+
+	RETURN total_seconds::numeric;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION extension.get_anwesenheiten_by_time(integer, integer, character varying) RETURNS float
 	stable
-	language plpgsql
-as
+	LANGUAGE plpgsql
+AS
 $$
 DECLARE i_prestudent_id ALIAS FOR $1;
 	DECLARE i_lv_id ALIAS FOR $2;
@@ -11,9 +40,9 @@ DECLARE i_prestudent_id ALIAS FOR $1;
 BEGIN
 	SELECT
 		INTO timerec ROUND((SUM(CASE WHEN status IN ('anwesend', 'entschuldigt')
-										 THEN EXTRACT(EPOCH FROM (bis - von))
+										 THEN extension.get_epoch_from_anw_times(von, bis)
 									 ELSE 0 END) * 100.0)
-							   / SUM(EXTRACT(EPOCH FROM (bis - von))), 2) AS anwesenheitsquote
+							   / SUM(extension.get_epoch_from_anw_times(von, bis)), 2) AS anwesenheitsquote
 	FROM
 		extension.tbl_anwesenheit_user
 			JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id

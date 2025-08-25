@@ -10,8 +10,8 @@ class Profil extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw'),
-				'getEntschuldigungFile' => array('extension/anwesenheit_admin:rw', 'extension/anw_ent_admin:rw', 'extension/anwesenheit_student:rw')
+				'index' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_student:rw'),
+				'getEntschuldigungFile' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_student:rw')
 			)
 		);
 
@@ -40,7 +40,7 @@ class Profil extends Auth_Controller
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
-
+		$this->load->helper('hlp_language');
 	}
 
 
@@ -48,10 +48,10 @@ class Profil extends Auth_Controller
 	{
 		$viewData = array(
 			'permissions' => [
-				'admin' => $this->permissionlib->isBerechtigt('extension/anwesenheit_admin'),
-				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_ent_admin'),
-				'lektor' => $this->permissionlib->isBerechtigt('extension/anwesenheit_lektor'),
-				'student' => $this->permissionlib->isBerechtigt('extension/anwesenheit_student'),
+				'admin' => $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz'),
+				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz'),
+				'lektor' => $this->permissionlib->isBerechtigt('extension/anw_r_lektor'),
+				'student' => $this->permissionlib->isBerechtigt('extension/anw_r_student'),
 				'authID' => getAuthUID(),
 				'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),
 				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
@@ -64,9 +64,14 @@ class Profil extends Auth_Controller
 				'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),
 				'einheitDauer' => $this->_ci->config->item('EINHEIT_DAUER'),
 				'entschuldigungen_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_ent_admin'),
-				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anwesenheit_admin'),
-				'controller' => get_class($this)
+				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_r_ent_assistenz'),
+				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_r_full_assistenz'),
+				'controller' => get_class($this),
+				'show_guide' => $this->_ci->config->item('SHOW_GUIDE'),
+				'guide_link' => $this->_ci->config->item('GUIDE_LINK'),
+				'no_qr_lehrform' => $this->_ci->config->item('NO_QR_LEHRFORM'),
+				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
+				'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
 			]
 		);
 
@@ -89,8 +94,8 @@ class Profil extends Auth_Controller
 			$this->terminateWithError($this->_ci->p->t('global', 'wrongParameters'));
 
 		$person_id = getAuthPersonId();
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anwesenheit_admin');
-		$isEntAdmin = $this->permissionlib->isBerechtigt('extension/anw_ent_admin');
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
+		$isEntAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
 
 		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid) && ($isAdmin || $isEntAdmin))
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
