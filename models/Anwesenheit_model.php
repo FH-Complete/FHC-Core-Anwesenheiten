@@ -176,10 +176,9 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getLETermine($le_id)
 	{
-		$query = "SELECT datum, MIN(beginn) as beginn, MAX(ende) as ende
+		$query = "SELECT DISTINCT datum, beginn, ende, stunde
 				FROM lehre.vw_stundenplan JOIN lehre.tbl_stunde USING(stunde)
 				WHERE lehreinheit_id = ?
-				GROUP BY datum
 				ORDER BY datum ASC";
 
 		return $this->execReadOnlyQuery($query, [$le_id]);
@@ -299,6 +298,7 @@ class Anwesenheit_model extends \DB_Model
 	{
 		$query = '
 			SELECT tbl_lehrveranstaltung.bezeichnung,
+			       tbl_lehrveranstaltung.bezeichnung_english,
 			       lehrveranstaltung_id,
 				tbl_anwesenheit_status.status_kurzbz as student_status,
 				Date(tbl_anwesenheit.von) as datum,

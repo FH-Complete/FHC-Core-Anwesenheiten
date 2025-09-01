@@ -1082,8 +1082,22 @@ class KontrolleApi extends FHCAPI_Controller
 			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
 			if(!isSuccess($result)) $this->terminateWithError(getError($result));
 			$leTermine = getData($result);
+			
+			// if someone knows how to this one in the previous sql query, feel free to change it and tell me - johann
+			$leTermineGrouped = [];
+			// group le termine only with consecutive hours, detect the odd case of same lesson
+			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14 
+			forEach($leTermine as $distinctLesson) {
+				if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
+					$leTermineGrouped[] = $distinctLesson;
+				} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1)) {
+					$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
+				} else { // new block detected
+					$leTermineGrouped[] = $distinctLesson;
+				}
+			}
 
-			$allLeTermine[$leRow->lehreinheit_id] = $leTermine;
+			$allLeTermine[$leRow->lehreinheit_id] = $leTermineGrouped;
 		}
 
 

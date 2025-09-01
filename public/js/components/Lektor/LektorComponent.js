@@ -832,7 +832,12 @@ export const LektorComponent = {
 			kontrolle.editVon = {hours: vonSplit[0], minutes: vonSplit[1], seconds: vonSplit[2]}
 			const bisSplit = kontrolle.bis.split(':')
 			kontrolle.editBis = {hours: bisSplit[0], minutes: bisSplit[1], seconds: bisSplit[2]}
-			this.editKontrolle = kontrolle
+			if(this.editKontrolle === null) {
+				this.editKontrolle = kontrolle
+			} else {
+				this.editKontrolle = null
+			}
+			
 		},
 		formatDateToDbString(date) {
 			return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
@@ -1560,7 +1565,49 @@ export const LektorComponent = {
 		},
 		getTooltipDatumFromStundenplan() {
 			return {
-				value: this.$p.t('global/tooltipUnterrichtDatumCustomV2'),//'Datum wurde dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
+				value: this.$p.t('global/tooltipUnterrichtDatumCustomV2'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipLegende() {
+			return {
+				value: this.$p.t('global/tooltipLegende'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipCsv() {
+			return {
+				value: this.$p.t('global/tooltipCsv'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipEdit() {
+			return {
+				value: this.$p.t('global/tooltipEdit'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipSaveChanges() {
+			return {
+				value: this.$p.t('global/tooltipSaveChanges'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipRestartKontrolle() {
+			return {
+				value: this.$p.t('global/tooltipRestartKontrolle'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipDeleteKontrolle() {
+			return {
+				value: this.$p.t('global/tooltipDeleteKontrolle'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipEditKontrollzeiten() {
+			return {
+				value: this.$p.t('global/tooltipEditKontrollzeiten'),
 				class: "custom-tooltip"
 			}
 		},
@@ -1726,15 +1773,16 @@ export const LektorComponent = {
 											<AnwCountDisplay :anwesend="kontrolle.anwesend" :abwesend="kontrolle.abwesend" :entschuldigt="kontrolle.entschuldigt"/>
 										</div>
 										<div class="col-3 d-flex justify-content-end">
-											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary">
+											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary" v-tooltip.bottom="getTooltipRestartKontrolle">
 												<i class="fa fa-rotate-right"></i>
+						
 											</button>
 											
-											<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger">
+											<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger" v-tooltip.bottom="getTooltipDeleteKontrolle">
 												<i class="fa fa-trash"></i>
 											</button>
 											
-											<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success">
+											<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
 												<i class="fa fa-pen"></i>
 											</button>
 											
@@ -1919,19 +1967,19 @@ export const LektorComponent = {
 						:sideMenu="false"
 						noColumnFilter>
 							<template #actions>
-								<button @click="saveChanges" :disabled="!changedData.length" role="button" :class="getSaveBtnClass">
+								<button @click="saveChanges" :disabled="!changedData.length" role="button" :class="getSaveBtnClass" v-tooltip.bottom="getTooltipSaveChanges">
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getEditBtnClass">
+								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
 									<i class="fa fa-pen"></i>
 								</button>
 								
-								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2">
+								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipCsv">
 									<i class="fa fa-file-csv"></i>
 								</button>
 								
-								<button @click="openLegend" role="button" class="btn btn-secondary ml-2">
+								<button @click="openLegend" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipLegende">
 									<i class="fa fa-book"></i>
 								</button>
 							</template>
