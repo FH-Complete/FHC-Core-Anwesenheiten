@@ -107,9 +107,9 @@ class AdministrationApi extends FHCAPI_Controller
 
 		// check if status is being updated at all
 		$statusChanged = $status !== $entschuldigung->akzeptiert;
-		$this->addMeta('$statusChanged', $statusChanged);
-		$this->addMeta('$status', $status);
-		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
+//		$this->addMeta('$statusChanged', $statusChanged);
+//		$this->addMeta('$status', $status);
+//		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
 		
 		if($statusChanged) {
 			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
@@ -118,7 +118,7 @@ class AdministrationApi extends FHCAPI_Controller
 			if (isError($result))
 				$this->terminateWithError($result);
 			$anwesenheit_user_idsArr = getData($result);
-			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
+//			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
 			
 			if($anwesenheit_user_idsArr) {
 				$funcAUID = function ($value) {
@@ -126,12 +126,12 @@ class AdministrationApi extends FHCAPI_Controller
 				};
 
 				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
-				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
+//				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
 				
 				// if anw is from exam kontrolle and entschuldigung was uploaded past that date it does not count, even though
 				// the kontroll entry was in the time range
 				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids, $entschuldigung->insertamum);
-				$this->addMeta('examCheck', $result);
+//				$this->addMeta('examCheck', $result);
 				
 				if(count($result->retval) > 0) { // filter exam ids
 					$exam_ids = array_map($funcAUID, $result->retval);
@@ -140,7 +140,7 @@ class AdministrationApi extends FHCAPI_Controller
 						return !in_array($anwId, $exam_ids);
 					});
 
-					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
+//					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
 				}
 				
 				if(count($anwesenheit_user_ids) > 0) {
@@ -180,10 +180,10 @@ class AdministrationApi extends FHCAPI_Controller
 				'version' => $entschuldigung->version
 			)
 		);
-
-		$update = $this->_ci->EntschuldigungModel->update(
-			$entschuldigung->entschuldigung_id,
-			array(
+		
+		// only apply statusset cols when akzeptiert flag is different
+		if($statusChanged) {
+			$updateEntries = array(
 				'updatevon' => $this->_uid,
 				'updateamum' => date('Y-m-d H:i:s'),
 				'statussetvon' => $this->_uid,
@@ -193,7 +193,21 @@ class AdministrationApi extends FHCAPI_Controller
 				'version' => $version,
 				'von' => $von,
 				'bis' => $bis
-			)
+			);
+		} else {
+			$updateEntries = array(
+				'updatevon' => $this->_uid,
+				'updateamum' => date('Y-m-d H:i:s'),
+				'notiz' => $notiz,
+				'version' => $version,
+				'von' => $von,
+				'bis' => $bis
+			);
+		}
+		
+		$update = $this->_ci->EntschuldigungModel->update(
+			$entschuldigung->entschuldigung_id,
+			$updateEntries
 		);
 
 		if (isError($update))
