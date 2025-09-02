@@ -19,34 +19,34 @@ class KontrolleApi extends FHCAPI_Controller
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 				
 				// changing status or note of anwesenheit user entry
-				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// requests new code when timer reaches its limit during kontrolle
-				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// deletes old code from db when refreshed is received
-				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// start of a new kontrolle, inserts anw_user entries
-				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// start & end of kontrolle without the qr part for lessons where scanning is not intended
 				'insertAnwWithoutQR' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// requests qr code for existing kontrolle
-				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// update von/bis times for existing kontrolle
-				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// in case kontrolle was not stopped intentionally jump right back in on startup
-				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// method called at end of kontrolle to clean up qr code
-				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// delete kontrolle and all corresponding anw_user entries
-				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// gets checkin & entschuldigt count for ongoing kontrolle
 				'pollAnwesenheiten' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
@@ -1087,15 +1087,18 @@ class KontrolleApi extends FHCAPI_Controller
 			$leTermineGrouped = [];
 			// group le termine only with consecutive hours, detect the odd case of same lesson
 			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14 
-			forEach($leTermine as $distinctLesson) {
-				if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
-					$leTermineGrouped[] = $distinctLesson;
-				} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1)) {
-					$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
-				} else { // new block detected
-					$leTermineGrouped[] = $distinctLesson;
+			if($leTermine !== null) {
+				forEach($leTermine as $distinctLesson) {
+					if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
+						$leTermineGrouped[] = $distinctLesson;
+					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1)) {
+						$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
+					} else { // new block detected
+						$leTermineGrouped[] = $distinctLesson;
+					}
 				}
 			}
+			
 
 			$allLeTermine[$leRow->lehreinheit_id] = $leTermineGrouped;
 		}
