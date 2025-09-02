@@ -12,7 +12,7 @@ class Anw extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_student:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw')
+				'index' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_student:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw')
 			)
 		);
 

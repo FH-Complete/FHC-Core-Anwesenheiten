@@ -110,7 +110,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
 			$aktuellesSem = getData($result)[0];
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -153,7 +153,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
 			$aktuellesSem = getData($result)[0];
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}

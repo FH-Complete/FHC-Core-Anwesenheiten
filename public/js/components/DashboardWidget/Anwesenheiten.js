@@ -45,7 +45,7 @@ export default {
 		fetchData(){
 			this.$api.call(ApiProfil.getAllAnwQuotasForLvaByUID(null, this.viewData.uid, this.viewData.person_id))
 				.then(res => {
-					this.quotas = res.data
+					this.quotas = res.data ? res.data : []
 					this.quotas.forEach(q => {
 						q.showDetails = false
 						q.details = Vue.reactive([])
