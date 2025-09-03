@@ -450,6 +450,18 @@ export const AssistenzComponent = {
 				value: this.$p.t('global/tooltipAssistenzV2'),
 				class: "custom-tooltip"
 			}
+		},
+		getTooltipVonDatum() {
+			return {
+				value: this.$p.t('global/tooltipAssistenzVonDatum'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipBisDatum() {
+			return {
+				value: this.$p.t('global/tooltipAssistenzBisDatum'),
+				class: "custom-tooltip"
+			}
 		}
 	},
 	template: `
@@ -522,7 +534,7 @@ export const AssistenzComponent = {
 					</div>
 				</div>
 				<div class="col-2">
-					<div class="row mb-3 align-items-center">
+					<div class="row mb-3 align-items-center" v-tooltip.bottom="getTooltipVonDatum">
 						<datepicker
 							v-model="zeitraum.von"
 							:placeholder="$capitalize($p.t('ui/von'))"
@@ -535,7 +547,7 @@ export const AssistenzComponent = {
 					</div>
 				</div>
 				<div class="col-2">
-					<div class="row mb-3 align-items-center">
+					<div class="row mb-3 align-items-center" v-tooltip.bottom="getTooltipBisDatum">
 						<datepicker
 							v-model="zeitraum.bis"
 							:placeholder="$capitalize($p.t('global/bis'))"
