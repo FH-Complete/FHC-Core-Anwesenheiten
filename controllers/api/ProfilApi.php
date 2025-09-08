@@ -37,7 +37,10 @@ class ProfilApi extends FHCAPI_Controller
 				'checkInAnwesenheit' => array('extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
-				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
+				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r'),
+				
+				// load anw details onclick in cis4 widget
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
 			)
 		);
 
@@ -176,39 +179,37 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithSuccess($data);
 		}
 	}
-
-	// TODO: check if this can be removed, unused func
 	
-//	/**
-//	 * GET METHOD
-//	 * expects parameter 'studiensemester', 'uid'
-//	 *
-//	 * returns list of all anwesenheiten user entries of student in semester
-//	 */
-//	public function getAllAnwesenheitenByStudentByLva() {
-//
-//		$result = $this->getPostJSON();
-//		
-//		$prestudent_id = $result->prestudent_id;
-//		$lv_id = $result->lv_id;
-//		$sem_kurzbz = $result->sem_kurzbz;
-//		$uid = $result->uid;
-//
-//		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
-//		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
-//
-//		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
-//
-//			$result = $this->_ci->StudiensemesterModel->getAkt();
-//			$aktuellesSem = getData($result)[0];
-//			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
-//		}
-//		
-//		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz);
-//
-//		if(!isSuccess($res)) $this->terminateWithError($res);
-//		$this->terminateWithSuccess($res);
-//	}
+	/**
+	 * GET METHOD
+	 * expects parameter 'studiensemester', 'uid'
+	 *
+	 * returns list of all anwesenheiten user entries of student in semester
+	 */
+	public function getAllAnwesenheitenByStudentByLva() {
+
+		$result = $this->getPostJSON();
+		
+		$prestudent_id = $result->prestudent_id;
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+		$uid = $result->uid;
+
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
+
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$aktuellesSem = getData($result)[0];
+			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
+		}
+		
+		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz);
+
+		if(!isSuccess($res)) $this->terminateWithError($res);
+		$this->terminateWithSuccess($res);
+	}
 
 	/**
 	 * POST METHOD
