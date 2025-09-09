@@ -394,7 +394,7 @@ class ProfilApi extends FHCAPI_Controller
 				'ext_anw_entschuldigungen'
 			);
 
-			if(!isSuccess($dmsFile)) {
+			if(isError($dmsFile) || !hasData($dmsFile)) {
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}
 
@@ -488,7 +488,7 @@ class ProfilApi extends FHCAPI_Controller
 			'ext_anw_entschuldigungen'
 		);
 
-		if(!isSuccess($dmsFile)) {
+		if(isError($dmsFile) || !hasData($dmsFile)) {
 			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 		}
 
