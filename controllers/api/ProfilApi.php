@@ -378,17 +378,22 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
 		
-		if(!$noFileUpload) {
-			$file = array(
-				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
-				'version' => 0,
-				'name' => $_FILES['files']['name'],
-				'mimetype' => $_FILES['files']['type'],
-				'insertamum' => date('Y-m-d H:i:s'),
-				'insertvon' => $this->_uid,
+		if (!$noFileUpload) {
+			// Upload file
+			$upload_data = $this->_ci->dmslib->upload(array('pdf', 'jpg', 'png'));
+
+			// If an error occurred
+			if (isError($upload_data))
+				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+
+			// Add file to the DMS (DB + file system)
+			$dmsFile = $this->_ci->dmslib->add(
+				$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
+				$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
+				fopen($upload_data['full_path'], 'r'),
+				'ext_anw_entschuldigungen'
 			);
 
-			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
 			if(!isSuccess($dmsFile)) {
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}
@@ -468,16 +473,21 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		$entschuldigung = getData($result)[0];
 
-		$file = array(
-			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
-			'version' => 0,
-			'name' => $_FILES['files']['name'],
-			'mimetype' => $_FILES['files']['type'],
-			'insertamum' => date('Y-m-d H:i:s'),
-			'insertvon' => $this->_uid,
+		// Upload file
+		$upload_data = $this->_ci->dmslib->upload(array('pdf', 'jpg', 'png'));
+
+		// If an error occurred
+		if (isError($upload_data))
+			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+
+		// Add file to the DMS (DB + file system)
+		$dmsFile = $this->_ci->dmslib->add(
+			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
+			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
+			fopen($upload_data['full_path'], 'r'),
+			'ext_anw_entschuldigungen'
 		);
 
-		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
 		if(!isSuccess($dmsFile)) {
 			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 		}

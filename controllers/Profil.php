@@ -103,7 +103,7 @@ class Profil extends Auth_Controller
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);
 
 		if (hasData($zuordnung)) {
-			$file = $this->_ci->dmslib->download($dms_id, null, 'attachment');
+			$file = $this->_ci->dmslib->getOutputFileInfo($dms_id);
 			// remove server filepath from name
 			preg_match("~[^/]+$~", $file->retval->name, $matches);
 			$file->retval->name = $matches[0];
