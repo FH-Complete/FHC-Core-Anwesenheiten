@@ -35,10 +35,14 @@ export const StudiengangDropdown = {
 
 				// apply this last resort filter if an assistenz who has simultaneous admin rights
 				// finds that they see too many stg's
-				this.options = data.filter(d => {
-					return this.allowedStg.includes(String(d.studiengang_kz))
-				})
-
+				if(this.allowedStg) {
+					this.options = data.filter(d => {
+						return this.allowedStg.includes(String(d.studiengang_kz))
+					})
+				} else {
+					this.options = data
+				}
+				
 				this.$entryParams.studiengaengeAdmin = res.data.retval.map(e => e.studiengang_kz)
 			});
 		},

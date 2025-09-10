@@ -93,7 +93,8 @@ export const AssistenzComponent = {
 					{title: this.$capitalize(this.$p.t('global/file')), field: 'dms_id', formatter: studentFormatters.formFile},
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
-					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: this.$capitalize(this.$p.t('global/antragsdatum')), field: 'entuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: this.$capitalize(this.$p.t('global/fileuploaddatum')), field: 'fileuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform',
 						headerFilter: true,
 						tooltip: false
@@ -373,7 +374,8 @@ export const AssistenzComponent = {
 			cols.find(e => e.getField() === 'studiengang_kz').updateDefinition({title: this.$capitalize(this.$p.t('lehre/studiengang'))})
 			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$capitalize(this.$p.t('ui/aktion'))})
 			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$capitalize(this.$p.t('global/begruendungAnw'))})
-			cols.find(e => e.getField() === 'uploaddatum').updateDefinition({title: this.$capitalize(this.$p.t('global/uploaddatum'))})
+			cols.find(e => e.getField() === 'entuploaddatum').updateDefinition({title: this.$capitalize(this.$p.t('global/antragsdatum'))})
+			cols.find(e => e.getField() === 'fileuploaddatum').updateDefinition({title: this.$capitalize(this.$p.t('global/fileuploaddatum'))})
 			cols.find(e => e.getField() === 'studentorgform').updateDefinition({title: this.$capitalize(this.$p.t('lehre/organisationsform'))})
 
 			

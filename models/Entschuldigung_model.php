@@ -122,7 +122,8 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_studiengang.kurzbzlang as kurzbzlang,
 						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
 						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as uploaddatum,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as entuploaddatum,
+						TO_CHAR(campus.tbl_dms_version.insertamum, 'YYYY-MM-DD HH24:MI:00') as fileuploaddatum,
 						public.tbl_student.semester as semester
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
@@ -133,6 +134,7 @@ class Entschuldigung_model extends \DB_Model
 						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
 						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+						LEFT JOIN campus.tbl_dms_version USING(dms_id)
 					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 
 		// $von & $bis are not clearable in UI but once were...
