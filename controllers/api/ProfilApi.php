@@ -380,7 +380,7 @@ class ProfilApi extends FHCAPI_Controller
 		
 		if (!$noFileUpload) {
 			// Upload file
-			$upload_data = $this->_ci->dmslib->upload(array('pdf', 'jpg', 'png'));
+			$upload_data = $this->_ci->dmslib->upload($_FILES['files']['name'], array('pdf', 'jpg', 'png'));
 
 			// If an error occurred
 			if (isError($upload_data))
@@ -388,8 +388,8 @@ class ProfilApi extends FHCAPI_Controller
 
 			// Add file to the DMS (DB + file system)
 			$dmsFile = $this->_ci->dmslib->add(
-				$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
-				$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
+				$_FILES['files']['name'],
+				$_FILES['files']['type'],
 				fopen($upload_data['full_path'], 'r'),
 				'ext_anw_entschuldigungen'
 			);
@@ -474,7 +474,7 @@ class ProfilApi extends FHCAPI_Controller
 		$entschuldigung = getData($result)[0];
 
 		// Upload file
-		$upload_data = $this->_ci->dmslib->upload(array('pdf', 'jpg', 'png'));
+		$upload_data = $this->_ci->dmslib->upload($_FILES['files']['name'], array('pdf', 'jpg', 'png'));
 
 		// If an error occurred
 		if (isError($upload_data))
@@ -482,8 +482,8 @@ class ProfilApi extends FHCAPI_Controller
 
 		// Add file to the DMS (DB + file system)
 		$dmsFile = $this->_ci->dmslib->add(
-			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
-			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
+			$_FILES['files']['name'],
+			$_FILES['files']['type'],
 			fopen($upload_data['full_path'], 'r'),
 			'ext_anw_entschuldigungen'
 		);
