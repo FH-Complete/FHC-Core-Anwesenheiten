@@ -544,49 +544,52 @@ class ProfilApi extends FHCAPI_Controller
 			return;
 		}
 		
-		$data = getData($result)[0];
-//		$this->addMeta('emailData', $data);
-		//emailTo usually is 1 address, sometimes several seperated by ','
-		$emails = explode(', ', $data->email);
+		$data = getData($result);
+		
+		foreach($data as $mailrow) {
+//			$this->addMeta('emailData', $mailrow);
+			//emailTo usually is 1 address, sometimes several seperated by ','
+			$emails = explode(', ', $mailrow->email);
 
-		// Link to Entschuldigungsmanagement
-		$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
-		$studentname = $data->vorname.' '.$data->nachname;
-		$student_uid = $data->student_uid;
-		$stg = $data->kurzbzlang.' - '.$data->bezeichnung;
-		$orgform = $data->dual ? 'DUAL' : $data->orgform_kurzbz;
-		$sem = $data->semester.'. Semester';
+			// Link to Entschuldigungsmanagement
+			$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
+			$studentname = $mailrow->vorname.' '.$mailrow->nachname;
+			$student_uid = $mailrow->uid;
+			$stg = $mailrow->kurzbzlang.' - '.$mailrow->bezeichnung;
+			$orgform = $mailrow->orgform;
+			$sem = $mailrow->semester.'. Semester';
 
-		if($dmsId && $type == 'add' ) { // neue ent mit datei hochgeladen
-			$vorlage = 'AnwesenheitSanchoEntschuldigung';
-			$betreff = $this->p->t('global', 'entFullEmailBetreff');
-		} else if($dmsId && $type == 'edit') { // datei für alte ent hochgeladen
-			$vorlage = 'AnwEntFileAfter';
-			$betreff = $this->p->t('global', 'entEditEmailBetreff');
-		} else if(!$dmsId && $type == 'add') { // entschuldigung ohne datei uploaded
-			$vorlage = 'AnwEntNoFile';
-			$betreff = $this->p->t('global', 'entNewEmailBetreff');
-		}
+			if($dmsId && $type == 'add' ) { // neue ent mit datei hochgeladen
+				$vorlage = 'AnwesenheitSanchoEntschuldigung';
+				$betreff = $this->p->t('global', 'entFullEmailBetreff');
+			} else if($dmsId && $type == 'edit') { // datei für alte ent hochgeladen
+				$vorlage = 'AnwEntFileAfter';
+				$betreff = $this->p->t('global', 'entEditEmailBetreff');
+			} else if(!$dmsId && $type == 'add') { // entschuldigung ohne datei uploaded
+				$vorlage = 'AnwEntNoFile';
+				$betreff = $this->p->t('global', 'entNewEmailBetreff');
+			}
 
-		foreach ($emails as $email)
-		{
-			// Prepare mail content
-			$body_fields = array(
-				'student' => $studentname,
-				'UID' => $student_uid,
-				'stg' => $stg,
-				'Orgform' => $orgform,
-				'sem' => $sem,
-				'linkEntschuldigungen' => $url
-			);
+			foreach ($emails as $email)
+			{
+				// Prepare mail content
+				$body_fields = array(
+					'student' => $studentname,
+					'UID' => $student_uid,
+					'stg' => $stg,
+					'Orgform' => $orgform,
+					'sem' => $sem,
+					'linkEntschuldigungen' => $url
+				);
 
-			// Send mail
-			sendSanchoMail(
-				$vorlage,
-				$body_fields,
-				$email,
-				$betreff
-			);
+				// Send mail
+				sendSanchoMail(
+					$vorlage,
+					$body_fields,
+					$email,
+					$betreff
+				);
+			}
 		}
 
 	}
@@ -634,13 +637,15 @@ class ProfilApi extends FHCAPI_Controller
 
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
 			
-			if (isError($deletedEntschuldigung))
-				$this->terminateWithError(getError($deletedEntschuldigung));
+			if(isset($entschuldigung->dms_id)) {
+				if (isError($deletedEntschuldigung))
+					$this->terminateWithError(getError($deletedEntschuldigung));
 
-			$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
-
-			if (isError($deletedFile))
-				$this->terminateWithError(getError($deletedFile));
+				$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
+				
+				if (isError($deletedFile))
+					$this->terminateWithError(getError($deletedFile));
+			}
 
 			$this->terminateWithSuccess($this->p->t('global', 'successDeleteEnschuldigung'));
 		} else {

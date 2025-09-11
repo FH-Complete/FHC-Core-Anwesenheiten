@@ -225,7 +225,7 @@ class AdministrationApi extends FHCAPI_Controller
 				$ci3BootstrapFilePath = "index.ci.php";
 			}
 			$url = APP_ROOT.$ci3BootstrapFilePath.'/extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung';
-			$student_uid = $data->student_uid;
+			$student_uid = $data->uid;
 
 			$vonDate = new DateTime($von);
 			$vonFormatted = $vonDate->format('d.m.Y H:i');

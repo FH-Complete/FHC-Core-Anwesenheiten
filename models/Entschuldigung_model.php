@@ -182,19 +182,33 @@ class Entschuldigung_model extends \DB_Model
 	}
 	
 	public function getMailInfoForStudent($person_id) {
-		$query = "SELECT tbl_person.vorname, tbl_person.nachname, tbl_student.student_uid, tbl_studiengang.email,
-			   tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, 
-			   tbl_studiengang.orgform_kurzbz, tbl_student.semester, tbl_prestudent.dual,
-			public.tbl_studiensemester.studiensemester_kurzbz, public.tbl_studiensemester.start
-		FROM public.tbl_person
-				 JOIN public.tbl_prestudent USING (person_id)
-				 JOIN public.tbl_studiengang USING (studiengang_kz)
-				 JOIN public.tbl_student USING(prestudent_id)
-				 JOIN public.tbl_studentlehrverband USING(student_uid)
-				 JOIN public.tbl_studiensemester USING(studiensemester_kurzbz)
-		WHERE public.tbl_student.semester > 0 AND person_id = ?
-		ORDER BY public.tbl_studiensemester.start DESC
-		LIMIT 1";
+		$query ="
+		SELECT vorname, nachname, person_id, tbl_benutzer.uid, tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_student.semester,
+			tbl_studiengang.email,
+				 (
+				 SELECT
+					 COALESCE(tbl_studienplan.orgform_kurzbz, 
+			tbl_prestudentstatus.orgform_kurzbz, tbl_studiengang.orgform_kurzbz) as 
+			orgform
+				 FROM
+					 public.tbl_prestudent
+					 JOIN public.tbl_prestudentstatus USING(prestudent_id)
+					 JOIN public.tbl_studiensemester USING(studiensemester_kurzbz)
+					 JOIN public.tbl_studiengang USING(studiengang_kz)
+					 LEFT JOIN lehre.tbl_studienplan USING(studienplan_id)
+				 WHERE
+					 prestudent_id=tbl_student.prestudent_id
+				 ORDER BY tbl_prestudentstatus.datum DESC LIMIT 1
+				 ) as orgform
+			FROM
+				 public.tbl_benutzer
+				 JOIN public.tbl_student ON(uid = student_uid)
+				 JOIN public.tbl_studiengang USING(studiengang_kz)
+				 JOIN public.tbl_person USING(person_id)
+			WHERE
+				 tbl_benutzer.aktiv
+				 AND person_id = ?
+		";
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
 	}
