@@ -1093,6 +1093,7 @@ class KontrolleApi extends FHCAPI_Controller
 						$leTermineGrouped[] = $distinctLesson;
 					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1)) {
 						$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
+						$leTermineGrouped[count($leTermineGrouped) - 1]->stunde = $distinctLesson->stunde;
 					} else { // new block detected
 						$leTermineGrouped[] = $distinctLesson;
 					}

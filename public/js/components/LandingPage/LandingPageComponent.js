@@ -428,7 +428,7 @@ export default {
 			</a>
 		</div>
 	
-		<template  v-if="permissioncount > 1">
+		<template  v-if="permissioncount > 1 && phrasenResolved">
 			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs" @changed="handleTabChanged" ref="tabsMain"></core-tabs>
 		</template>
 		<template v-else-if="permissioncount === 1 && phrasenResolved">

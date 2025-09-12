@@ -172,7 +172,8 @@ class Entschuldigung_model extends \DB_Model
 	
 	public function checkZuordnung($entschuldigung_id, $person_id)
 	{
-		$query = 'SELECT dms_id, person_id, entschuldigung_id
+		// need all columns for history anyway
+		$query = 'SELECT *
 					FROM extension.tbl_anwesenheit_entschuldigung
 					WHERE entschuldigung_id = ?
 						AND person_id = ?

@@ -415,9 +415,11 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id, $dmsId, 'add');
+		$entschuldigung_id = getData($result);
+		
+		$this->sendEmailToAssistenz($person_id, $dmsId, 'add', $entschuldigung_id, $von, $bis);
 
-		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
+		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => $entschuldigung_id]);
 	}
 
 	/**
@@ -517,12 +519,12 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id, $dmsId, 'edit');
+		$this->sendEmailToAssistenz($person_id, $dmsId, 'edit', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 
-		$this->terminateWithSuccess(['dms_id' => $dmsId, 'entschuldigung_id' => getData($result)]);
+		$this->terminateWithSuccess(['dms_id' => $dmsId, 'entschuldigung_id' => $entschuldigung->entschuldigung_id]);
 	}
 
-	private function sendEmailToAssistenz($person_id_param, $dmsId, $type)
+	private function sendEmailToAssistenz($person_id_param, $dmsId, $type, $entschuldigung_id, $von, $bis)
 	{
 
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
@@ -545,7 +547,12 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		
 		$data = getData($result);
-		
+
+		$vonDateTime = new DateTime($von);
+		$vonFormatted = $vonDateTime->format("d.m.Y H:i");
+		$bisDateTime = new DateTime($bis);
+		$bisFormatted = $bisDateTime->format("d.m.Y H:i");
+
 		foreach($data as $mailrow) {
 //			$this->addMeta('emailData', $mailrow);
 			//emailTo usually is 1 address, sometimes several seperated by ','
@@ -568,6 +575,9 @@ class ProfilApi extends FHCAPI_Controller
 			} else if(!$dmsId && $type == 'add') { // entschuldigung ohne datei uploaded
 				$vorlage = 'AnwEntNoFile';
 				$betreff = $this->p->t('global', 'entNewEmailBetreff');
+			} else if($type == 'delete') { // entschuldigung wurde gelöscht -> unabhängig von datei
+				$vorlage = 'AnwEntDeleted';
+				$betreff = $this->p->t('global', 'entDeletedEmailBetreff');
 			}
 
 			foreach ($emails as $email)
@@ -579,6 +589,9 @@ class ProfilApi extends FHCAPI_Controller
 					'stg' => $stg,
 					'Orgform' => $orgform,
 					'sem' => $sem,
+					'entschuldigung_id' => $entschuldigung_id,
+					'von' => $vonFormatted,
+					'bis' => $bisFormatted,
 					'linkEntschuldigungen' => $url
 				);
 
@@ -636,16 +649,41 @@ class ProfilApi extends FHCAPI_Controller
 			if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
+			if (isError($deletedEntschuldigung))
+				$this->terminateWithError(getError($deletedEntschuldigung));
+
+			
 			
 			if(isset($entschuldigung->dms_id)) {
-				if (isError($deletedEntschuldigung))
-					$this->terminateWithError(getError($deletedEntschuldigung));
 
 				$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
 				
 				if (isError($deletedFile))
 					$this->terminateWithError(getError($deletedFile));
+				
 			}
+			
+			// add old version to history table without dms_id -> either never existed or should be deleted aswell
+			$this->_ci->EntschuldigungHistoryModel->insert(
+				array(
+					'entschuldigung_id' => $entschuldigung->entschuldigung_id,
+					'person_id' => $entschuldigung->person_id,
+					'von' => $entschuldigung->von,
+					'bis' => $entschuldigung->bis,
+					'dms_id' => null,
+					'insertvon' => $entschuldigung->insertvon,
+					'insertamum' => $entschuldigung->insertamum,
+					'updatevon' => $entschuldigung->updatevon,
+					'updateamum' => $entschuldigung->updateamum,
+					'statussetvon' => $entschuldigung->statussetvon,
+					'statussetamum' => $entschuldigung->statussetamum,
+					'akzeptiert' => $entschuldigung->akzeptiert,
+					'notiz' => $entschuldigung->notiz,
+					'version' => $entschuldigung->version
+				)
+			);
+			
+			$this->sendEmailToAssistenz($person_id, $entschuldigung->dms_id, 'delete', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 
 			$this->terminateWithSuccess($this->p->t('global', 'successDeleteEnschuldigung'));
 		} else {
