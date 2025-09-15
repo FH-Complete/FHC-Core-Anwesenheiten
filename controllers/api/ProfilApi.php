@@ -53,6 +53,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
+		$this->_ci->load->library('AkteLib');
 		$this->_ci->load->library('DmsLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
@@ -380,27 +381,31 @@ class ProfilApi extends FHCAPI_Controller
 		
 		if (!$noFileUpload) {
 			// Upload file
-			$upload_data = $this->_ci->dmslib->upload($_FILES['files']['name'], array('pdf', 'jpg', 'png'));
+			$uploadDataResult = uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
 
 			// If an error occurred
-			if (isError($upload_data))
-				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+			if (isError($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+			// If no data
+			if (!hasData($uploadDataResult)) $this->terminateWithError('Upload error', 'errorInvalidFiletype'));
 
 			// Add file to the DMS (DB + file system)
 			$dmsFile = $this->_ci->dmslib->add(
-				$_FILES['files']['name'],
-				$_FILES['files']['type'],
-				fopen($upload_data['full_path'], 'r'),
+				getData($uploadDataResult)['file_name'],
+				getData($uploadDataResult)['file_type'],
+				fopen(getData($uploadDataResult)['full_path'], 'r'),
 				'ext_anw_entschuldigungen'
+				null, // dokument_kurzbz
+				null, // beschreibung
+				false, // cis_suche
+				null, // schlagworte
+				getAuthUID() // insertvon
 			);
 
 			if(isError($dmsFile) || !hasData($dmsFile)) {
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}
 
-			$dmsFile = getData($dmsFile);
-
-			$dmsId = $dmsFile['dms_id'];
+			$dmsId = getData($dmsFile)->dms_id;
 		} else {
 			$dmsId = null;
 		}
@@ -474,18 +479,24 @@ class ProfilApi extends FHCAPI_Controller
 		$entschuldigung = getData($result)[0];
 
 		// Upload file
-		$upload_data = $this->_ci->dmslib->upload($_FILES['files']['name'], array('pdf', 'jpg', 'png'));
+		$uploadDataResult = uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
 
 		// If an error occurred
-		if (isError($upload_data))
-			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+		if (isError($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+		// If no data
+		if (!hasData($uploadDataResult)) $this->terminateWithError('Upload error', 'errorInvalidFiletype'));
 
 		// Add file to the DMS (DB + file system)
 		$dmsFile = $this->_ci->dmslib->add(
-			$_FILES['files']['name'],
-			$_FILES['files']['type'],
-			fopen($upload_data['full_path'], 'r'),
+			getData($uploadDataResult)['file_name'],
+			getData($uploadDataResult)['file_type'],
+			fopen(getData($uploadDataResult)['full_path'], 'r'),
 			'ext_anw_entschuldigungen'
+			null, // dokument_kurzbz
+			null, // beschreibung
+			false, // cis_suche
+			null, // schlagworte
+			getAuthUID() // insertvon
 		);
 
 		if(isError($dmsFile) || !hasData($dmsFile)) {
@@ -512,8 +523,7 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 		
-		$dmsFile = getData($dmsFile);
-		$dmsId = $dmsFile['dms_id'];
+		$dmsId = getData($dmsFile)->dms_id;
 		
 		$result = $this->_ci->EntschuldigungModel->update(
 			$entschuldigung->entschuldigung_id,
@@ -646,7 +656,7 @@ class ProfilApi extends FHCAPI_Controller
 			if (isError($deletedEntschuldigung))
 				$this->terminateWithError(getError($deletedEntschuldigung));
 
-			$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
+			$deletedFile = $this->_ci->aktelib->removeByPersonIdAndDmsId($entschuldigung->person_id, $entschuldigung->dms_id);
 
 			if (isError($deletedFile))
 				$this->terminateWithError(getError($deletedFile));
