@@ -393,7 +393,7 @@ class ProfilApi extends FHCAPI_Controller
 				getData($uploadDataResult)['file_name'],
 				getData($uploadDataResult)['file_type'],
 				fopen(getData($uploadDataResult)['full_path'], 'r'),
-				'ext_anw_entschuldigungen'
+				'ext_anw_entschuldigungen',
 				null, // dokument_kurzbz
 				null, // beschreibung
 				false, // cis_suche
@@ -491,7 +491,7 @@ class ProfilApi extends FHCAPI_Controller
 			getData($uploadDataResult)['file_name'],
 			getData($uploadDataResult)['file_type'],
 			fopen(getData($uploadDataResult)['full_path'], 'r'),
-			'ext_anw_entschuldigungen'
+			'ext_anw_entschuldigungen',
 			null, // dokument_kurzbz
 			null, // beschreibung
 			false, // cis_suche
