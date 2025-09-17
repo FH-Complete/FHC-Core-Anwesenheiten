@@ -122,7 +122,8 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_studiengang.kurzbzlang as kurzbzlang,
 						public.tbl_studiengang.orgform_kurzbz as orgform_kurzbz,
 						status.orgform_kurzbz as studentorgform,
-						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as uploaddatum,
+						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as entuploaddatum,
+						TO_CHAR(campus.tbl_dms_version.insertamum, 'YYYY-MM-DD HH24:MI:00') as fileuploaddatum,
 						public.tbl_student.semester as semester
 					FROM extension.tbl_anwesenheit_entschuldigung
 						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
@@ -133,6 +134,7 @@ class Entschuldigung_model extends \DB_Model
 						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
 						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+						LEFT JOIN campus.tbl_dms_version USING(dms_id)
 					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 
 		// $von & $bis are not clearable in UI but once were...
@@ -170,7 +172,8 @@ class Entschuldigung_model extends \DB_Model
 	
 	public function checkZuordnung($entschuldigung_id, $person_id)
 	{
-		$query = 'SELECT dms_id, person_id, entschuldigung_id
+		// need all columns for history anyway
+		$query = 'SELECT *
 					FROM extension.tbl_anwesenheit_entschuldigung
 					WHERE entschuldigung_id = ?
 						AND person_id = ?
@@ -180,13 +183,33 @@ class Entschuldigung_model extends \DB_Model
 	}
 	
 	public function getMailInfoForStudent($person_id) {
-		$query = "SELECT tbl_person.vorname, tbl_person.nachname, tbl_student.student_uid, tbl_studiengang.email,
-			   tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_studiengang.orgform_kurzbz, tbl_student.semester, tbl_prestudent.dual
-		FROM public.tbl_person
-				 JOIN public.tbl_prestudent USING (person_id)
-				 JOIN public.tbl_studiengang USING (studiengang_kz)
-				 JOIN public.tbl_student USING(prestudent_id)
-		WHERE public.tbl_student.semester > 0 AND person_id = ?";
+		$query ="
+		SELECT vorname, nachname, person_id, tbl_benutzer.uid, tbl_studiengang.bezeichnung, tbl_studiengang.kurzbzlang, tbl_student.semester,
+			tbl_studiengang.email,
+				 (
+				 SELECT
+					 COALESCE(tbl_studienplan.orgform_kurzbz, 
+			tbl_prestudentstatus.orgform_kurzbz, tbl_studiengang.orgform_kurzbz) as 
+			orgform
+				 FROM
+					 public.tbl_prestudent
+					 JOIN public.tbl_prestudentstatus USING(prestudent_id)
+					 JOIN public.tbl_studiensemester USING(studiensemester_kurzbz)
+					 JOIN public.tbl_studiengang USING(studiengang_kz)
+					 LEFT JOIN lehre.tbl_studienplan USING(studienplan_id)
+				 WHERE
+					 prestudent_id=tbl_student.prestudent_id
+				 ORDER BY tbl_prestudentstatus.datum DESC LIMIT 1
+				 ) as orgform
+			FROM
+				 public.tbl_benutzer
+				 JOIN public.tbl_student ON(uid = student_uid)
+				 JOIN public.tbl_studiengang USING(studiengang_kz)
+				 JOIN public.tbl_person USING(person_id)
+			WHERE
+				 tbl_benutzer.aktiv
+				 AND person_id = ?
+		";
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
 	}

@@ -26,6 +26,11 @@ export const AssistenzComponent = {
 	},
 	data: function() {
 		return {
+			headerFiltersRestored: false,
+			filtersRestored: false,
+			colLayoutRestored: false,
+			sortRestored: false,
+			stateRestored: false,
 			selectedEntschuldigung: null,
 			selectedEntschuldigungValid: false,
 			selectedAnwArray: null,
@@ -64,6 +69,8 @@ export const AssistenzComponent = {
 					}
 				},
 				debugInvalidComponentFuncs:false,
+				// debugEventsExternal: true,
+				// debugEventsInternal: true,
 				layout: 'fitData',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
@@ -71,38 +78,43 @@ export const AssistenzComponent = {
 				paginationSize: 50,
 				height: this.$entryParams.tabHeights.assistenz,
 				columns: [
-					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname',
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('person/vorname'))), field: 'vorname',
 						headerFilter: true,
+						headerSort: true,
 						tooltip:false
 					},
-					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname',
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('person/nachname'))), field: 'nachname',
 						headerFilter: true,
+						headerSort: true,
 						tooltip:false
 					},
-					{title: this.$capitalize(this.$p.t('lehre/ausbildungssemester')), field: 'semester',
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/ausbildungssemester'))), field: 'semester',
 						headerFilter: true,
+						headerSort: true,
 						tooltip:false
 					} ,
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert',
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/status'))), field: 'akzeptiert',
 						headerFilter:'list',
 						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Offen', '':'Alle'}},
 						headerFilterFunc: this.akzeptiertFilterFunc,
 						formatter: this.entschuldigungstatusFormatter,
-						tooltip: false
+						tooltip: false,
+						headerSort: true
 					},
-					{title: this.$capitalize(this.$p.t('global/file')), field: 'dms_id', formatter: studentFormatters.formFile},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
-					{title: this.$capitalize(this.$p.t('global/uploaddatum')), field: 'uploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
-					{title: this.$capitalize(this.$p.t('lehre/organisationsform')), field: 'studentorgform',
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/file'))), headerSort: true,field: 'dms_id', formatter: studentFormatters.formFile},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/von'))), headerSort: true,field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/bis'))),headerSort: true, field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/antragsdatum'))),headerSort: true, field: 'entuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/fileuploaddatum'))),headerSort: true, field: 'fileuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/organisationsform'))),headerSort: true, field: 'studentorgform',
 						headerFilter: true,
 						tooltip: false
 					},
-					{title: this.$capitalize(this.$p.t('lehre/studiengang')), field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
-					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'entschuldigung_id', formatter: this.formAction, tooltip:false},
-					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/aktion'))), headerSort: true,field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 260},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/begruendungAnw'))), headerSort: true,field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
-				persistence: true,
+				persistence: false,
 				persistenceID: this.$entryParams.patchdate + "-assistenzTable"
 			},
 			assistenzViewTabulatorEventHandlers: [
@@ -359,23 +371,6 @@ export const AssistenzComponent = {
 		async setup() {
 			await this.$entryParams.phrasenPromise
 			await this.tableBuiltPromise
-
-			const cols = this.$refs.assistenzTable.tabulator.getColumns()
-
-			// phrasen bandaid
-			cols.find(e => e.getField() === 'vorname').updateDefinition({title: this.$capitalize(this.$p.t('person/vorname'))})
-			cols.find(e => e.getField() === 'nachname').updateDefinition({title: this.$capitalize(this.$p.t('person/nachname'))})
-			cols.find(e => e.getField() === 'semester').updateDefinition({title: this.$capitalize(this.$p.t('lehre/ausbildungssemester'))})
-
-			cols.find(e => e.getField() === 'akzeptiert').updateDefinition({title: this.$capitalize(this.$p.t('global/status'))})
-			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
-			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
-			cols.find(e => e.getField() === 'studiengang_kz').updateDefinition({title: this.$capitalize(this.$p.t('lehre/studiengang'))})
-			cols.find(e => e.getField() === 'entschuldigung_id').updateDefinition({title: this.$capitalize(this.$p.t('ui/aktion'))})
-			cols.find(e => e.getField() === 'notiz').updateDefinition({title: this.$capitalize(this.$p.t('global/begruendungAnw'))})
-			cols.find(e => e.getField() === 'uploaddatum').updateDefinition({title: this.$capitalize(this.$p.t('global/uploaddatum'))})
-			cols.find(e => e.getField() === 'studentorgform').updateDefinition({title: this.$capitalize(this.$p.t('lehre/organisationsform'))})
-
 			
 		},
 		tableResolve(resolve) {
@@ -408,6 +403,114 @@ export const AssistenzComponent = {
 
 			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
 			this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
+		},
+		saveState(table) {
+			// avoid storing state after first restore part happened
+			if(!this.stateRestored) return 
+			const rawLayout = table.getColumnLayout();
+			const state = {
+				columns: rawLayout.map(col => ({
+					field: col.field,
+					visible: col.visible,
+					width: col.width,
+				})),
+					sort: table.getSorters().map(s => ({
+					field: s.field,
+					dir: s.dir,
+				})),
+				filters: table.getFilters(),
+				headerFilters: table.getHeaderFilters()
+			};
+			
+			localStorage.setItem(this.assistenzViewTabulatorOptions.persistenceID, JSON.stringify(state));
+		},
+		handleTableBuilt() {
+			const table = this.$refs.assistenzTable.tabulator
+			table.on("columnMoved", () => {
+				this.saveState(table);
+			});
+
+			table.on("columnResized", () => {
+				this.saveState(table);
+			});
+
+			table.on("columnVisibilityChanged", () => {
+				this.saveState(table);
+			});
+
+			table.on("filterChanged", () => {
+				this.saveState(table);
+			});
+
+			table.on("headerFilterChanged", () => {
+				this.saveState(table);
+			});
+
+			table.on("dataSorted", () => {
+				this.saveState(table);
+			});
+
+			table.on("columnSorted", () => {
+				this.saveState(table);
+			});
+
+			table.on("sortersChanged", () => {
+				this.saveState(table);
+			});
+
+			const saved = this.loadState();
+
+			table.on("renderComplete", () => {
+				if(!this.stateRestored) {
+					
+						if (saved?.columns && !this.colLayoutRestored) {
+							const layout = saved.columns.map(col => ({
+								field: col.field,
+								width: col.width,
+								visible: col.visible,
+								// add more if needed, but keep it simple
+							}));
+
+							table.setColumnLayout(layout);
+							this.colLayoutRestored = true;
+						}
+						
+						if (saved?.filters && !this.filtersRestored) {
+							this.filtersRestored = true // instantly avoid retriggers
+							table.setFilter(saved.filters);
+						}
+						if (saved?.headerFilters && !this.headerFiltersRestored) {
+							this.headerFiltersRestored = true // instantly avoid retriggers
+							for (let hf of saved.headerFilters) {
+								table.setHeaderFilterValue(hf.field, hf.value);
+							}
+						}
+
+						if (saved?.sort?.length && !this.sortRestored) {
+							this.sortRestored = true;
+							
+							setTimeout(() => {
+								const sortList = saved.sort.map(s => {
+									const col = table.columnManager.findColumn(s.field);
+									if (!col) {
+										return null;
+									}
+									return { column: col, dir: s.dir };
+								}).filter(Boolean);
+
+								table.setSort(sortList);
+							}, 100);
+						}
+						this.stateRestored = true
+					
+				}
+				
+			});
+			
+			
+		},
+		loadState() {
+			return JSON.parse(localStorage.getItem(this.assistenzViewTabulatorOptions.persistenceID) || "null");
 		}
 	},
 	mounted() {
@@ -416,6 +519,9 @@ export const AssistenzComponent = {
 		this.setup()
 		
 		this.calculateTableHeight()
+		
+		
+		
 		window.addEventListener('resize', this.calculateTableHeight)
 		window.addEventListener('orientationchange', this.calculateTableHeight)
 	},
@@ -448,6 +554,18 @@ export const AssistenzComponent = {
 		getTooltipObj(){
 			return {
 				value: this.$p.t('global/tooltipAssistenzV2'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipVonDatum() {
+			return {
+				value: this.$p.t('global/tooltipAssistenzVonDatum'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipBisDatum() {
+			return {
+				value: this.$p.t('global/tooltipAssistenzBisDatum'),
 				class: "custom-tooltip"
 			}
 		}
@@ -553,6 +671,7 @@ export const AssistenzComponent = {
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="assistenzViewTabulatorOptions"
 				:tabulator-events="assistenzViewTabulatorEventHandlers"
+				@tableBuilt="handleTableBuilt"
 				:sideMenu="false"
 				:table-only="true"
 			></core-filter-cmpt>
