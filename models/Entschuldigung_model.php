@@ -107,7 +107,9 @@ class Entschuldigung_model extends \DB_Model
 							tbl_anwesenheit_entschuldigung.entschuldigung_id,
 							vorname,
 							nachname,
-							akzeptiert)
+							akzeptiert,
+							kurzbzlang
+						)
 						dms_id,
 						von,
 						bis,
