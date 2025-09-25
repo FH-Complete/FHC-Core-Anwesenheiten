@@ -1755,7 +1755,7 @@ export const LektorComponent = {
 						<template v-slot:footer>
 							
 							<button v-if="currentLEhasRightToSkipQR" type="button" class="btn btn-primary" @click="insertAnwWithoutQR">{{ $p.t('global/kontrolleOhneQR') }}</button>
-							<button v-show="!showQRLoadingSpinner" :disabled="qr != null" type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
+							<button v-show="!showQRLoadingSpinner" :disabled="qr != null" type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/jetztStarten') }}</button>
 							<div v-show="showQRLoadingSpinner">
 								<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
 							</div>
