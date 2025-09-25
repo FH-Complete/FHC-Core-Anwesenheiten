@@ -389,7 +389,7 @@ class ProfilApi extends FHCAPI_Controller
 				'insertvon' => $this->_uid,
 			);
 
-			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
+			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
 			if(!isSuccess($dmsFile)) {
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}

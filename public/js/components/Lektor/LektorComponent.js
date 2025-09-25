@@ -33,6 +33,7 @@ export const LektorComponent = {
 	},
 	data() {
 		return {
+			showQRLoadingSpinner: false,
 			selectedStudent: null,
 			kontrolleVonBis: null,
 			editKontrolle: null,
@@ -238,8 +239,6 @@ export const LektorComponent = {
 			abwesendCount: 0,
 			entschuldigtCount: 0,
 			studentCount: 0,
-			// minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach))),
-			// maxDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach))),
 			changes: false // if something could have happened to dataset -> reload on mounted
 		}
 	},
@@ -525,14 +524,18 @@ export const LektorComponent = {
 				month: this.selectedDate.getMonth() + 1,
 				day: this.selectedDate.getDate()
 			}
-
+			
 			this.$api.call(ApiKontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende))
 				.then(res => {
 				if (res.data) {
+					this.showQRLoadingSpinner = false
 					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
+			}).finally(()=>{
+				// just in case
+				this.showQRLoadingSpinner = false
 			})
 			
 		},
@@ -706,6 +709,7 @@ export const LektorComponent = {
 				return false;
 			}
 
+			this.showQRLoadingSpinner = true
 			this.qr = '' // indirectly set start button disabled
 
 			// fetch some data from stundenplan what should be happening rn
@@ -1192,7 +1196,7 @@ export const LektorComponent = {
 			if(!this.kontrollDatumSourceStundenplan && this.selectedDate <= this.minDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
-			} else if(!this.kontrollDatumSourceStundenplan && this.selectedDate > this.maxDate) {
+			} else if(this.selectedDate > this.maxDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
 			}
@@ -1745,13 +1749,16 @@ export const LektorComponent = {
 									<div class="row align items center mt-8">
 										<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
 									</div>
-									
 								</div>
 							</div>
 						</template>
 						<template v-slot:footer>
+							
 							<button v-if="currentLEhasRightToSkipQR" type="button" class="btn btn-primary" @click="insertAnwWithoutQR">{{ $p.t('global/kontrolleOhneQR') }}</button>
-							<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
+							<button v-show="!showQRLoadingSpinner" :disabled="qr != null" type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
+							<div v-show="showQRLoadingSpinner">
+								<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
+							</div>
 						</template>
 					</bs-modal>
 					
