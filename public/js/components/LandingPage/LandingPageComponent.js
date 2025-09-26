@@ -297,26 +297,30 @@ export default {
 					this.$entryParams.allLeTermine = res.data[1] ?? []
 					
 					res.data[0].forEach(entry => {
-						
+
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if (existing) {
 							// supplement info
 							existing.infoString += ', '
-							
-							existing.infoString += entry.kurzbzlang + '-' + entry.semester
-								+ (entry.verband ? entry.verband : '')
-								+ (entry.gruppe ? entry.gruppe : '')
-							
+							if (entry.gruppe_kurzbz !== null && entry.sichtbar && entry.direktinskription == false) {
+								existing.infoString += entry.gruppe_kurzbz
+							} else {
+								existing.infoString += entry.kurzbzlang + '-' + entry.semester
+									+ (entry.verband ? entry.verband : '')
+									+ (entry.gruppe ? entry.gruppe : '')
+							}
 						} else {
 							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
 							// so a new entry will always start with those groups, others are appended afterwards
 							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-							
-							entry.infoString += entry.kurzbzlang + '-' + entry.semester
-								+ (entry.verband ? entry.verband : '')
-								+ (entry.gruppe ? entry.gruppe : '')
-							
-							
+							if (entry.gruppe_kurzbz !== null && entry.sichtbar && entry.direktinskription == false) {
+								entry.infoString += entry.gruppe_kurzbz
+							} else {
+								entry.infoString += entry.kurzbzlang + '-' + entry.semester
+									+ (entry.verband ? entry.verband : '')
+									+ (entry.gruppe ? entry.gruppe : '')
+							}
+
 							data.push(entry)
 						}
 					})
