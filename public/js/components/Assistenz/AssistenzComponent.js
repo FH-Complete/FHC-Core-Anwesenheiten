@@ -169,8 +169,25 @@ export const AssistenzComponent = {
 		permissions: []
 	},
 	methods: {
+		formatForSql(date) {
+			if(typeof date === 'string') return date
+			else if (date instanceof Date) {
+				const pad = n => String(n).padStart(2, "0");
+
+				return (
+					date.getFullYear() + "-" +
+					pad(date.getMonth() + 1) + "-" +
+					pad(date.getDate()) + " " +
+					pad(date.getHours()) + ":" +
+					pad(date.getMinutes()) + ":" +
+					pad(date.getSeconds())
+				);
+			}
+		},
 		saveEditEntschuldigung() {
 			if(!this.selectedEntschuldigung) return
+				this.selectedEntschuldigung.von = this.formatForSql(this.selectedEntschuldigung.von)
+				this.selectedEntschuldigung.bis = this.formatForSql(this.selectedEntschuldigung.bis)
 			
 				this.$api.call(ApiAdmin.updateEntschuldigung(String(this.selectedEntschuldigung.entschuldigung_id),
 					this.selectedEntschuldigung.akzeptiert, this.selectedEntschuldigung.notiz,
@@ -183,6 +200,7 @@ export const AssistenzComponent = {
 					Object.keys(this.selectedEntschuldigung).forEach(key => {
 						this.selectedEntschuldigungCellRef[key] = this.selectedEntschuldigung[key];
 					});
+					this.$refs.assistenzTable.tabulator.redraw(true);
 					
 				}
 			}).finally(()=>{

@@ -153,8 +153,8 @@ export default {
 
 				// console.log('$entryParams', this.$entryParams)
 
-				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach)))
-				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach)))
+				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReachPast)))
+				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReachFuture)))
 
 				el.removeAttribute('permissions')
 
@@ -297,12 +297,12 @@ export default {
 					this.$entryParams.allLeTermine = res.data[1] ?? []
 					
 					res.data[0].forEach(entry => {
-						
+
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if (existing) {
 							// supplement info
 							existing.infoString += ', '
-							if (entry.gruppe_kurzbz !== null) {
+							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
 								existing.infoString += entry.gruppe_kurzbz
 							} else {
 								existing.infoString += entry.kurzbzlang + '-' + entry.semester
@@ -313,14 +313,14 @@ export default {
 							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
 							// so a new entry will always start with those groups, others are appended afterwards
 							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-							if (entry.gruppe_kurzbz !== null) {
+							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
 								entry.infoString += entry.gruppe_kurzbz
 							} else {
 								entry.infoString += entry.kurzbzlang + '-' + entry.semester
 									+ (entry.verband ? entry.verband : '')
 									+ (entry.gruppe ? entry.gruppe : '')
 							}
-							
+
 							data.push(entry)
 						}
 					})

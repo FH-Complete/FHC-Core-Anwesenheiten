@@ -96,8 +96,7 @@ class KontrolleApi extends FHCAPI_Controller
 				'ui'
 			)
 		);
-
-		require_once(FHCPATH.'include/lehreinheit.class.php');
+		
 		require_once(FHCPATH.'include/lehrveranstaltung.class.php');
 
 		$this->_setAuthUID(); // sets property uid
@@ -412,9 +411,9 @@ class KontrolleApi extends FHCAPI_Controller
 		$dateTime = strtotime($dateString);
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
-
-		$le = new lehreinheit();
-		$le->load($le_id);
+		
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 		
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($dateTime < $dateLimit && !$isAdmin) { 
@@ -494,8 +493,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 		
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($dateTime < $dateLimit && !$isAdmin) {
@@ -530,13 +529,17 @@ class KontrolleApi extends FHCAPI_Controller
 		$anwesenheit_id = $insert->retval;
 
 		// insert Anwesenheiten entries of every Student as Abwesend
-		$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
 			$le_id,
 			$anwesenheit_id,
 			$von, $bis,
 			$this->_ci->config->item('ANWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
+		if($transactionResult == false) {
+			$this->terminateWithError('Error during insert user Anwesenheiten entries transaction.');
+		}
+		
 		$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 		
 		$this->terminateWithSuccess($kontrolle);
@@ -546,13 +549,13 @@ class KontrolleApi extends FHCAPI_Controller
 
 		// kontrollen laden by le & date
 		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndDate($le_id, $datum);
-		$this->addMeta('getKontrollenForLeIdAndDate$result', $result);
+//		$this->addMeta('getKontrollenForLeIdAndDate$result', $result);
 		
 		if(isError($result)) $this->terminateWithError("error checking for kontrollen on same date");
 		else if (!hasData($result)) return true; // no other kontrollen -> no collision
 		
 		$kontrollen = getData($result);
-		$this->addMeta('kontrollen', $kontrollen);
+//		$this->addMeta('kontrollen', $kontrollen);
 		
 		// check against other von/bis
 
@@ -604,12 +607,16 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
 
 		// insert Anwesenheiten entries of every Student as Abwesend
-		$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
 			$le_id,
 			$anwesenheit_id,
 			$von, $bis,
 			$this->_ci->config->item('ABWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
+		
+		if($transactionResult == false) {
+			$this->terminateWithError('Error during insert user Anwesenheiten entries transaction.');
+		}
 
 		// count entschuldigt entries
 		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
@@ -701,8 +708,8 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLE($le_id)
 	{
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if($isAdmin) return true;
@@ -773,8 +780,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 
 		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 
@@ -793,13 +800,13 @@ class KontrolleApi extends FHCAPI_Controller
 		// check against kontrolle insert date since nominal von/bis date does not tell about the
 		// actuality of the check
 		$insertamum = $kontrolle->insertamum;
-		$this->addMeta('$insertamum', $insertamum);
+//		$this->addMeta('$insertamum', $insertamum);
 		$dateInsert = new DateTime($insertamum);
 		$insertFormatted = $dateInsert->format('Y-m-d');
 		$insertDateTime = strtotime($insertFormatted);
 		
-		$this->addMeta('$insertDateTime', $insertDateTime);
-		$this->addMeta('$dateLimit', $dateLimit);
+//		$this->addMeta('$insertDateTime', $insertDateTime);
+//		$this->addMeta('$dateLimit', $dateLimit);
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($insertDateTime < $dateLimit && !$isAdmin) {
 			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
@@ -920,8 +927,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 		
 		// remove date check when restarting since adding anew is allowed for all termine right now anyways
 //		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
@@ -1080,6 +1087,7 @@ class KontrolleApi extends FHCAPI_Controller
 		forEach($distinctLeId as $leRow)
 		{
 			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
+//			$this->addMeta($leRow->lehreinheit_id, $result);
 			if(!isSuccess($result)) $this->terminateWithError(getError($result));
 			$leTermine = getData($result);
 			
@@ -1091,7 +1099,8 @@ class KontrolleApi extends FHCAPI_Controller
 				forEach($leTermine as $distinctLesson) {
 					if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
 						$leTermineGrouped[] = $distinctLesson;
-					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1)) {
+					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1) 
+						&& $leTermineGrouped[count($leTermineGrouped) - 1]->datum == $distinctLesson->datum) {
 						$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
 						$leTermineGrouped[count($leTermineGrouped) - 1]->stunde = $distinctLesson->stunde;
 					} else { // new block detected
