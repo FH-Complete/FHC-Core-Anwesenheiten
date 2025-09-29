@@ -381,7 +381,7 @@ class ProfilApi extends FHCAPI_Controller
 		
 		if (!$noFileUpload) {
 			// Upload file
-			$uploadDataResult = uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
+			$uploadDataResult = $this->uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
 
 			// If an error occurred
 			if (isError($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
@@ -479,7 +479,7 @@ class ProfilApi extends FHCAPI_Controller
 		$entschuldigung = getData($result)[0];
 
 		// Upload file
-		$uploadDataResult = uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
+		$uploadDataResult = $this->uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
 
 		// If an error occurred
 		if (isError($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
