@@ -39,3 +39,15 @@ Events::on('lvMenuBuild', function ($menu_reference, $params) {
 		);
 	}
 });
+
+Events::on('getEntschuldigungsStatusForStudentOnDate', function($status_reference, $params) {
+	$_ci =& get_instance();	
+	$_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
+
+	$status =& $status_reference();
+	$result = $_ci->EntschuldigungModel->getEntschuldigungsStatusForStudentOnDate($params['student_uid'], $params['datum']);
+	$data = getData($result);
+	if(count($data) > 0 ) {
+		$status[] = $data[0]->akzeptiert;
+	}
+});

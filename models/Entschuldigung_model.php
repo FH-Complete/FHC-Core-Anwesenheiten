@@ -268,4 +268,14 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, [$person_id, $person_id]);
 	}
+	
+	public function getEntschuldigungsStatusForStudentOnDate($student_uid, $datum) {
+		$query = "SELECT person_id, von, bis, akzeptiert, entschuldigung_id
+				  FROM extension.tbl_anwesenheit_entschuldigung 
+					  JOIN public.tbl_benutzer USING (person_id)
+				  WHERE public.tbl_benutzer.uid = ?
+				      AND von <= ? AND bis >= ? AND akzeptiert = true";
+
+		return $this->execReadOnlyQuery($query, [$student_uid, $datum, $datum]);
+	}
 }
