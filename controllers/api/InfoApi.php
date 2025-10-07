@@ -11,15 +11,15 @@ class InfoApi extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getStudiensemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getStunden' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getStudentInfo' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getStudiengaenge' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getLektorsForLvaInSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw'),
-				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw'),
-				'getLvViewDataInfo' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getAktuellesSemester' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw'),
-				'getViewDataStudent' => array('extension/anw_r_full_assistenz:rw', 'extension/anw_r_ent_assistenz:rw', 'extension/anw_r_lektor:rw', 'extension/anw_r_student:rw')
+				'getStudiensemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getStunden' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getStudentInfo' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getStudiengaenge' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getLektorsForLvaInSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r'),
+				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r'),
+				'getLvViewDataInfo' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getAktuellesSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getViewDataStudent' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r')
 			)
 		);
 

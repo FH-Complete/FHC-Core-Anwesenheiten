@@ -65,21 +65,27 @@ export default {
 			const stg_kz = searchParams.get('stg_kz')
 			const sem_kurzbz = searchParams.get('sem_kurzbz')
 			const notMissingParams = (lv_id && stg_kz && sem_kurzbz) || this.$entryParams.notMissingParams
+
+			// redeclare function since at this point globalProperties are not ready
+			function capitalize(string) {
+				if(!string) return ''
+				return string[0].toUpperCase() + string.slice(1);
+			}
 			
 			
 			if((permissions.lektor || permissions.admin) && notMissingParams) {
-				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/kontrolle') : 'K'})
+				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'})
 				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
 			}
 
 			if((permissions.student || permissions.admin) && notMissingParams)  {
-				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/profil') : 'P'})
+				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'})
 
 				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
 			}
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
-				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? this.$p.t('global/admin') : 'A'})
+				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
 
 				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
 			}
@@ -147,22 +153,8 @@ export default {
 
 				// console.log('$entryParams', this.$entryParams)
 
-				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach)))
-				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach)))
-				
-
-				if(this.$entryParams.permissions.entschuldigungen_enabled) {
-					this.$entryParams.semesterInfoPromise = new Promise((resolve) => {
-							this.$api.call(ApiInfo.getAktuellesSemester())
-							.then(res => {
-							if(res?.meta?.status === 'success') {
-								this.$entryParams.aktuellesSemester = res?.data?.[0]
-								this.$entryParams.maxDate = Date.parse(this.$entryParams.aktuellesSemester.ende)
-								resolve()
-							}
-						})
-					})
-				}
+				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReachPast)))
+				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReachFuture)))
 
 				el.removeAttribute('permissions')
 
@@ -305,12 +297,12 @@ export default {
 					this.$entryParams.allLeTermine = res.data[1] ?? []
 					
 					res.data[0].forEach(entry => {
-						
+
 						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
 						if (existing) {
 							// supplement info
 							existing.infoString += ', '
-							if (entry.gruppe_kurzbz !== null) {
+							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
 								existing.infoString += entry.gruppe_kurzbz
 							} else {
 								existing.infoString += entry.kurzbzlang + '-' + entry.semester
@@ -321,19 +313,20 @@ export default {
 							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
 							// so a new entry will always start with those groups, others are appended afterwards
 							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-							if (entry.gruppe_kurzbz !== null) {
+							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
 								entry.infoString += entry.gruppe_kurzbz
 							} else {
 								entry.infoString += entry.kurzbzlang + '-' + entry.semester
 									+ (entry.verband ? entry.verband : '')
 									+ (entry.gruppe ? entry.gruppe : '')
 							}
-							
+
 							data.push(entry)
 						}
 					})
 						
 					res.data[0].forEach(entry => {
+						entry.csvInfoString = entry.infoString
 						entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
 					})
 
@@ -435,7 +428,7 @@ export default {
 			</a>
 		</div>
 	
-		<template  v-if="permissioncount > 1">
+		<template  v-if="permissioncount > 1 && phrasenResolved">
 			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs" @changed="handleTabChanged" ref="tabsMain"></core-tabs>
 		</template>
 		<template v-else-if="permissioncount === 1 && phrasenResolved">

@@ -34,7 +34,7 @@ export const StudentComponent = {
 				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
 			}
 			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
-			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimeline'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'}
+			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimelineV2'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'}
 			
 			return tabs
 		},
@@ -129,14 +129,6 @@ export const StudentComponent = {
 			// empty method so landing page doesnt break on this tab
 		}
 	},
-	computed: {
-		getTooltipTestphase() {
-			return {
-				value: this.$p.t('global/tooltipStudentTestphase'),
-				class: "custom-tooltip"
-			}
-		},	
-	},
 	created() {
 	},
 	mounted() {
@@ -157,7 +149,6 @@ export const StudentComponent = {
 						<h1 class="h4">
 							{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} 
 							<span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span>
-							<i v-tooltip.bottom="getTooltipTestphase" class="fa fa-circle-question" style="margin-left: 12px;"></i>
 						</h1>				
 					</div>
 					<div class="col-3">

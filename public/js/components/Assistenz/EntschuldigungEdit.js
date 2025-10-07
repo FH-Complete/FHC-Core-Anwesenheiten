@@ -134,8 +134,7 @@ export const EntschuldigungEdit = {
 						:format="formatDate"
 						:enable-time-picker="true"
 						:min-date="minDate"
-						:start-date="minDate"
-						:max-date="new Date($entryParams.maxDate)">
+						:start-date="minDate">
 					</datepicker>
 				</div>
 				<div class="col-6">
@@ -148,8 +147,7 @@ export const EntschuldigungEdit = {
 						:format="formatDate"
 						:enable-time-picker="true"
 						:min-date="minDate"
-						:start-date="minDate"
-						:max-date="new Date($entryParams.maxDate)">
+						:start-date="minDate">
 					</datepicker>
 				</div>
 			</div>

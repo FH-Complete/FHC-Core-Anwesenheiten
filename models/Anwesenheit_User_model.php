@@ -199,10 +199,12 @@ class Anwesenheit_User_model extends \DB_Model
 		if ($this->db->trans_status() === false || isError($result))
 		{
 			$this->db->trans_rollback();
+			return false;
 		}
 		else
 		{
 			$this->db->trans_commit();
+			return true;
 		}
 
 	}
