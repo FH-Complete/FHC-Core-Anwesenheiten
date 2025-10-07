@@ -391,7 +391,6 @@ class ProfilApi extends FHCAPI_Controller
 
 			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
 			if(!isSuccess($dmsFile)) {
-				$this->addMeta('dms res', $dmsFile);
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}
 
