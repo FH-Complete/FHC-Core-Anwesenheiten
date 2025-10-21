@@ -165,7 +165,8 @@ class Anwesenheit_User_model extends \DB_Model
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
 				 JOIN public.tbl_prestudent USING(prestudent_id)
-			WHERE lehreinheit_id = ?;";
+				 JOIN public.tbl_benutzer USING(uid)
+			WHERE lehreinheit_id = ? AND public.tbl_benutzer.aktiv = true;";
 
 		$result = $this->execQuery($query, [$von, $bis, $le_id]);
 
