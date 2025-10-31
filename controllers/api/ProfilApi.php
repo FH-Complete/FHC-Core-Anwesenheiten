@@ -37,7 +37,7 @@ class ProfilApi extends FHCAPI_Controller
 				'checkInAnwesenheit' => array('extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
-				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r'),
+				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 				
 				// load anw details onclick in cis4 widget
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
