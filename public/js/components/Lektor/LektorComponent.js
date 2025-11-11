@@ -77,6 +77,7 @@ export const LektorComponent = {
 				columns: [
 					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, download: false, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('global/prestudentID')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false, minWidth: 150, download: true, tooltip: this.tooltipTableRow},
+					{title: this.$capitalize(this.$p.t('ui/student_uid')), field: 'student_uid', formatter: lektorFormatters.centeredFormatter, visible: false, minWidth: 150, download: true, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1,  minWidth: 150, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe', headerFilter: 'list', tooltip: this.tooltipTableRow,
@@ -462,6 +463,7 @@ export const LektorComponent = {
 				
 				const nachname = student.nachname + student.zusatz
 				const row = {
+					student_uid: student.student_uid,
 					prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
@@ -1035,10 +1037,11 @@ export const LektorComponent = {
 
 				this.anwesenheitenTabulatorOptions.columns[0].title = this.$capitalize(await this.$p.t('global/foto'))
 				this.anwesenheitenTabulatorOptions.columns[1].title = this.$capitalize(await this.$p.t('global/prestudentID'))
-				this.anwesenheitenTabulatorOptions.columns[2].title = this.$capitalize(await this.$p.t('person/vorname'))
-				this.anwesenheitenTabulatorOptions.columns[3].title = this.$capitalize(await this.$p.t('person/nachname'))
-				this.anwesenheitenTabulatorOptions.columns[4].title = this.$capitalize(await this.$p.t('lehre/gruppe'))
-				this.anwesenheitenTabulatorOptions.columns[6].title = this.$capitalize(await this.$p.t('global/summe'))
+				this.anwesenheitenTabulatorOptions.columns[2].title = this.$capitalize(await this.$p.t('ui/student_uid'))
+				this.anwesenheitenTabulatorOptions.columns[3].title = this.$capitalize(await this.$p.t('person/vorname'))
+				this.anwesenheitenTabulatorOptions.columns[4].title = this.$capitalize(await this.$p.t('person/nachname'))
+				this.anwesenheitenTabulatorOptions.columns[5].title = this.$capitalize(await this.$p.t('lehre/gruppe'))
+				this.anwesenheitenTabulatorOptions.columns[7].title = this.$capitalize(await this.$p.t('global/summe'))
 				
 				this.lektorState.tabulatorCols = anwCols
 				this.$refs.anwesenheitenTable.tabulator.clearSort()

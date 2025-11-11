@@ -67,7 +67,7 @@ const anwesenheitApp = Vue.createApp({
 });
 anwesenheitApp.config.globalProperties.$entryParams = {
 	// TODO: update every patch to keep renew persistenceID for tabulator tables
-	patchdate: '2025-09-11',
+	patchdate: '2025-11-11',
 	isInFrame: !!window.frameElement,
 	isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
 	available_le_ids: Vue.ref([]),

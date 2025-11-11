@@ -77,7 +77,7 @@ class Anwesenheit_model extends \DB_Model
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root)
 	{
 		$query = "SELECT
-				distinct on(nachname, vorname, public.tbl_benutzer.person_id) vorname, nachname, prestudent_id, public.tbl_benutzer.person_id,
+				distinct on(nachname, vorname, public.tbl_benutzer.person_id) vorname, nachname, prestudent_id, public.tbl_student.student_uid, public.tbl_benutzer.person_id,
 				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || public.tbl_benutzer.person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
