@@ -1,5 +1,5 @@
 import LektorComponent from "../components/Lektor/LektorComponent.js";
-import Phrasen from "../../../../js/plugin/Phrasen.js";
+import Phrasen from "../../../../js/plugins/Phrasen.js";
 import {StudentByLvaComponent} from "../components/Lektor/StudentByLvaComponent.js";
 import StudentComponent from "../components/Student/StudentComponent.js";
 import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent.js";
@@ -10,7 +10,7 @@ import LandingPageComponent from "../components/LandingPage/LandingPageComponent
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
 const router = VueRouter.createRouter({
-	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten/`),
+	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Anwesenheiten`),
 	routes: [
 		{
 			path: `/Administration`,

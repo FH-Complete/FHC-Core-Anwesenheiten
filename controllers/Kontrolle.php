@@ -71,8 +71,8 @@ class Kontrolle extends Auth_Controller
 				'guide_link' => $this->_ci->config->item('GUIDE_LINK'),
 				'no_qr_lehrform' => $this->_ci->config->item('NO_QR_LEHRFORM'),
 				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
-				'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
-			]
+				'lang' => getUserLanguage(), // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
+				'APP_ROOT' => APP_ROOT]
 		);
 
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', $viewData);
