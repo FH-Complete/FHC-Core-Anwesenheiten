@@ -86,7 +86,7 @@ export default {
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
 				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
-				const adminPath = this.$entryParams.permissions.tabPaths['Admin']
+				const adminPath = this.$entryParams.permissions.tabPaths['Assistenz']
 				tabs.push({key: 'Admin', title: adminTitle, component: adminPath})
 			}
 
