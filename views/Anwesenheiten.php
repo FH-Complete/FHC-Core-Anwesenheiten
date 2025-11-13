@@ -28,7 +28,7 @@ $includesArray = array(
 		'vendor/npm-asset/primevue/timeline/timeline.js'
 	),
 	'customJSModules' => array(
-		'public/dist/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
+		'public/extensions/FHC-Core-Anwesenheiten/js/apps/AnwesenheitApp.js',
 		'public/extensions/FHC-Core-Anwesenheiten/js/formatters/formatters.js',
 		'vendor/olifolkerd/tabulator5/src/js/modules/Download/Download.js'
 	)

@@ -30,16 +30,16 @@ export const StudentComponent = {
 	},
 	methods: {
 		getTabsStudent() {
-			const componentPath = this.$entryParams.permissions.APP_ROOT + 'public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js';
+			const componentPath = this.$entryParams.permissions.tabPaths['StudentAnw']
 			const tabs = {
 				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: componentPath},
 			}
 			if(this.$entryParams.permissions.entschuldigungen_enabled) {
-				const entCompPath = this.$entryParams.permissions.APP_ROOT + 'public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js';
+				const entCompPath = this.$entryParams.permissions.tabPaths['StudentEnt']
 				tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: entCompPath }
 			}
 			if(this.$entryParams.permissions.admin) {
-				const timelinePath = this.$entryParams.permissions.APP_ROOT + 'public/extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'
+				const timelinePath = this.$entryParams.permissions.tabPaths['StudentTimeline']
 				tabs['timeline'] = { title: this.$p.t('global/anwTimelineV2'), component: timelinePath}
 			}
 			return tabs

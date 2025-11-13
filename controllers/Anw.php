@@ -73,7 +73,15 @@ class Anw extends Auth_Controller
 				'no_qr_lehrform' => $this->_ci->config->item('NO_QR_LEHRFORM'),
 				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
 				'lang' => getUserLanguage(), // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
-				'APP_ROOT' => APP_ROOT]
+				'tabPaths' =>  array(
+					'Lektor' => absoluteJsImportUrl('public/js/components/Lektor/LektorComponent.js'),
+					'Student' => absoluteJsImportUrl('public/js/components/Student/StudentComponent.js'),
+					'StudentAnw' => absoluteJsImportUrl('public/js/components/Student/StudentAnwesenheitComponent.js'),
+					'StudentEnt' => absoluteJsImportUrl('public/js/components/Student/StudentEntschuldigungComponent.js'),
+					'StudentTimeline' => absoluteJsImportUrl('public/js/components/Student/AnwTimelineWrapper.js'),
+					'Assistenz' => absoluteJsImportUrl('public/js/components/Assistenz/AssistenzComponent.js')
+				)
+			]
 		);
 
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', $viewData);
