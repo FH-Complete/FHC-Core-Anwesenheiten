@@ -71,23 +71,23 @@ export default {
 				if(!string) return ''
 				return string[0].toUpperCase() + string.slice(1);
 			}
-			
-			
+
 			if((permissions.lektor || permissions.admin) && notMissingParams) {
 				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'})
-				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+				const lektorPath = this.$entryParams.permissions.tabPaths['Lektor']
+				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: lektorPath})
 			}
-
+			
 			if((permissions.student || permissions.admin) && notMissingParams)  {
 				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'})
-
-				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+				const studentPath = this.$entryParams.permissions.tabPaths['Student']
+				tabs.push({key: 'Profil', title: profilTitle, component: studentPath})
 			}
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
 				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
-
-				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+				const adminPath = this.$entryParams.permissions.tabPaths['Assistenz']
+				tabs.push({key: 'Admin', title: adminTitle, component: adminPath})
 			}
 
 			const ret = {}

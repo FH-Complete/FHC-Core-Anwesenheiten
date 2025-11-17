@@ -30,12 +30,18 @@ export const StudentComponent = {
 	},
 	methods: {
 		getTabsStudent() {
+			const componentPath = this.$entryParams.permissions.tabPaths['StudentAnw']
 			const tabs = {
-				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: componentPath},
 			}
-			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
-			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimelineV2'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'}
-			
+			if(this.$entryParams.permissions.entschuldigungen_enabled) {
+				const entCompPath = this.$entryParams.permissions.tabPaths['StudentEnt']
+				tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: entCompPath }
+			}
+			if(this.$entryParams.permissions.admin) {
+				const timelinePath = this.$entryParams.permissions.tabPaths['StudentTimeline']
+				tabs['timeline'] = { title: this.$p.t('global/anwTimelineV2'), component: timelinePath}
+			}
 			return tabs
 		},
 		routeToCodeScan() {
