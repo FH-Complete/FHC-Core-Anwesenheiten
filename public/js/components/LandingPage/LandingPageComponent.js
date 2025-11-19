@@ -74,19 +74,19 @@ export default {
 
 			if((permissions.lektor || permissions.admin) && notMissingParams) {
 				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'})
-				const lektorPath = this.$entryParams.permissions.tabPaths['Lektor']
+				const lektorPath = permissions.tabPaths['Lektor']
 				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: lektorPath})
 			}
 			
 			if((permissions.student || permissions.admin) && notMissingParams)  {
 				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'})
-				const studentPath = this.$entryParams.permissions.tabPaths['Student']
+				const studentPath = permissions.tabPaths['Student']
 				tabs.push({key: 'Profil', title: profilTitle, component: studentPath})
 			}
 
 			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
 				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
-				const adminPath = this.$entryParams.permissions.tabPaths['Assistenz']
+				const adminPath = permissions.tabPaths['Assistenz']
 				tabs.push({key: 'Admin', title: adminTitle, component: adminPath})
 			}
 
