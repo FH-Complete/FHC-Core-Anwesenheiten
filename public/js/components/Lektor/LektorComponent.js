@@ -287,12 +287,14 @@ export const LektorComponent = {
 			const data = row.getData()
 			const name = document.createElement('p')
 			
-			name.innerText = data.vorname + ' ' + data.nachname
+			name.innerText = data.vorname + ' ' + data.nachname 
+			if(data?.entschuldigungen?.length) {
+				name.innerText += " vorhandene Entschuldigungen: \n\n"
+			}
 			el.appendChild(name)
 			
 			data?.entschuldigungen?.forEach(ent => {
 				const entschuldigung = document.createElement('p')
-
 				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
 				el.appendChild(entschuldigung)
 			})
@@ -302,12 +304,15 @@ export const LektorComponent = {
 		formatEntschuldigungZeit(ent) {
 			const von = new Date(ent.von)
 			const bis = new Date(ent.bis)
+			const today = new Date()
+			const sameDay = this.areDatesSame(today, bis) && this.areDatesSame(von, today)
 			
-			const sameDay = this.areDatesSame(von, bis)
 			if(sameDay) {
-				return String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return  (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
 			} else {
-				return (von.getMonth() + 1) + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + (bis.getMonth() + 1) + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				// return (von.getMonth() + 1) + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + (bis.getMonth() + 1) + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + bis.getDate() + '.' + (bis.getMonth()+1) + '.' + bis.getFullYear() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+
 			}
 		},
 		formatAkzeptiertStatus(akzeptiert) {
