@@ -289,16 +289,19 @@ export const LektorComponent = {
 			const name = document.createElement('p')
 			
 			name.innerText = data.vorname + ' ' + data.nachname 
+			const limit = 10
+			const shownNumber = data?.entschuldigungen?.length >= limit ? limit : data?.entschuldigungen?.length
 			if(data?.entschuldigungen?.length) {
-				name.innerText += " vorhandene Entschuldigungen: \n\n"
+				name.innerText += ` vorhandene Entschuldigungen: (${shownNumber}/${data?.entschuldigungen?.length} angezeigt)\n\n`
 			}
 			el.appendChild(name)
 			
-			data?.entschuldigungen?.forEach(ent => {
+			for(let i = 0; i < shownNumber; i++) {
+				const ent = data.entschuldigungen[i]
 				const entschuldigung = document.createElement('p')
 				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
 				el.appendChild(entschuldigung)
-			})
+			}
 			
 			return el
 		},
@@ -465,6 +468,11 @@ export const LektorComponent = {
 					if(status.person_id === student.person_id) return true
 					else return false
 				})
+				
+				// sort entschuldigungen descending, so tooltip shows most recent on top
+				// allEntStudent.sort(
+				//	
+				// )
 				
 				const nachname = student.nachname + student.zusatz
 				const row = {
