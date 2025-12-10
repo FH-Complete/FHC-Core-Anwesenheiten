@@ -86,6 +86,7 @@ class Anwesenheit_model extends \DB_Model
 				WHERE prestudent_id=tbl_student.prestudent_id
 				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
 			   tbl_mitarbeiter.mitarbeiter_uid,
+			   tbl_bisio.bisio_id, tbl_bisio.bis, tbl_bisio.von,
 			   tbl_note.lkt_ueberschreibbar, tbl_note.anmerkung,
 			   tbl_mobilitaet.mobilitaetstyp_kurzbz,
 			   (CASE WHEN bis.tbl_mobilitaet.studiensemester_kurzbz = vw_student_lehrveranstaltung.studiensemester_kurzbz THEN 1 ELSE 0 END) as doubledegree,

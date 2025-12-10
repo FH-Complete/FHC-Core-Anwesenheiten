@@ -863,21 +863,25 @@ export const LektorComponent = {
 				.toISOString()
 				.split("T")[0];
 		},
+		formatZusatzDate(date){
+			const parts = date.split('-');
+			return `${parts[2]}.${parts[1]}.${parts[0]}`;
+		},
 		formatZusatz(entry, stsem) {
 			let zusatz = ''
-			const stsemdatumvon = new Date(stsem.von)
-			const stsemdatumbis = new Date(stsem.bis)
-			// if(entry.studienstatus === 'Abbrecher '||entry.studienstatus === 'Unterbrecher') {
-			// 	// this should never come up anyways?
-			// }
+			const stsemdatumvon = new Date(stsem.start)
+			const stsemdatumbis = new Date(stsem.ende)
 
+			const entryVon = new Date(entry.von)
+			const entryBis = new Date(entry.bis)
+			
 			if (entry.studienstatus === 'Incoming') zusatz = ' (i)'
 			if (entry.bisio_id && entry.studienstatus !== 'Incoming'
-				&& entry.bis > stsemdatumvon && entry.von < stsemdatumbis && ((entry.bis.getTime() - entry.von.getTime()) / 1000 * 3600 * 24) >= 30) {
-				zusatz = ' (o) (ab ' + entry.von + ')'
-			} else if (entry.bisio_id && entry.studienstatus !== 'Incoming' && entry.von && entry.von > stsemdatumvon) {
+				&& entryBis > stsemdatumvon && entryVon < stsemdatumbis && ((entryBis.getTime() - entryVon.getTime()) / 1000 * 3600 * 24) >= 30) {
+				zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
+			} else if (entry.bisio_id && entry.studienstatus !== 'Incoming' && entryVon && entryVon > stsemdatumvon) {
 				// if bis datum is not yet known but von is available already
-				zusatz = ' (o) (ab ' + entry.von + ')'
+				zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
 			}
 
 			if (entry.lkt_ueberschreibbar === false) zusatz = ' (' + entry.anmerkung + ')'
