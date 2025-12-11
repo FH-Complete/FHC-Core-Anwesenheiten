@@ -299,7 +299,7 @@ export const LektorComponent = {
 			for(let i = 0; i < shownNumber; i++) {
 				const ent = data.entschuldigungen[i]
 				const entschuldigung = document.createElement('p')
-				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
+				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung Status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
 				el.appendChild(entschuldigung)
 			}
 			
