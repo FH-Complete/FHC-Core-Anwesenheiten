@@ -247,19 +247,22 @@ export default {
 			return new Promise(resolve => {
 				this.$api.call(ApiInfo.getLektorsForLvaInSemester(lv_id, sem_kurzbz))
 					.then(res => {
+						
 					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
 					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
 					const lektor = found ?? res.data.retval[0]
-					const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
+					const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
+					const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 						+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 						+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
 					this.$entryParams.selected_maUID.value = lektor ?{mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
 
 
 					res.data?.retval?.forEach(lektor => {
-						const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
+						const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
+						const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 							+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 							+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
 
