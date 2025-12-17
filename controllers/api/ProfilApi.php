@@ -473,6 +473,12 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		$entschuldigung = getData($result)[0];
 
+		// edge case where student still has old ui with nachreichen button enabled but in the meantime assistenz
+		// has already denied the entschuldigung request for some reason 
+		if($entschuldigung->akzeptiert !== null) {
+			$this->terminateWithError($this->p->t('global', 'errorEntschuldigungUpload'), 'general');
+		}
+		
 		$file = array(
 			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 			'version' => 0,
