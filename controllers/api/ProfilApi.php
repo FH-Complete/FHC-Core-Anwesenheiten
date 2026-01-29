@@ -381,6 +381,8 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
 		
+		// if working on a new dump/system, make sure that "ext_anw_entschuldigungen" dms kategorie exists,
+		// or the upload will fail and respond with errorInvalidFiletype
 		if(!$noFileUpload) {
 			$file = array(
 				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
@@ -392,6 +394,7 @@ class ProfilApi extends FHCAPI_Controller
 			);
 
 			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
+
 			if(!isSuccess($dmsFile)) {
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}

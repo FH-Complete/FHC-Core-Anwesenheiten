@@ -28,6 +28,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('person/Person_model', 'PersonModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
@@ -65,8 +66,20 @@ class AdministrationApi extends FHCAPI_Controller
 		$bis = $result->bis;
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithSuccess($this->p->t('global', 'errorNoSTGassigned'));
-
-		$this->terminateWithSuccess( $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis));
+		
+		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis);
+		$entschuldigungen = getData($result);
+		
+		foreach ($entschuldigungen as $entschuldigung) {
+			$result = $this->PersonModel->loadAllStudentUIDSForPersonID($entschuldigung->person_id);
+			$data = getData($result);
+			if(count($data) > 0) {
+				$entschuldigung->student_uid = $data[0]->uids;
+			}
+			
+		}
+		
+		$this->terminateWithSuccess($entschuldigungen);
 	}
 
 	/**
