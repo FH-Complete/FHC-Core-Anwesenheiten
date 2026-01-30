@@ -48,4 +48,6 @@ $config['ALERT_LEHRFORM'] = array(
 //		'english_alert_text' => 'In the supervision teaching format, you can skip the attendance check with QR code and enter attendance directly!'
 //	)
 );
+// limit for auto declining old entschuldigung applications that do not have a file attached yet
+$config['ENTSCHULDIGUNG_AUTODECLINE_THRESHOLD'] = '60 days';
 	

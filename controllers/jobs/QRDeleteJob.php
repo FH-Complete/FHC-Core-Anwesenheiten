@@ -21,13 +21,13 @@ class QRDeleteJob extends JOB_Controller
 
 	public function deleteOldCodes()
 	{
-		$this->logInfo('Start job FHC-Core-Anwesenheiten->deleteOldCodes');
+		$this->logInfo('Start job FHC-Core-Anwesenheiten->QRDeleteJob->deleteOldCodes');
 
 		$milliseconds = $this->_ci->config->item('QR_EXPIRATION_TIMER');
 
-		$result = $this->QRModel->deleteOlderThanMilliseconds($milliseconds);
+		$result = $this->_ci->QRModel->deleteOlderThanMilliseconds($milliseconds);
 
-		$rows_affected = $this->QRModel->db->affected_rows();
+		$rows_affected = $this->_ci->QRModel->db->affected_rows();
 
 		if (isError($result))
 		{
@@ -36,6 +36,6 @@ class QRDeleteJob extends JOB_Controller
 			$this->logInfo($rows_affected." QR Codes deleted.");
 		}
 
-		$this->logInfo('End job FHC-Core-Anwesenheiten->deleteOldCodes');
+		$this->logInfo('End job FHC-Core-Anwesenheiten->QRDeleteJob->deleteOldCodes');
 	}
 }
