@@ -379,20 +379,37 @@ export default {
 			}
 		},
 		findClosestTermin(termine) {
-			const todayTime = new Date(Date.now()).getTime()
 
-			termine.forEach((termin) => { // calculate time & timediff from today
-				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
-				termin.time = new Date(termin.datum).getTime()
-			})
+			const now = luxon.DateTime.now().toUTC();
+
+			termine.forEach((termin) => {
+				const combined = `${termin.datum} ${termin.ende}`
+				const dtUtc = luxon.DateTime.fromFormat(combined, 'yyyy-MM-dd HH:mm:ss', {zone: 'utc' }).toUTC();
+				
+				termin.time = dtUtc.toMillis();
+				termin.timeDiff = dtUtc.diff(now, 'milliseconds').milliseconds;
+			});
 			
-			// TODO: this approach messes with too much logic, maybe write method clone for startup logic?
-			// // avoid going for stunplantermine that lie too far back in the past
-			// const eligibleTermine = termine.filter(t => {
-			// 	t.time >= this.anwKontrolleMinDate
+			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff && termin.timeDiff > 0 ? termin : min, termine[0]);
+			
+			
+			// const todayTime = new Date(Date.now()).getTime()
+			//
+			// termine.forEach((termin) => { // calculate time & timediff from today
+			// 	termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
+			// 	termin.time = new Date(termin.datum).getTime()
 			// })
-			
-			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
+			//
+			// // TODO: this approach messes with too much logic, maybe write method clone for startup logic?
+			// // // avoid going for stunplantermine that lie too far back in the past
+			// // const eligibleTermine = termine.filter(t => {
+			// // 	t.time >= this.anwKontrolleMinDate
+			// // })
+			//
+			// console.trace()
+			// console.log(termine)
+			//
+			// return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
 		}
 	},
 	created(){

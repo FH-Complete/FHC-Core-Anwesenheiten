@@ -39,3 +39,14 @@ Events::on('lvMenuBuild', function ($menu_reference, $params) {
 		);
 	}
 });
+
+Events::on('getAnwesenheitenForLvAndSemester', function ($prestudent_ids, $lv_id, $sem_kurzbz, $downloadFunc) {
+	$ci =& get_instance();
+
+	$ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
+
+	$result = $ci->AnwesenheitUserModel->getAnwQuoteForPrestudentIds($prestudent_ids, $lv_id,  $sem_kurzbz);
+	
+	$downloadFunc($result->retval);
+});
+	

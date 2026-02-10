@@ -1,5 +1,6 @@
 import LektorComponent from "../components/Lektor/LektorComponent.js";
-import Phrasen from "../../../../js/plugin/Phrasen.js";
+// plugin or plugins doesnt matter it all loads all legacy plugins anyway, switch to FhcBase for more sanity
+import Phrasen from "../../../../js/plugins/Phrasen.js";
 import {StudentByLvaComponent} from "../components/Lektor/StudentByLvaComponent.js";
 import StudentComponent from "../components/Student/StudentComponent.js";
 import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent.js";
@@ -67,7 +68,7 @@ const anwesenheitApp = Vue.createApp({
 });
 anwesenheitApp.config.globalProperties.$entryParams = {
 	// TODO: update every patch to keep renew persistenceID for tabulator tables
-	patchdate: '2025-09-11',
+	patchdate: '2026-01-29',
 	isInFrame: !!window.frameElement,
 	isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
 	available_le_ids: Vue.ref([]),
