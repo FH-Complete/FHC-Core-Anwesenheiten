@@ -68,31 +68,49 @@ export default {
 
 			// redeclare function since at this point globalProperties are not ready
 			function capitalize(string) {
-				if(!string) return ''
+				if (!string) return ''
 				return string[0].toUpperCase() + string.slice(1);
 			}
-			
-			
-			if((permissions.lektor || permissions.admin) && notMissingParams) {
-				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'})
-				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+
+
+			if ((permissions.lektor || permissions.admin) && notMissingParams) {
+				const kontrolleTitle = Vue.computed(() => {
+					return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'
+				})
+				tabs.push({
+					key: 'Kontrolle',
+					title: kontrolleTitle,
+					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'
+				})
 			}
 
-			if((permissions.student || permissions.admin) && notMissingParams)  {
-				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'})
+			if ((permissions.student || permissions.admin) && notMissingParams) {
+				const profilTitle = Vue.computed(() => {
+					return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'
+				})
 
-				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+				tabs.push({
+					key: 'Profil',
+					title: profilTitle,
+					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'
+				})
 			}
 
-			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
-				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
+			if ((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
+				const adminTitle = Vue.computed(() => {
+					return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'
+				})
 
-				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+				tabs.push({
+					key: 'Admin',
+					title: adminTitle,
+					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'
+				})
 			}
 
 			const ret = {}
 			tabs.forEach((tab, i) => {
-				ret['tab'+i] = tab
+				ret['tab' + i] = tab
 			})
 
 			this.setCurrentTab(permissions.controller, tabs)
@@ -109,9 +127,9 @@ export default {
 			this.$entryParams.tabHeights.studentEnt = Vue.ref(400)
 			this.$entryParams.tabHeights.assistenz = Vue.ref(400)
 		},
-		setCurrentTab (controller, tabs) {
+		setCurrentTab(controller, tabs) {
 
-			switch(controller) {
+			switch (controller) {
 				case 'Admin':
 					this.currentTab = tabs.findIndex(t => t.key === 'Admin')
 					break;
@@ -125,9 +143,9 @@ export default {
 					this.currentTab = 0
 			}
 		},
-		async createdSetup () {
-			await new Promise (resolve => {
-				
+		async createdSetup() {
+			await new Promise(resolve => {
+
 				const queryString = window.location.search;
 				const searchParams = new URLSearchParams(queryString)
 				this.$entryParams.lv_id = searchParams.get('lvid')
@@ -141,12 +159,14 @@ export default {
 
 				this.setupViewDataRefs()
 
-				if(this.$entryParams.lv_id) {
+				if (this.$entryParams.lv_id) {
 					this.loadLvViewData()
 				}
 
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
-				this.$entryParams.phrasenPromise.then(()=> {this.phrasenResolved = true})
+				this.$entryParams.phrasenPromise.then(() => {
+					this.phrasenResolved = true
+				})
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
@@ -161,7 +181,7 @@ export default {
 				resolve()
 			})
 		},
-		setupViewDataRefs(){
+		setupViewDataRefs() {
 			this.$entryParams.viewDataLv = {}
 			this.$entryParams.viewDataLv.benotung = Vue.ref('')
 			this.$entryParams.viewDataLv.bezeichnung = Vue.ref('')
@@ -184,11 +204,11 @@ export default {
 		loadLvViewData() {
 			this.$api.call(ApiInfo.getLvViewDataInfo(this.$entryParams.lv_id))
 				.then(res => {
-				if(res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
-			})
+					if (res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
+				})
 		},
 		async handleSetup() {
-			if(this.$entryParams.setupPromise) return
+			if (this.$entryParams.setupPromise) return
 			return new Promise(resolve => {
 				const ma_uid = this.$entryParams.permissions.authID
 				const sem_kurzbz = this.$entryParams.sem_kurzbz
@@ -197,21 +217,21 @@ export default {
 
 				const promises = []
 				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
-				if(this.$entryParams.permissions.admin && lv_id && sem_kurzbz && le_ids) {
+				if (this.$entryParams.permissions.admin && lv_id && sem_kurzbz && le_ids) {
 					const maProm = this.handleMaSetup(lv_id, sem_kurzbz, ma_uid)
 
-					maProm.then(()=> {
+					maProm.then(() => {
 
 						promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.value?.mitarbeiter_uid, sem_kurzbz, le_ids))
 						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
-						Promise.all(promises).then(()=>{
+						Promise.all(promises).then(() => {
 							resolve()
 						})
 					})
 
 					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
-				} else if(this.$entryParams.permissions.lektor && lv_id && sem_kurzbz && le_ids) {
-					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(()=>{
+				} else if (this.$entryParams.permissions.lektor && lv_id && sem_kurzbz && le_ids) {
+					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(() => {
 						resolve(true)
 					})
 				} else {
@@ -222,57 +242,62 @@ export default {
 		},
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
-					this.$api.call(ApiInfo.getStudentsForLvaInSemester(lv_id, sem_kurzbz))
+				this.$api.call(ApiInfo.getStudentsForLvaInSemester(lv_id, sem_kurzbz))
 					.then(res => {
-					this.$entryParams.availableStudents = []
+						this.$entryParams.availableStudents = []
 
-					res?.data?.retval?.forEach(e => {
-						const infoString = e.semester + e.verband + e.gruppe + ' ' + e.vorname + ' ' + e.nachname
-						this.$entryParams.availableStudents.push({
-							vorname: e.vorname, nachname: e.nachname,
-							prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
-							lehreinheit_id: e.lehreinheit_id, lehrveranstaltung_id: e.lehrveranstaltung_id,
-							semester: e.semester, verband: e.verband, gruppe: e.gruppe,
-							uid: e.uid, person_id: e.person_id,
-							infoString
+						res?.data?.retval?.forEach(e => {
+							const infoString = e.semester + e.verband + e.gruppe + ' ' + e.vorname + ' ' + e.nachname
+							this.$entryParams.availableStudents.push({
+								vorname: e.vorname, nachname: e.nachname,
+								prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
+								lehreinheit_id: e.lehreinheit_id, lehrveranstaltung_id: e.lehrveranstaltung_id,
+								semester: e.semester, verband: e.verband, gruppe: e.gruppe,
+								uid: e.uid, person_id: e.person_id,
+								infoString
+							})
 						})
-					})
-					
-					this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
 
-				}).finally(()=>{resolve()})
+						this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
+
+					}).finally(() => {
+					resolve()
+				})
 			})
 		},
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
 				this.$api.call(ApiInfo.getLektorsForLvaInSemester(lv_id, sem_kurzbz))
 					.then(res => {
-						
-					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
-					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
+						this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
-					const lektor = found ?? res.data.retval[0]
-					const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
-					const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
-						+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
-						+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
-					this.$entryParams.selected_maUID.value = lektor ?{mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
+						const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
-
-					res.data?.retval?.forEach(lektor => {
+						const lektor = found ?? res.data.retval[0]
 						const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
 						const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 							+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 							+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
-
-						this.$entryParams.available_maUID.value.push({
+						this.$entryParams.selected_maUID.value = lektor ? {
 							mitarbeiter_uid: lektor.mitarbeiter_uid,
 							infoString
-						})
-					})
+						} : null
 
-				}).finally(()=> {
+
+						res.data?.retval?.forEach(lektor => {
+							const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
+							const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
+								+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
+								+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
+
+							this.$entryParams.available_maUID.value.push({
+								mitarbeiter_uid: lektor.mitarbeiter_uid,
+								infoString
+							})
+						})
+
+					}).finally(() => {
 					resolve()
 				})
 			})
@@ -281,66 +306,66 @@ export default {
 			return new Promise(resolve => {
 				this.$api.call(ApiKontrolle.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz))
 					.then(res => {
-					// merge entries with same LE
-					const data = []
+						// merge entries with same LE
+						const data = []
 
-					if(res.data[1]) {
-						// res.data[1] = null
-						Object.keys(res.data[1]).forEach(key => {
-							const val = res.data[1][key]
-							
-							if(val && val.length) {
-								val.forEach(v => v.le_id = key)
-								// spoof le termine to test with
-								// val.push({le_id: key, datum: '2025-04-17', beginn: '13:37:42', ende: '23:42:17'})
-							}
-						}) 
-					}
-					
-					this.$entryParams.allLeTermine = res.data[1] ?? []
-					
-					res.data[0].forEach(entry => {
+						if (res.data[1]) {
+							// res.data[1] = null
+							Object.keys(res.data[1]).forEach(key => {
+								const val = res.data[1][key]
 
-						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
-						if (existing) {
-							// supplement info
-							existing.infoString += ', '
-							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
-								existing.infoString += entry.gruppe_kurzbz
-							} else {
-								existing.infoString += entry.kurzbzlang + '-' + entry.semester
-									+ (entry.verband ? entry.verband : '')
-									+ (entry.gruppe ? entry.gruppe : '')
-							}
-						} else {
-							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
-							// so a new entry will always start with those groups, others are appended afterwards
-							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
-								entry.infoString += entry.gruppe_kurzbz
-							} else {
-								entry.infoString += entry.kurzbzlang + '-' + entry.semester
-									+ (entry.verband ? entry.verband : '')
-									+ (entry.gruppe ? entry.gruppe : '')
-							}
-
-							data.push(entry)
+								if (val && val.length) {
+									val.forEach(v => v.le_id = key)
+									// spoof le termine to test with
+									// val.push({le_id: key, datum: '2025-04-17', beginn: '13:37:42', ende: '23:42:17'})
+								}
+							})
 						}
-					})
-						
-					res.data[0].forEach(entry => {
-						entry.csvInfoString = entry.infoString
-						entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
-					})
 
-					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
-					this.$entryParams.available_le_info.value = [...data]
-					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
+						this.$entryParams.allLeTermine = res.data[1] ?? []
 
-					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
-					this.$entryParams.available_le_ids.value = [...le_ids]
+						res.data[0].forEach(entry => {
 
-				}).finally(() => {
+							const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
+							if (existing) {
+								// supplement info
+								existing.infoString += ', '
+								if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
+									existing.infoString += entry.gruppe_kurzbz
+								} else {
+									existing.infoString += entry.kurzbzlang + '-' + entry.semester
+										+ (entry.verband ? entry.verband : '')
+										+ (entry.gruppe ? entry.gruppe : '')
+								}
+							} else {
+								// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
+								// so a new entry will always start with those groups, others are appended afterwards
+								entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
+								if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
+									entry.infoString += entry.gruppe_kurzbz
+								} else {
+									entry.infoString += entry.kurzbzlang + '-' + entry.semester
+										+ (entry.verband ? entry.verband : '')
+										+ (entry.gruppe ? entry.gruppe : '')
+								}
+
+								data.push(entry)
+							}
+						})
+
+						res.data[0].forEach(entry => {
+							entry.csvInfoString = entry.infoString
+							entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
+						})
+
+						this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
+						this.$entryParams.available_le_info.value = [...data]
+						data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
+
+						this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
+						this.$entryParams.available_le_ids.value = [...le_ids]
+
+					}).finally(() => {
 					resolve()
 				})
 			})
@@ -355,62 +380,72 @@ export default {
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
 		},
 		handleTabChanged(key) {
-			if(this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
+			if (this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
 		},
 		findLeWithClosestTermin(leChoices, leTermine) {
 			const flat = Object.values(leTermine).filter(Array.isArray).flat();
-			
-			if(flat && flat.length) {
+
+			if (flat && flat.length) {
 				const closest = this.findClosestTermin(flat)
 
-				if(!closest) { // all possible termine are too far back in the past
+				if (!closest) { // all possible termine are too far back in the past
 					this.$fhcAlert.alertWarning(this.$p.t('global/noLePreselectTermineTooOld'))
-					
+
 					return leChoices[0]
 				}
-				
+
 				const choiceFound = leChoices.find(choice => choice.lehreinheit_id == closest.le_id)
 				return choiceFound
-				
-			} else if(leChoices && leChoices.length) { // no termine to determine closest le by
+
+			} else if (leChoices && leChoices.length) { // no termine to determine closest le by
 				return leChoices[0]
 			} else { // no termine and no le found
 				return null
 			}
 		},
 		findClosestTermin(termine) {
+			if (!termine || termine.length === 0) return null;
 
 			const now = luxon.DateTime.now().toUTC();
 
-			termine.forEach((termin) => {
-				const combined = `${termin.datum} ${termin.ende}`
-				const dtUtc = luxon.DateTime.fromFormat(combined, 'yyyy-MM-dd HH:mm:ss', {zone: 'utc' }).toUTC();
-				
-				termin.time = dtUtc.toMillis();
-				termin.timeDiff = dtUtc.diff(now, 'milliseconds').milliseconds;
+			// prepare luxon utc timestamps & priority ranking overall & ranking in same day
+			const scoredTermine = termine.map(termin => {
+				const start = luxon.DateTime.fromFormat(`${termin.datum} ${termin.beginn}`, 'yyyy-MM-dd HH:mm:ss', {zone: 'utc'});
+				const end = luxon.DateTime.fromFormat(`${termin.datum} ${termin.ende}`, 'yyyy-MM-dd HH:mm:ss', {zone: 'utc'});
+
+				let score = 100;
+
+				if (start.hasSame(now, 'day')) {
+					if (now >= start && now <= end) {
+						score = 1; // currently active lesson
+					} else if (now < start) {
+						score = 3; // future lesson later today
+					} else {
+						score = 4; // today but already over
+					}
+				} else if (start > now) {
+					score = 5; // future not today
+				} else {
+					score = 6; // past termine not today
+				}
+
+				return {
+					...termin,
+					score,
+					// absolute distance from the start of the lesson
+					diff: Math.abs(start.diff(now).as('milliseconds'))
+				};
 			});
-			
-			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff && termin.timeDiff > 0 ? termin : min, termine[0]);
-			
-			
-			// const todayTime = new Date(Date.now()).getTime()
-			//
-			// termine.forEach((termin) => { // calculate time & timediff from today
-			// 	termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
-			// 	termin.time = new Date(termin.datum).getTime()
-			// })
-			//
-			// // TODO: this approach messes with too much logic, maybe write method clone for startup logic?
-			// // // avoid going for stunplantermine that lie too far back in the past
-			// // const eligibleTermine = termine.filter(t => {
-			// // 	t.time >= this.anwKontrolleMinDate
-			// // })
-			//
-			// console.trace()
-			// console.log(termine)
-			//
-			// return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
-		}
+
+			return scoredTermine.reduce((best, current) => {
+				// if ranks are different, lower rank wins
+				if (current.score < best.score) return current;
+				if (current.score > best.score) return best;
+
+				// if they are in the same rank, pick the one closest to 'now' with the smallest absolute diff
+				return current.diff < best.diff ? current : best;
+			});
+		},
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
