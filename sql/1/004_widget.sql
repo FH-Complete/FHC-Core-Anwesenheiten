@@ -23,7 +23,7 @@ $$ BEGIN
 						"css": "d-flex justify-content-center align-items-center h-100", "title": "Digitale Anwesenheiten"
 					}'::jsonb,
 					'{
-						"file": "../../extensions/FHC-Core-Anwesenheiten/js/components/DashboardWidget/Anwesenheiten.js",
+						"file": "public/extensions/FHC-Core-Anwesenheiten/js/components/DashboardWidget/Anwesenheiten.js",
 						"icon": "/skin/images/fh_technikum_wien_illustration_klein.png",
 						"name": "Anwesenheiten",
 						"width": {

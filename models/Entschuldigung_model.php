@@ -268,4 +268,17 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, [$person_id, $person_id]);
 	}
+	
+	// used for autodecline job - filters for old applications still missing their attachment and which would
+	// have applied for a past timeframe
+	public function findOlderThanInterval($interval) {
+		$query = "SELECT *
+					FROM extension.tbl_anwesenheit_entschuldigung
+					WHERE akzeptiert IS NULL
+						AND insertamum <= NOW() - INTERVAL ?
+						AND dms_id IS null
+						AND bis <= NOW()";
+
+		return $this->execReadOnlyQuery($query, [$interval]);
+	}
 }

@@ -28,6 +28,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('person/Person_model', 'PersonModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
@@ -65,8 +66,20 @@ class AdministrationApi extends FHCAPI_Controller
 		$bis = $result->bis;
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithSuccess($this->p->t('global', 'errorNoSTGassigned'));
-
-		$this->terminateWithSuccess( $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis));
+		
+		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis);
+		$entschuldigungen = getData($result);
+		
+		foreach ($entschuldigungen as $entschuldigung) {
+			$result = $this->PersonModel->loadAllStudentUIDSForPersonID($entschuldigung->person_id);
+			$data = getData($result);
+			if(count($data) > 0) {
+				$entschuldigung->student_uid = $data[0]->uids;
+			}
+			
+		}
+		
+		$this->terminateWithSuccess($entschuldigungen);
 	}
 
 	/**
@@ -112,8 +125,11 @@ class AdministrationApi extends FHCAPI_Controller
 //		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
 		
 		if($statusChanged) {
+			// if updateStatus goes entschuldigt -> abwesend, look into extension.anwesenheit_user_history in case the
+			// entries that have been set to entschuldigt by this now invalid entschuldigung revert back to their last
+			// history entry,(which can be anwesend due to normal scan) instead of default to abwesend
 			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
-
+			
 			$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
 			if (isError($result))
 				$this->terminateWithError($result);
@@ -144,11 +160,48 @@ class AdministrationApi extends FHCAPI_Controller
 				}
 				
 				if(count($anwesenheit_user_ids) > 0) {
-					$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
+					// if update status is "abwesend", find out if there has been anwesend checkin status from before the entschuldigung was akzeptiert
+					if($updateStatus == $this->_ci->config->item('ABWESEND_STATUS')) {
+						$stati = [];
+						forEach($anwesenheit_user_ids as $id) { 
+							// query last status for each relevant "uncovered" user_entry
+							// that is to be reverted back to previous status, since they might have been anwesend in some
+							// and normally absent in others
+							
+							$result = $this->_ci->AnwesenheitUserHistoryModel->getStatusPriorToEntschuldigtForId($id);
+							if(count($result->retval) > 0) {
+								$stati[] = [$id, $result->retval[0]->status];
+							} else {
+								$stati[] = [$id, $updateStatus];
+							}
+						}
+						// update twice, once for each status
 
-					if (isError($updateAnwesenheit))
-						$this->terminateWithError($updateAnwesenheit);
-					
+						$presentUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('ANWESEND_STATUS'));
+						$absentUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('ABWESEND_STATUS'));
+
+						if(count($presentUserIds) > 0) {
+							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($presentUserIds, $this->_ci->config->item('ANWESEND_STATUS'));
+							if (isError($updateAnwesenheit)) {
+								$this->terminateWithError($updateAnwesenheit);
+							}
+						}
+						
+						if(count($absentUserIds) > 0) {
+							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($absentUserIds, $this->_ci->config->item('ABWESEND_STATUS'));
+							if (isError($updateAnwesenheit)) {
+								$this->terminateWithError($updateAnwesenheit);
+							}
+						}
+						
+						
+					} else { // just update all stati in question to entschuldigt
+						$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
+
+						if (isError($updateAnwesenheit)) {
+							$this->terminateWithError($updateAnwesenheit);
+						}
+					}
 				}
 			}
 		}
@@ -263,6 +316,24 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
+	}
+
+	/**
+	 * Filters an array of [user_id, status] pairs for a specific status
+	 * and returns a simple 1D array containing only the user IDs.
+	 *
+	 * @param array $stati The array of user status pairs: [[id, status], ...].
+	 * @param string $targetStatus The status value to filter by.
+	 * @return array A 1D array containing only the IDs of users with the target status.
+	 */
+	private function getIdsByStatus($stati,  $targetStatus) {
+		// 1. Filter the array to only include entries matching the $targetStatus
+		$filteredStati = array_filter($stati, function($entry) use ($targetStatus) {
+			return $entry[1] === $targetStatus;
+		});
+
+		// 2. Extract the user IDs from the filtered entries
+		return array_column($filteredStati, 0);
 	}
 
 	/**
