@@ -18,7 +18,7 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "
 			SELECT *
 			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
-			WHERE prestudent_id = ? AND lehreinheit_id = ? AND DATE(extension.tbl_anwesenheit.von) = ?
+			WHERE prestudent_id = ? AND lehreinheit_id = ? AND extension.tbl_anwesenheit.von = ?
 			ORDER BY von ASC;
 		";
 
@@ -141,7 +141,8 @@ class Anwesenheit_User_model extends \DB_Model
 
 		$query ='SELECT person_id, von, bis, akzeptiert
 			FROM extension.tbl_anwesenheit_entschuldigung
-			WHERE person_id IN ?';
+			WHERE person_id IN ?
+			ORDER BY von DESC';
 
 		return $this->execReadOnlyQuery($query, array($personIds));
 

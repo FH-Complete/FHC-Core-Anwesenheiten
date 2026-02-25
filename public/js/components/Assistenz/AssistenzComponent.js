@@ -49,8 +49,8 @@ export const AssistenzComponent = {
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
-					this.tableData = response.data.retval
-					return response.data.retval
+					this.tableData = response.data
+					return response.data
 				},
 				ajaxConfig: "POST",
 				ajaxContentType:{
@@ -78,6 +78,11 @@ export const AssistenzComponent = {
 				paginationSize: 50,
 				height: this.$entryParams.tabHeights.assistenz,
 				columns: [
+					{title: Vue.computed(() => this.$capitalize(this.$p.t('ui/student_uid'))), field: 'student_uid',
+						headerFilter: true,
+						headerSort: true,
+						tooltip:false
+					},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('person/vorname'))), field: 'vorname',
 						headerFilter: true,
 						headerSort: true,
@@ -401,7 +406,7 @@ export const AssistenzComponent = {
 
 				this.$api.call(ApiAdmin.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis))
 					.then(res => {
-				this.$refs.assistenzTable.tabulator.setData(res.data.retval)
+				this.$refs.assistenzTable.tabulator.setData(res.data)
 			})
 		},
 		handleUuidDefined(uuid) {

@@ -37,7 +37,7 @@ class ProfilApi extends FHCAPI_Controller
 				'checkInAnwesenheit' => array('extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
-				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r'),
+				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 				
 				// load anw details onclick in cis4 widget
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
@@ -113,7 +113,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -156,8 +156,10 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
+			
+			$this->addMeta('$aktuellesSem', $aktuellesSem);
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
 
@@ -200,7 +202,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
 			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -379,6 +381,8 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
 		
+		// if working on a new dump/system, make sure that "ext_anw_entschuldigungen" dms kategorie exists,
+		// or the upload will fail and respond with errorInvalidFiletype
 		if(!$noFileUpload) {
 			$file = array(
 				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
@@ -390,6 +394,7 @@ class ProfilApi extends FHCAPI_Controller
 			);
 
 			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
+
 			if(!isSuccess($dmsFile)) {
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}
@@ -471,6 +476,12 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		$entschuldigung = getData($result)[0];
 
+		// edge case where student still has old ui with nachreichen button enabled but in the meantime assistenz
+		// has already denied the entschuldigung request for some reason 
+		if($entschuldigung->akzeptiert !== null) {
+			$this->terminateWithError($this->p->t('global', 'errorEntschuldigungUpload'), 'general');
+		}
+		
 		$file = array(
 			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 			'version' => 0,
