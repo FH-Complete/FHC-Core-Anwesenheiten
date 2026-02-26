@@ -13,6 +13,9 @@ class EntschuldigungJob extends JOB_Controller
 		parent::__construct();
 
 		$this->_ci =& get_instance();
+
+		$this->_ci->load->helper('hlp_sancho_helper');
+		
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
@@ -21,6 +24,10 @@ class EntschuldigungJob extends JOB_Controller
 
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
+
+		$this->loadPhrases([
+			'anwesenheiten'
+		]);
 	}
 
 	
@@ -39,8 +46,6 @@ class EntschuldigungJob extends JOB_Controller
 			return;
 		}
 		
-		var_dump($entschuldigungen);
-		
 		// organize which assistenz should receive info about which entschuldigungen
 		$assistenzMap = [];
 		forEach($entschuldigungen as $ent) {
@@ -49,109 +54,109 @@ class EntschuldigungJob extends JOB_Controller
 			$personData = $resultPerson->retval[0];
 			
 			$resultStudentUIDS = $this->_ci->PersonModel->loadAllStudentUIDSForPersonID($ent->person_id);
-//			var_dump($ent);
 			
+
+			// its possible that old entschuldigungen are found where no student exists
 			if(count($resultStudentUIDS->retval) == 0) {
+				$this->_ci->logInfo("Keine Studenten Info für Person ID: ".$ent->person_id." gefunden, es wird keine Info an Assistenzen über alte Entschuldigungen versandt!");
 				continue;
 			}
-			var_dump($resultStudentUIDS);
 			
-			// its possible that old entschuldigungen are found where no student exists
+			forEach($resultStudentUIDS->retval[0]->stg_oes as $stg_oe) {
+				$assistenzResult = $this->_ci->OrganisationseinheitModel->getAssistenzForOE($stg_oe);
+				forEach($assistenzResult->retval as $assistenzRow) {
+					if (!isset($assistenzMap[$assistenzRow->person_id])) {
+						$assistenzMap[$assistenzRow->person_id] = [];
+					}
 
-//			forEach($resultStudentUIDS->retval[0]->uids as $student_uid) {
-//				
-//				$assistenzResult = $this->_ci->OrganisationseinheitModel->getAssistenzForOE($resultStudent->retval[0]->stg_oe_kurzbz);
-//
-//				forEach($assistenzResult->retval as $assistenzRow) {
-//					if (!isset($assistenzMap[$assistenzRow->person_id])) {
-//						$assistenzMap[$assistenzRow->person_id] = [];
-//					}
-//
-//					// Add the current $assistenzRow to the $assistenzMap as an array associated with its entschuldigung_id.
-//					$assistenzMap[$assistenzRow->person_id][] = [$ent, $assistenzRow, $personData];
-//				}
-//				
-//			}
+					// Add the current $assistenzRow to the $assistenzMap as an array associated with its entschuldigung_id.
+					$assistenzMap[$assistenzRow->person_id][] = [$ent, $assistenzRow, $personData];
+				}
+				
+			}
 		}
 		
-//		// send the mails
-//		$emailcount = 0;
-//		foreach($assistenzMap as $assistenz_person_id => $tripelArr) {
-//
-//			$entschuldigungenString = '<div style="font-family: Arial, sans-serif; color: #333;">';
-//
-//			foreach($tripelArr as $tripel) {
-//				$entschuldigung = $tripel[0];
-//				$assistenzRow = $tripel[1];
-//				$person = $tripel[2];
-//				
-//				$nameParts = [];
-//				if (!empty($person->titelpre)) $nameParts[] = $person->titelpre;
-//				$nameParts[] = $person->vorname;
-//				$nameParts[] = $person->nachname;
-//				if (!empty($person->titelpost)) $nameParts[] = $person->titelpost;
-//				$studentFullName = implode(' ', $nameParts);
-//				
-//				// Start Table
-//				$entschuldigungenString .= '
-//				<table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
-//					<thead>
-//						<tr style="background-color: #eee; text-align: left;">
-//							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">StudentIn</th>
-//							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px; width: 20%;">Von</th>
-//							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">Bis</th>
-//							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">Antragsdatum</th>
-//						</tr>
-//					</thead>
-//					<tbody>';
-//
-//				$vonDateFormatted = (new DateTime($ent->von))->format('d.m.Y H:i');
-//				$bisDateFormatted = (new DateTime($ent->bis))->format('d.m.Y H:i');
-//				$antragsDateFormatted = (new DateTime($ent->insertamum))->format('d.m.Y H:i:s');
-//
-//				$entschuldigungenString .= "
-//					<tr>
-//						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;'>{$studentFullName}</td>
-//						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;'>{$vonDateFormatted}</td>
-//						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;'>{$bisDateFormatted}</td>
-//						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px;'>{$antragsDateFormatted}</td>
-//					</tr>";
-//				
-//				$entschuldigungenString .= '</tbody></table>';
-//			}
-//
-//			$entschuldigungenString .= '</div>';
-//			
-//			$assistenzRow = $tripelArr[0][1];
-//			$anrede = $assistenzRow->anrede;
-//			$anredeFillString = $assistenzRow->anrede == "Herr" ? "r" : "";
-//			$fullFormattedNameString = $assistenzRow->first;
-//
-//			$path = $this->_ci->config->item('URL_ASSISTENZ_ENTMANAGEMENT');
-//			$url = CIS_ROOT.$path;
-//
-//			$body_fields = array(
-//				'anrede' => $anrede,
-//				'anredeFillString' => $anredeFillString,
-//				'fullFormattedNameString' => $fullFormattedNameString,
-//				'dayCount' => $interval,
-//				'entschuldigungenString' => $entschuldigungenString,
-//				'linkAbgabetool' => $url
-//			);
-//
-//			$email = $assistenzRow->uid."@".DOMAIN;
-//
-//			// send email with bundled info
-//			sendSanchoMail(
-//				'AnwEntMissingDocInfo',
-//				$body_fields,
-//				$email,
-//				$this->p->t('anwesenheiten', 'oldEntsWithoutDocumentFound') // ironic to use phrasen for a hardcoded german template btw
-//			);
-//
-//			$emailcount++;
-//		}
+		// send the mails
+		$emailcount = 0;
+		foreach($assistenzMap as $assistenz_person_id => $tripelArr) {
+			// Start Table
+			$entschuldigungenString = '<div style="font-family: Arial, sans-serif; color: #333;">';
+			$entschuldigungenString .= '
+				<table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+					<thead>
+						<tr style="background-color: #eee; text-align: left;">
+							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">StudentIn</th>
+							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px; width: 20%;">Von</th>
+							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">Bis</th>
+							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">Antragsdatum</th>
+						</tr>
+					</thead>
+					<tbody>';
 
+			foreach($tripelArr as $tripel) {
+				$entschuldigung = $tripel[0];
+				$assistenzRow = $tripel[1];
+				$person = $tripel[2];
+				
+				$nameParts = [];
+				if (!empty($person->titelpre)) $nameParts[] = $person->titelpre;
+				$nameParts[] = $person->vorname;
+				$nameParts[] = $person->nachname;
+				if (!empty($person->titelpost)) $nameParts[] = $person->titelpost;
+				$studentFullName = implode(' ', $nameParts);
+				
+				
+
+				$vonDateFormatted = (new DateTime($entschuldigung->von))->format('d.m.Y H:i');
+				$bisDateFormatted = (new DateTime($entschuldigung->bis))->format('d.m.Y H:i');
+				$antragsDateFormatted = (new DateTime($entschuldigung->insertamum))->format('d.m.Y H:i:s');
+
+				$entschuldigungenString .= "
+					<tr>
+						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;'>{$studentFullName}</td>
+						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;'>{$vonDateFormatted}</td>
+						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;'>{$bisDateFormatted}</td>
+						<td style='padding: 10px; border: 1px solid #ddd; font-size: 13px;'>{$antragsDateFormatted}</td>
+					</tr>";
+				
+			}
+
+			$entschuldigungenString .= '</tbody></table></div>';
+			
+//			var_dump($entschuldigungenString);
+			
+			$assistenzRow = $tripelArr[0][1];
+			$anrede = $assistenzRow->anrede;
+			$anredeFillString = $assistenzRow->anrede == "Herr" ? "r" : "";
+			$fullFormattedNameString = $assistenzRow->first;
+
+			$path = $this->_ci->config->item('URL_ASSISTENZ_ENTMANAGEMENT');
+			$url = CIS_ROOT.$path;
+			
+			
+			$body_fields = array(
+				'anrede' => $anrede,
+				'anredeFillString' => $anredeFillString,
+				'fullFormattedNameString' => $fullFormattedNameString,
+				'dayCount' => $interval,
+				'entschuldigungenString' => $entschuldigungenString,
+				'link' => $url
+			);
+
+			$email = $assistenzRow->uid."@".DOMAIN;
+
+			// send email with bundled info
+			sendSanchoMail(
+				'AnwEntMissingDocInfo',
+				$body_fields,
+				$email,
+				$this->p->t('anwesenheiten', 'oldEntsWithoutDocumentFound') // ironic to use phrasen for a hardcoded german template btw
+			);
+
+			$emailcount++;
+		}
+
+		$this->_ci->logInfo($emailcount . " Emails erfolgreich versandt");
 		$this->logInfo('End job FHC-Core-Anwesenheiten->EntschuldigungJob->notifyAssistenzAboutMissingEntschuldigungDokumente');
 
 	}
