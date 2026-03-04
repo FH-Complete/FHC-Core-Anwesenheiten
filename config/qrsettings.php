@@ -50,4 +50,7 @@ $config['ALERT_LEHRFORM'] = array(
 );
 // limit for auto declining old entschuldigung applications that do not have a file attached yet
 $config['ENTSCHULDIGUNG_AUTODECLINE_THRESHOLD'] = '60 days';
-	
+$config['ENTSCHULDIGUNG_EMAIL_INTERVAL'] = 3; // Workdays
+$config['URL_ASSISTENZ_ENTMANAGEMENT'] = 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
+
+

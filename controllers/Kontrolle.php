@@ -73,12 +73,12 @@ class Kontrolle extends Auth_Controller
 				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
 				'lang' => getUserLanguage(), // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
 				'tabPaths' =>  array(
-					'Lektor' => absoluteJsImportUrl('public/js/components/Lektor/LektorComponent.js'),
-					'Student' => absoluteJsImportUrl('public/js/components/Student/StudentComponent.js'),
-					'StudentAnw' => absoluteJsImportUrl('public/js/components/Student/StudentAnwesenheitComponent.js'),
-					'StudentEnt' => absoluteJsImportUrl('public/js/components/Student/StudentEntschuldigungComponent.js'),
-					'StudentTimeline' => absoluteJsImportUrl('public/js/components/Student/AnwTimelineWrapper.js'),
-					'Assistenz' => absoluteJsImportUrl('public/js/components/Assistenz/AssistenzComponent.js')
+					'Lektor' => absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'),
+					'Student' => absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'),
+					'StudentAnw' => absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'),
+					'StudentEnt' => absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'),
+					'StudentTimeline' => absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'),
+					'Assistenz' => absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js')
 				)
 			]
 		);
