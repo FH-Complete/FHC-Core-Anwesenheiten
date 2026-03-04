@@ -10,6 +10,8 @@ import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
 import ApiInfo from '../../api/factory/info.js';
 import ApiKontrolle from '../../api/factory/kontrolle.js';
 
+import {absoluteJsImportUrl} from "../../../../../js/helpers/UrlHelpers.js";
+
 export default {
 	name: 'LandingPageComponent',
 	components: {
@@ -79,7 +81,7 @@ export default {
 				tabs.push({
 					key: 'Kontrolle',
 					title: kontrolleTitle,
-					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'
+					component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js')
 				})
 			}
 
@@ -91,7 +93,7 @@ export default {
 				tabs.push({
 					key: 'Profil',
 					title: profilTitle,
-					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'
+					component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js')
 				})
 			}
 
@@ -103,7 +105,7 @@ export default {
 				tabs.push({
 					key: 'Admin',
 					title: adminTitle,
-					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'
+					component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js')
 				})
 			}
 
