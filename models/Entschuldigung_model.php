@@ -95,8 +95,6 @@ class Entschuldigung_model extends \DB_Model
 		return $this->execReadOnlyQuery($qry, array($vonNew, $bisNew, $vonOld, $bisOld, $le_id));
 	}
 	
-	
-
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{
 		$params = [$stg_kz_arr];
@@ -280,5 +278,17 @@ class Entschuldigung_model extends \DB_Model
 						AND bis <= NOW()";
 
 		return $this->execReadOnlyQuery($query, [$interval]);
+	}
+
+	// used to detect entschuldigungen older than a certain date to send stg assistenz an email to remind them to
+	// manually set the status declined if they think it should be declined. 
+	public function findOlderThanDateIntervalMissingUploads($dateTime) {
+		$query = "SELECT *
+					FROM extension.tbl_anwesenheit_entschuldigung
+					WHERE akzeptiert IS NULL
+						AND insertamum <= ?
+						AND dms_id IS null";
+
+		return $this->execReadOnlyQuery($query, [$dateTime]);
 	}
 }

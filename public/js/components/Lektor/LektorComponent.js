@@ -1750,8 +1750,8 @@ export const LektorComponent = {
 													:auto-apply="true"
 												/>
 											</div>
-											<div class="col-5">
-												<div v-show="!kontrollZeitSourceStundenplanBeginn" 
+											<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn">
+												<div  
 													 class="d-flex align-items-start small" 
 													 v-tooltip.bottom="getTooltipZeitFromStundenplan">
 													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
@@ -1774,8 +1774,8 @@ export const LektorComponent = {
 													:auto-apply="true"
 												/>
 											</div>
-											<div class="col-5">
-												<div v-show="!kontrollZeitSourceStundenplanEnde" 
+											<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde">
+												<div  
 													 class="d-flex align-items-start small" 
 													 v-tooltip.bottom="getTooltipZeitFromStundenplan">
 													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
@@ -1811,8 +1811,8 @@ export const LektorComponent = {
 													</template>
 												</datepicker>
 											</div>
-											<div class="col-5">
-												<div v-show="!kontrollDatumSourceStundenplan" 
+											<div class="col-5" v-show="!kontrollDatumSourceStundenplan">
+												<div  
 													 class="d-flex align-items-start small" 
 													 v-tooltip.bottom="getTooltipDatumFromStundenplan">
 													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
