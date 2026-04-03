@@ -1,7 +1,7 @@
 export const lektorFormatters = {
 	centeredFormatter: function(cell) {
 		const val = cell.getValue()
-		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+val+'</div>'
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 44px; max-height: 44px;">'+val+'</div>'
 	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();
@@ -22,7 +22,7 @@ export const lektorFormatters = {
 		let value = cell.getValue();
 		if(value === undefined) return
 
-		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><img src="'+value+'" style="max-height: 64px"></img></div>'
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 44px; max-height: 44px;"><img src="'+value+'" style="max-height: 64px"></img></div>'
 	},
 	dateOnlyTimeFormatter: function (cell) {
 		const value = cell.getValue();

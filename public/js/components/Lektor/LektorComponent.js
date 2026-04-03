@@ -67,7 +67,6 @@ export const LektorComponent = {
 			kontrollZeitSourceStundenplanEnde: false,
 			kontrollDatumSourceStundenplan: false,
 			anwesenheitenTabulatorOptions: {
-				rowHeight: 44, // foto max-height + 2x padding
 				rowFormatter: this.entschuldigtColoring,
 				height: this.$entryParams.tabHeights.lektor,
 				index: 'prestudent_id',
@@ -87,22 +86,6 @@ export const LektorComponent = {
 							autocomplete: true,
 						},
 						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, minWidth: 100},
-					// {title: Vue.computed(() => this.$p.t('benotungstool/c4note')), field: 'note_vorschlag',
-					// 	editor: 'list',
-					// 	editorParams: {
-					// 		values: Vue.computed(()=>this.notenOptions.map(opt => {
-					// 			return {
-					// 				label: opt.bezeichnung,
-					// 				value: opt.note
-					// 			}
-					// 		}))
-					// 	},
-					// 	formatter: (cell) => {
-					// 		const value = cell.getValue()
-					// 		const match = this.notenOptions.find(opt => opt.note === value)
-					// 		return match ? match.bezeichnung : value
-					// 	},
-					// 	widthGrow: 1},
 					{
 						title: this.$capitalize(this.$p.t('global/datum')),
 						field: 'status',
@@ -125,15 +108,6 @@ export const LektorComponent = {
 						widthGrow: 1,
 						tooltip: this.tooltipTableRow,
 						minWidth: 150
-						
-						// title: this.$capitalize(this.$p.t('global/datum')),
-						// field: 'status',
-						// formatter: this.anwesenheitFormatterValue,
-						// hozAlign:"center",
-						// widthGrow: 1, 
-						// // tooltip: this.anwTooltip,
-						// tooltip: this.tooltipTableRow,
-						// minWidth: 150
 					},
 					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: this.percentFormatter,widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
 				],
@@ -344,9 +318,7 @@ export const LektorComponent = {
 			if(sameDay) {
 				return  (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
 			} else {
-				// return (von.getMonth() + 1) + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + (bis.getMonth() + 1) + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
 				return (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + bis.getDate() + '.' + (bis.getMonth()+1) + '.' + bis.getFullYear() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
-
 			}
 		},
 		formatAkzeptiertStatus(akzeptiert) {
@@ -363,7 +335,6 @@ export const LektorComponent = {
 			}
 			
 			return ret
-			
 		},
 		percentFormatter: function (cell) {
 			const data = cell.getData()
@@ -452,7 +423,6 @@ export const LektorComponent = {
 
 				this.lektorState.showAllVar = false
 			}
-
 		},
 		setShowAll() {
 			const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
@@ -860,11 +830,9 @@ export const LektorComponent = {
 			const date = {year: dateobj.getFullYear(), month: dateobj.getMonth() + 1, day: dateobj.getDate()}
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
-
 			
-			
-				this.$api.call(ApiKontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date, kontrolle.anwesenheit_id))
-				.then(res => {
+			this.$api.call(ApiKontrolle.deleteAnwesenheitskontrolle(this.$entryParams.selected_le_id.value, date, kontrolle.anwesenheit_id))
+			.then(res => {
 				if (res.meta.status === "success" && res.data) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/deleteAnwKontrolleConfirmation'))
 
@@ -874,7 +842,6 @@ export const LektorComponent = {
 				}
 			})
 			
-
 		},
 		editAnwesenheitskontrolle(kontrolle) {
 			const vonSplit = kontrolle.von.split(':')
@@ -897,39 +864,65 @@ export const LektorComponent = {
 			const parts = date.split('-');
 			return `${parts[2]}.${parts[1]}.${parts[0]}`;
 		},
-		formatZusatz(entry, stsem) {
+		formatZusatz(entry, stsem, config = {}) {
 			let zusatz = ''
+
 			const stsemdatumvon = new Date(stsem.start)
 			const stsemdatumbis = new Date(stsem.ende)
+			const entryVon      = entry.von ? new Date(entry.von) : null
+			const entryBis      = entry.bis ? new Date(entry.bis) : null
 
-			const entryVon = new Date(entry.von)
-			const entryBis = new Date(entry.bis)
-			
-			if (entry.studienstatus === 'Incoming') zusatz = ' (i)'
-			if (entry.bisio_id && entry.studienstatus !== 'Incoming'
-				&& entryBis > stsemdatumvon && entryVon < stsemdatumbis && ((entryBis.getTime() - entryVon.getTime()) / 1000 * 3600 * 24) >= 30) {
-				zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
-			} else if (entry.bisio_id && entry.studienstatus !== 'Incoming' && entryVon && entryVon > stsemdatumvon) {
-				// if bis datum is not yet known but von is available already
-				zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
+			if (entry.studienstatus === 'Incoming') {
+				zusatz = ' (i)'
+			}
+
+			const isOutgoing = entry.bisio_id
+				&& entry.studienstatus !== 'Incoming'
+				&& entryVon !== null
+
+			// Add an outgoing label if the entry overlaps with the semester and meets the 
+			// minimum duration—either calculated as total duration or specific semester 
+			// overlap days, depending on config.
+			if (isOutgoing) {
+				const startsBeforeSemEnds = entryVon <= stsemdatumbis
+				const alreadyEnded        = entryBis !== null && entryBis < stsemdatumvon
+
+				let stayLongEnough
+				
+				if (this.$entryParams.permissions.show_outgoing_semester_overlap) {
+					// Overlap = how many days of the exchange actually fall within this semester
+					const overlapStart = entryVon > stsemdatumvon ? entryVon : stsemdatumvon
+					const overlapEnd   = (entryBis === null || entryBis > stsemdatumbis) ? stsemdatumbis : entryBis
+					const overlapDays  = (overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)
+					stayLongEnough = overlapDays >= (this.$entryParams.permissions.show_outgoing_semester_overlap_min_days ?? 30)
+				} else {
+					// original behaviour — total exchange duration >= 30 days
+					const durationDays = entryBis !== null
+						? (entryBis - entryVon) / (1000 * 60 * 60 * 24)
+						: Infinity
+					stayLongEnough = durationDays >= 30
+				}
+
+				if (startsBeforeSemEnds && !alreadyEnded && stayLongEnough) {
+					zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
+				}
 			}
 
 			if (entry.lkt_ueberschreibbar === false) zusatz = ' (' + entry.anmerkung + ')'
-			if (entry.mitarbeiter_uid !== null) zusatz = ' (ma)'
+			if (entry.mitarbeiter_uid !== null)       zusatz = ' (ma)'
 			if (entry.stg_kz_student == this.lektorState.a_o_kz) {
 				zusatz = ' (a.o.)'
 			}
 			if (entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) {
 				zusatz = ' (d.d.'
-				if (entry.ddtype == 'Intern') zusatz += 'i.)';
-				else if (entry.ddtype == 'Extern') zusatz += 'o.)';
-				else zusatz += ')';
+				if      (entry.ddtype == 'Intern') zusatz += 'i.)'
+				else if (entry.ddtype == 'Extern') zusatz += 'o.)'
+				else                               zusatz += ')'
 			}
 
 			return zusatz
 		},
 		linkKontrollData() {
-			// TODO: write Set of controlled groups into kontroll obj
 
 			this.lektorState.kontrollen.forEach(k => {
 				k.sumAnw = 0
@@ -1047,36 +1040,6 @@ export const LektorComponent = {
 			// tableData prefilled with all dates & status
 			this.lektorState.tableStudentData = this.setupAllData(newCols)
 			this.studentCount = this.lektorState.students.length
-			
-			// // build together the tableData by iterating over each student and look for the status of every (datum | von - bis) entry
-			// this.lektorState.students.forEach(student => {
-			//	
-			// 	const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
-			// 		const vonDate = new Date(status.von)
-			// 		const bisDate = new Date(status.bis)
-			// 		if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
-			// 		else return false
-			// 	})
-			// 	// foundEntry.hasEntschuldigung = !!entschuldigungEntryStudent
-			//	
-			// 	let isEntschuldigt = null
-			// 	allEntStudentForCurrentDate.forEach(entCurDate => {
-			// 		if(entCurDate.akzeptiert === true) isEntschuldigt = true
-			// 	})
-			//	
-			// 	const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-			// 	const nachname = student.nachname + student.zusatz
-			// 	const gruppe = student.semester + student.verband + student.gruppe
-			// 	const newRow = {
-			// 		prestudent_id: student.prestudent_id,
-			// 		foto: student.foto,
-			// 		vorname: student.vorname,
-			// 		nachname: nachname,
-			// 		gruppe: gruppe,
-			// 		entschuldigt: isEntschuldigt,
-			// 		entschuldigungen: allEntStudentForCurrentDate,
-			// 		sum: student.sum
-			// 	}
 
 			if (this.lektorState.showAllVar) {
 				this.setShowAll()
@@ -1338,7 +1301,6 @@ export const LektorComponent = {
 			}
 		},
 		togglePopOut() {
-			// todo: handle BS backdrop
 			
 			if (!this.externalWindow) {
 				this.externalWindow = window.open("", "", "width=1000,height=1000");
@@ -1408,13 +1370,6 @@ export const LektorComponent = {
 
 			// standard -> show all termine of a certain date
 			const datesFiltered = this.lektorState.dates.filter(d => d.startsWith(selectedDateDBFormatted))
-
-			// // fall back to all termine if on selected date none are found
-			// if(!datesFiltered.length && this.lektorState.dates.length) { // dont spam alerts when LE just has no kontrollen yet
-			
-			// 	this.$fhcAlert.alertWarning(this.$p.t('global/keineKontrollenAnDatumFallback', [selectedDateFrontendFormatted]))
-			// 	return this.lektorState.dates
-			// }
 
 			return datesFiltered
 		},
@@ -1514,9 +1469,6 @@ export const LektorComponent = {
 					}
 				})
 		},
-		openKontrolleInfo() {
-			
-		},
 		handleTitleSet(title) {
 			this.selectedStudent.title = title
 		},
@@ -1537,7 +1489,6 @@ export const LektorComponent = {
 				this.loading = false
 			})
 		}
-		
 	},
 	created(){
 		this.lv_id = this.$entryParams.lv_id
@@ -1571,10 +1522,6 @@ export const LektorComponent = {
 
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 			
-			// todo: range status anzeigen irgendwo
-			// if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-			// else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-
 			this.lektorState.tabulatorCols = anwCols
 			
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
@@ -1594,7 +1541,6 @@ export const LektorComponent = {
 			
 			// if just one kontrolle is selected query counts for that kontrolle
 			if(newVal === 1) {
-				
 				this.queryOnlyKontrolleShown()
 			}
 		}
