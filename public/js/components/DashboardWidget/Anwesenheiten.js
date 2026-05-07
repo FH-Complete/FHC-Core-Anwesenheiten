@@ -81,7 +81,7 @@ export default {
     <div class="widgets-anw w-100 h-100">
 		<div style="height: 100%; overflow-y: auto">
 			<Accordion ref="accordion" :multiple="true" :activeIndex="[0, 1, 2]">
-				<AccordionTab :header="$p.t('global/zugangscode')" style="padding: 0px;" :pt="tabPassthroughStyle">
+				<AccordionTab :header="$p.t('global/zugangscode')" :pt="tabPassthroughStyle">
 					<ScanComponent></ScanComponent>
 				</AccordionTab>
 				<AccordionTab :header="$p.t('global/anwesenheiten')" :pt="tabPassthroughStyle">
