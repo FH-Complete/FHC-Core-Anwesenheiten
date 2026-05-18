@@ -57,6 +57,7 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
+		$this->_ci->load->model('system/Webservicelog_model', 'WebservicelogModel');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -396,6 +397,7 @@ class ProfilApi extends FHCAPI_Controller
 			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
 
 			if(!isSuccess($dmsFile)) {
+				$this->handleUploadError($dmsFile, 'addEntschuldigung');
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 			}
 
@@ -425,6 +427,49 @@ class ProfilApi extends FHCAPI_Controller
 		$this->sendEmailToAssistenz($person_id, $dmsId, 'add', $entschuldigung_id, $von, $bis);
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => $entschuldigung_id]);
+	}
+	
+	private function handleUploadError($dmsResponse, $context, $fileFieldName = 'files') {
+
+		$phpErrorCode = $_FILES[$fileFieldName]['error'] ?? null;
+
+		$logData = array(
+			'context'             => $context,
+			'file_php_error_code' => $phpErrorCode,
+			'file_php_error_name' => $this->getPhpUploadErrorName($phpErrorCode),
+			'file_name'           => $_FILES[$fileFieldName]['name'] ?? null,
+			'file_type'           => $_FILES[$fileFieldName]['type'] ?? null,
+			'file_size'           => $_FILES[$fileFieldName]['size'] ?? null,
+			'dms_path_exists'     => file_exists(DMS_PATH),
+			'dms_path_writable'   => is_writable(DMS_PATH),
+			'error_raw'           => $this->_extractErrorString($dmsResponse),
+		);
+
+		$encoded = json_encode($logData, JSON_UNESCAPED_UNICODE);
+		
+		$this->_ci->WebservicelogModel->insert(array(
+			'webservicetyp_kurzbz' => 'content',
+			'beschreibung'         => 'EntschuldigungUploadError on '.$context,
+			'request_data'         => $encoded,
+			'execute_user' => getAuthUID(),
+			'execute_time' => 'NOW()'
+		));
+	}
+
+	private function getPhpUploadErrorName($code)
+	{
+		$map = array(
+			UPLOAD_ERR_OK        => 'UPLOAD_ERR_OK',
+			UPLOAD_ERR_INI_SIZE  => 'UPLOAD_ERR_INI_SIZE',
+			UPLOAD_ERR_FORM_SIZE => 'UPLOAD_ERR_FORM_SIZE',
+			UPLOAD_ERR_PARTIAL   => 'UPLOAD_ERR_PARTIAL',
+			UPLOAD_ERR_NO_FILE   => 'UPLOAD_ERR_NO_FILE',
+			UPLOAD_ERR_NO_TMP_DIR => 'UPLOAD_ERR_NO_TMP_DIR',
+			UPLOAD_ERR_CANT_WRITE => 'UPLOAD_ERR_CANT_WRITE',
+			UPLOAD_ERR_EXTENSION => 'UPLOAD_ERR_EXTENSION',
+		);
+
+		return isset($map[$code]) ? $map[$code] : 'UNKNOWN (' . $code . ')';
 	}
 
 	/**
@@ -493,6 +538,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
 		if(!isSuccess($dmsFile)) {
+			$this->handleUploadError($dmsFile, 'editEntschuldigung');
 			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 		}
 
