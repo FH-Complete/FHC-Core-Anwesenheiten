@@ -7,16 +7,14 @@ export const lektorFormatters = {
 		var value = cell.getValue();
 
 		if (value) {
-			var date = new Date(value);
+			var date = luxon.DateTime.fromISO(value, { zone: 'Europe/Vienna' });
 
-			var formattedDate = date.getDate().toString().padStart(2, '0') + '.' +
-				(date.getMonth() + 1).toString().padStart(2, '0') + '.' +
-				date.getFullYear()
+			if (!date.isValid) return value;
 
-			return formattedDate;
+			return date.toFormat('dd.MM.yyyy');
 		}
 
-		return value
+		return value;
 	},
 	fotoFormatter: function (cell) {
 		let value = cell.getValue();
@@ -27,16 +25,14 @@ export const lektorFormatters = {
 	dateOnlyTimeFormatter: function (cell) {
 		const value = cell.getValue();
 
-		if(value === undefined) return ''
+		if (value === undefined) return '';
 
-		const date = new Date(value);
-		let hours = date.getHours();
-		let minutes = date.getMinutes();
+		const date = luxon.DateTime.fromSQL(value, { zone: 'Europe/Vienna' });
 
-		hours = (hours < 10) ? '0' + hours : hours;
-		minutes = (minutes < 10) ? '0' + minutes : minutes;
-		return hours + ':' + minutes
-	}
+		if (!date.isValid) return '';
+
+		return date.toFormat('HH:mm');
+	},
 }
 
 export const studentFormatters = {

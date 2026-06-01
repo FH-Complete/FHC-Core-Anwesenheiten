@@ -154,16 +154,16 @@ export default {
 			})
 
 			anw.forEach(a => {
-				a.vonDate = new Date(a.von)
-				a.bisDate = new Date(a.bis)
+				a.vonDate = luxon.DateTime.fromSQL(a.von, { zone: 'Europe/Vienna' })
+				a.bisDate = luxon.DateTime.fromSQL(a.bis, { zone: 'Europe/Vienna' })
 				a.anteil = (a.dauer / this.sums[a.lehrveranstaltung_id] * 100).toFixed(2)
 			})
 
 			if(this.$entryParams.permissions.entschuldigungen_enabled) {
 				const ent = data[1].retval
 				ent.forEach(e => {
-					e.vonDate = new Date(e.von)
-					e.bisDate = new Date(e.bis)
+					e.vonDate = luxon.DateTime.fromSQL(e.von, { zone: 'Europe/Vienna' })
+					e.bisDate = luxon.DateTime.fromSQL(e.bis, { zone: 'Europe/Vienna' })
 				})
 
 				// filter entschuldigungen into offene and abgelehnte (entschuldigt status already in anw_user)
