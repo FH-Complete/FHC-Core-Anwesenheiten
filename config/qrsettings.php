@@ -52,5 +52,9 @@ $config['ALERT_LEHRFORM'] = array(
 $config['ENTSCHULDIGUNG_AUTODECLINE_THRESHOLD'] = '60 days';
 $config['ENTSCHULDIGUNG_EMAIL_INTERVAL'] = 3; // Workdays
 $config['URL_ASSISTENZ_ENTMANAGEMENT'] = 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
-
-
+// used to toggle outgoing kuerzel logic
+// if true also shows mobility of students that overlap over semester boudnaries,
+// without the mobility needed to be strictly in range
+$config['SHOW_OUTGOING_SEMESTER_OVERLAP'] = TRUE;
+// if student is abroad for at least 14 days in the current semester print the zusatz
+$config['SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'] = 14;

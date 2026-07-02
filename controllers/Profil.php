@@ -72,6 +72,8 @@ class Profil extends Auth_Controller
 				'guide_link' => $this->_ci->config->item('GUIDE_LINK'),
 				'no_qr_lehrform' => $this->_ci->config->item('NO_QR_LEHRFORM'),
 				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
+				'show_outgoing_semester_overlap' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP'),
+				'show_outgoing_semester_overlap_min_days' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'),
 				'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
 			]
 		);

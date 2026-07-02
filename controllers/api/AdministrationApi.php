@@ -69,15 +69,16 @@ class AdministrationApi extends FHCAPI_Controller
 		
 		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis);
 		$entschuldigungen = getData($result);
-		
-		foreach ($entschuldigungen as $entschuldigung) {
-			$result = $this->PersonModel->loadAllStudentUIDSForPersonID($entschuldigung->person_id);
-			$data = getData($result);
-			if(count($data) > 0) {
-				$entschuldigung->student_uid = $data[0]->uids;
+		if($entschuldigungen != null && count($entschuldigungen) > 0) {
+			foreach ($entschuldigungen as $entschuldigung) {
+				$result = $this->PersonModel->loadAllStudentUIDSForPersonID($entschuldigung->person_id);
+				$data = getData($result);
+				if(count($data) > 0) {
+					$entschuldigung->student_uid = $data[0]->uids;
+				}
 			}
-			
 		}
+		
 		
 		$this->terminateWithSuccess($entschuldigungen);
 	}

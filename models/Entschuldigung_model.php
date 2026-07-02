@@ -129,7 +129,6 @@ class Entschuldigung_model extends \DB_Model
 						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
 						JOIN public.tbl_studiengang USING (studiengang_kz)
-						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
 						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
 						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
 						LEFT JOIN campus.tbl_dms_version USING(dms_id)

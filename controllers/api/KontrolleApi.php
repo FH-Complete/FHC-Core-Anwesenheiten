@@ -131,7 +131,13 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
 
-		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
+		// use this preliminary error message in a hardcoded way since this should only ever occur when installing the extension on a
+		// custom fhcomplete installation and even if it was a phrase, it would be dead weight in the namespace
+//		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
+		if(isError($result)) $this->terminateWithError("Datenbankfehler beim Laden der Studentenliste aus AnweseheitModel->getStudentsForLVAandLEandSemester. Bitte überprüfen sie die Verfügbarkeit und Korrektheit der dort referenzierten Tabellen.");
+		
+		// this usually happens when there are no students assigned to the lehreinheit yet, usually occurs when opening
+		// digi anw tool for future semesters
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', [$ma_uid, $le_id]), 'general');
 		$students = getData($result);
 
