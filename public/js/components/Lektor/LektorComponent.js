@@ -87,22 +87,6 @@ export const LektorComponent = {
 							autocomplete: true,
 						},
 						formatter: lektorFormatters.centeredFormatter, widthGrow: 1, minWidth: 100},
-					// {title: Vue.computed(() => this.$p.t('benotungstool/c4note')), field: 'note_vorschlag',
-					// 	editor: 'list',
-					// 	editorParams: {
-					// 		values: Vue.computed(()=>this.notenOptions.map(opt => {
-					// 			return {
-					// 				label: opt.bezeichnung,
-					// 				value: opt.note
-					// 			}
-					// 		}))
-					// 	},
-					// 	formatter: (cell) => {
-					// 		const value = cell.getValue()
-					// 		const match = this.notenOptions.find(opt => opt.note === value)
-					// 		return match ? match.bezeichnung : value
-					// 	},
-					// 	widthGrow: 1},
 					{
 						title: this.$capitalize(this.$p.t('global/datum')),
 						field: 'status',
@@ -125,15 +109,6 @@ export const LektorComponent = {
 						widthGrow: 1,
 						tooltip: this.tooltipTableRow,
 						minWidth: 150
-						
-						// title: this.$capitalize(this.$p.t('global/datum')),
-						// field: 'status',
-						// formatter: this.anwesenheitFormatterValue,
-						// hozAlign:"center",
-						// widthGrow: 1, 
-						// // tooltip: this.anwTooltip,
-						// tooltip: this.tooltipTableRow,
-						// minWidth: 150
 					},
 					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: this.percentFormatter,widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
 				],
@@ -181,22 +156,7 @@ export const LektorComponent = {
 							this.$refs.modalContainerStudentByLva.show()
 						})
 						
-						
-						// this.$router.push({
-						// 	name: 'StudentByLva',
-						// 	params: {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz}
-						// })
 					}
-					// else { // on date fields toggle state edit
-					// 	this.toggleAnwStatus(e, cell, prestudent_id)
-					// 	const el = cell.getElement()
-					//	
-					// 	if(this.changedData.find(d => d.prestudent_id === prestudent_id)) {
-					// 		el.style.backgroundColor = "#E0BBE4"
-					// 	} else {
-					// 		el.style.backgroundColor = null
-					// 	}
-					// }
 				}
 			},
 			{
@@ -450,6 +410,8 @@ export const LektorComponent = {
 				// use selectedDate watcher to retrieve single column table state
 				this.selectedDate = new Date(this.selectedDate)
 
+				this.$refs.showAllTickbox.checked = false
+				localStorage.setItem('DigiAnwShowAll', false)
 				this.lektorState.showAllVar = false
 			}
 
@@ -488,6 +450,8 @@ export const LektorComponent = {
 			this.lektorState.tabulatorCols = newCols
 			this.setAllColsAndData()
 
+			this.$refs.showAllTickbox.checked = true
+			localStorage.setItem('DigiAnwShowAll', true)
 			this.lektorState.showAllVar = true
 		},
 		setupAllData() {
@@ -976,7 +940,6 @@ export const LektorComponent = {
 			})
 		},
 		async setupLektorComponent() {
-			
 			this.$entryParams.available_termine.value.forEach(termin => {
 				const dateParts = termin.datum.split("-")
 				termin.datumFrontend = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
@@ -1004,7 +967,6 @@ export const LektorComponent = {
 			})
 			
 			this.setEntries(this.lektorState.anwEntries, this.lektorState.kontrollen)
-			// this.$refs.kontrolleDropdown.setKontrollen(this.lektorState.kontrollen)
 			
 			// datepicker only allows to select for distinct days but one day can lead to several
 			// kontrollen on that day during different timespans -> find all from that date and postfix the von - bis times
@@ -1047,36 +1009,6 @@ export const LektorComponent = {
 			// tableData prefilled with all dates & status
 			this.lektorState.tableStudentData = this.setupAllData(newCols)
 			this.studentCount = this.lektorState.students.length
-			
-			// // build together the tableData by iterating over each student and look for the status of every (datum | von - bis) entry
-			// this.lektorState.students.forEach(student => {
-			//	
-			// 	const allEntStudentForCurrentDate = this.lektorState.entschuldigtStati.filter(status => {
-			// 		const vonDate = new Date(status.von)
-			// 		const bisDate = new Date(status.bis)
-			// 		if(status.person_id === student.person_id && vonDate <= this.selectedDate && bisDate >= this.selectedDate) return true
-			// 		else return false
-			// 	})
-			// 	// foundEntry.hasEntschuldigung = !!entschuldigungEntryStudent
-			//	
-			// 	let isEntschuldigt = null
-			// 	allEntStudentForCurrentDate.forEach(entCurDate => {
-			// 		if(entCurDate.akzeptiert === true) isEntschuldigt = true
-			// 	})
-			//	
-			// 	const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
-			// 	const nachname = student.nachname + student.zusatz
-			// 	const gruppe = student.semester + student.verband + student.gruppe
-			// 	const newRow = {
-			// 		prestudent_id: student.prestudent_id,
-			// 		foto: student.foto,
-			// 		vorname: student.vorname,
-			// 		nachname: nachname,
-			// 		gruppe: gruppe,
-			// 		entschuldigt: isEntschuldigt,
-			// 		entschuldigungen: allEntStudentForCurrentDate,
-			// 		sum: student.sum
-			// 	}
 
 			if (this.lektorState.showAllVar) {
 				this.setShowAll()
@@ -1110,6 +1042,7 @@ export const LektorComponent = {
 			}
 
 			this.loading = false
+			this.$watch('selectedDate', this.selectedDateWatcherHandler)
 		},
 		setCurrentCountsFromTableData() {
 			
@@ -1127,6 +1060,7 @@ export const LektorComponent = {
 			this.lektorState.viewData = this.$entryParams.lektorState.viewData
 			this.lektorState.a_o_kz = this.$entryParams.lektorState.a_o_kz
 			this.lektorState.gruppen = new Set()
+			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true" || false
 			
 			// put query params back into url for expected f5 behaviour
 			function updateQueryParam(key, value) {
@@ -1157,6 +1091,7 @@ export const LektorComponent = {
 			this.$entryParams.available_termine.value = this.getAvailableTermine()
 			this.lektorState.a_o_kz = data[7] ?? []
 			this.lektorState.gruppen = new Set()
+			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true" || false
 
 			this.setupLektorComponent()
 		},
@@ -1536,7 +1471,30 @@ export const LektorComponent = {
 				}).finally(() => {
 				this.loading = false
 			})
-		}
+		},
+		selectedDateWatcherHandler(newVal) {
+			if(newVal === "") {
+				this.selectedDate = new Date(Date.now())
+				return
+			}
+
+			const dates = this.determineDates()
+			const anwCols = this.buildColsForDates(dates)
+
+			this.setCurrentCountsFromTableData()
+
+			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
+
+			// todo: range status anzeigen irgendwo
+			// if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+			// else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
+
+			this.lektorState.tabulatorCols = anwCols
+
+			this.$refs.anwesenheitenTable.tabulator.clearSort()
+			this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
+
+		},
 		
 	},
 	created(){
@@ -1558,39 +1516,20 @@ export const LektorComponent = {
 		this.stopPollingAnwesenheiten()
 	},
 	watch: {
-		selectedDate(newVal) {
-			if(newVal === "") {
-				this.selectedDate = new Date(Date.now())
-				return
-			}
-			
-			const dates = this.determineDates()
-			const anwCols = this.buildColsForDates(dates)
-			
-			this.setCurrentCountsFromTableData()
-
-			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
-			
-			// todo: range status anzeigen irgendwo
-			// if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-			// else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-
-			this.lektorState.tabulatorCols = anwCols
-			
-			this.$refs.anwesenheitenTable.tabulator.clearSort()
-			this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
-
-		},
 		selectedDateCount(newVal, oldVal) {
 			// watch the nr of columns rendered on any given date,
 			// if the amount is equal to all avaialble kontrollen tick the showAll box to avoid confusion
-			if(newVal == this.lektorState.kontrollen.length) {
-				this.$refs.showAllTickbox.checked = true
-				this.lektorState.showAllVar = true
-			} else {
-				this.$refs.showAllTickbox.checked = false
-				this.lektorState.showAllVar = false
-			}
+			
+			// TODO: do we really need this?
+			
+			// if(newVal == this.lektorState.kontrollen.length) {
+			// 	this.$refs.showAllTickbox.checked = true
+			// 	this.lektorState.showAllVar = true
+			// } else {
+			// 	debugger
+			// 	this.$refs.showAllTickbox.checked = false
+			// 	this.lektorState.showAllVar = false
+			// }
 			
 			// if just one kontrolle is selected query counts for that kontrolle
 			if(newVal === 1) {
@@ -2039,7 +1978,7 @@ export const LektorComponent = {
 						
 								<div class="col-5 d-flex align-items-center">
 									<div class="form-check d-flex align-items-center gap-2">
-										<input 
+										<input
 											type="checkbox" 
 											class="form-check-input m-0" 
 											@click="handleShowAllToggle" 

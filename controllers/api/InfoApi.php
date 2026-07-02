@@ -90,7 +90,7 @@ class InfoApi extends FHCAPI_Controller
 
 	public function getStunden()
 	{
-		$this->_ci->StudiensemesterModel->addOrder("stunde", "ASC");
+		$this->_ci->StundeModel->addOrder("stunde", "ASC");
 		$result = $this->_ci->StundeModel->load();
 		$data = getData($result);
 
