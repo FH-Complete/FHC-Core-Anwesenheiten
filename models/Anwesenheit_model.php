@@ -35,7 +35,7 @@ class Anwesenheit_model extends \DB_Model
 			AND lehreinheit_id = ?
 		";
 
-		return $this->execQuery($query, [$date, $le_id]);
+		return $this->execReadOnlyQuery($query, [$date, $le_id]);
 	}
 
 	public function getKontrollenForLeId($le_id)
@@ -53,7 +53,7 @@ class Anwesenheit_model extends \DB_Model
 			ORDER BY MIN(von) DESC;
 		";
 
-		return $this->execQuery($query, [$le_id]);
+		return $this->execReadOnlyQuery($query, [$le_id]);
 	}
 
 	public function getKontrollenForLeIdAndDate($le_id, $date)
@@ -81,7 +81,7 @@ class Anwesenheit_model extends \DB_Model
 				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || public.tbl_benutzer.person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
-			   	extension.get_anwesenheiten_by_time(prestudent_id, $lv_id, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
+			   	extension.get_anwesenheiten_by_time(prestudent_id, ?, campus.vw_student_lehrveranstaltung.studiensemester_kurzbz) as sum,
 			   (SELECT status_kurzbz FROM public.tbl_prestudentstatus
 				WHERE prestudent_id=tbl_student.prestudent_id
 				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
@@ -112,7 +112,7 @@ class Anwesenheit_model extends \DB_Model
 				 vw_student_lehrveranstaltung.studiensemester_kurzbz=? AND 
 				 vw_student_lehrveranstaltung.lehreinheit_id=?";
 
-		return $this->execReadOnlyQuery($query, [$root, $lv_id, $sem_kurzbz, $le_id]);
+		return $this->execReadOnlyQuery($query, [$root, $lv_id, $lv_id, $sem_kurzbz, $le_id]);
 	}
 
 	public function getStudentsForLvaInSemester($lv_id, $sem_kurzbz)
@@ -180,7 +180,7 @@ class Anwesenheit_model extends \DB_Model
 		$query = "SELECT DISTINCT datum, beginn, ende, stunde
 				FROM lehre.vw_stundenplan JOIN lehre.tbl_stunde USING(stunde)
 				WHERE lehreinheit_id = ?
-				ORDER BY datum ASC";
+				ORDER BY datum, stunde";
 
 		return $this->execReadOnlyQuery($query, [$le_id]);
 	}
@@ -196,7 +196,7 @@ class Anwesenheit_model extends \DB_Model
 			JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
 		WHERE studiensemester_kurzbz = ? AND lehrveranstaltung_id = ?";
 
-		return $this->execQuery($query, [$sem_kurzbz, $lv_id]);
+		return $this->execReadOnlyQuery($query, [$sem_kurzbz, $lv_id]);
 	}
 
 	public function getAllPersonIdsForLE($le_id)
@@ -412,20 +412,13 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getCheckInCountsForAnwesenheitId($anwesenheit_id, $anwesendStatus, $abwesenStatus, $entschuldigtStatus)
 	{
-		$query = "SELECT (SELECT COUNT(*)
+		$query = "SELECT COUNT(*) FILTER (WHERE status = ?) AS anwesend,
+				COUNT(*) FILTER (WHERE status = ?) AS abwesend,
+				COUNT(*) FILTER (WHERE status = ?) AS entschuldigt
 			FROM extension.tbl_anwesenheit_user
-			LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
-			WHERE anwesenheit_id = ? AND status = ?) as anwesend,
-		(SELECT COUNT(*)
-			FROM extension.tbl_anwesenheit_user
-			LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
-			WHERE anwesenheit_id = ? AND status = ?) as abwesend,
-		(SELECT COUNT(*)
-				FROM extension.tbl_anwesenheit_user
-				LEFT JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
-				WHERE anwesenheit_id = ? AND status = ?) as entschuldigt;";
+			WHERE anwesenheit_id = ?;";
 
-		return $this->execQuery($query, [$anwesenheit_id, $anwesendStatus, $anwesenheit_id, $abwesenStatus, $anwesenheit_id, $entschuldigtStatus]);
+		return $this->execReadOnlyQuery($query, [$anwesendStatus, $abwesenStatus, $entschuldigtStatus, $anwesenheit_id]);
 	}
 
 	public function getStudiengaenge()
@@ -482,9 +475,19 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$stg_kz, $sem_kurzbz]);
 	}
 
+	public function kontrolleBelongsToLva($anwesenheit_id, $lv_id)
+	{
+		$query = "SELECT COUNT(*) AS cnt
+			FROM extension.tbl_anwesenheit
+				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
+			WHERE anwesenheit_id = ? AND lehrveranstaltung_id = ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $lv_id]);
+	}
+
 	public function getLektorIsTeachingLE($le_id, $ma_uid)
 	{
-		$query = "SELECT COUNT(*) > 0
+		$query = "SELECT COUNT(*) AS teaches
 			FROM lehre.tbl_lehreinheitmitarbeiter
 			WHERE lehreinheit_id = ? AND mitarbeiter_uid = ?";
 
@@ -493,7 +496,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getLektorIsTeachingLva($lva_id, $ma_uid)
 	{
-		$query = "SELECT COUNT(*) > 0
+		$query = "SELECT COUNT(*) AS teaches
 			FROM lehre.tbl_lehreinheitmitarbeiter
 				JOIN lehre.tbl_lehreinheit USING (lehreinheit_id)
 				JOIN lehre.tbl_lehrveranstaltung USING (lehrveranstaltung_id)

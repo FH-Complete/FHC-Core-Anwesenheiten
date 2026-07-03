@@ -10,6 +10,7 @@ import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {KontrolleDisplay} from "./KontrolleDisplay.js";
 import {Statuslegende} from "./Statuslegende.js";
+import {HighlightModeSelector} from "./HighlightModeSelector.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
 import {StudentByLvaComponent} from "./StudentByLvaComponent.js"
 
@@ -29,7 +30,8 @@ export const LektorComponent = {
 		"datepicker": VueDatePicker,
 		Statuslegende,
 		KontrolleDisplay,
-		StudentByLvaComponent
+		StudentByLvaComponent,
+		HighlightModeSelector
 	},
 	data() {
 		return {
@@ -91,16 +93,7 @@ export const LektorComponent = {
 						field: 'status',
 						editor: 'list',
 						editorParams: {
-							values: Vue.computed(()=> {
-								if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-									return [this.$entryParams.permissions.anwesend_status,
-										this.$entryParams.permissions.abwesend_status,
-										this.$entryParams.permissions.entschuldigt_status]
-								} else if (this.$entryParams.permissions.lektor) {
-									return [this.$entryParams.permissions.anwesend_status,
-										this.$entryParams.permissions.abwesend_status]
-								}
-							})	
+							values: Vue.computed(() => this.statusEditorValues())
 						},
 						editable: this.checkCellEditability,
 						formatter: this.anwesenheitFormatterValue,
@@ -129,16 +122,16 @@ export const LektorComponent = {
 					const field = cell.getColumn().getField()
 
 					const row = cell.getRow()
-					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
+					const prestudent_id = row.getData().prestudent_id
 
 					if(field === "gruppe" || field === "foto" || field === "prestudent_id" ||
 						field === "vorname" || field === "nachname" || field === "sum") {
 
 						if(this.changedData.length && await this.$fhcAlert.confirm({
-							message: 'Ungespeicherte Änderungen werden verloren!',
-							acceptLabel: 'Verwerfen und Fortfahren',
+							message: this.$p.t('global/anwUnsavedChangesConfirm'),
+							acceptLabel: this.$p.t('global/anwDiscardAndContinue'),
 							acceptClass: 'btn btn-danger',
-							rejectLabel: 'Zurück',
+							rejectLabel: this.$p.t('global/zurueck'),
 							rejectClass: 'btn btn-outline-secondary'
 						}) === false) {
 							return
@@ -163,16 +156,12 @@ export const LektorComponent = {
 				handler: async (cell) => {
 					
 					const row = cell.getRow()
-					const prestudent_id = Reflect.get(row.getData(), 'prestudent_id')
+					const prestudent_id = row.getData().prestudent_id
 
 					this.changeAnwStatus(cell, prestudent_id)
 					const el = cell.getElement()
 
-					if(this.changedData.find(d => d.prestudent_id === prestudent_id)) {
-						el.style.backgroundColor = "#E0BBE4"
-					} else {
-						el.style.backgroundColor = null
-					}
+					el.classList.toggle('anw-dirty', !!this.changedData.find(d => d.prestudent_id === prestudent_id))
 					
 				}
 			},
@@ -228,8 +217,7 @@ export const LektorComponent = {
 			const titleParts = title.split("|")
 			
 			const titledate = titleParts[0].trimEnd()
-			const dateParts = titledate.split("-")
-			const selectedDateFrontendFormatted = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
+			const selectedDateFrontendFormatted = this.toFrontendDate(titledate)
 
 			const container = document.createElement("div");
 			container.style.textAlign = "center";
@@ -238,7 +226,7 @@ export const LektorComponent = {
 		},
 		checkCellEditability(cell) {
 			const val = cell.getValue()
-			return val !== '-' // dont allow edit on empty cols 
+			return val !== undefined && val !== '-' // dont allow edit on empty cols
 		},
 		tooltipTableRow(e, cell, onRendered) {
 			const el = document.createElement('div');
@@ -260,7 +248,7 @@ export const LektorComponent = {
 
 			header.innerText = `${data.vorname} ${data.nachname}`;
 			if (count > 0) {
-				header.innerText += ` (Entschuldigungen: ${shownNumber}/${count})`;
+				header.innerText += ` (${this.$p.t('global/entschuldigungenAnzahl', [shownNumber, count])})`;
 			}
 			el.appendChild(header);
 
@@ -280,7 +268,7 @@ export const LektorComponent = {
 
 					const statusSpan = document.createElement('span');
 					statusSpan.style.color = ent.akzeptiert ? '#2e7d32' : '#d32f2f';
-					statusSpan.innerText = 'Status: ' + this.formatAkzeptiertStatus(ent.akzeptiert);
+					statusSpan.innerText = this.$p.t('global/statusLabel') + ': ' + this.formatAkzeptiertStatus(ent.akzeptiert);
 
 					grid.appendChild(dateSpan);
 					grid.appendChild(statusSpan);
@@ -288,7 +276,7 @@ export const LektorComponent = {
 				el.appendChild(grid);
 			} else {
 				const none = document.createElement('div');
-				none.innerText = 'Keine Entschuldigungen vorhanden';
+				none.innerText = this.$p.t('global/keineEntschuldigungenVorhanden');
 				el.appendChild(none);
 			}
 
@@ -299,24 +287,27 @@ export const LektorComponent = {
 			const bis = new Date(ent.bis)
 			const today = new Date()
 			const sameDay = this.areDatesSame(today, bis) && this.areDatesSame(von, today)
-			
+
+			const vonTime = String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0')
+			const bisTime = String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+
 			if(sameDay) {
-				return  (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return this.toFrontendDateFromDate(von) + ' ' + vonTime + ' - ' + bisTime
 			} else {
-				return (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + bis.getDate() + '.' + (bis.getMonth()+1) + '.' + bis.getFullYear() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return this.toFrontendDateFromDate(von) + ' ' + vonTime + ' - ' + this.toFrontendDateFromDate(bis) + ' ' + bisTime
 			}
 		},
 		formatAkzeptiertStatus(akzeptiert) {
 			// formats akzeptiert tri state logic (true => accepted, false => denied, null => open) into meaningful strings
 			
 			let ret = ''
-			
+
 			if(akzeptiert === null) {
-				ret = 'Offen'
+				ret = this.$p.t('global/entschuldigungStatusOffen')
 			} else if (akzeptiert === true) {
-				ret = 'Akzeptiert'
+				ret = this.$p.t('global/entschuldigungStatusAkzeptiert')
 			} else if (akzeptiert === false) {
-				ret = 'Abgelehnt'
+				ret = this.$p.t('global/entschuldigungStatusAbgelehnt')
 			}
 			
 			return ret
@@ -324,19 +315,22 @@ export const LektorComponent = {
 		percentFormatter: function (cell) {
 			const data = cell.getData()
 			const val = data.sum ?? data.anteil ?? '-'
-			return '<div style="display: flex;' + (val < (this.$entryParams.permissions.positiveRatingThreshold * 100) ? 'color: red; ' : '') + 'justify-content: center; align-items: center; height: 100%">' + val + ' %</div>'
+			const isLow = val !== '-' && val < (this.$entryParams.permissions.positiveRatingThreshold * 100)
+			return '<div style="display: flex;' + (isLow ? 'color: red; ' : '') + 'justify-content: center; align-items: center; height: 100%">' + val + ' %</div>'
 		},
 		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()
-			
+			const el = cell.getElement()
+			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt')
+
 			if (data === this.$entryParams.permissions.anwesend_status) {
-				cell.getElement().style.color = "#28a745";
+				el.classList.add('anw-anwesend');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
 			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				cell.getElement().style.color = "#dc3545";
+				el.classList.add('anw-abwesend');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
 			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				cell.getElement().style.color = "#0335f5";
+				el.classList.add('anw-entschuldigt');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
 		},
@@ -412,37 +406,8 @@ export const LektorComponent = {
 			}
 		},
 		setShowAll() {
-			const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
-			this.lektorState.dates.forEach(date => {
-				newCols.push({
-					title: date,
-					field: date,
-					editor: 'list',
-					editorParams: {
-						values: Vue.computed(()=> {
-							if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-								return [this.$entryParams.permissions.anwesend_status,
-									this.$entryParams.permissions.abwesend_status,
-									this.$entryParams.permissions.entschuldigt_status]
-							} else if (this.$entryParams.permissions.lektor) {
-								return [this.$entryParams.permissions.anwesend_status,
-									this.$entryParams.permissions.abwesend_status]
-							}
-						})
-					},
-					editable: this.checkCellEditability,
-					formatter: this.anwesenheitFormatterValue,
-					titleFormatter: this.anwColTitleFormatter,
-					hozAlign:"center",
-					widthGrow: 1,
-					tooltip: this.tooltipTableRow,
-					minWidth: 150
-				})
-			})
-			newCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field == 'sum'))
-
-			this.lektorState.tableStudentData = this.setupAllData(newCols)
-			this.lektorState.tabulatorCols = newCols
+			this.lektorState.tabulatorCols = this.buildColsForDates(this.lektorState.dates)
+			this.lektorState.tableStudentData = this.setupAllData()
 			this.setAllColsAndData()
 
 			this.$refs.showAllTickbox.checked = true
@@ -502,8 +467,7 @@ export const LektorComponent = {
 		},
 		formatQRTime(kontrolle) {
 			const vp = kontrolle.von.split(" ")
-			const datumParts = vp[0].split("-")
-			const datum = datumParts[2] + '.' + datumParts[1] + '.' + datumParts[0]
+			const datum = this.toFrontendDate(vp[0])
 			const von = vp[1]
 			const bis = kontrolle.bis.split(" ")[1]
 			return datum + ' | ' + von + ' - ' + bis
@@ -588,8 +552,10 @@ export const LektorComponent = {
 						valueToChange.status = change.status
 
 						const kontrolleToUpdate = this.lektorState.kontrollen.find(k => k.anwesenheit_id == change.anwesenheit_id)
-						kontrolleToUpdate[oldVal]--;
-						kontrolleToUpdate[change.status]++;
+						if (kontrolleToUpdate) {
+							kontrolleToUpdate[oldVal]--;
+							kontrolleToUpdate[change.status]++;
+						}
 					}
 					
 					
@@ -624,12 +590,8 @@ export const LektorComponent = {
 			this.$api.call(ApiKontrolle.degenerateQRCode(this.anwesenheit_id, oldCode))
 		},
 		handleChangeDatum(date) {
-			const padZero = (num) => String(num).padStart(2, '0');
-			const month = padZero(date.getMonth() + 1); // Months are zero-based
-			const day = padZero(date.getDate());
-			const year = date.getFullYear();
-			const searchStr = year + '-' + month + '-' + day
-			
+			const searchStr = this.formatDateToDbString(date)
+
 			const terminFound = this.$entryParams.available_termine.value.find(termin => termin.datum == searchStr)
 			if(terminFound) this.kontrollDatumSourceStundenplan = true
 			else this.kontrollDatumSourceStundenplan = false
@@ -850,9 +812,14 @@ export const LektorComponent = {
 				.toISOString()
 				.split("T")[0];
 		},
-		formatZusatzDate(date){
-			const parts = date.split('-');
+		// 'YYYY-MM-DD' -> 'DD.MM.YYYY'
+		toFrontendDate(dbDateStr) {
+			const parts = dbDateStr.split('-');
 			return `${parts[2]}.${parts[1]}.${parts[0]}`;
+		},
+		// Date -> 'D.M.YYYY' (unpadded)
+		toFrontendDateFromDate(date) {
+			return date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear();
 		},
 		formatZusatz(entry, stsem, config = {}) {
 			let zusatz = ''
@@ -894,7 +861,7 @@ export const LektorComponent = {
 				}
 
 				if (startsBeforeSemEnds && !alreadyEnded && stayLongEnough) {
-					zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
+					zusatz = ' (o) (ab ' + this.toFrontendDate(entry.von) + ')'
 				}
 			}
 
@@ -951,28 +918,20 @@ export const LektorComponent = {
 				}
 			})
 			
-			// sort dates and termine
-			this.lektorState.dates.sort((a, b) => {
-				const as = a.split('|')
-				const bs = b.split('|')
-				return as > bs ? 1 : a < b ? -1 : 0
-			})
+			// sort dates and termine (ISO-prefixed, so plain string comparison sorts correctly)
+			this.lektorState.dates.sort((a, b) => a.localeCompare(b))
 		},
 		async setupLektorComponent() {
 			this.$entryParams.available_termine.value.forEach(termin => {
-				const dateParts = termin.datum.split("-")
-				termin.datumFrontend = dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
+				termin.datumFrontend = this.toFrontendDate(termin.datum)
 			})
 
 			if (this.$entryParams.available_termine.value.length) {
 				const closestTermin = this.$entryParams.findClosestTermin(this.$entryParams.available_termine.value);
 				const termin = new Date(closestTermin.datum)
-				const closestTerminSameDay = this.selectedDate.getDate() === termin.getDate() && this.selectedDate.getMonth() === termin.getMonth && this.selectedDate.getFullYear() === termin.getFullYear()
+				const closestTerminSameDay = this.areDatesSame(this.selectedDate, termin)
 				closestTermin.isSameDay = closestTerminSameDay
 				this.setTimespanForKontrolleTermin(closestTermin, true)
-
-				this.$entryParams.available_termine.value.forEach(t => this.lektorState.dates.push(t.datum))
-
 			} else {
 				this.setTimespanForKontrolleNow()	
 			}
@@ -996,37 +955,9 @@ export const LektorComponent = {
 			
 			// define VISIBLE tabulator columns with dynamic columns
 			const anwCols = this.buildColsForDates(dates)
-			
-			const newCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
-			this.lektorState.dates.forEach(date => {
-				newCols.push({
-					title: date,
-					field: date,
-					editor: 'list',
-					editorParams: {
-						values: Vue.computed(()=> {
-							if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-								return [this.$entryParams.permissions.anwesend_status,
-									this.$entryParams.permissions.abwesend_status,
-									this.$entryParams.permissions.entschuldigt_status]
-							} else if (this.$entryParams.permissions.lektor) {
-								return [this.$entryParams.permissions.anwesend_status,
-									this.$entryParams.permissions.abwesend_status]
-							}
-						})
-					},
-					editable: this.checkCellEditability,
-					formatter: this.anwesenheitFormatterValue,
-					titleFormatter: this.anwColTitleFormatter,
-					hozAlign:"center",
-					widthGrow: 1,
-					tooltip: this.tooltipTableRow,
-					minWidth: 150
-				})
-			})
-			newCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field == 'sum'))
+
 			// tableData prefilled with all dates & status
-			this.lektorState.tableStudentData = this.setupAllData(newCols)
+			this.lektorState.tableStudentData = this.setupAllData()
 			this.studentCount = this.lektorState.students.length
 
 			if (this.lektorState.showAllVar) {
@@ -1034,23 +965,17 @@ export const LektorComponent = {
 			} else {
 
 				// set phrasen by field id instead of index
-				this.anwesenheitenTabulatorOptions.columns.forEach(async (col) => {
-					switch(col.field) {
-						case 'foto': 
-							col.titel = this.$capitalize(await this.$p.t('global/foto'))
-						case 'prestudent_id':
-							col.titel = this.$capitalize(await this.$p.t('global/prestudentID'))
-						case 'student_id':
-							col.titel = this.$capitalize(await this.$p.t('ui/student_uid'))
-						case 'vorname':
-							col.titel = this.$capitalize(await this.$p.t('person/vorname'))
-						case 'nachname':
-							col.titel = this.$capitalize(await this.$p.t('person/nachname'))
-						case 'gruppe':
-							col.titel = this.$capitalize(await this.$p.t('lehre/gruppe'))
-						case 'sum':
-							col.titel = this.$capitalize(await this.$p.t('global/summe'))
-					}
+				const titleKeys = {
+					foto: 'global/foto',
+					prestudent_id: 'global/prestudentID',
+					student_uid: 'ui/student_uid',
+					vorname: 'person/vorname',
+					nachname: 'person/nachname',
+					gruppe: 'lehre/gruppe',
+					sum: 'global/summe'
+				}
+				this.anwesenheitenTabulatorOptions.columns.forEach(col => {
+					if (titleKeys[col.field]) col.title = this.$capitalize(this.$p.t(titleKeys[col.field]))
 				})
 
 				this.lektorState.tabulatorCols = anwCols
@@ -1097,18 +1022,18 @@ export const LektorComponent = {
 			this.setupLektorComponent()
 		},
 		setupData(data) {
-			this.lektorState.students = data[0] ?? []
-			this.lektorState.anwEntries = data[1] ?? []
-			this.lektorState.stsem = data[2][0] ?? []
-			this.lektorState.entschuldigtStati = data[3] ?? []
-			this.lektorState.kontrollen = data[4] ?? []
+			this.lektorState.students = data.students ?? []
+			this.lektorState.anwEntries = data.anwEntries ?? []
+			this.lektorState.stsem = data.stsem?.[0] ?? []
+			this.lektorState.entschuldigtStati = data.entschuldigtStati ?? []
+			this.lektorState.kontrollen = data.kontrollen ?? []
 			this.lektorState.kontrollen.forEach(k => {
 				const dateparts = k.datum.split(".")
 				k.jsDate = new Date(dateparts[2],dateparts[1] - 1,dateparts[0])
 			})
-			this.lektorState.viewData = data[5] ?? []
+			this.lektorState.viewData = data.viewData ?? []
 			this.$entryParams.available_termine.value = this.getAvailableTermine()
-			this.lektorState.a_o_kz = data[7] ?? []
+			this.lektorState.a_o_kz = data.a_o_kz ?? []
 			this.lektorState.gruppen = new Set()
 			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true" || false
 
@@ -1119,7 +1044,7 @@ export const LektorComponent = {
 				return this.$entryParams.allLeTermine[this.$entryParams.selected_le_id.value] ?? []
 			} else {
 				// this should never happen since we always have termine setup before LE but still handling the odd case
-				this.$fhcAlert.alertError("Keine Termine gefunden")
+				this.$fhcAlert.alertError(this.$p.t('global/keineTermineGefunden'))
 				return  []
 			}
 		},
@@ -1141,8 +1066,7 @@ export const LektorComponent = {
 				date = this.formatDateToDbString(this.selectedDate)
 			}
 
-			const arrWrapped = this.lektorState.studentsData.get(prestudent_id)
-			const arr = JSON.parse(JSON.stringify(arrWrapped))
+			const arr = this.lektorState.studentsData.get(prestudent_id)
 			const found = arr.find(e => (e.datum + ' | ' + e.von + ' - ' + e.bis) === date)
 			const anwesenheit_user_id = found?.anwesenheit_user_id
 			const anwesenheit_id = found?.anwesenheit_id
@@ -1155,13 +1079,13 @@ export const LektorComponent = {
 
 			// check if the entry is in the original tableData with the same status
 			const student = this.lektorState.studentsData.get(newEntry.prestudent_id)
-			const original = student.find(v => (Reflect.get(v, 'datum') + ' | ' + Reflect.get(v, 'von') + ' - ' + Reflect.get(v, 'bis')) === newEntry.date)
+			const original = student.find(v => (v.datum + ' | ' + v.von + ' - ' + v.bis) === newEntry.date)
 			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
 			if (updateFoundIndex >= 0) {
 				this.changedData.splice(updateFoundIndex, 1)
 			}
-				
-			if (newEntry.status !== original.status) {
+
+			if (!original || newEntry.status !== original.status) {
 				this.changedData.push(newEntry)
 			}
 			
@@ -1269,7 +1193,9 @@ export const LektorComponent = {
 		},
 		entschuldigtColoring: function (row) {
 			const data = row.getData()
-			
+			const el = row.getElement()
+			el.classList.remove('anw-entschuldigt', 'anw-entschuldigt-offen')
+
 			if(!data.entschuldigungen?.length) return
 
 			// filter for entschuldigungen relevant to selected date
@@ -1284,11 +1210,11 @@ export const LektorComponent = {
 			entForSelectedDate.forEach(entCurDate => {
 				if(entCurDate.akzeptiert === true) isEntschuldigt = true
 			})
-			
+
 			if (isEntschuldigt) {
-				row.getElement().style.color = "#0335f5";
+				el.classList.add('anw-entschuldigt');
 			} else if(entForSelectedDate.length) {
-				row.getElement().style.color = "#12d5d5";
+				el.classList.add('anw-entschuldigt-offen');
 			}
 		},
 		togglePopOut() {
@@ -1364,39 +1290,40 @@ export const LektorComponent = {
 
 			return datesFiltered
 		},
+		statusEditorValues() {
+			const p = this.$entryParams.permissions
+			if (p.admin || p.assistenz) return [p.anwesend_status, p.abwesend_status, p.entschuldigt_status]
+			if (p.lektor) return [p.anwesend_status, p.abwesend_status]
+			return []
+		},
+		baseColumns() {
+			const fields = ['foto', 'prestudent_id', 'student_uid', 'vorname', 'nachname', 'gruppe']
+			return this.anwesenheitenTabulatorOptions.columns.filter(c => fields.includes(c.field))
+		},
+		buildDateColumn(date) {
+			return {
+				title: date,
+				field: date,
+				editor: 'list',
+				editorParams: {
+					values: Vue.computed(() => this.statusEditorValues())
+				},
+				editable: this.checkCellEditability,
+				formatter: this.anwesenheitFormatterValue,
+				titleFormatter: this.anwColTitleFormatter,
+				hozAlign: 'center',
+				widthGrow: 1,
+				tooltip: this.tooltipTableRow,
+				minWidth: 150
+			}
+		},
 		buildColsForDates(dates) {
-			const anwCols = this.anwesenheitenTabulatorOptions.columns.slice(0, 5)
+			const anwCols = this.baseColumns()
+			dates.forEach(d => anwCols.push(this.buildDateColumn(d)))
+			anwCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'sum'))
 
-			dates.forEach(d => {
-				anwCols.push({
-					title: d,
-					field: d,
-					editor: 'list',
-					editorParams: {
-						values: Vue.computed(()=> {
-							if(this.$entryParams.permissions.admin || this.$entryParams.permissions.assistenz) {
-								return [this.$entryParams.permissions.anwesend_status,
-									this.$entryParams.permissions.abwesend_status,
-									this.$entryParams.permissions.entschuldigt_status]
-							} else if (this.$entryParams.permissions.lektor) {
-								return [this.$entryParams.permissions.anwesend_status,
-									this.$entryParams.permissions.abwesend_status]
-							}
-						})
-					},
-					editable: this.checkCellEditability,
-					formatter: this.anwesenheitFormatterValue,
-					titleFormatter: this.anwColTitleFormatter,
-					hozAlign:"center",
-					widthGrow: 1,
-					tooltip: this.tooltipTableRow,
-					minWidth: 150
-				})
-			})
-			anwCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field == 'sum'))
-			
 			this.selectedDateCount = dates.length
-			
+
 			return anwCols
 		},
 		restartKontrolle(kontrolle) {
@@ -1489,8 +1416,7 @@ export const LektorComponent = {
 			const dates = this.determineDates()
 			const anwCols = this.buildColsForDates(dates)
 
-			this.setCurrentCountsFromTableData()
-
+			// selectedDateCount watcher already queries counts when it changes to 1
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 
 			// todo: range status anzeigen irgendwo
@@ -1521,23 +1447,11 @@ export const LektorComponent = {
 		window.removeEventListener('orientationchange', this.calculateTableHeight)
 		// anwesenheitskontrolle could be active
 		this.stopPollingAnwesenheiten()
+		clearInterval(this.progressTimerID)
+		this.progressTimerID = null
 	},
 	watch: {
-		selectedDateCount(newVal, oldVal) {
-			// watch the nr of columns rendered on any given date,
-			// if the amount is equal to all avaialble kontrollen tick the showAll box to avoid confusion
-			
-			// TODO: do we really need this?
-			
-			// if(newVal == this.lektorState.kontrollen.length) {
-			// 	this.$refs.showAllTickbox.checked = true
-			// 	this.lektorState.showAllVar = true
-			// } else {
-			// 	debugger
-			// 	this.$refs.showAllTickbox.checked = false
-			// 	this.lektorState.showAllVar = false
-			// }
-			
+		selectedDateCount(newVal) {
 			// if just one kontrolle is selected query counts for that kontrolle
 			if(newVal === 1) {
 				this.queryOnlyKontrolleShown()
@@ -1745,14 +1659,7 @@ export const LektorComponent = {
 													:highlight="highlights">
 													
 													<template #action-row>
-														<div class="col">
-															<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
-															<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
-																<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
-																<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
-																<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
-															</div>
-														</div>
+														<HighlightModeSelector v-model="highlightMode" />
 													</template>
 												</datepicker>
 											</div>
@@ -1857,7 +1764,7 @@ export const LektorComponent = {
 											</div>	
 										</div>
 										<div class="col-2">
-											<button role="button" class="col text-white option-entry text-center w-100 btn" @click="updateKontrolle">Speichern</button>
+											<button role="button" class="col text-white option-entry text-center w-100 btn" @click="updateKontrolle">{{ $p.t('global/speichern') }}</button>
 										</div>
 									</div>
 									<Divider/>
@@ -1928,7 +1835,7 @@ export const LektorComponent = {
 							<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
 								<h1 class="h4">{{ $entryParams.selected_le_info?.value?.infoString ? getTitle : '' }}</h1>
 								<h6>{{$entryParams.viewDataLv.bezeichnung}}</h6>		
-								<AnwCountDisplay  v-if="selectedDateCount == 1 & !lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
+								<AnwCountDisplay  v-if="selectedDateCount == 1 && !lektorState?.showAllVar" :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
 							</div>
 						</div>
 						
@@ -1970,14 +1877,7 @@ export const LektorComponent = {
 										:highlight="highlights"
 									>
 										<template #action-row>
-											<div class="col">
-												<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
-												<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
-													<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
-													<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
-													<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
-												</div>
-											</div>
+											<HighlightModeSelector v-model="highlightMode" />
 										</template>
 									</datepicker>
 								</div>

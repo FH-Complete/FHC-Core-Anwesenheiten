@@ -131,3 +131,24 @@
 .option-entry.btn {
 	border-radius: 0 !important;
 }
+
+/* Anwesenheit status colors, shared by LektorComponent formatters/row coloring */
+.anw-anwesend {
+	color: #28a745;
+}
+
+.anw-abwesend {
+	color: #dc3545;
+}
+
+.anw-entschuldigt {
+	color: #0335f5;
+}
+
+.anw-entschuldigt-offen {
+	color: #12d5d5;
+}
+
+.anw-dirty {
+	background-color: #E0BBE4 !important;
+}

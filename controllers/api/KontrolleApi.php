@@ -100,13 +100,13 @@ class KontrolleApi extends FHCAPI_Controller
 	 * in order to keep state management simple in the prototype phase. High potential for optimization.
 	 *
 	 * returns (
-	 *    1. list of students attending le in semester on date for lektor
-	 * 	  2. anwesenheiten_user entries of students
-	 *    3. object of current studiensemester (used to calculate zusätze like outgoing, incoming, etc of students)
-	 *    4. a list of every accepted entschuldigungsrange for students in this lesson
-	 *    5. existing anwesenheitskontrollen to delete later on
-	 *    6. some lektor and lehreinheit viewData for 'LektorComponent'
-	 *    7. termine for lehreinheit in stundenplan
+	 *    students - list of students attending le in semester on date for lektor
+	 *    anwEntries - anwesenheiten_user entries of students
+	 *    stsem - object of current studiensemester (used to calculate zusätze like outgoing, incoming, etc of students)
+	 *    entschuldigtStati - a list of every accepted entschuldigungsrange for students in this lesson
+	 *    kontrollen - existing anwesenheitskontrollen to delete later on
+	 *    viewData - some lektor and lehreinheit viewData for 'LektorComponent'
+	 *    a_o_kz - ausserordentlich kennzeichen prefix for student zusatz
 	 * )
 	 */
 	public function fetchAllAnwesenheitenByLvaAssigned()
@@ -114,11 +114,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$result = $this->getPostJSON();
 
-		if(!property_exists($result, 'le_id') || !property_exists($result, 'lv_id')
-			|| !property_exists($result, 'sem_kurzbz') || !property_exists($result, 'ma_uid')
-			|| !property_exists($result, 'date')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
+		$this->_requireProps($result, array('le_id', 'lv_id', 'sem_kurzbz', 'ma_uid', 'date'));
 
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
@@ -177,7 +173,15 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$a_o_kz = '9' . sprintf("%03s", $erhalter->erhalter_kz);
 
-		$this->terminateWithSuccess(array($students, $anwesenheiten, $studiensemester, $entschuldigungsstatus, $kontrollen, $lektorLehreinheitData, null, $a_o_kz));
+		$this->terminateWithSuccess(array(
+			'students' => $students,
+			'anwEntries' => $anwesenheiten,
+			'stsem' => $studiensemester,
+			'entschuldigtStati' => $entschuldigungsstatus,
+			'kontrollen' => $kontrollen,
+			'viewData' => $lektorLehreinheitData,
+			'a_o_kz' => $a_o_kz
+		));
 
 	}
 
@@ -210,6 +214,7 @@ class KontrolleApi extends FHCAPI_Controller
 	public function updateAnwesenheiten()
 	{
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('le_id', 'changedAnwesenheiten'));
 		$le_id = $result->le_id;
 
 		// check if user is lektor for that le or admin/assistenz
@@ -218,6 +223,22 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$changedAnwesenheiten = $result->changedAnwesenheiten;
 
+		if(!is_array($changedAnwesenheiten) || !count($changedAnwesenheiten))
+			$this->terminateWithSuccess(array());
+
+		// make sure all submitted entries actually belong to the authorized lehreinheit
+		$anwesenheitUserIds = array();
+		foreach ($changedAnwesenheiten as $entry) {
+			if(!property_exists($entry, 'anwesenheit_user_id') || $entry->anwesenheit_user_id === null)
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+			$anwesenheitUserIds[] = $entry->anwesenheit_user_id;
+		}
+
+		$foreignCheck = $this->_ci->AnwesenheitUserModel->countEntriesNotInLehreinheit($anwesenheitUserIds, $le_id);
+		if(isError($foreignCheck) || !hasData($foreignCheck)
+			|| ((int) getData($foreignCheck)[0]->cnt) > 0) {
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+		}
 
 		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten, true);
 
@@ -243,9 +264,7 @@ class KontrolleApi extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 
-		if(!property_exists($result, 'le_id')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
+		$this->_requireProps($result, array('le_id'));
 
 		$le_id = $result->le_id;
 		
@@ -254,14 +273,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id, getAuthUID());
 
 		if(!hasData($resultQR)) $this->terminateWithSuccess($this->p->t('global', 'noExistingKontrolleFound'));
-		
-		$options = new QROptions([
-			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
-			'addQuietzone' => true,
-			'quietzoneSize' => 1,
-			'scale' => $this->_ci->config->item('QR_SCALE')
-		]);
-		$qrcode = new QRCode($options);
+
+		$qrcode = $this->_buildQRCode();
 
 		$anwesenheit_id = $resultQR->retval[0]->anwesenheit_id;
 		$shortHash = $resultQR->retval[0]->zugangscode;
@@ -271,12 +284,14 @@ class KontrolleApi extends FHCAPI_Controller
 				$this->_ci->config->item('ANWESEND_STATUS'),
 				$this->_ci->config->item('ABWESEND_STATUS'),
 				$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
-			
+
 			$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 
 			$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0], 'kontrolle' => getData($kontrolle)[0]));
-
 		}
+
+		// check row exists but has no zugangscode -> nothing to resume
+		$this->terminateWithSuccess($this->p->t('global', 'noExistingKontrolleFound'));
 	}
 
 	/**
@@ -295,24 +310,50 @@ class KontrolleApi extends FHCAPI_Controller
 	public function regenerateQRCode()
 	{
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('anwesenheit_id'));
 		$anwesenheit_id = $result->anwesenheit_id;
 
+		$this->_loadKontrolleAuthorized($anwesenheit_id);
+
 		// create new qr, insert for anwesenheit and send back. Delete old one after regeneration in seperate call
-		$options = new QROptions([
+		$qrcode = $this->_buildQRCode();
+
+		$shortHash = $this->_createUniqueZugangscode($anwesenheit_id);
+		$url = $this->getQRURLLink($shortHash);
+
+		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+	}
+	
+	/**
+	 * terminates with 'missingParameters' error if any of the given properties is missing on the POST payload
+	 */
+	private function _requireProps($obj, array $props)
+	{
+		foreach ($props as $prop) {
+			if (!property_exists($obj, $prop))
+				$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+	}
+
+	private function _buildQRCode()
+	{
+		return new QRCode(new QROptions([
 			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
 			'addQuietzone' => true,
 			'quietzoneSize' => 1,
 			'scale' => $this->_ci->config->item('QR_SCALE')
-		]);
-		$qrcode = new QRCode($options);
+		]));
+	}
 
+	/**
+	 * generates a unique zugangscode, inserts it for the given kontrolle and returns it
+	 */
+	private function _createUniqueZugangscode($anwesenheit_id)
+	{
 		do {
-			$token = generateToken();
-			$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
-			$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
-
-			$url = $this->getQRURLLink($shortHash);
-
+			// even md5 is way too secure when trimming hashcode anyways
+			// trim hashcode for people entering manually
+			$shortHash = substr(hash('md5', generateToken()), 0, 8);
 			$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
 		} while(hasData($check));
 
@@ -324,11 +365,29 @@ class KontrolleApi extends FHCAPI_Controller
 		));
 
 		if (isError($insert))
-			$this->terminateWithError('Fehler beim Speichern', 'general');
+			$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
 
-		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id));
+		return $shortHash;
 	}
-	
+
+	/**
+	 * loads the kontrolle for given anwesenheit_id and checks that the caller
+	 * is admin or teaches its lehreinheit; terminates otherwise
+	 */
+	private function _loadKontrolleAuthorized($anwesenheit_id)
+	{
+		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
+		if(!hasData($resultKontrolle))
+			$this->terminateWithError($this->p->t('global', 'errorKontrolleDoesNotExist'), 'general');
+
+		$kontrolle = getData($resultKontrolle)[0];
+
+		if(!$this->isAdminOrTeachesLE($kontrolle->lehreinheit_id))
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+
+		return $kontrolle;
+	}
+
 	private function getQRURLLink($shortHash) {
 		if(defined('CIS4') && CIS4) {
 			$ci3BootstrapFilePath = "cis.php";
@@ -348,17 +407,20 @@ class KontrolleApi extends FHCAPI_Controller
 	public function degenerateQRCode()
 	{
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('anwesenheit_id', 'zugangscode'));
 		$anwesenheit_id = $result->anwesenheit_id;
 		$zugangscode = $result->zugangscode;
+
+		$this->_loadKontrolleAuthorized($anwesenheit_id);
 
 		$deleteresp = $this->_ci->QRModel->delete(array(
 			'zugangscode' => $zugangscode,
 			'anwesenheit_id' => $anwesenheit_id
 		));
 
-		if(!$deleteresp) $this->terminateWithError($this->p->t('global', 'errorDegeneratingQRCode'), 'general');
+		if(isError($deleteresp)) $this->terminateWithError($this->p->t('global', 'errorDegeneratingQRCode'), 'general');
 
-		return $deleteresp;
+		$this->terminateWithSuccess(getData($deleteresp));
 	}
 
 	/**
@@ -379,150 +441,55 @@ class KontrolleApi extends FHCAPI_Controller
 	{
 		$result = $this->getPostJSON();
 
-		if(!property_exists($result, 'le_id') || !property_exists($result, 'datum')
-			|| !property_exists($result, 'beginn') || !property_exists($result, 'ende')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
+		list($le_id, $von, $bis) = $this->_validateAndPrepareKontrolle($result);
 
-		$le_id = $result->le_id;
-		$date = $result->datum;
+		$qrcode = $this->_buildQRCode();
 
-		$berechtigt = $this->isAdminOrTeachesLe($le_id);
-		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+		// kontrolle, qr code and user entries have to be created together
+		$this->_ci->db->trans_start();
 
-		$beginn = $result->beginn;
-		$von = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds, $date->month, $date->day, $date->year));
+		$anwesenheit_id = $this->_insertKontrolle($le_id, $von, $bis);
 
-		$ende = $result->ende;
-		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
-
-		if(isEmptyString($le_id) || $le_id === 'null'
-			|| $date === 'null' || $von === 'null' || $bis === 'null') {
-			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
-		}
-
-		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
-		$dateTime = strtotime($dateString);
-		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
-		$dateLimit = strtotime("-$reach day");
-		
-		$leResult = $this->_ci->LehreinheitModel->load($le_id);
-		$le = getData($leResult)[0];
-		
-		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
-		if ($dateTime < $dateLimit && !$isAdmin) { 
-			// lektor chooses to run kontrolle on old termin outside of usual reach -> check if that termin exists
-			$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
-			if(isError($result) || !hasData($result)) $this->terminateWithError("Provided date is older than allowed date.");
-			
-			$isAllowed = false;
-			foreach($result->retval AS $key => $value) {
-				if($value->datum == $dateString) $isAllowed = true;
-			}
-
-			if(!$isAllowed) {
-				$this->terminateWithError("Provided date is older than allowed date.");
-			}
-			
-		}
-		
-		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id)) {
-			$this->terminateWithError("Times collide with other Kontrolle on the same date.");
-		}
-		
-		$options = new QROptions([
-			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
-			'addQuietzone' => true,
-			'quietzoneSize' => 1,
-			'scale' => $this->_ci->config->item('QR_SCALE')
-		]);
-		$qrcode = new QRCode($options);
-
-		// create new Kontrolle
-		$insert = $this->_ci->AnwesenheitModel->insert(array(
-			'lehreinheit_id' => $le_id,
-			'insertamum' => date('Y-m-d H:i:s'),
-			'insertvon' => getAuthUID(),
-			'von' => $von,
-			'bis' => $bis
-		));
-
-		$anwesenheit_id = $insert->retval;
-
-//		$this->addMeta('$anwesenheit_id', $anwesenheit_id);
-//		$this->addMeta('$le_id', $le_id);
-//		$this->addMeta('$von', $von);
-//		$this->addMeta('$bis', $bis);
-		$this->_handleResultQRNew($qrcode, $anwesenheit_id, $le_id, $von, $bis);
-	}
-	
-	public function insertAnwWithoutQR() {
-		
-		$result = $this->getPostJSON();
-
-		if(!property_exists($result, 'le_id') || !property_exists($result, 'datum')
-			|| !property_exists($result, 'beginn') || !property_exists($result, 'ende')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
-
-		$le_id = $result->le_id;
-		$date = $result->datum;
-
-		$berechtigt = $this->isAdminOrTeachesLe($le_id);
-		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
-
-		$beginn = $result->beginn;
-		$von = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds, $date->month, $date->day, $date->year));
-
-		$ende = $result->ende;
-		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
-
-		if(isEmptyString($le_id) || $le_id === 'null'
-			|| $date === 'null' || $von === 'null' || $bis === 'null') {
-			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
-		}
-
-		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
-		$dateTime = strtotime($dateString);
-		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
-		$dateLimit = strtotime("-$reach day");
-
-		$leResult = $this->_ci->LehreinheitModel->load($le_id);
-		$le = getData($leResult)[0];
-		
-		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
-		if ($dateTime < $dateLimit && !$isAdmin) {
-			// lektor chooses to run kontrolle on old termin outside of usual reach -> check if that termin exists
-			$result = $this->_ci->AnwesenheitModel->getLETermine($le_id);
-			if(isError($result) || !hasData($result)) $this->terminateWithError("Provided date is older than allowed date.");
-
-			$isAllowed = false;
-			foreach($result->retval AS $key => $value) {
-				if($value->datum == $dateString) $isAllowed = true;
-			}
-
-			if(!$isAllowed) {
-				$this->terminateWithError("Provided date is older than allowed date.");
-			}
-
-		}
-
-		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id)) {
-			$this->terminateWithError("Times collide with other Kontrolle on the same date.");
-		}
-
-		// create new Kontrolle
-		$insert = $this->_ci->AnwesenheitModel->insert(array(
-			'lehreinheit_id' => $le_id,
-			'insertamum' => date('Y-m-d H:i:s'),
-			'insertvon' => getAuthUID(),
-			'von' => $von,
-			'bis' => $bis
-		));
-
-		$anwesenheit_id = $insert->retval;
+		$shortHash = $this->_createUniqueZugangscode($anwesenheit_id);
+		$url = $this->getQRURLLink($shortHash);
 
 		// insert Anwesenheiten entries of every Student as Abwesend
+		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+			$le_id,
+			$anwesenheit_id,
+			$von, $bis,
+			$this->_ci->config->item('ABWESEND_STATUS'),
+			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
+
+		$this->_ci->db->trans_complete();
+
+		if($transactionResult == false || $this->_ci->db->trans_status() === false) {
+			$this->terminateWithError($this->p->t('global', 'errorInsertUserAnwEntries'), 'general');
+		}
+
+		// count entschuldigt entries
+		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
+			$this->_ci->config->item('ANWESEND_STATUS'),
+			$this->_ci->config->item('ABWESEND_STATUS'),
+			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
+
+		$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
+
+		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0], 'kontrolle' => getData($kontrolle)[0]));
+	}
+
+	public function insertAnwWithoutQR() {
+
+		$result = $this->getPostJSON();
+
+		list($le_id, $von, $bis) = $this->_validateAndPrepareKontrolle($result);
+
+		// kontrolle and user entries have to be created together
+		$this->_ci->db->trans_start();
+
+		$anwesenheit_id = $this->_insertKontrolle($le_id, $von, $bis);
+
+		// no qr scan happening -> insert every Student as Anwesend
 		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
 			$le_id,
 			$anwesenheit_id,
@@ -530,27 +497,104 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->_ci->config->item('ANWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
-		if($transactionResult == false) {
-			$this->terminateWithError('Error during insert user Anwesenheiten entries transaction.');
+		$this->_ci->db->trans_complete();
+
+		if($transactionResult == false || $this->_ci->db->trans_status() === false) {
+			$this->terminateWithError($this->p->t('global', 'errorInsertUserAnwEntries'), 'general');
 		}
-		
+
 		$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
-		
+
 		$this->terminateWithSuccess($kontrolle);
+	}
+
+	/**
+	 * shared validation/preparation for creating a new kontrolle:
+	 * checks params, authorization, reach/termin rules and time collisions
+	 * returns array($le_id, $von, $bis, $dateString)
+	 */
+	private function _validateAndPrepareKontrolle($result)
+	{
+		$this->_requireProps($result, array('le_id', 'datum', 'beginn', 'ende'));
+
+		$le_id = $result->le_id;
+		$date = $result->datum;
+
+		$berechtigt = $this->isAdminOrTeachesLE($le_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+
+		if(isEmptyString($le_id) || $le_id === 'null' || $date === 'null') {
+			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+		}
+
+		$beginn = $result->beginn;
+		$von = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds, $date->month, $date->day, $date->year));
+
+		$ende = $result->ende;
+		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
+
+		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
+		$dateTime = strtotime($dateString);
+		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
+		$dateLimit = strtotime("-$reach day");
+
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		if(!hasData($leResult)) $this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+		$le = getData($leResult)[0];
+
+		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
+		if ($dateTime < $dateLimit && !$isAdmin) {
+			// lektor chooses to run kontrolle on old termin outside of usual reach -> check if that termin exists
+			$termineResult = $this->_ci->AnwesenheitModel->getLETermine($le_id);
+			if(isError($termineResult) || !hasData($termineResult)) $this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
+
+			$isAllowed = false;
+			foreach(getData($termineResult) AS $value) {
+				if($value->datum == $dateString) $isAllowed = true;
+			}
+
+			if(!$isAllowed) {
+				$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
+			}
+		}
+
+		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id)) {
+			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');
+		}
+
+		return array($le_id, $von, $bis, $dateString);
+	}
+
+	private function _insertKontrolle($le_id, $von, $bis)
+	{
+		$insert = $this->_ci->AnwesenheitModel->insert(array(
+			'lehreinheit_id' => $le_id,
+			'insertamum' => date('Y-m-d H:i:s'),
+			'insertvon' => getAuthUID(),
+			'von' => $von,
+			'bis' => $bis
+		));
+
+		if (isError($insert))
+			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+
+		return getData($insert);
 	}
 
 	private function checkTimesAgainstOtherKontrollen($von, $bis, $datum, $le_id, $anwesenheit_id = null) {
 
+		// normalize to time-of-day strings regardless of input shape (full datetime or time string)
+		$vonTime = date('H:i:s', strtotime($von));
+		$bisTime = date('H:i:s', strtotime($bis));
+
 		// kontrollen laden by le & date
 		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndDate($le_id, $datum);
-//		$this->addMeta('getKontrollenForLeIdAndDate$result', $result);
-		
-		if(isError($result)) $this->terminateWithError("error checking for kontrollen on same date");
+
+		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorCheckingKontrollenOnDate'), 'general');
 		else if (!hasData($result)) return true; // no other kontrollen -> no collision
-		
+
 		$kontrollen = getData($result);
-//		$this->addMeta('kontrollen', $kontrollen);
-		
+
 		// check against other von/bis
 
 		// when editing dont compare with overlap with its own timespan
@@ -567,96 +611,28 @@ class KontrolleApi extends FHCAPI_Controller
 			$kVon = $k->von; // e.g., "08:30:00"
 			$kBis = $k->bis; // e.g., "10:00:00"
 
-			// actually only string compares but lexically comparing times works here
-			// also blocks same start as end but 
-			if ($von < $kBis && $bis > $kVon) {
+			// lexical comparison works for zero-padded H:i:s time strings
+			// also blocks same start as end
+			if ($vonTime < $kBis && $bisTime > $kVon) {
 				return false;
 			}
 		}
-		
+
 		// return a bool
 		return true;
 	}
 	
-	private function _handleResultQRNew($qrcode, $anwesenheit_id, $le_id, $von, $bis)
-	{
-		do {
-			$token = generateToken();
-			$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
-			$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
-
-			$url = $this->getQRURLLink($shortHash);
-
-			$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
-		} while(hasData($check));
-
-		$insert = $this->_ci->QRModel->insert(array(
-			'zugangscode' => $shortHash,
-			'anwesenheit_id' => $anwesenheit_id,
-			'insertamum' => date('Y-m-d H:i:s'),
-			'insertvon' => $this->_uid
-		));
-
-		if (isError($insert))
-			$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
-
-		// insert Anwesenheiten entries of every Student as Abwesend
-		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
-			$le_id,
-			$anwesenheit_id,
-			$von, $bis,
-			$this->_ci->config->item('ABWESEND_STATUS'),
-			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
-		
-		if($transactionResult == false) {
-			$this->terminateWithError('Error during insert user Anwesenheiten entries transaction.');
-		}
-
-		// count entschuldigt entries
-		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
-			$this->_ci->config->item('ANWESEND_STATUS'),
-			$this->_ci->config->item('ABWESEND_STATUS'),
-			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
-
-		$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
-
-		$this->terminateWithSuccess(array('svg' => $qrcode->render($url), 'url' => $url, 'code' => $shortHash, 'anwesenheit_id' => $anwesenheit_id, 'count' => getData($countPoll)[0], 'kontrolle' => getData($kontrolle)[0]));
-		
-	}
-
-	private function _handleResultQRExisting($resultQR, $qrcode, $anwesenheit_id, $le_id, $von, $bis)
+	private function _handleResultQRExisting($resultQR, $qrcode, $anwesenheit_id)
 	{
 		// maybe qr exists still in edge cases so try and resend
 		// should never be the case but fringe cases might appear
 		if(hasData($resultQR)) { // resend existing qr
-
 			$shortHash = $resultQR->retval[0]->zugangscode;
-
-			$url = $this->getQRURLLink($shortHash);
-			
 		} else { // create new qr since old one must have been cleaned
-
-			do {
-				$token = generateToken();
-				$hash = hash('md5', $token); // even md5 is way too secure when trimming hashcode anyways
-				$shortHash = substr($hash, 0, 8);// trim hashcode for people entering manually
-
-				$url = $this->getQRURLLink($shortHash);
-
-				$check = $this->_ci->QRModel->loadWhere(array('zugangscode' => $shortHash));
-			} while(hasData($check));
-
-			$insert = $this->_ci->QRModel->insert(array(
-				'zugangscode' => $shortHash,
-				'anwesenheit_id' => $anwesenheit_id,
-				'insertamum' => date('Y-m-d H:i:s'),
-				'insertvon' => $this->_uid
-			));
-
-			if (isError($insert))
-				$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
-			
+			$shortHash = $this->_createUniqueZugangscode($anwesenheit_id);
 		}
+
+		$url = $this->getQRURLLink($shortHash);
 
 		// either way gather statuses and send back result
 		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
@@ -678,20 +654,24 @@ class KontrolleApi extends FHCAPI_Controller
 	public function deleteQRCode()
 	{
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('anwesenheit_id', 'lv_id'));
 		$anwesenheit_id = $result->anwesenheit_id;
 		$lv_id = $result->lv_id;
 
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
+		// make sure the kontrolle whose codes get deleted actually belongs to a le the caller teaches
+		$this->_loadKontrolleAuthorized($anwesenheit_id);
+
 		$deleteresp = $this->_ci->QRModel->delete(array(
 			'anwesenheit_id' => $anwesenheit_id
 		));
-		if($deleteresp) {
-			$this->terminateWithSuccess($deleteresp);
-		} else {
+		if(isError($deleteresp)) {
 			$this->terminateWithError($this->p->t('global', 'errorDeletingAnwKontrolle'), 'general');
 		}
+
+		$this->terminateWithSuccess(getData($deleteresp));
 	}
 
 	/**
@@ -703,18 +683,19 @@ class KontrolleApi extends FHCAPI_Controller
 	private function isAdminOrTeachesLE($le_id)
 	{
 		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		if(!hasData($leResult)) return false;
 		$le = getData($leResult)[0];
 
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if($isAdmin) return true;
-		
+
 		$isLektor = $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor');
-		
+
 		if($isLektor) {
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLE($le_id, $this->_uid);
 			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
 
-			return $lektorIsTeaching;
+			return ((int) getData($lektorIsTeaching)[0]->teaches) > 0;
 		}
 
 		return false;
@@ -733,12 +714,12 @@ class KontrolleApi extends FHCAPI_Controller
 		if($isAdmin) return true;
 
 		$isLektor = $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor');
-		
+
 		if($isLektor) {
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
 			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
 
-			return $lektorIsTeaching;
+			return ((int) getData($lektorIsTeaching)[0]->teaches) > 0;
 		}
 
 		return false;
@@ -763,6 +744,7 @@ class KontrolleApi extends FHCAPI_Controller
 	public function deleteAnwesenheitskontrolle()
 	{
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('le_id', 'date', 'anwesenheit_id'));
 		$le_id = $result->le_id;
 		$date = $result->date;
 		$anwesenheit_id = $result->anwesenheit_id;
@@ -770,16 +752,12 @@ class KontrolleApi extends FHCAPI_Controller
 		// check if user is lektor for that le or admin/assistenz
 		$berechtigt = $this->isAdminOrTeachesLE($le_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
-		
+
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$leResult = $this->_ci->LehreinheitModel->load($le_id);
-		$le = getData($leResult)[0];
-
 		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 
-		//$this->p->t('global', 'errorDeletingAnwKontrolle')
 		if(!hasData($resultKontrolle)) {
 			$this->terminateWithError($this->p->t('global', 'errorDeleteKontrolleKeineLEAnDatum', [
 				'le_id' => $le_id,
@@ -790,17 +768,21 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 		$kontrolle = getData($resultKontrolle)[0];
 		$anwesenheit_id = $kontrolle->anwesenheit_id;
-		
+
+		// authorize against the lehreinheit the kontrolle actually belongs to
+		if(!$this->isAdminOrTeachesLE($kontrolle->lehreinheit_id))
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+
+		$leResult = $this->_ci->LehreinheitModel->load($kontrolle->lehreinheit_id);
+		$le = getData($leResult)[0];
+
 		// check against kontrolle insert date since nominal von/bis date does not tell about the
 		// actuality of the check
 		$insertamum = $kontrolle->insertamum;
-//		$this->addMeta('$insertamum', $insertamum);
 		$dateInsert = new DateTime($insertamum);
 		$insertFormatted = $dateInsert->format('Y-m-d');
 		$insertDateTime = strtotime($insertFormatted);
-		
-//		$this->addMeta('$insertDateTime', $insertDateTime);
-//		$this->addMeta('$dateLimit', $dateLimit);
+
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($insertDateTime < $dateLimit && !$isAdmin) {
 			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
@@ -818,7 +800,7 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 		$anwesenheiten = getData($result);
 
-		
+
 		// write log entry about changed kontrollzeiten
 		$this->_ci->WebservicelogModel->insert(array(
 			'webservicetyp_kurzbz' => 'content',
@@ -827,27 +809,28 @@ class KontrolleApi extends FHCAPI_Controller
 			'execute_user' => getAuthUID(),
 			'execute_time' => 'NOW()'
 		));
-		
-		
-		$this->_ci->AnwesenheitUserHistoryModel->deleteAllByAnwesenheitId($anwesenheit_id);
+
+		// history, user entries, qr codes and kontrolle have to go together - all or nothing
+		$this->_ci->db->trans_begin();
+
+		$resultDeleteHistory = $this->_ci->AnwesenheitUserHistoryModel->deleteAllByAnwesenheitId($anwesenheit_id);
 
 		// delete user anwesenheiten by anwesenheit_id of kontrolle
-		$resultDelete = $this->_ci->AnwesenheitUserModel->deleteAllByAnwesenheitId($anwesenheit_id);
+		$resultDeleteUser = $this->_ci->AnwesenheitUserModel->deleteAllByAnwesenheitId($anwesenheit_id);
 
-		if(!hasData($resultDelete)) {
-			$this->terminateWithError($this->p->t('global', 'errorDeleteUserAnwEntriesAnDatum', [
-				'le_id' => $le_id,
-				'day' => $date->day,
-				'month' => $date->month,
-				'year' => $date->year
-			]), 'general');
-		}
+		// delete leftover qr codes (fk on tbl_anwesenheit_check is ON DELETE RESTRICT,
+		// leftover codes would block the kontrolle delete)
+		$resultDeleteQR = $this->_ci->QRModel->delete(array('anwesenheit_id' => $anwesenheit_id));
 
 		// delete kontrolle itself
-		$result = $this->_ci->AnwesenheitModel->delete(array('anwesenheit_id'=>$anwesenheit_id));
+		$resultDeleteKontrolle = $this->_ci->AnwesenheitModel->delete(array('anwesenheit_id' => $anwesenheit_id));
 
-		// delete kontrolle
-		if(!hasData($result)) {
+		if($this->_ci->db->trans_status() === false
+			|| isError($resultDeleteHistory) || isError($resultDeleteUser)
+			|| isError($resultDeleteQR) || isError($resultDeleteKontrolle)) {
+
+			$this->_ci->db->trans_rollback();
+
 			$this->terminateWithError($this->p->t('global', 'errorDeleteKontrolleEntryAnDatum', [
 				'le_id' => $le_id,
 				'day' => $date->day,
@@ -855,6 +838,8 @@ class KontrolleApi extends FHCAPI_Controller
 				'year' => $date->year
 			]), 'general');
 		}
+
+		$this->_ci->db->trans_commit();
 
 		$this->terminateWithSuccess($this->p->t('global', 'successDeleteKontrolleEntryAnDatum', [
 			'le_id' => $le_id,
@@ -872,11 +857,19 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	public function pollAnwesenheiten() {
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('anwesenheit_id', 'lv_id'));
 		$anwesenheit_id = $result->anwesenheit_id;
 		$lv_id = $result->lv_id;
 
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
+		// make sure the polled kontrolle actually belongs to the authorized lva
+		$belongsCheck = $this->_ci->AnwesenheitModel->kontrolleBelongsToLva($anwesenheit_id, $lv_id);
+		if(isError($belongsCheck) || !hasData($belongsCheck)
+			|| ((int) getData($belongsCheck)[0]->cnt) === 0) {
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+		}
 
 		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
 			$this->_ci->config->item('ANWESEND_STATUS'),
@@ -893,6 +886,7 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	public function getAnwQuoteForPrestudentIds() {
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('ids', 'lv_id', 'sem_kurzbz'));
 		$ids = $result->ids;
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
@@ -910,11 +904,8 @@ class KontrolleApi extends FHCAPI_Controller
 	public function restartKontrolle() {
 		$result = $this->getPostJSON();
 
-		if(!property_exists($result, 'le_id') || !property_exists($result, 'datum')
-			|| !property_exists($result, 'anwesenheit_id')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
-		
+		$this->_requireProps($result, array('le_id', 'datum', 'anwesenheit_id'));
+
 		$anwesenheit_id = $result->anwesenheit_id;
 		$le_id = $result->le_id;
 		$date = $result->datum;
@@ -922,91 +913,44 @@ class KontrolleApi extends FHCAPI_Controller
 		if(isEmptyString($le_id) || $le_id === 'null' || $date === 'null') {
 			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
 		}
-		$berechtigt = $this->isAdminOrTeachesLE($le_id);
-		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
-		
-		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
-		$dateTime = strtotime($dateString);
-		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
-		$dateLimit = strtotime("-$reach day");
 
-		$leResult = $this->_ci->LehreinheitModel->load($le_id);
-		$le = getData($leResult)[0];
-		
-		// remove date check when restarting since adding anew is allowed for all termine right now anyways
-//		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
-//		if ($dateTime < $dateLimit && !$isAdmin) {
-//			$this->terminateWithError("Provided date is older than allowed date");
-//		}
+		// authorizes against the lehreinheit the kontrolle actually belongs to
+		$this->_loadKontrolleAuthorized($anwesenheit_id);
 
-		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
-		$existsKontrolle = hasData($resultKontrolle);
-		
-		if(!$existsKontrolle) $this->terminateWithError("Kontrolle does not exist.");
-		
-		$options = new QROptions([
-			'outputType' => QRCode::OUTPUT_MARKUP_SVG,
-			'addQuietzone' => true,
-			'quietzoneSize' => 1,
-			'scale' => $this->_ci->config->item('QR_SCALE')
-		]);
-		$qrcode = new QRCode($options);
-
-		 // reuse existing one
-		$anwesenheit_id = $resultKontrolle->retval[0]->anwesenheit_id;
-
-		// TODO: write updatefields here? technically nothing changed with anwesenheit here
-//		$update = $this->_ci->AnwesenheitModel->update($anwesenheit_id, array(
-//			'lehreinheit_id' => $le_id,
-//			'updateamum' => date('Y-m-d H:i:s'),
-//			'updatevon' => getAuthUID()
-//		));
-//
-//		if(isError($update)) {
-//			$this->terminateWithError('Error Updating Anwesenheitskontrolle', 'general');
-//		}
+		$qrcode = $this->_buildQRCode();
 
 		$resultQR = $this->_ci->QRModel->loadWhere(array('anwesenheit_id' => $anwesenheit_id));
 
-		$this->_handleResultQRExisting($resultQR, $qrcode, $anwesenheit_id, $le_id, $resultKontrolle->retval[0]->von, $resultKontrolle->retval[0]->bis, $existsKontrolle);
-		
+		$this->_handleResultQRExisting($resultQR, $qrcode, $anwesenheit_id);
 	}
 	
 	public function updateKontrolle() {
 		$result = $this->getPostJSON();
 
-		if(!property_exists($result, 'le_id') || 
-			!property_exists($result, 'von') || !property_exists($result, 'bis')
-			|| !property_exists($result, 'anwesenheit_id')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
+		$this->_requireProps($result, array('le_id', 'von', 'bis', 'anwesenheit_id'));
 
 		$anwesenheit_id = $result->anwesenheit_id;
 		$le_id = $result->le_id;
 		$von = $result->von;
 		$bis = $result->bis;
 
-		$berechtigt = $this->isAdminOrTeachesLE($le_id);
-		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
+		// authorizes against the lehreinheit the kontrolle actually belongs to
+		$kontrolle = $this->_loadKontrolleAuthorized($anwesenheit_id);
 
-		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
-		$existsKontrolle = hasData($resultKontrolle);
-		if(!$existsKontrolle) $this->terminateWithError("Kontrolle does not exist.");
-		
 		// for the logs
-		$oldVon = $resultKontrolle->retval[0]->von;
-		$oldBis = $resultKontrolle->retval[0]->bis;
-		
-		$vonDate = new DateTime($resultKontrolle->retval[0]->von);
+		$oldVon = $kontrolle->von;
+		$oldBis = $kontrolle->bis;
+
+		$vonDate = new DateTime($kontrolle->von);
 		$vonDate->setTime($von->hours, $von->minutes, $von->seconds);
-		$bisDate = new DateTime($resultKontrolle->retval[0]->bis);
+		$bisDate = new DateTime($kontrolle->bis);
 		$bisDate->setTime($bis->hours, $bis->minutes, $bis->seconds);
 
-		$date = new DateTime($resultKontrolle->retval[0]->von);
+		$date = new DateTime($kontrolle->von);
 		$dateString = $date->format('Y-m-d');
 		
-		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id, $anwesenheit_id)) {
-			$this->terminateWithError("Times collide with other Kontrolle on the same date.");
+		if(!$this->checkTimesAgainstOtherKontrollen($vonDate->format('H:i:s'), $bisDate->format('H:i:s'), $dateString, $kontrolle->lehreinheit_id, $anwesenheit_id)) {
+			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');
 		}
 
 		$update = $this->_ci->AnwesenheitModel->update($anwesenheit_id, array(
@@ -1017,7 +961,7 @@ class KontrolleApi extends FHCAPI_Controller
 		));
 		
 		if(isError($update)) {
-			$this->terminateWithError('Error Updating Anwesenheitskontrolle', 'general');
+			$this->terminateWithError($this->p->t('global', 'errorUpdateAnwKontrolle'), 'general');
 		}
 		
 		// write log entry about changed kontrollzeiten
@@ -1040,7 +984,7 @@ class KontrolleApi extends FHCAPI_Controller
 		// finally recalculate valid entschuldigung stati since they depend on kontrolle von & bis
 		
 		// find students of le whose entschuldigt status is not anymore valid when times change
-		$resultCompare = $this->_ci->EntschuldigungModel->compareStatusZeitenForLE($vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'), $resultKontrolle->retval[0]->von, $resultKontrolle->retval[0]->bis, $le_id);
+		$resultCompare = $this->_ci->EntschuldigungModel->compareStatusZeitenForLE($vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'), $oldVon, $oldBis, $kontrolle->lehreinheit_id);
 //		$this->addMeta('$resultCompare', $resultCompare);
 		if(hasData($resultCompare)) {
 			$changed = getData($resultCompare);

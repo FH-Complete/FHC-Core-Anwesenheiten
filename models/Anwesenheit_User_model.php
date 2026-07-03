@@ -74,6 +74,9 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false)
 	{
+		if (!is_array($changedAnwesenheiten) || !count($changedAnwesenheiten))
+			return success([]);
+
 		$this->db->trans_start(false);
 
 		$updateResults = [];
@@ -91,49 +94,51 @@ class Anwesenheit_User_model extends \DB_Model
 				$this->addHistoryEntry($existing);
 			}
 
-			if(property_exists($entry, 'notiz')) {
-				$result = $this->update($entry->anwesenheit_user_id, array(
-					'version' => $existing->version + 1,
-					'status' => $entry->status,
-					'notiz' => $entry->notiz,
-					'updatevon' => getAuthUID(),
-					'updateamum' => date('Y-m-d H:i:s')
-				));
+			$fields = array(
+				'version' => $existing->version + 1,
+				'status' => $entry->status,
+				'updatevon' => getAuthUID(),
+				'updateamum' => date('Y-m-d H:i:s')
+			);
+			if(property_exists($entry, 'notiz')) $fields['notiz'] = $entry->notiz;
 
-				if(isSuccess($result) && hasData($result)) {
-					$updateResults[] = getData($result);
-				}
-			} else {
-				$result = $this->update($entry->anwesenheit_user_id, array(
-					'version' => $existing->version + 1,
-					'status' => $entry->status,
-					'updatevon' => getAuthUID(),
-					'updateamum' => date('Y-m-d H:i:s')
-				));
-
-				if(isSuccess($result) && hasData($result)) {
-					$updateResults[] = getData($result);
-				}
-			}
-
+			$result = $this->update($entry->anwesenheit_user_id, $fields);
 
 			if (isError($result)) {
 				$this->db->trans_rollback();
 				return error($result->msg, EXIT_ERROR);
+			}
+
+			if(hasData($result)) {
+				$updateResults[] = getData($result);
 			}
 		}
 
 		$this->db->trans_complete();
 
 		// Check if everything went ok during the transaction
-		if ($this->db->trans_status() === false || isError($result)) {
+		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
-			return error($result->msg, EXIT_ERROR);
+			return error('error during updateAnwesenheiten transaction', EXIT_ERROR);
 		} else {
 			$this->db->trans_commit();
 			return success($updateResults);
 		}
 
+	}
+
+	/**
+	 * counts how many of the given anwesenheit_user entries do NOT belong to the given lehreinheit
+	 * (used to reject updates on foreign entries)
+	 */
+	public function countEntriesNotInLehreinheit($anwesenheit_user_ids, $le_id)
+	{
+		$query = "SELECT COUNT(*) AS cnt
+			FROM extension.tbl_anwesenheit_user
+				JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
+			WHERE anwesenheit_user_id IN ? AND lehreinheit_id <> ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids, $le_id]);
 	}
 
 	public function getEntschuldigungsstatusForPersonIds($personIds)
@@ -303,7 +308,7 @@ class Anwesenheit_User_model extends \DB_Model
 			WHERE anwesenheit_id = ?
 		";
 
-		return $this->execQuery($query, [$anwesenheit_id]);
+		return $this->execReadOnlyQuery($query, [$anwesenheit_id]);
 	}
 	
 	
@@ -338,7 +343,7 @@ class Anwesenheit_User_model extends \DB_Model
 			FROM public.tbl_student
 			WHERE prestudent_id IN ?";
 
-		return $this->execQuery($query, [$lv_id, $sem_kurzbz, $prestudent_Ids]);
+		return $this->execReadOnlyQuery($query, [$lv_id, $sem_kurzbz, $prestudent_Ids]);
 	}
 	public function deleteUserAnwesenheitById($anwesenheit_user_id)
 	{
