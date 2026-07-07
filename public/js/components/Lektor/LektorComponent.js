@@ -27,6 +27,7 @@ export const LektorComponent = {
 		MaUIDDropdown,
 		KontrollenDropdown,
 		AnwCountDisplay,
+		Multiselect: primevue.multiselect,
 		"datepicker": VueDatePicker,
 		Statuslegende,
 		KontrolleDisplay,
@@ -174,6 +175,12 @@ export const LektorComponent = {
 			boundRegenerateQR: null,
 			boundProgressCounter: null,
 			changedData: [],
+			selectedLehreinheiten: [],
+			multiselectOpen: false,
+			multiselectDebounceTimer: null,
+			lastLoadedLeIds: [],
+			selectedDateUnwatch: null,
+			forceSingleDateView: false,
 			deleteData: null,
 			selectedDate: new Date(Date.now()),
 			qr: null,
@@ -207,24 +214,102 @@ export const LektorComponent = {
 		}
 	},
 	methods: {
+		// load trigger strategy for the le multiselect: @change fires on every single option toggle
+		// (too many requests while picking) and @blur even fires when nothing was selected at all.
+		// instead the combined data is loaded once the overlay panel closes (@hide) and only if the
+		// selection actually changed. @change events arriving while the panel is closed (chip remove
+		// icon / clear icon) are debounced so quickly removing multiple chips causes one reload only.
+		handleMultiselectShow() {
+			this.multiselectOpen = true
+		},
+		handleMultiselectHide() {
+			this.multiselectOpen = false
+			this.loadSelectedLehreinheiten()
+		},
+		handleChangeLEMultiselect() {
+			if (this.multiselectOpen) return // @hide will pick the final selection up
+			clearTimeout(this.multiselectDebounceTimer)
+			this.multiselectDebounceTimer = setTimeout(() => this.loadSelectedLehreinheiten(), 700)
+		},
+		loadSelectedLehreinheiten() {
+			const leIds = this.selectedLehreinheiten.map(le => le.lehreinheit_id).sort()
+
+			if (leIds.join() === this.lastLoadedLeIds.join()) return // selection unchanged since last load
+			this.lastLoadedLeIds = leIds
+
+			if (!leIds.length) {
+				// multiselect cleared -> back to the classic single le view for quick kontrollen
+				this.forceSingleDateView = true
+				const date = this.formatDateToDbString(this.selectedDate)
+				const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
+				this.reloadState(ma_uid, date)
+				return
+			}
+
+			if (leIds.length === 1) {
+				// exactly one le picked -> switch into the regular single le context with full
+				// functionality, so a lvlead teacher can run kontrollen for a colleague
+				const le = this.selectedLehreinheiten[0]
+				this.$entryParams.selected_le_id.value = le.lehreinheit_id
+				this.$entryParams.selected_le_info.value = le
+
+				this.forceSingleDateView = true
+				const date = this.formatDateToDbString(this.selectedDate)
+				const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
+				this.reloadState(ma_uid, date)
+
+				this.getExistingQRCode()
+				return
+			}
+
+			// the persisted showAll flag acts as render mode and is applied in setupData
+			this.loading = true
+			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLva(this.lv_id, this.sem_kurzbz, leIds))
+				.then(res => {
+					if (res.meta.status === 'success') this.setupData(res.data)
+				}).catch(() => {
+					if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
+				}).finally(() => {
+					this.loading = false
+				})
+		},
 		handleAutoApply(date) {
 			this.selectedDate = date
 			this.$refs.outsideDateSelect.closeMenu()	
 			if(this.$refs.insideDateSelect) this.$refs.insideDateSelect.closeMenu()
 		},
+		// unique column key per kontrolle timeslot AND lehreinheit. Parallel le groups of a lva
+		// often share the exact same timeslot, their kontrollen must not merge into one column
+		anwColumnKey(datum, von, bis, le_id) {
+			return datum + ' | ' + von + ' - ' + bis + ' | ' + le_id
+		},
+		getLeLabel(le_id) {
+			const options = this.$entryParams.available_le_info_lva.value?.length
+				? this.$entryParams.available_le_info_lva.value
+				: this.$entryParams.available_le_info.value
+			const le = options?.find(o => o.lehreinheit_id == le_id)
+			return le?.csvInfoString ?? le?.infoString ?? ('LE ' + le_id)
+		},
 		anwColTitleFormatter(cell) {
 			const title = cell.getColumn().getDefinition().title;
 			const titleParts = title.split("|")
-			
+
 			const titledate = titleParts[0].trimEnd()
 			const selectedDateFrontendFormatted = this.toFrontendDate(titledate)
 
 			const container = document.createElement("div");
 			container.style.textAlign = "center";
 			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span style="color: gray;">${titleParts[1]}</span>`;
+
+			// in the combined multi le view show which lehreinheit the kontrolle belongs to
+			if (this.multiLeMode && titleParts[2] !== undefined) {
+				const leLabel = this.getLeLabel(titleParts[2].trim())
+				container.innerHTML += `<br><span style="color: gray; font-size: 0.75em;">${leLabel}</span>`;
+			}
 			return container;
 		},
 		checkCellEditability(cell) {
+			if (this.multiLeMode) return false // combined multi le view is read only for now
 			const val = cell.getValue()
 			return val !== undefined && val !== '-' // dont allow edit on empty cols
 		},
@@ -441,7 +526,7 @@ export const LektorComponent = {
 				}
 				const studentDataEntry = this.lektorState.studentsData.get(student.prestudent_id)
 				studentDataEntry.forEach(entry => {
-					const d = entry.datum + ' | ' + entry.von + ' - ' + entry.bis
+					const d = this.anwColumnKey(entry.datum, entry.von, entry.bis, entry.le_id)
 					row[d] = entry.status
 				})
 
@@ -746,7 +831,8 @@ export const LektorComponent = {
 		},
 		reloadState(ma_uid, date) {
 			this.loading = true
-			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date)).then(res => {
+
+			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid)).then(res => {
 				if(res.meta.status === 'success') {
 					this.setupData(res.data)
 				}
@@ -909,10 +995,11 @@ export const LektorComponent = {
 					anwesenheit_user_id: entry.anwesenheit_user_id,
 					anwesenheit_id: entry.anwesenheit_id,
 					von: kontrolle?.von,
-					bis: kontrolle?.bis
+					bis: kontrolle?.bis,
+					le_id: kontrolle?.lehreinheit_id
 				})
 
-				const datum = entry.datum + ' | ' + kontrolle.von + ' - ' + kontrolle.bis
+				const datum = this.anwColumnKey(entry.datum, kontrolle.von, kontrolle.bis, kontrolle.lehreinheit_id)
 				if (this.lektorState.dates.indexOf(datum) < 0) {
 					this.lektorState.dates.push(datum)
 				}
@@ -963,6 +1050,8 @@ export const LektorComponent = {
 			if (this.lektorState.showAllVar) {
 				this.setShowAll()
 			} else {
+				// keep the tickbox in sync when the persisted render mode got overridden once
+				if (this.$refs.showAllTickbox) this.$refs.showAllTickbox.checked = false
 
 				// set phrasen by field id instead of index
 				const titleKeys = {
@@ -986,7 +1075,11 @@ export const LektorComponent = {
 			}
 
 			this.loading = false
-			this.$watch('selectedDate', this.selectedDateWatcherHandler)
+
+			// setupLektorComponent runs on every reload, register the watcher once only
+			if (!this.selectedDateUnwatch) {
+				this.selectedDateUnwatch = this.$watch('selectedDate', this.selectedDateWatcherHandler)
+			}
 		},
 		setCurrentCountsFromTableData() {
 			
@@ -1001,7 +1094,6 @@ export const LektorComponent = {
 			this.lektorState.stsem = this.$entryParams.lektorState.stsem
 			this.lektorState.entschuldigtStati = this.$entryParams.lektorState.entschuldigtStati
 			this.lektorState.kontrollen = this.$entryParams.lektorState.kontrollen
-			this.lektorState.viewData = this.$entryParams.lektorState.viewData
 			this.lektorState.a_o_kz = this.$entryParams.lektorState.a_o_kz
 			this.lektorState.gruppen = new Set()
 			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true" || false
@@ -1031,11 +1123,14 @@ export const LektorComponent = {
 				const dateparts = k.datum.split(".")
 				k.jsDate = new Date(dateparts[2],dateparts[1] - 1,dateparts[0])
 			})
-			this.lektorState.viewData = data.viewData ?? []
 			this.$entryParams.available_termine.value = this.getAvailableTermine()
 			this.lektorState.a_o_kz = data.a_o_kz ?? []
 			this.lektorState.gruppen = new Set()
-			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true" || false
+
+			// persisted showAll flag acts as render mode, unless a single le was just
+			// explicitly selected (quick jump-in-and-start-kontrolle flow for teachers)
+			this.lektorState.showAllVar = !this.forceSingleDateView && localStorage.getItem('DigiAnwShowAll') == "true"
+			this.forceSingleDateView = false
 
 			this.setupLektorComponent()
 		},
@@ -1067,7 +1162,7 @@ export const LektorComponent = {
 			}
 
 			const arr = this.lektorState.studentsData.get(prestudent_id)
-			const found = arr.find(e => (e.datum + ' | ' + e.von + ' - ' + e.bis) === date)
+			const found = arr.find(e => this.anwColumnKey(e.datum, e.von, e.bis, e.le_id) === date)
 			const anwesenheit_user_id = found?.anwesenheit_user_id
 			const anwesenheit_id = found?.anwesenheit_id
 			const newEntry = {
@@ -1079,7 +1174,7 @@ export const LektorComponent = {
 
 			// check if the entry is in the original tableData with the same status
 			const student = this.lektorState.studentsData.get(newEntry.prestudent_id)
-			const original = student.find(v => (v.datum + ' | ' + v.von + ' - ' + v.bis) === newEntry.date)
+			const original = student.find(v => this.anwColumnKey(v.datum, v.von, v.bis, v.le_id) === newEntry.date)
 			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
 			if (updateFoundIndex >= 0) {
 				this.changedData.splice(updateFoundIndex, 1)
@@ -1173,9 +1268,14 @@ export const LektorComponent = {
 			this.reloadState(ma_uid, date)
 		},
 		handleLEChanged() {
-			this.$refs.showAllTickbox.checked = false
-			this.lektorState.showAllVar = false
-			
+			// picking a single le from the dropdown exits a combined multi le view
+			this.selectedLehreinheiten = []
+			this.lastLoadedLeIds = []
+
+			// explicitly picking a single le means working on it now (start kontrolle etc),
+			// override the persisted showAll render mode for this load once
+			this.forceSingleDateView = true
+
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			this.reloadState(ma_uid, date)
@@ -1293,7 +1393,7 @@ export const LektorComponent = {
 		statusEditorValues() {
 			const p = this.$entryParams.permissions
 			if (p.admin || p.assistenz) return [p.anwesend_status, p.abwesend_status, p.entschuldigt_status]
-			if (p.lektor) return [p.anwesend_status, p.abwesend_status]
+			if (p.lektor || p.lektor_lvlead) return [p.anwesend_status, p.abwesend_status]
 			return []
 		},
 		baseColumns() {
@@ -1301,9 +1401,16 @@ export const LektorComponent = {
 			return this.anwesenheitenTabulatorOptions.columns.filter(c => fields.includes(c.field))
 		},
 		buildDateColumn(date) {
+			// field/title carry the raw column key (datum | von - bis | le_id),
+			// build a readable header for downloads
+			const keyParts = date.split(' | ')
+			let titleDownload = this.toFrontendDate(keyParts[0]) + ' ' + (keyParts[1] ?? '')
+			if (this.multiLeMode && keyParts[2] !== undefined) titleDownload += ' ' + this.getLeLabel(keyParts[2])
+
 			return {
 				title: date,
 				field: date,
+				titleDownload,
 				editor: 'list',
 				editorParams: {
 					values: Vue.computed(() => this.statusEditorValues())
@@ -1370,20 +1477,9 @@ export const LektorComponent = {
 						k.bis = this.editKontrolle.editBis.hours + ':' + this.editKontrolle.editBis.minutes + ':' + this.editKontrolle.editBis.seconds
 						
 						this.editKontrolle = null
-						
+
 						// reload tableData since different kontroll times means different % for all students
-						this.$api.call(
-							ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(
-								this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, dateAnwFormat))
-							.then((res) => {
-								if(res.meta.status === 'success') {
-									this.setupData(res.data)
-								}
-						}).catch(() => {
-							if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-						}).finally(() => {
-							this.loading = false
-						})
+						this.reloadState(ma_uid, dateAnwFormat)
 					}
 				})
 		},
@@ -1391,25 +1487,29 @@ export const LektorComponent = {
 			this.selectedStudent.title = title
 		},
 		handleUpdateAnwesenheit() {
+			// reload tableData to get state back
+			if (this.multiLeMode) {
+				this.lastLoadedLeIds = [] // force reload of the combined dataset
+				this.loadSelectedLehreinheiten()
+				return
+			}
+
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-			// reload tableData to get state back
-			this.$api.call(
-				ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(
-					this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid, date))
-				.then((res) => {
-					if(res.meta.status === 'success') {
-						this.setupData(res.data)
-					}
-				}).catch(() => {
-					if (this.$refs.anwesenheitenTable?.tabulator) this.$refs.anwesenheitenTable.tabulator.setData([])
-				}).finally(() => {
-				this.loading = false
-			})
+			this.reloadState(ma_uid, date)
 		},
 		selectedDateWatcherHandler(newVal) {
 			if(newVal === "") {
 				this.selectedDate = new Date(Date.now())
+				return
+			}
+
+			// selectedDate also changes during setup (closest termin preselect) which queues
+			// this watcher AFTER setShowAll already rendered all columns. In showAll render
+			// mode the date must not collapse the table back to the single date columns,
+			// it only feeds the kontrolle creation defaults then.
+			if (this.lektorState.showAllVar) {
+				this.handleChangeDatum(this.selectedDate) // still look up if datum is in termin list
 				return
 			}
 
@@ -1437,7 +1537,7 @@ export const LektorComponent = {
 	},
 	mounted() {
 		this.setupMounted()
-		
+
 		this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
 		window.addEventListener('orientationchange', this.calculateTableHeight)
@@ -1449,6 +1549,7 @@ export const LektorComponent = {
 		this.stopPollingAnwesenheiten()
 		clearInterval(this.progressTimerID)
 		this.progressTimerID = null
+		clearTimeout(this.multiselectDebounceTimer)
 	},
 	watch: {
 		selectedDateCount(newVal) {
@@ -1459,12 +1560,25 @@ export const LektorComponent = {
 		}
 	},
 	computed: {
+		multiLeMode() {
+			// exactly one selected le runs as full featured single le mode (kontrollen etc),
+			// the read only combined view only kicks in for two or more
+			return this.selectedLehreinheiten.length > 1
+		},
+		getLEOptions() {
+			// the multiselect always offers every le of the lva, unlike available_le_info
+			// which gets refiltered when an admin switches the maUID dropdown
+			return this.$entryParams.available_le_info_lva.value
+		},
 		currentLEhasRightToSkipQR() {
 			if(!this.$entryParams.permissions.no_qr_lehrform || !this.$entryParams.permissions.no_qr_lehrform.length) return false
 			if(!this.$entryParams.selected_le_info?.value) return false
 			return this.$entryParams.permissions.no_qr_lehrform.includes(this.$entryParams.selected_le_info?.value?.lehrform_kurzbz)
 		},
 		getTitle() {
+			if (this.multiLeMode) {
+				return this.selectedLehreinheiten.map(le => le.csvInfoString ?? le.infoString).join(', ')
+			}
 			return this.$entryParams.selected_le_info?.value?.infoString ?? ''
 		},
 		getTabulatorStyle(){
@@ -1841,6 +1955,22 @@ export const LektorComponent = {
 						
 	
 						<div class="col-6">
+							<div class="row g-3 mb-4" v-if="$entryParams?.permissions?.lektor_lvlead || $entryParams?.permissions?.admin" >
+								<Multiselect
+									ref="leMultiselect"
+									v-model="selectedLehreinheiten"
+									:options="getLEOptions"
+									optionLabel="infoString"
+									placeholder="LV-Teile auswählen"
+									:maxSelectedLabels="3"
+									showToggleAll
+									class="tabulated-text"
+									@show="handleMultiselectShow"
+									@hide="handleMultiselectHide"
+									@change="handleChangeLEMultiselect"
+								/>
+							</div>
+
 							<div class="row g-3 align-items-end">
 								<div class="col-5" v-if="$entryParams?.permissions?.admin">
 									<MaUIDDropdown 
@@ -1911,7 +2041,7 @@ export const LektorComponent = {
 						:tableOnly="true"
 						:newBtnShow="true"
 						:newBtnLabel="$p.t('global/neueAnwKontrolle')"
-						:newBtnDisabled="!lektorState.students.length"
+						:newBtnDisabled="!lektorState.students.length || multiLeMode"
 						@click:new=openNewAnwesenheitskontrolleModal
 						:sideMenu="false"
 						noColumnFilter>
@@ -1920,7 +2050,7 @@ export const LektorComponent = {
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
+								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length || multiLeMode" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
 									<i class="fa fa-pen"></i>
 								</button>
 								

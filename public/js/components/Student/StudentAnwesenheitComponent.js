@@ -134,7 +134,7 @@ export default {
 				} else {
 					const processedAnw = this.processAnw(res.data)
 
-					this.$refs.uebersichtTable.tabulator.setData(processedAnw);
+					this.$refs.uebersichtTable?.tabulator?.setData(processedAnw);
 				}
 			});
 		},
@@ -142,7 +142,7 @@ export default {
 			return percentage
 		},
 		processAnw(data) {
-			const anw = data[0].retval
+			const anw = data[0]?.retval ?? []
 			this.sums = {}
 			// calc sum for each lva to display percentage
 			anw.forEach(entry => {
@@ -160,7 +160,7 @@ export default {
 			})
 
 			if(this.$entryParams.permissions.entschuldigungen_enabled) {
-				const ent = data[1].retval
+				const ent = data[1]?.retval ?? []
 				ent.forEach(e => {
 					e.vonDate = new Date(e.von)
 					e.bisDate = new Date(e.bis)

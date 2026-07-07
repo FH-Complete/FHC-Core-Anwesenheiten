@@ -22,7 +22,10 @@ export const StudentComponent = {
 	data: function() {
 		return {
 			tabsStudent: this.getTabsStudent(),
-			viewDataStudent: {}
+			viewDataStudent: {},
+			// tabs are kept alive, inactive ones still show the previous student
+			// after a student switch and get reloaded once they are activated again
+			tabsToReload: new Set()
 		};
 	},
 	props: {
@@ -55,45 +58,46 @@ export const StudentComponent = {
 
 		},
 		handleTabChanged (key) {
+			const current = this.$refs.tabsStudent?._?.refs?.current
+			if (!current) return
+
+			// tab still holds data of a previously selected student -> reload it
+			if (this.tabsToReload.has(key) && current.reload) {
+				this.tabsToReload.delete(key)
+				current.reload()
+			}
+
 			// check if the current has redrawTable function -> its a tabulator so redraw it to avoid bad things
-			if(this.$refs.tabsStudent?._?.refs?.current?.redrawTable) this.$refs.tabsStudent._.refs.current.redrawTable()
+			if (current.redrawTable) current.redrawTable()
+		},
+		setViewDataStudent(data) {
+			this.viewDataStudent.vorname = data.vorname
+			this.viewDataStudent.nachname = data.nachname
+			this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid
+			this.viewDataStudent.person_id = data.person_id
+			this.viewDataStudent.prestudent_id = data.prestudent_id
+			this.viewDataStudent.gruppe = data.gruppe
+			this.viewDataStudent.verband = data.verband
+			this.viewDataStudent.semester = data.semester
 		},
 		async setup() {
 			await this.$entryParams.setupPromise
 			await this.$entryParams.phrasenPromise
 
 			this.$entryParams.profileViewDataPromise = new Promise((resolve) => {
-			// if student is logged in as himself load his own viewData
-			if(!this.$entryParams.selected_student_info) {
+				// if student is logged in as himself load his own viewData
+				if(!this.$entryParams.selected_student_info) {
 
-				this.$api.call(ApiProfil.getProfileViewData(null))
+					this.$api.call(ApiProfil.getProfileViewData(null))
 						.then(res => {
-
-						const data = res.data.retval[0]
-						this.viewDataStudent.vorname = data.vorname
-						this.viewDataStudent.nachname = data.nachname
-						this.viewDataStudent.student_uid = data.student_uid
-						this.viewDataStudent.person_id = data.person_id
-						this.viewDataStudent.prestudent_id = data.prestudent_id
-						this.viewDataStudent.gruppe = data.gruppe
-						this.viewDataStudent.verband = data.verband
-						this.viewDataStudent.semester = data.semester
-
-						this.$entryParams.viewDataStudent = data
-						resolve()
-					});
+							const data = res.data.retval[0]
+							this.setViewDataStudent(data)
+							this.$entryParams.viewDataStudent = data
+							resolve()
+						});
 
 				} else { // admin or assistenz check student data - set viewdata from selected student
-					const data = this.$entryParams.selected_student_info
-					this.viewDataStudent.vorname = data.vorname
-					this.viewDataStudent.nachname = data.nachname
-					this.viewDataStudent.student_uid = data.student_uid ? data.student_uid : data.uid
-					this.viewDataStudent.person_id = data.person_id
-					this.viewDataStudent.prestudent_id = data.prestudent_id
-					this.viewDataStudent.gruppe = data.gruppe
-					this.viewDataStudent.verband = data.verband
-					this.viewDataStudent.semester = data.semester
-
+					this.setViewDataStudent(this.$entryParams.selected_student_info)
 					resolve()
 				}
 
@@ -101,25 +105,19 @@ export const StudentComponent = {
 		},
 		studentChangedHandler() {
 
+			// reload the visible tab right away, mark the other kept alive tabs
+			// stale so they reload once activated (handleTabChanged)
 			this.$refs.tabsStudent._.refs.current.reload()
+			this.tabsToReload = new Set(Object.keys(this.tabsStudent).filter(key => key !== this.$refs.tabsStudent.current))
 
 			const uid = this.$entryParams.selected_student_info.uid ? this.$entryParams.selected_student_info.uid : this.$entryParams.selected_student_info.student_uid
-				this.$api.call(ApiProfil.getProfileViewData(uid))
+			this.$api.call(ApiProfil.getProfileViewData(uid))
 				.then(res => {
-
-				if(!res?.data?.retval?.[0]) return
-				const data = res.data.retval[0]
-				this.viewDataStudent.vorname = data.vorname
-				this.viewDataStudent.nachname = data.nachname
-				this.viewDataStudent.student_uid = data.student_uid
-				this.viewDataStudent.person_id = data.person_id
-				this.viewDataStudent.prestudent_id = data.prestudent_id
-				this.viewDataStudent.gruppe = data.gruppe
-				this.viewDataStudent.verband = data.verband
-				this.viewDataStudent.semester = data.semester
-
-				this.$entryParams.viewDataStudent = data
-			});
+					if(!res?.data?.retval?.[0]) return
+					const data = res.data.retval[0]
+					this.setViewDataStudent(data)
+					this.$entryParams.viewDataStudent = data
+				});
 
 		},
 		async awaitPhrasen() {

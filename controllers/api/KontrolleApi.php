@@ -13,50 +13,55 @@ class KontrolleApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				// tableData fetch lektor main page
-				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
+				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+
+				// alternative tableData fetch lektor main page for lva leader
+				'fetchAllAnwesenheitenByLva' => array('extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
 
 				// tableData fetch lektor-student page
-				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
-				
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+
 				// changing status or note of anwesenheit user entry
-				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
+				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// requests new code when timer reaches its limit during kontrolle
-				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
-				
+				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+
 				// deletes old code from db when refreshed is received
-				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
-				
+				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+
 				// start of a new kontrolle, inserts anw_user entries
-				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
+				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// start & end of kontrolle without the qr part for lessons where scanning is not intended
-				'insertAnwWithoutQR' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
-				
+				'insertAnwWithoutQR' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+
 				// requests qr code for existing kontrolle
-				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
+				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// update von/bis times for existing kontrolle
-				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
+				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// in case kontrolle was not stopped intentionally jump right back in on startup
-				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
+				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// method called at end of kontrolle to clean up qr code
-				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
-				
+				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+
 				// delete kontrolle and all corresponding anw_user entries
-				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
+				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// gets checkin & entschuldigt count for ongoing kontrolle
-				'pollAnwesenheiten' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
+				'pollAnwesenheiten' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
 
 				// reloads just the sum% when anwesenheiten have been updated to avoid full reload
-				'getAnwQuoteForPrestudentIds' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
+				'getAnwQuoteForPrestudentIds' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
 			
 				// loads le dropdown options
 				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 
+				// loads le multiselect options
+				'getLehreinheitenForLehrveranstaltung' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor_lvlead:r'),
 			)
 		);
 
@@ -94,7 +99,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 	/**
 	 * POST METHOD
-	 * expects parameters 'le_id', 'lv_id', 'sem_kurzbz', 'ma_uid', 'date'
+	 * expects parameters 'le_id', 'lv_id', 'sem_kurzbz', 'ma_uid'
 	 *
 	 * main setup & state management Method of LektorComponent and fulfills several functions
 	 * in order to keep state management simple in the prototype phase. High potential for optimization.
@@ -105,7 +110,6 @@ class KontrolleApi extends FHCAPI_Controller
 	 *    stsem - object of current studiensemester (used to calculate zusätze like outgoing, incoming, etc of students)
 	 *    entschuldigtStati - a list of every accepted entschuldigungsrange for students in this lesson
 	 *    kontrollen - existing anwesenheitskontrollen to delete later on
-	 *    viewData - some lektor and lehreinheit viewData for 'LektorComponent'
 	 *    a_o_kz - ausserordentlich kennzeichen prefix for student zusatz
 	 * )
 	 */
@@ -114,13 +118,12 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$result = $this->getPostJSON();
 
-		$this->_requireProps($result, array('le_id', 'lv_id', 'sem_kurzbz', 'ma_uid', 'date'));
+		$this->_requireProps($result, array('le_id', 'lv_id', 'sem_kurzbz', 'ma_uid'));
 
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kurzbz;
 		$le_id = $result->le_id;
 		$ma_uid = $result->ma_uid;
-		$date = $result->date;
 
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
@@ -165,8 +168,78 @@ class KontrolleApi extends FHCAPI_Controller
 		$kontrollen = getData($result);
 		
 
-		$result = $this->_ci->AnwesenheitModel->getLehreinheitAndLektorInfo($le_id, $ma_uid, $date);
-		$lektorLehreinheitData = getData($result);
+		$result = $this->_ci->ErhalterModel->load();
+		$erhalter = getData($result)[0];
+
+		$a_o_kz = '9' . sprintf("%03s", $erhalter->erhalter_kz);
+
+		$this->terminateWithSuccess(array(
+			'students' => $students,
+			'anwEntries' => $anwesenheiten,
+			'stsem' => $studiensemester,
+			'entschuldigtStati' => $entschuldigungsstatus,
+			'kontrollen' => $kontrollen,
+			'a_o_kz' => $a_o_kz
+		));
+
+	}
+
+	/**
+	 * POST METHOD
+	 * expects parameters 'le_ids', 'lv_id', 'sem_kurzbz'
+	 *
+	 * alternative tableData fetch for lva leads/admins, combines students, anwEntries and kontrollen
+	 * over one or more lehreinheiten of a lehrveranstaltung. Response shape matches
+	 * fetchAllAnwesenheitenByLvaAssigned so the LektorComponent state setup can be reused.
+	 */
+	public function fetchAllAnwesenheitenByLva() {
+		$result = $this->getPostJSON();
+
+		$this->_requireProps($result, array('le_ids', 'lv_id', 'sem_kurzbz'));
+
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+		$le_ids = $result->le_ids;
+
+		if(!is_array($le_ids) || !count($le_ids))
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		$berechtigt = $this->isAdminOrLeadsLva($lv_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
+		// every requested lehreinheit has to belong to the authorized lehrveranstaltung
+		$leCheck = $this->_ci->AnwesenheitModel->countLehreinheitenInLva($le_ids, $lv_id);
+		if(isError($leCheck) || !hasData($leCheck)
+			|| ((int) getData($leCheck)[0]->cnt) !== count(array_unique($le_ids))) {
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+		}
+
+		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandMultipleLEandSemester($lv_id, $le_ids, $sem_kurzbz, APP_ROOT);
+
+		if(isError($result)) $this->terminateWithError("Datenbankfehler beim Laden der Studentenliste aus AnwesenheitModel->getStudentsForLVAandMultipleLEandSemester. Bitte überprüfen sie die Verfügbarkeit und Korrektheit der dort referenzierten Tabellen.");
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', [$this->_uid, implode(', ', $le_ids)]), 'general');
+		$students = getData($result);
+
+		$prestudentIds = array_map(function ($value) {
+			return $value->prestudent_id;
+		}, $students);
+		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudentsInLehreinheiten($prestudentIds, $le_ids);
+		$anwesenheiten = getData($result);
+
+		$personIds = array_map(function ($value) {
+			return $value->person_id;
+		}, $students);
+		$entschuldigungsstatus = [];
+		if($this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIds($personIds);
+			$entschuldigungsstatus = getData($result);
+		}
+
+		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
+		$studiensemester = getData($result);
+
+		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIds($le_ids);
+		$kontrollen = getData($result);
 
 		$result = $this->_ci->ErhalterModel->load();
 		$erhalter = getData($result)[0];
@@ -179,12 +252,10 @@ class KontrolleApi extends FHCAPI_Controller
 			'stsem' => $studiensemester,
 			'entschuldigtStati' => $entschuldigungsstatus,
 			'kontrollen' => $kontrollen,
-			'viewData' => $lektorLehreinheitData,
 			'a_o_kz' => $a_o_kz
 		));
-
 	}
-
+	
 	/**
 	 * GET METHOD
 	 * expects parameters 'prestudent_id', 'lv_id', 'sem_kurzbz'
@@ -693,12 +764,13 @@ class KontrolleApi extends FHCAPI_Controller
 
 		if($isLektor) {
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLE($le_id, $this->_uid);
-			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
-
-			return ((int) getData($lektorIsTeaching)[0]->teaches) > 0;
+			if(!isError($lektorIsTeaching) && hasData($lektorIsTeaching)
+				&& ((int) getData($lektorIsTeaching)[0]->teaches) > 0) return true;
 		}
 
-		return false;
+		// lva leads may operate every lehreinheit of a lehrveranstaltung they are assigned to,
+		// eg running kontrollen for a colleague who cant teach that day
+		return $this->leadsLva($le->lehrveranstaltung_id);
 	}
 
 	/**
@@ -709,7 +781,7 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLva($lva_id)
 	{
-		
+
 		$isAdmin = $this->isAdmin($lva_id);
 		if($isAdmin) return true;
 
@@ -717,14 +789,43 @@ class KontrolleApi extends FHCAPI_Controller
 
 		if($isLektor) {
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
-			if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
-
-			return ((int) getData($lektorIsTeaching)[0]->teaches) > 0;
+			if(!isError($lektorIsTeaching) && hasData($lektorIsTeaching)
+				&& ((int) getData($lektorIsTeaching)[0]->teaches) > 0) return true;
 		}
 
-		return false;
+		return $this->leadsLva($lva_id);
 	}
-	
+
+	/**
+	 * @param $lva_id
+	 * @return bool
+	 *
+	 * checks Berechtigungen for Admin or LvLead and is Teaching lehrveranstaltung.
+	 * the lvlead right allows access to all lehreinheiten of a lehrveranstaltung
+	 * as long as the user is assigned to at least one lehreinheit of it
+	 */
+	private function isAdminOrLeadsLva($lva_id)
+	{
+		$isAdmin = $this->isAdmin($lva_id);
+		if($isAdmin) return true;
+
+		return $this->leadsLva($lva_id);
+	}
+
+	/**
+	 * lvlead right + assigned to at least one lehreinheit of the lehrveranstaltung
+	 */
+	private function leadsLva($lva_id)
+	{
+		$isLvLead = $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor_lvlead');
+		if(!$isLvLead) return false;
+
+		$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
+		if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
+
+		return ((int) getData($lektorIsTeaching)[0]->teaches) > 0;
+	}
+
 	private function isAdmin($lva_id) {
 		$lva = new lehrveranstaltung();
 		$lva->load($lva_id);
@@ -1027,7 +1128,7 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 
 		if(isEmptyString($lva_id) ||
-			isEmptyString($ma_uid)  ||
+			isEmptyString($ma_uid) ||
 			isEmptyString($sem_kurzbz) ) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
@@ -1086,6 +1187,72 @@ class KontrolleApi extends FHCAPI_Controller
 
 	}
 
+	public function getLehreinheitenForLehrveranstaltung() {
+		$lva_id = $this->input->get('lva_id');
+		$sem_kurzbz = $this->input->get('sem_kurzbz');
+
+		if($lva_id === 'null' ||  $sem_kurzbz === 'null') {
+			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
+
+		if(isEmptyString($lva_id) ||
+			isEmptyString($sem_kurzbz) ) {
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
+
+		$berechtigt = $this->isAdminOrLeadsLva($lva_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
+		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
+		
+		if(!isSuccess($result)) $this->terminateWithError(getError($result));
+		$leForLva = getData($result);
+
+		if(is_null($leForLva))
+		{
+			$this->terminateWithSuccess(array([], []));
+		}
+		// filter for unique le_id keys
+		$distinctLeId = array_values(array_reduce($leForLva, function ($carry, $leRow) {
+			// use the name as a key to ensure uniqueness
+			$carry[$leRow->lehreinheit_id] = $leRow;
+			return $carry;
+		}, []));
+
+		$allLeTermine = [];
+
+		forEach($distinctLeId as $leRow)
+		{
+			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
+//			$this->addMeta($leRow->lehreinheit_id, $result);
+			if(!isSuccess($result)) $this->terminateWithError(getError($result));
+			$leTermine = getData($result);
+			
+			$leTermineGrouped = [];
+			// group le termine only with consecutive hours, detect the odd case of same lesson
+			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14 
+			if($leTermine !== null) {
+				forEach($leTermine as $distinctLesson) {
+					if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
+						$leTermineGrouped[] = $distinctLesson;
+					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1)
+						&& $leTermineGrouped[count($leTermineGrouped) - 1]->datum == $distinctLesson->datum) {
+						$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
+						$leTermineGrouped[count($leTermineGrouped) - 1]->stunde = $distinctLesson->stunde;
+					} else { // new block detected
+						$leTermineGrouped[] = $distinctLesson;
+					}
+				}
+			}
+
+
+			$allLeTermine[$leRow->lehreinheit_id] = $leTermineGrouped;
+		}
+
+
+		$this->terminateWithSuccess(array($leForLva, $allLeTermine));
+	}
+	
 	private function _setAuthUID()
 	{
 		$this->_uid = getAuthUID();

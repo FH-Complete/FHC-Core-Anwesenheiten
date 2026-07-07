@@ -26,6 +26,7 @@ $includesArray = array(
 		'vendor/npm-asset/primevue/tristatecheckbox/tristatecheckbox.js',
 		'vendor/npm-asset/primevue/progressspinner/progressspinner.js',
 		'vendor/npm-asset/primevue/timeline/timeline.js',
+		'vendor/npm-asset/primevue/multiselect/multiselect.js',
 		'vendor/moment/luxonjs/luxon.min.js'
 	),
 	'customJSModules' => array(

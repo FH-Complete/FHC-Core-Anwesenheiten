@@ -26,23 +26,11 @@ export default {
 			minDate: this.calcMinDate(),
 			tableBuiltPromise: null,
 			entschuldigungsViewTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
-				ajaxResponse: (url, params, response) => {
-					return response.data.retval
-				},
+				// data is fetched and set from outside (loadEntschuldigungen) instead of tabulator ajax options:
+				// the ajax fetch fired on table build, before person_id was resolved, and tabulator
+				// displayed a confusing error placeholder to students until the request chain settled
 				height: this.$entryParams.tabHeights.studentEnt,
-				ajaxConfig: "POST",
-				ajaxContentType: {
-					headers:{
-						'Content-Type': 'application/json'
-					},
-					body:()=>{
-						return JSON.stringify({
-							person_id: this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-						})
-					}
-				},
-				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
+				placeholder: this.$p.t('global/noDataAvailable'),
 				debugInvalidComponentFuncs:false,
 				layout:"fitDataStretch",
 				pagination: true,
@@ -108,11 +96,12 @@ export default {
 			return `${day}.${month}.${year} ${hours}:${minutes}`;
 		},
 		calcMinDate(){
-			// calc max reach offset into workdays
-			let d = new Date();
+			// step back entschuldigungMaxReach workdays, skipping weekends
+			// (holidays are not considered, there is no data source for them here)
+			const d = new Date();
 			for (let x = this.$entryParams.permissions.entschuldigungMaxReach; x > 0; x--) {
-				// step 3 times on monday, else step once per counter
-				d.setDate(d.getDate() - (d.getDay() === 1 ? 3 : 1));
+				d.setDate(d.getDate() - 1);
+				while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
 			}
 
 			return d
@@ -154,6 +143,7 @@ export default {
 			formData.append('person_id', person_id);
 
 
+			// only close the modal on success, on error the student can retry
 			this.$api.call(ApiProfil.editEntschuldigung(formData))
 				.then(response => {
 
@@ -168,9 +158,8 @@ export default {
 					}
 
 					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
+					this.$refs.modalContainerEntschuldigungEdit.hide()
 				}
-			}).finally(()=> {
-				this.$refs.modalContainerEntschuldigungEdit.hide()
 			});
 
 		},
@@ -195,24 +184,26 @@ export default {
 
 			formData.append('person_id', person_id);
 
+			// only close the modal once the upload actually succeeded, on error the
+			// student keeps the filled form and can retry
 			this.$api.call(ApiProfil.addEntschuldigung(formData))
 				.then(res => {
-				let rowData = res.data
-				this.$refs.entschuldigungsTable.tabulator.addRow(
-					{
-						'dms_id': rowData.dms_id,
-						'akzeptiert': null,
-						'von': rowData.von,
-						'bis': rowData.bis,
-						'entschuldigung_id': rowData.entschuldigung_id
-					}
-					, true);
-				this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
-				this.entschuldigung = this.initEntschuldigungForm();
+					if (res.meta.status !== 'success' || !res.data) return
 
-			})
-
-			this.$refs.modalContainerEntschuldigungUpload.hide()
+					const rowData = res.data
+					this.$refs.entschuldigungsTable.tabulator.addRow(
+						{
+							'dms_id': rowData.dms_id,
+							'akzeptiert': null,
+							'von': rowData.von,
+							'bis': rowData.bis,
+							'entschuldigung_id': rowData.entschuldigung_id
+						}
+						, true);
+					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
+					this.entschuldigung = this.initEntschuldigungForm();
+					this.$refs.modalContainerEntschuldigungUpload.hide()
+				})
 		},
 		formAction: function(cell) {
 			let download = document.createElement('div');
@@ -243,7 +234,7 @@ export default {
 				button.style.minWidth = minwidth;
 				button.innerHTML = '<i class="fa fa-xmark"></i>';
 				button.title = this.$p.t('global/entschuldigungLöschen');
-				button.addEventListener('click', () => this.deleteEntschuldigung(cell, 'decline'));
+				button.addEventListener('click', () => this.deleteEntschuldigung(cell));
 				download.append(button);
 			}
 
@@ -276,12 +267,12 @@ export default {
 			this.$refs.modalContainerEntschuldigungUpload.show()
 		},
 		validate: function() {
-			// todo: check for von/bis input never toched => von still exists as initialized hours minutes object
-			if(!this.entschuldigung.von) {
+			// text input can produce invalid dates, treat them like missing input
+			if(!this.entschuldigung.von || !this.isValidDateObj(this.entschuldigung.von)) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
 				return false
 			}
-			if(!this.entschuldigung.bis) {
+			if(!this.entschuldigung.bis || !this.isValidDateObj(this.entschuldigung.bis)) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
 				return false
 			}
@@ -298,12 +289,20 @@ export default {
 
 			return true;
 		},
-		reload(){
-			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(id))
+		async loadEntschuldigungen() {
+			// wait until the profile viewData (person_id) is resolved, then fetch and set the data
+			await this.$entryParams.profileViewDataPromise
+
+			const person_id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
+			if (!person_id) return
+
+			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(person_id))
 				.then(res => {
-				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
-			})
+					this.$refs.entschuldigungsTable?.tabulator?.setData(res.data.retval ?? [])
+				})
+		},
+		reload(){
+			this.loadEntschuldigungen()
 		},
 		redrawTable() {
 			if(this.$refs?.entschuldigungsTable?.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
@@ -316,21 +315,21 @@ export default {
 			await this.$entryParams.phrasenPromise
 			await this.tableBuiltPromise
 
-			const cols = this.$refs.entschuldigungsTable.tabulator.getColumns()
+			// columns were defined in data() where phrasen might not have been resolved yet,
+			// re-apply the titles by field once the phrasen are guaranteed to be loaded
+			const titleKeys = {
+				akzeptiert: 'global/status',
+				von: 'ui/von',
+				bis: 'global/bis',
+				dms_id: 'ui/aktion',
+				notiz: 'global/begruendungAnw'
+			}
+			this.$refs.entschuldigungsTable.tabulator.getColumns().forEach(col => {
+				const key = titleKeys[col.getField()]
+				if (key) col.updateDefinition({title: this.$capitalize(this.$p.t(key))})
+			})
 
-			// phrasen bandaid
-
-			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('global/status')})
-			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
-			cols.find(e => e.getField() === 'student_status').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
-			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('ui/aktion')})
-			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$p.t('global/notiz')})
-
-			this.entschuldigungsViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('global/status'))
-			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/von'))
-			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/bis'))
-			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/aktion'))
-			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/notiz'))
+			this.loadEntschuldigungen()
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
@@ -364,20 +363,16 @@ export default {
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {
-			if(newVal == [] || newVal === null || newVal === undefined) return
+			if(!newVal || !newVal.length) return
 
-			// check filetype on input change
-			const file = newVal[0]
-			if(!file) return
-
-			if(file.type && !file.name.includes('jfif') && (
-				file.type.includes('jpg')
-				|| file.type.includes('jpeg')
+			// check filetype of EVERY chosen file on input change. jfif files sneak through
+			// with mime type image/jpeg, so they are excluded by filename
+			const isAllowed = file => file.type && !file.name?.toLowerCase().includes('jfif') && (
+				file.type.includes('jpeg')
 				|| file.type.includes('pdf')
 				|| file.type.includes('png'))
-			) {
-				// all fine
-			} else {
+
+			if (![...newVal].every(isAllowed)) {
 				// clear and alert for filetypes
 				this.$fhcAlert.alertInfo(this.$p.t('global/allowedEntschuldigungFileTypes'))
 				this.entschuldigung.files = []

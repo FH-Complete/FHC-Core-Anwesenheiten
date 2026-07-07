@@ -73,6 +73,9 @@ anwesenheitApp.config.globalProperties.$entryParams = {
 	isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
 	available_le_ids: Vue.ref([]),
 	available_le_info: Vue.ref([]),
+	// lva wide le list for the lvlead/admin multiselect, stays stable while
+	// available_le_info gets refiltered on maUID switches
+	available_le_info_lva: Vue.ref([]),
 	selected_le_id: Vue.ref(),
 	selected_le_info: Vue.ref(),
 	available_maUID: Vue.ref([]),

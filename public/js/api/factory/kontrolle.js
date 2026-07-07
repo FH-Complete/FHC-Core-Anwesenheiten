@@ -1,7 +1,7 @@
 export default {
-	fetchAllAnwesenheitenByLvaAssigned(lv_id, sem_kurzbz, le_id, ma_uid, date) {
+	fetchAllAnwesenheitenByLvaAssigned(lv_id, sem_kurzbz, le_id, ma_uid) {
 		
-		const params = { lv_id, sem_kurzbz, le_id, ma_uid, date} 
+		const params = { lv_id, sem_kurzbz, le_id, ma_uid} 
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/fetchAllAnwesenheitenByLvaAssigned';
 		
 		return {
@@ -10,6 +10,18 @@ export default {
 			params
 		}
 		
+	},
+	fetchAllAnwesenheitenByLva(lv_id, sem_kurzbz, le_ids) {
+
+		const params = { lv_id, sem_kurzbz, le_ids}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/fetchAllAnwesenheitenByLva';
+
+		return {
+			method: 'post',
+			url,
+			params
+		}
+
 	},
 	getAllAnwesenheitenByStudentByLva(prestudent_id, lv_id, sem_kurzbz) {
 		
@@ -165,6 +177,15 @@ export default {
 			params
 		}
 
+	},
+	getLehreinheitenForLehrveranstaltung(lva_id, sem_kurzbz) {
+		const params = { lva_id, sem_kurzbz }
+		const url = `extensions/FHC-Core-Anwesenheiten/api/KontrolleApi/getLehreinheitenForLehrveranstaltung`;
+		return {
+			method: 'get',
+			url,
+			params
+		}
 	},
 	insertAnwWithoutQR(le_id, datum, beginn, ende) {
 
