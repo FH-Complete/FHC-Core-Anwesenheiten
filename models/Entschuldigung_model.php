@@ -210,61 +210,6 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
 	}
-
-	/**
-	 * Expects parameter '$anw_user_ids'
-	 * Checks if anw_user_entries are linked to an exam kontrolle that has been held in the past relative to entschuldigung uploaddatum.
-	 */
-	public function checkForExam($anw_user_ids, $uploaddatum) {
-		$query = "SELECT anwesenheit_user_id
-				  FROM extension.tbl_anwesenheit_user 
-						JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
-						JOIN lehre.tbl_lehreinheit USING(lehreinheit_id) 
-				  WHERE lehrform_kurzbz = 'EXAM' AND anwesenheit_user_id IN ? AND DATE(von) < DATE(?)";
-
-		return $this->execReadOnlyQuery($query, [$anw_user_ids, $uploaddatum]);
-	}
-
-	/**
-	 * this query loads all user anwesenheiten entries of a person
-	 * where the person has an entschuldigung in akzeptiert state but also a kontrolle
-	 * of a lehreinheit that is still marked as abwesend. This should only ever happen
-	 * if the lehreinheit in question is of Lehrform EXAM and the INSERTAMUM field of entschuldigung (which is set
-	 * when declaring an entschuldigung, not when uploading the document) is after the kontrolle von date (kvon in this query).
-	 */
-	public function getExamEntriesIgnoredByEntschuldigungenForPerson($person_id) {
-
-		$query = "SELECT DISTINCT ON (tbl_anwesenheit_user.anwesenheit_id, tbl_anwesenheit_user.anwesenheit_user_id) 
-			anwesenheit_id, tbl_anwesenheit_user.anwesenheit_user_id,
-			extension.tbl_anwesenheit_user.status as konAnwesend, extension.tbl_anwesenheit.von as kVon,
-			extension.tbl_anwesenheit.bis as kBis,
-			akzeptierteEntsch.von as eVon,
-			akzeptierteEntsch.bis as eBis, pid, akzeptierteEntsch.entschuldigung_id as entid, akzeptierteEntsch.akzeptiert as entAkzeptiert
-		FROM extension.tbl_anwesenheit
-				 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
-				 JOIN
-		(SELECT extension.tbl_anwesenheit_entschuldigung.*, person_id as pid, student_uid, prestudent_id
-			FROM extension.tbl_anwesenheit_entschuldigung
-					 JOIN public.tbl_benutzer USING (person_id)
-					 JOIN public.tbl_student ON (public.tbl_benutzer.uid = public.tbl_student.student_uid)
-			WHERE
-				person_id = ? AND
-				akzeptiert = true) AS akzeptierteEntsch
-			ON (
-				akzeptierteEntsch.von <= extension.tbl_anwesenheit.von
-				AND
-				akzeptierteEntsch.bis >= extension.tbl_anwesenheit.bis
-				AND extension.tbl_anwesenheit_user.prestudent_id IN (
-				SELECT public.tbl_prestudent.prestudent_id
-				FROM public.tbl_prestudent JOIN public.tbl_student USING (prestudent_id)
-				WHERE public.tbl_prestudent.prestudent_id = public.tbl_student.prestudent_id
-				AND person_id = ?
-				)
-			)
-		WHERE extension.tbl_anwesenheit_user.status = 'abwesend'";
-
-		return $this->execReadOnlyQuery($query, [$person_id, $person_id]);
-	}
 	
 	// used for autodecline job - filters for old applications still missing their attachment and which would
 	// have applied for a past timeframe

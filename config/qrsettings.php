@@ -58,3 +58,6 @@ $config['URL_ASSISTENZ_ENTMANAGEMENT'] = 'index.ci.php/extensions/FHC-Core-Anwes
 $config['SHOW_OUTGOING_SEMESTER_OVERLAP'] = TRUE;
 // if student is abroad for at least 14 days in the current semester print the zusatz
 $config['SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'] = 14;
+
+// for superstrict installations where the old limited view is the preferred choice
+$config['LEGACY_LE_SELECTION'] = false;

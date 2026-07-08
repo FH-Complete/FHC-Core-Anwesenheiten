@@ -18,7 +18,6 @@ export const EntschuldigungEdit = {
 				bis: null,
 				notiz: '',
 				akzeptiert: '',
-				// todo: column examberechtigt default false?
 			})
 		};
 	},

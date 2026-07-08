@@ -73,7 +73,7 @@ export default {
 			}
 
 
-			if ((permissions.lektor || permissions.lektor_lvlead || permissions.admin) && notMissingParams) {
+			if ((permissions.lektor || permissions.admin) && notMissingParams) {
 				const kontrolleTitle = Vue.computed(() => {
 					return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'
 				})
@@ -234,14 +234,9 @@ export default {
 					})
 
 					// lva leads get every lehreinheit of the lva instead of just their own assigned ones
-				} else if (this.$entryParams.permissions.lektor_lvlead && lv_id && sem_kurzbz && le_ids) {
-					this.handleLvaSetup(lv_id, sem_kurzbz, le_ids).finally(()=>  {
-						resolve(true)
-					})
 
-					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
 				} else if (this.$entryParams.permissions.lektor && lv_id && sem_kurzbz && le_ids) {
-					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(() => {
+					this.handleLvaSetup(lv_id, sem_kurzbz, le_ids).finally(()=>  {
 						resolve(true)
 					})
 				} else {
@@ -310,38 +305,33 @@ export default {
 			res.data[0].forEach(entry => {
 
 				const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
+
+				// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
+				// so a new entry will always start with those groups, others are appended afterwards
+				const groupKey = (entry.gruppe_kurzbz !== null && entry.direktinskription == false)
+					? entry.gruppe_kurzbz
+					: entry.kurzbzlang + '-' + entry.semester
+						+ (entry.verband ? entry.verband : '')
+						+ (entry.gruppe ? entry.gruppe : '')
+
 				if (existing) {
-					// supplement info
-					existing.infoString += ', '
-					existing.groupString += ', '
-					if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
-						existing.groupString += entry.gruppe_kurzbz
-						existing.infoString += entry.gruppe_kurzbz
-					} else {
-						existing.groupString += entry.kurzbzlang + '-' + entry.semester
-							+ (entry.verband ? entry.verband : '')
-							+ (entry.gruppe ? entry.gruppe : '')
-						
-						existing.infoString += entry.kurzbzlang + '-' + entry.semester
-							+ (entry.verband ? entry.verband : '')
-							+ (entry.gruppe ? entry.gruppe : '')
+					// co-taught lehreinheiten return one row per lektor and group. collect every
+					// lektor (the mine/others grouping needs all of them) but list each group once only
+					if (!existing.mitarbeiter_uids.includes(entry.mitarbeiter_uid)) {
+						existing.mitarbeiter_uids.push(entry.mitarbeiter_uid)
+						existing.lektor_names.push(entry.vorname + ' ' + entry.nachname)
+					}
+					if (!existing.groupKeys.includes(groupKey)) {
+						existing.groupKeys.push(groupKey)
+						existing.groupString += ', ' + groupKey
+						existing.infoString += ', ' + groupKey
 					}
 				} else {
-					// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
-					// so a new entry will always start with those groups, others are appended afterwards
-					entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-					entry.groupString = ''
-					if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
-						entry.groupString += entry.gruppe_kurzbz
-						entry.infoString += entry.gruppe_kurzbz
-					} else {
-						entry.groupString += entry.kurzbzlang + '-' + entry.semester
-							+ (entry.verband ? entry.verband : '')
-							+ (entry.gruppe ? entry.gruppe : '')
-						entry.infoString += entry.kurzbzlang + '-' + entry.semester
-							+ (entry.verband ? entry.verband : '')
-							+ (entry.gruppe ? entry.gruppe : '')
-					}
+					entry.mitarbeiter_uids = [entry.mitarbeiter_uid]
+					entry.lektor_names = [entry.vorname + ' ' + entry.nachname]
+					entry.groupKeys = [groupKey]
+					entry.groupString = groupKey
+					entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - ' + groupKey
 
 					data.push(entry)
 				}
@@ -423,7 +413,16 @@ export default {
 			if (this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
 		},
 		findLeWithClosestTermin(leChoices, leTermine) {
-			const flat = Object.values(leTermine).filter(Array.isArray).flat();
+			// the closest termin preselect only considers lehreinheiten the user teaches,
+			// termine of colleagues les (lva wide option list) must not hijack the default.
+			// users without own les (admin/assistenz view) fall back to the whole list
+			const authUid = this.$entryParams.permissions.authID
+			const ownChoices = leChoices.filter(choice => choice.mitarbeiter_uids?.includes(authUid))
+			const relevantChoices = ownChoices.length ? ownChoices : leChoices
+			const relevantLeIds = relevantChoices.map(choice => String(choice.lehreinheit_id))
+
+			const flat = Object.values(leTermine).filter(Array.isArray).flat()
+				.filter(termin => relevantLeIds.includes(String(termin.le_id)));
 
 			if (flat && flat.length) {
 				const closest = this.findClosestTermin(flat)
@@ -431,14 +430,14 @@ export default {
 				if (!closest) { // all possible termine are too far back in the past
 					this.$fhcAlert.alertWarning(this.$p.t('global/noLePreselectTermineTooOld'))
 
-					return leChoices[0]
+					return relevantChoices[0]
 				}
 
 				const choiceFound = leChoices.find(choice => choice.lehreinheit_id == closest.le_id)
 				return choiceFound
 
-			} else if (leChoices && leChoices.length) { // no termine to determine closest le by
-				return leChoices[0]
+			} else if (relevantChoices && relevantChoices.length) { // no termine to determine closest le by
+				return relevantChoices[0]
 			} else { // no termine and no le found
 				return null
 			}
@@ -497,7 +496,7 @@ export default {
 			this.$entryParams.phrasenPromise.then(()=> this.phrasenResolved = true)
 
 		})
-		if(this.$entryParams.permissions.lektor || this.$entryParams.permissions.lektor_lvlead) this.permissioncount++
+		if(this.$entryParams.permissions.lektor) this.permissioncount++
 		if(this.$entryParams.permissions.student) this.permissioncount++
 		if(this.$entryParams.permissions.assistenz) this.permissioncount = 3
 		if(this.$entryParams.permissions.admin) this.permissioncount = 3 // default has max permissions
@@ -527,7 +526,7 @@ export default {
 			<core-tabs :default="getCurrentTab" :modelValue="currentTab" :config="tabs" @changed="handleTabChanged" ref="tabsMain"></core-tabs>
 		</template>
 		<template v-else-if="permissioncount === 1 && phrasenResolved">
-			<LektorComponent v-if="$entryParams?.permissions?.lektor || $entryParams?.permissions?.lektor_lvlead"></LektorComponent>
+			<LektorComponent v-if="$entryParams?.permissions?.lektor"></LektorComponent>
 			<StudentComponent v-if="$entryParams?.permissions?.student"></StudentComponent>
 			<AssistenzComponent v-if="$entryParams?.permissions?.assistenz || $entryParams?.permissions?.admin"></AssistenzComponent>
 		</template>

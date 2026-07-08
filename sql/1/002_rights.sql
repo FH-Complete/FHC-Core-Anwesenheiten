@@ -50,9 +50,3 @@ INSERT INTO system.tbl_berechtigung(berechtigung_kurzbz, beschreibung)
 SELECT 'extension/anw_stud_ent', 'Digitale Anwesenheiten Entschuldigung für StudentUID Uploaden/Editieren/Löschen'
 WHERE
 	NOT EXISTS(SELECT 1 FROM system.tbl_berechtigung WHERE berechtigung_kurzbz='extension/anw_stud_ent');
-
--- new berechtigung for full lva anw kontrolle feature
-INSERT INTO system.tbl_berechtigung(berechtigung_kurzbz, beschreibung)
-SELECT 'extension/anw_r_lektor_lvlead', 'Digitale Anwesenheitskontrollen für ganze LVA durchführen'
-WHERE
-	NOT EXISTS(SELECT 1 FROM system.tbl_berechtigung WHERE berechtigung_kurzbz='extension/anw_r_lektor_lvlead');

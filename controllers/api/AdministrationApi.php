@@ -145,21 +145,6 @@ class AdministrationApi extends FHCAPI_Controller
 				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
 //				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
 				
-				// if anw is from exam kontrolle and entschuldigung was uploaded past that date it does not count, even though
-				// the kontroll entry was in the time range
-				$result = $this->_ci->EntschuldigungModel->checkForExam($anwesenheit_user_ids, $entschuldigung->insertamum);
-//				$this->addMeta('examCheck', $result);
-				
-				if(count($result->retval) > 0) { // filter exam ids
-					$exam_ids = array_map($funcAUID, $result->retval);
-					
-					$anwesenheit_user_ids = array_filter($anwesenheit_user_ids, function($anwId) use ($exam_ids) {
-						return !in_array($anwId, $exam_ids);
-					});
-
-//					$this->addMeta('$anwesenheit_user_ids_post_filter', $anwesenheit_user_ids);
-				}
-				
 				if(count($anwesenheit_user_ids) > 0) {
 					// if update status is "abwesend", find out if there has been anwesend checkin status from before the entschuldigung was akzeptiert
 					if($updateStatus == $this->_ci->config->item('ABWESEND_STATUS')) {
@@ -194,7 +179,6 @@ class AdministrationApi extends FHCAPI_Controller
 								$this->terminateWithError($updateAnwesenheit);
 							}
 						}
-						
 						
 					} else { // just update all stati in question to entschuldigt
 						$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);

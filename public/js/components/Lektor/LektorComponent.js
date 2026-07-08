@@ -280,12 +280,41 @@ export const LektorComponent = {
 		anwColumnKey(datum, von, bis, le_id) {
 			return datum + ' | ' + von + ' - ' + bis + ' | ' + le_id
 		},
+		isOwnLe(le) {
+			// options built by processLeSetupResponse carry every lektor of the le,
+			// entries from other sources may only have the single row uid
+			if (Array.isArray(le?.mitarbeiter_uids)) return le.mitarbeiter_uids.includes(this.$entryParams.permissions.authID)
+			return le?.mitarbeiter_uid === this.$entryParams.permissions.authID
+		},
+		async confirmFremdeLe(messageKey, acceptLabelKey) {
+			// operating on a colleagues le is a valid use case (substitution) but rare enough
+			// that starting/saving/deleting anything there by accident deserves a confirm popup
+			const le = this.$entryParams.selected_le_info?.value
+			if (!le || this.isOwnLe(le)) return true
+			return await this.$fhcAlert.confirm({
+				message: this.$p.t(messageKey, [le.lektor_names?.join(', ') ?? '']),
+				acceptLabel: this.$p.t(acceptLabelKey),
+				acceptClass: 'btn btn-danger',
+				rejectLabel: this.$p.t('global/zurueck'),
+				rejectClass: 'btn btn-outline-secondary'
+			})
+		},
+		confirmKontrolleFremdeLe() {
+			return this.confirmFremdeLe('global/anwKontrolleFremdeLeConfirm', 'global/jetztStarten')
+		},
+		confirmEditFremdeLe() {
+			return this.confirmFremdeLe('global/anwEditFremdeLeConfirm', 'global/anwFortfahren')
+		},
 		getLeLabel(le_id) {
 			const options = this.$entryParams.available_le_info_lva.value?.length
 				? this.$entryParams.available_le_info_lva.value
 				: this.$entryParams.available_le_info.value
 			const le = options?.find(o => o.lehreinheit_id == le_id)
 			return le?.groupString ?? le?.csvInfoString ?? le?.infoString ?? ('LE ' + le_id)
+		},
+		// '10:00:00 - 11:30:00' -> '10:00 - 11:30', column keys keep the raw times
+		stripSeconds(timespan) {
+			return timespan.replace(/(\d{1,2}:\d{2}):\d{2}/g, '$1')
 		},
 		anwColTitleFormatter(cell) {
 			const title = cell.getColumn().getDefinition().title;
@@ -296,7 +325,7 @@ export const LektorComponent = {
 
 			const container = document.createElement("div");
 			container.style.textAlign = "center";
-			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span style="color: gray;">${titleParts[1]}</span>`;
+			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span style="color: gray;">${this.stripSeconds(titleParts[1])}</span>`;
 
 			// in the combined multi le view show which lehreinheit the kontrolle belongs to
 			if (this.multiLeMode && titleParts[2] !== undefined) {
@@ -614,6 +643,8 @@ export const LektorComponent = {
 		},
 		async saveChanges() {
 
+			if (await this.confirmEditFremdeLe() === false) return
+
 			const changedStudents = new Set(this.changedData.map(e => e.prestudent_id))
 			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, this.changedData))
 				.then((res) => {
@@ -747,7 +778,7 @@ export const LektorComponent = {
 			
 			this.kontrollZeitSourceStundenplanEnde = true
 		},
-		startNewAnwesenheitskontrolle() {
+		async startNewAnwesenheitskontrolle() {
 			if (!this.lektorState.beginn || !this.lektorState.ende) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorAnwStartAndEndSet'))
 				return
@@ -756,6 +787,8 @@ export const LektorComponent = {
 			if (!this.validateTimespan(this.lektorState.beginn, this.lektorState.ende, this.selectedDate)) {
 				return false;
 			}
+
+			if (await this.confirmKontrolleFremdeLe() === false) return
 
 			this.showQRLoadingSpinner = true
 			this.qr = '' // indirectly set start button disabled
@@ -765,7 +798,7 @@ export const LektorComponent = {
 
 			this.getNewQRCode()
 		},
-		insertAnwWithoutQR() {
+		async insertAnwWithoutQR() {
 			if (!this.lektorState.beginn || !this.lektorState.ende) {
 				this.$fhcAlert.alertError(this.$p.t('global/errorAnwStartAndEndSet'))
 				return
@@ -774,6 +807,8 @@ export const LektorComponent = {
 			if (!this.validateTimespan(this.lektorState.beginn, this.lektorState.ende, this.selectedDate)) {
 				return false;
 			}
+
+			if (await this.confirmKontrolleFremdeLe() === false) return
 
 			const date = {
 				year: this.selectedDate.getFullYear(),
@@ -857,6 +892,7 @@ export const LektorComponent = {
 			this.$refs.modalContainerLegende.show()
 		},
 		async deleteAnwesenheitskontrolle(kontrolle) {
+			if (await this.confirmEditFremdeLe() === false) return
 			if (await this.$fhcAlert.confirmDelete() === false) return;
 
 			const dataparts = kontrolle.datum.split('.')
@@ -1255,10 +1291,17 @@ export const LektorComponent = {
 			// see if test is still running
 			this.getExistingQRCode()
 
+			// show the preselected le (closest own termin) as checked in the multiselect,
+			// lastLoadedLeIds matches so the reloadState below isnt repeated on overlay close
+			if (!this.$entryParams.permissions.legacy_le_selection && this.$entryParams.selected_le_info?.value) {
+				this.selectedLehreinheiten = [this.$entryParams.selected_le_info.value]
+				this.lastLoadedLeIds = [this.$entryParams.selected_le_info.value.lehreinheit_id]
+			}
+
 			// fetch LE data
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-			
+
 			this.reloadState(ma_uid, date)
 		},
 		handleLEChanged() {
@@ -1383,7 +1426,7 @@ export const LektorComponent = {
 		statusEditorValues() {
 			const p = this.$entryParams.permissions
 			if (p.admin || p.assistenz) return [p.anwesend_status, p.abwesend_status, p.entschuldigt_status]
-			if (p.lektor || p.lektor_lvlead) return [p.anwesend_status, p.abwesend_status]
+			if (p.lektor) return [p.anwesend_status, p.abwesend_status]
 			return []
 		},
 		baseColumns() {
@@ -1394,7 +1437,7 @@ export const LektorComponent = {
 			// field/title carry the raw column key (datum | von - bis | le_id),
 			// build a readable header for downloads
 			const keyParts = date.split(' | ')
-			let titleDownload = this.toFrontendDate(keyParts[0]) + ' ' + (keyParts[1] ?? '')
+			let titleDownload = this.toFrontendDate(keyParts[0]) + ' ' + (keyParts[1] ? this.stripSeconds(keyParts[1]) : '')
 			if (this.multiLeMode && keyParts[2] !== undefined) titleDownload += ' ' + this.getLeLabel(keyParts[2])
 
 			return {
@@ -1423,7 +1466,9 @@ export const LektorComponent = {
 
 			return anwCols
 		},
-		restartKontrolle(kontrolle) {
+		async restartKontrolle(kontrolle) {
+			if (await this.confirmKontrolleFremdeLe() === false) return
+
 			const kdate = new Date(kontrolle.datum)
 			// js months 0-11, php months 1-12
 			const date = {
@@ -1443,7 +1488,7 @@ export const LektorComponent = {
 					}
 				})
 		},
-		updateKontrolle() {
+		async updateKontrolle() {
 			const dataparts = this.editKontrolle.datum.split('.')
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 			const dateAnwFormat = dataparts[2] + '-' + dataparts[1] + '-' + dataparts[0]
@@ -1451,7 +1496,9 @@ export const LektorComponent = {
 			if (!this.validateTimespan(this.editKontrolle.editVon, this.editKontrolle.editBis, this.editKontrolle.jsDate, this.editKontrolle.anwesenheit_id)) {
 				return false;
 			}
-			
+
+			if (await this.confirmEditFremdeLe() === false) return
+
 			this.loading = true
 			this.$api.call(ApiKontrolle.updateKontrolle(
 				this.editKontrolle.anwesenheit_id,
@@ -1521,6 +1568,7 @@ export const LektorComponent = {
 		}
 	},
 	created(){
+		console.log('this.$entryParams', this.$entryParams)
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.$entryParams.permissions.authID
@@ -1557,8 +1605,16 @@ export const LektorComponent = {
 		},
 		getLEOptions() {
 			// the multiselect always offers every le of the lva, unlike available_le_info
-			// which gets refiltered when an admin switches the maUID dropdown
-			return this.$entryParams.available_le_info_lva.value
+			// which gets refiltered when an admin switches the maUID dropdown.
+			// grouped into the les the user teaches and the ones of colleagues
+			const all = this.$entryParams.available_le_info_lva.value ?? []
+			const mine = all.filter(le => this.isOwnLe(le))
+			const others = all.filter(le => !this.isOwnLe(le))
+
+			const groups = []
+			if (mine.length) groups.push({label: this.$p.t('global/anwMeineLvTeile'), items: mine})
+			if (others.length) groups.push({label: this.$p.t('global/anwLvTeileKollegen'), items: others})
+			return groups
 		},
 		currentLEhasRightToSkipQR() {
 			if(!this.$entryParams.permissions.no_qr_lehrform || !this.$entryParams.permissions.no_qr_lehrform.length) return false
@@ -1649,8 +1705,8 @@ export const LektorComponent = {
 		},
 		getCSVFilename() {
 			let str = ''
-			if(this.multiLeMode()) {
-				str = this.getTitle()
+			if(this.multiLeMode) {
+				str = this.getTitle
 			} else {
 				str = this.$entryParams.selected_le_info?.value?.csvInfoString ?? ''
 			}
@@ -1951,13 +2007,16 @@ export const LektorComponent = {
 						
 	
 						<div class="col-6">
-							<div class="row g-3 mb-4" v-if="$entryParams?.permissions?.lektor_lvlead || $entryParams?.permissions?.admin" style="padding-right: 2%" >
+							<div class="row g-3 mb-4" v-if="!$entryParams?.permissions?.legacy_le_selection" style="padding-right: 2%" >
 								<div class="col-12" style="padding-right: 24px">
 									<Multiselect
 										ref="leMultiselect"
 										v-model="selectedLehreinheiten"
 										:options="getLEOptions"
 										optionLabel="infoString"
+										optionGroupLabel="label"
+										optionGroupChildren="items"
+										dataKey="lehreinheit_id"
 										placeholder="LV-Teile auswählen"
 										:maxSelectedLabels="3"
 										showToggleAll
@@ -1970,7 +2029,7 @@ export const LektorComponent = {
 										<template #option="slotProps">
 											<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
 												<span>{{ slotProps.option.infoString }}</span>
-												<span>{{ slotProps.option.vorname }} {{ slotProps.option.nachname }}</span>
+												<span>{{ slotProps.option.lektor_names ? slotProps.option.lektor_names.join(', ') : slotProps.option.vorname + ' ' + slotProps.option.nachname }}</span>
 											</div>
 										</template>
 									</Multiselect>
@@ -1978,7 +2037,15 @@ export const LektorComponent = {
 							</div>
 
 							<div v-else class="row g-3 align-items-end">
-								<div class="col-12">
+								<div class="col-5" v-if="$entryParams?.permissions?.admin">
+									<MaUIDDropdown 
+										:title="$capitalize($p.t('lehre/lektor'))" 
+										id="maUID" 
+										ref="MADropdown" 
+										@maUIDchanged="maUIDchangedHandler"
+									/>
+								</div>
+								<div :class="$entryParams?.permissions?.admin ? 'col-7' : 'col-12'">
 									<LehreinheitenDropdown 
 										id="lehreinheit" 
 										:title="$capitalize($p.t('lehre/lehreinheit'))" 

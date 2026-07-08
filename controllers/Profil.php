@@ -52,7 +52,6 @@ class Profil extends Auth_Controller
 				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz'),
 				'lektor' => $this->permissionlib->isBerechtigt('extension/anw_r_lektor'),
 				'student' => $this->permissionlib->isBerechtigt('extension/anw_r_student'),
-				'lektor_lvlead' => $this->permissionlib->isBerechtigt('extension/anw_r_lektor_lvlead'),
 				'authID' => getAuthUID(),
 				'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),
 				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
@@ -75,6 +74,7 @@ class Profil extends Auth_Controller
 				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
 				'show_outgoing_semester_overlap' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP'),
 				'show_outgoing_semester_overlap_min_days' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'),
+				'legacy_le_selection' => $this->_ci->config->item('LEGACY_LE_SELECTION'),
 				'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
 			]
 		);

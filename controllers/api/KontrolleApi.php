@@ -13,55 +13,55 @@ class KontrolleApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				// tableData fetch lektor main page
-				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+				'fetchAllAnwesenheitenByLvaAssigned' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 
-				// alternative tableData fetch lektor main page for lva leader
-				'fetchAllAnwesenheitenByLva' => array('extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+				// alternative tableData fetch lektor main page
+				'fetchAllAnwesenheitenByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 
 				// tableData fetch lektor-student page
-				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 
 				// changing status or note of anwesenheit user entry
-				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw',  'extension/anw_r_full_assistenz:rw'),
 
 				// requests new code when timer reaches its limit during kontrolle
-				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// deletes old code from db when refreshed is received
-				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// start of a new kontrolle, inserts anw_user entries
-				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// start & end of kontrolle without the qr part for lessons where scanning is not intended
-				'insertAnwWithoutQR' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'insertAnwWithoutQR' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// requests qr code for existing kontrolle
-				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// update von/bis times for existing kontrolle
-				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// in case kontrolle was not stopped intentionally jump right back in on startup
-				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// method called at end of kontrolle to clean up qr code
-				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// delete kontrolle and all corresponding anw_user entries
-				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_lektor_lvlead:rw', 'extension/anw_r_full_assistenz:rw'),
+				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// gets checkin & entschuldigt count for ongoing kontrolle
-				'pollAnwesenheiten' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+				'pollAnwesenheiten' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 
 				// reloads just the sum% when anwesenheiten have been updated to avoid full reload
-				'getAnwQuoteForPrestudentIds' => array('extension/anw_r_lektor:r', 'extension/anw_r_lektor_lvlead:r', 'extension/anw_r_full_assistenz:r'),
+				'getAnwQuoteForPrestudentIds' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 			
 				// loads le dropdown options
 				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 
 				// loads le multiselect options
-				'getLehreinheitenForLehrveranstaltung' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor_lvlead:r'),
+				'getLehreinheitenForLehrveranstaltung' => array('extension/anw_r_full_assistenz:r'),
 			)
 		);
 
@@ -188,7 +188,7 @@ class KontrolleApi extends FHCAPI_Controller
 	 * POST METHOD
 	 * expects parameters 'le_ids', 'lv_id', 'sem_kurzbz'
 	 *
-	 * alternative tableData fetch for lva leads/admins, combines students, anwEntries and kontrollen
+	 * alternative tableData fetch, combines students, anwEntries and kontrollen
 	 * over one or more lehreinheiten of a lehrveranstaltung. Response shape matches
 	 * fetchAllAnwesenheitenByLvaAssigned so the LektorComponent state setup can be reused.
 	 */
@@ -204,7 +204,7 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!is_array($le_ids) || !count($le_ids))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
-		$berechtigt = $this->isAdminOrLeadsLva($lv_id);
+		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		// every requested lehreinheit has to belong to the authorized lehrveranstaltung
@@ -768,9 +768,7 @@ class KontrolleApi extends FHCAPI_Controller
 				&& ((int) getData($lektorIsTeaching)[0]->teaches) > 0) return true;
 		}
 
-		// lva leads may operate every lehreinheit of a lehrveranstaltung they are assigned to,
-		// eg running kontrollen for a colleague who cant teach that day
-		return $this->leadsLva($le->lehrveranstaltung_id);
+		return false;
 	}
 
 	/**
@@ -793,37 +791,7 @@ class KontrolleApi extends FHCAPI_Controller
 				&& ((int) getData($lektorIsTeaching)[0]->teaches) > 0) return true;
 		}
 
-		return $this->leadsLva($lva_id);
-	}
-
-	/**
-	 * @param $lva_id
-	 * @return bool
-	 *
-	 * checks Berechtigungen for Admin or LvLead and is Teaching lehrveranstaltung.
-	 * the lvlead right allows access to all lehreinheiten of a lehrveranstaltung
-	 * as long as the user is assigned to at least one lehreinheit of it
-	 */
-	private function isAdminOrLeadsLva($lva_id)
-	{
-		$isAdmin = $this->isAdmin($lva_id);
-		if($isAdmin) return true;
-
-		return $this->leadsLva($lva_id);
-	}
-
-	/**
-	 * lvlead right + assigned to at least one lehreinheit of the lehrveranstaltung
-	 */
-	private function leadsLva($lva_id)
-	{
-		$isLvLead = $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor_lvlead');
-		if(!$isLvLead) return false;
-
-		$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
-		if(isError($lektorIsTeaching) || !hasData($lektorIsTeaching)) return false;
-
-		return ((int) getData($lektorIsTeaching)[0]->teaches) > 0;
+		return false;
 	}
 
 	private function isAdmin($lva_id) {
@@ -1200,7 +1168,7 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
-		$berechtigt = $this->isAdminOrLeadsLva($lva_id);
+		$berechtigt = $this->isAdminOrTeachesLva($lva_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
