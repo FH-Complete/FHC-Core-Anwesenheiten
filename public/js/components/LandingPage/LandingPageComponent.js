@@ -283,7 +283,9 @@ export default {
 
 					// keep a stable copy for the multiselect, available_le_info gets refiltered
 					// by handleLeSetup whenever an admin switches the maUID dropdown
-					this.$entryParams.available_le_info_lva.value = [...data]
+					const allLe = [...data]
+					const allLeSorted = allLe.sort((a, b) => (a.infoString ?? '').localeCompare(b.infoString ?? ''))
+					this.$entryParams.available_le_info_lva.value = allLeSorted
 				}).finally(()=> resolve())
 			})
 		},

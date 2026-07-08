@@ -15,6 +15,7 @@ import ApiKontrolle from '../../api/factory/kontrolle.js';
 import {StudentByLvaComponent} from "./StudentByLvaComponent.js"
 
 export const LektorComponent = {
+	inheritAttrs: false,
 	name: 'LektorComponent',
 	components: {
 		CoreBaseLayout,
@@ -1689,7 +1690,7 @@ export const LektorComponent = {
 		
 		<core-base-layout>			
 			<template #main>
-				<div id="lektorWrap">
+				<div id="lektorWrap" v-bind="$attrs">
 				
 					<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
 						<template v-slot:title>			
@@ -1973,19 +1974,11 @@ export const LektorComponent = {
 											</div>
 										</template>
 									</Multiselect>
-								<div/>
+								</div>
 							</div>
 
-							<div class="row g-3 align-items-end">
-								<div class="col-5" v-if="$entryParams?.permissions?.admin">
-									<MaUIDDropdown 
-										:title="$capitalize($p.t('lehre/lektor'))" 
-										id="maUID" 
-										ref="MADropdown" 
-										@maUIDchanged="maUIDchangedHandler"
-									/>
-								</div>
-								<div :class="$entryParams?.permissions?.admin ? 'col-7' : 'col-12'">
+							<div v-else class="row g-3 align-items-end">
+								<div class="col-12">
 									<LehreinheitenDropdown 
 										id="lehreinheit" 
 										:title="$capitalize($p.t('lehre/lehreinheit'))" 
