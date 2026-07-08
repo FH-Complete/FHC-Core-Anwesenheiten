@@ -180,7 +180,6 @@ export const LektorComponent = {
 			multiselectDebounceTimer: null,
 			lastLoadedLeIds: [],
 			selectedDateUnwatch: null,
-			forceSingleDateView: false,
 			deleteData: null,
 			selectedDate: new Date(Date.now()),
 			qr: null,
@@ -238,8 +237,6 @@ export const LektorComponent = {
 			this.lastLoadedLeIds = leIds
 
 			if (!leIds.length) {
-				// multiselect cleared -> back to the classic single le view for quick kontrollen
-				this.forceSingleDateView = true
 				const date = this.formatDateToDbString(this.selectedDate)
 				const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 				this.reloadState(ma_uid, date)
@@ -252,8 +249,7 @@ export const LektorComponent = {
 				const le = this.selectedLehreinheiten[0]
 				this.$entryParams.selected_le_id.value = le.lehreinheit_id
 				this.$entryParams.selected_le_info.value = le
-
-				this.forceSingleDateView = true
+				
 				const date = this.formatDateToDbString(this.selectedDate)
 				const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 				this.reloadState(ma_uid, date)
@@ -288,7 +284,7 @@ export const LektorComponent = {
 				? this.$entryParams.available_le_info_lva.value
 				: this.$entryParams.available_le_info.value
 			const le = options?.find(o => o.lehreinheit_id == le_id)
-			return le?.csvInfoString ?? le?.infoString ?? ('LE ' + le_id)
+			return le?.groupString ?? le?.csvInfoString ?? le?.infoString ?? ('LE ' + le_id)
 		},
 		anwColTitleFormatter(cell) {
 			const title = cell.getColumn().getDefinition().title;
@@ -1127,10 +1123,7 @@ export const LektorComponent = {
 			this.lektorState.a_o_kz = data.a_o_kz ?? []
 			this.lektorState.gruppen = new Set()
 
-			// persisted showAll flag acts as render mode, unless a single le was just
-			// explicitly selected (quick jump-in-and-start-kontrolle flow for teachers)
-			this.lektorState.showAllVar = !this.forceSingleDateView && localStorage.getItem('DigiAnwShowAll') == "true"
-			this.forceSingleDateView = false
+			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true"
 
 			this.setupLektorComponent()
 		},
@@ -1228,7 +1221,7 @@ export const LektorComponent = {
 			}
 			
 			// date of kontrolle needs to be in range or a stundenplantermin
-			if(!this.kontrollDatumSourceStundenplan && this.selectedDate <= this.minDate) {
+			if(!this.kontrollDatumSourceStundenplan && this.selectedDate < this.minDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
 			} else if(this.selectedDate > this.maxDate) {
@@ -1271,10 +1264,6 @@ export const LektorComponent = {
 			// picking a single le from the dropdown exits a combined multi le view
 			this.selectedLehreinheiten = []
 			this.lastLoadedLeIds = []
-
-			// explicitly picking a single le means working on it now (start kontrolle etc),
-			// override the persisted showAll render mode for this load once
-			this.forceSingleDateView = true
 
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
@@ -1577,7 +1566,8 @@ export const LektorComponent = {
 		},
 		getTitle() {
 			if (this.multiLeMode) {
-				return this.selectedLehreinheiten.map(le => le.csvInfoString ?? le.infoString).join(', ')
+				let title = this.selectedLehreinheiten[0].kurzbz + ': '
+				return title + this.selectedLehreinheiten.map(le => le.groupString).join(', ')
 			}
 			return this.$entryParams.selected_le_info?.value?.infoString ?? ''
 		},
@@ -1657,7 +1647,12 @@ export const LektorComponent = {
 			return !this.lektorState.kontrollen.length ? "btn btn-secondary ml-2" : "btn btn-success ml-2"
 		},
 		getCSVFilename() {
-			let str = this.$entryParams.selected_le_info?.value?.csvInfoString ?? ''
+			let str = ''
+			if(this.multiLeMode()) {
+				str = this.getTitle()
+			} else {
+				str = this.$entryParams.selected_le_info?.value?.csvInfoString ?? ''
+			}
 			str += '_'+ this.$entryParams?.viewDataLv?.bezeichnung + '_'
 			str += this.lektorState.showAllVar ? 'AllDates' : this.selectedDate.toDateString()
 			return str
@@ -1705,97 +1700,97 @@ export const LektorComponent = {
 						</template>
 						<template v-slot:default>
 						
-								<div class="row">
-									<div class="col-12">
-										<h5 class="mb-4 border-bottom pb-2">{{ $p.t('global/unterrichtzeit') }}</h5>
-								
-										<div class="row align-items-center mb-3">
-											<div class="col-3">
-												<label for="beginn" class="form-label mb-0 fw-semibold">{{ $p.t('global/anwKontrolleVon') }}</label>
-											</div>
-											<div class="col-4">
-												<datepicker
-													v-model="lektorState.beginn"
-													@update:model-value="handleChangeBeginn"
-													:clearable="false"
-													:time-picker="true"
-													:text-input="true"
-													:auto-apply="true"
-												/>
-											</div>
-											<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn">
-												<div  
-													 class="d-flex align-items-start small" 
-													 v-tooltip.bottom="getTooltipZeitFromStundenplan">
-													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
-													<span>{{ $p.t('global/zeitNichtAusStundenplanBeginnV2') }}</span>
-												</div>
-											</div>
+							<div class="row">
+								<div class="col-12">
+									<h5 class="mb-4 border-bottom pb-2">{{ $p.t('global/unterrichtzeit') }}</h5>
+							
+									<div class="row align-items-center mb-3">
+										<div class="col-3">
+											<label for="beginn" class="form-label mb-0 fw-semibold">{{ $p.t('global/anwKontrolleVon') }}</label>
 										</div>
-								
-										<div class="row align-items-center mb-3">
-											<div class="col-3">
-												<label for="von" class="form-label mb-0 fw-semibold">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
-											</div>
-											<div class="col-4">
-												<datepicker
-													v-model="lektorState.ende"
-													@update:model-value="handleChangeEnde"
-													:clearable="false"
-													:time-picker="true"
-													:text-input="true"
-													:auto-apply="true"
-												/>
-											</div>
-											<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde">
-												<div  
-													 class="d-flex align-items-start small" 
-													 v-tooltip.bottom="getTooltipZeitFromStundenplan">
-													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
-													<span>{{ $p.t('global/zeitNichtAusStundenplanEndeV2') }}</span>
-												</div>
-											</div>
+										<div class="col-4">
+											<datepicker
+												v-model="lektorState.beginn"
+												@update:model-value="handleChangeBeginn"
+												:clearable="false"
+												:time-picker="true"
+												:text-input="true"
+												:auto-apply="true"
+											/>
 										</div>
-								
-										<div class="row align-items-center mb-4">
-											<div class="col-3">
-												<label for="datum" class="form-label mb-0 fw-semibold">{{ $p.t('global/kontrolldatumV2') }}</label>
-											</div>
-											<div class="col-4">
-												<datepicker
-													ref="insideDateSelect"
-													v-model="selectedDate"
-													:clearable="false"
-													locale="de"
-													format="dd.MM.yyyy"
-													:text-input="true"
-													@date-update="handleAutoApply"
-													:highlight="highlights">
-													
-													<template #action-row>
-														<HighlightModeSelector v-model="highlightMode" />
-													</template>
-												</datepicker>
-											</div>
-											<div class="col-5" v-show="!kontrollDatumSourceStundenplan">
-												<div  
-													 class="d-flex align-items-start small" 
-													 v-tooltip.bottom="getTooltipDatumFromStundenplan">
-													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
-													<span>{{ $p.t('global/datumNichtAusStundenplanV2') }}</span>
-												</div>
-											</div>
-										</div>
-								
-										<hr class="my-4" />
-								
-										<div class="row">
-											<div class="col-12">
-												<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged" />
+										<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn">
+											<div  
+												 class="d-flex align-items-start small" 
+												 v-tooltip.bottom="getTooltipZeitFromStundenplan">
+												<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
+												<span>{{ $p.t('global/zeitNichtAusStundenplanBeginnV2') }}</span>
 											</div>
 										</div>
 									</div>
+							
+									<div class="row align-items-center mb-3">
+										<div class="col-3">
+											<label for="von" class="form-label mb-0 fw-semibold">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
+										</div>
+										<div class="col-4">
+											<datepicker
+												v-model="lektorState.ende"
+												@update:model-value="handleChangeEnde"
+												:clearable="false"
+												:time-picker="true"
+												:text-input="true"
+												:auto-apply="true"
+											/>
+										</div>
+										<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde">
+											<div  
+												 class="d-flex align-items-start small" 
+												 v-tooltip.bottom="getTooltipZeitFromStundenplan">
+												<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
+												<span>{{ $p.t('global/zeitNichtAusStundenplanEndeV2') }}</span>
+											</div>
+										</div>
+									</div>
+							
+									<div class="row align-items-center mb-4">
+										<div class="col-3">
+											<label for="datum" class="form-label mb-0 fw-semibold">{{ $p.t('global/kontrolldatumV2') }}</label>
+										</div>
+										<div class="col-4">
+											<datepicker
+												ref="insideDateSelect"
+												v-model="selectedDate"
+												:clearable="false"
+												locale="de"
+												format="dd.MM.yyyy"
+												:text-input="true"
+												@date-update="handleAutoApply"
+												:highlight="highlights">
+												
+												<template #action-row>
+													<HighlightModeSelector v-model="highlightMode" />
+												</template>
+											</datepicker>
+										</div>
+										<div class="col-5" v-show="!kontrollDatumSourceStundenplan">
+											<div  
+												 class="d-flex align-items-start small" 
+												 v-tooltip.bottom="getTooltipDatumFromStundenplan">
+												<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
+												<span>{{ $p.t('global/datumNichtAusStundenplanV2') }}</span>
+											</div>
+										</div>
+									</div>
+							
+									<hr class="my-4" />
+							
+									<div class="row">
+										<div class="col-12">
+											<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged" />
+										</div>
+									</div>
 								</div>
+							</div>
 						</template>
 						<template v-slot:footer>
 							
@@ -1810,79 +1805,79 @@ export const LektorComponent = {
 					<bs-modal ref="modalContainerEditKontrolle" class="bootstrap-prompt"
 					dialogClass="modal-xl">
 						<template v-slot:title>
-								{{ $p.t('global/editAnwKontrolle') }}
+							{{ $p.t('global/editAnwKontrolle') }}
 
 						</template>
 						<template v-slot:default>
 						
-								<template v-for="kontrolle in lektorState.kontrollen">
+							<template v-for="kontrolle in lektorState.kontrollen">
 
-									<div class="row p-2">
-										<div class="col-5 d-flex align-items-center">
-											<KontrolleDisplay :kontrolle="kontrolle"></KontrolleDisplay>
-										</div>
-										<div class="col-4">
-											<AnwCountDisplay :anwesend="kontrolle.anwesend" :abwesend="kontrolle.abwesend" :entschuldigt="kontrolle.entschuldigt"/>
-										</div>
-										<div class="col-3 d-flex justify-content-end">
-											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary" v-tooltip.bottom="getTooltipRestartKontrolle">
-												<i class="fa fa-rotate-right"></i>
-						
-											</button>
-											
-											<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger" v-tooltip.bottom="getTooltipDeleteKontrolle">
-												<i class="fa fa-trash"></i>
-											</button>
-											
-											<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
-												<i class="fa fa-pen"></i>
-											</button>
-											
-										</div>
+								<div class="row p-2">
+									<div class="col-5 d-flex align-items-center">
+										<KontrolleDisplay :kontrolle="kontrolle"></KontrolleDisplay>
 									</div>
-									
-									<div v-if="editKontrolle && editKontrolle === kontrolle" class="row align-items-center p-4" style="border: 0px;">
-										<div class="col-10">
-											<div class="row align-items-center">
-												<div class="col-3" style="align-items: center; justify-items: center;">
-													<label for="beginn" class="form-label">{{ $p.t('global/anwKontrolleVon') }}</label>
-												</div>
-												<div class="col-9">
-													<datepicker v-if="editKontrolle"
-														v-model="editKontrolle.editVon"
-														@update:model-value="handleChangeBeginn"
-														:clearable="false"
-														:time-picker="true"
-														:text-input="true"
-														:auto-apply="true">
-													</datepicker>
-													
-												</div>
+									<div class="col-4">
+										<AnwCountDisplay :anwesend="kontrolle.anwesend" :abwesend="kontrolle.abwesend" :entschuldigt="kontrolle.entschuldigt"/>
+									</div>
+									<div class="col-3 d-flex justify-content-end">
+										<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary" v-tooltip.bottom="getTooltipRestartKontrolle">
+											<i class="fa fa-rotate-right"></i>
+					
+										</button>
+										
+										<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger" v-tooltip.bottom="getTooltipDeleteKontrolle">
+											<i class="fa fa-trash"></i>
+										</button>
+										
+										<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
+											<i class="fa fa-pen"></i>
+										</button>
+										
+									</div>
+								</div>
+								
+								<div v-if="editKontrolle && editKontrolle === kontrolle" class="row align-items-center p-4" style="border: 0px;">
+									<div class="col-10">
+										<div class="row align-items-center">
+											<div class="col-3" style="align-items: center; justify-items: center;">
+												<label for="beginn" class="form-label">{{ $p.t('global/anwKontrolleVon') }}</label>
 											</div>
+											<div class="col-9">
+												<datepicker v-if="editKontrolle"
+													v-model="editKontrolle.editVon"
+													@update:model-value="handleChangeBeginn"
+													:clearable="false"
+													:time-picker="true"
+													:text-input="true"
+													:auto-apply="true">
+												</datepicker>
+												
+											</div>
+										</div>
 
-											<div class="row align-items-center mt-2">
-												<div class="col-3" style="align-items: center; justify-items: center;">
-													<label for="von" class="form-label">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
-												</div>
-												<div class="col-9">
-													<datepicker v-if="editKontrolle"
-														v-model="editKontrolle.editBis"
-														@update:model-value="handleChangeEnde"
-														:clearable="false"
-														:time-picker="true"
-														:text-input="true"
-														:auto-apply="true">
-													</datepicker>
-													
-												</div>
-											</div>	
-										</div>
-										<div class="col-2">
-											<button role="button" class="col text-white option-entry text-center w-100 btn" @click="updateKontrolle">{{ $p.t('global/speichern') }}</button>
-										</div>
+										<div class="row align-items-center mt-2">
+											<div class="col-3" style="align-items: center; justify-items: center;">
+												<label for="von" class="form-label">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
+											</div>
+											<div class="col-9">
+												<datepicker v-if="editKontrolle"
+													v-model="editKontrolle.editBis"
+													@update:model-value="handleChangeEnde"
+													:clearable="false"
+													:time-picker="true"
+													:text-input="true"
+													:auto-apply="true">
+												</datepicker>
+												
+											</div>
+										</div>	
 									</div>
-									<Divider/>
-								</template>
+									<div class="col-2">
+										<button role="button" class="col text-white option-entry text-center w-100 btn" @click="updateKontrolle">{{ $p.t('global/speichern') }}</button>
+									</div>
+								</div>
+								<Divider/>
+							</template>
 						</template>
 					</bs-modal>		
 	
@@ -1955,20 +1950,30 @@ export const LektorComponent = {
 						
 	
 						<div class="col-6">
-							<div class="row g-3 mb-4" v-if="$entryParams?.permissions?.lektor_lvlead || $entryParams?.permissions?.admin" >
-								<Multiselect
-									ref="leMultiselect"
-									v-model="selectedLehreinheiten"
-									:options="getLEOptions"
-									optionLabel="infoString"
-									placeholder="LV-Teile auswählen"
-									:maxSelectedLabels="3"
-									showToggleAll
-									class="tabulated-text"
-									@show="handleMultiselectShow"
-									@hide="handleMultiselectHide"
-									@change="handleChangeLEMultiselect"
-								/>
+							<div class="row g-3 mb-4" v-if="$entryParams?.permissions?.lektor_lvlead || $entryParams?.permissions?.admin" style="padding-right: 2%" >
+								<div class="col-12" style="padding-right: 24px">
+									<Multiselect
+										ref="leMultiselect"
+										v-model="selectedLehreinheiten"
+										:options="getLEOptions"
+										optionLabel="infoString"
+										placeholder="LV-Teile auswählen"
+										:maxSelectedLabels="3"
+										showToggleAll
+										scrollHeight=400
+										class="w-100"
+										@show="handleMultiselectShow"
+										@hide="handleMultiselectHide"
+										@change="handleChangeLEMultiselect"
+									>
+										<template #option="slotProps">
+											<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+												<span>{{ slotProps.option.infoString }}</span>
+												<span>{{ slotProps.option.vorname }} {{ slotProps.option.nachname }}</span>
+											</div>
+										</template>
+									</Multiselect>
+								<div/>
 							</div>
 
 							<div class="row g-3 align-items-end">

@@ -171,11 +171,16 @@ export default {
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
-				// console.log('$entryParams', this.$entryParams)
-
 				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReachPast)))
+				const tmpMin = new Date(this.anwKontrolleMinDate)
+				tmpMin.setHours(0, 0)
+				this.anwKontrolleMinDate = tmpMin.getTime()
+				
 				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReachFuture)))
-
+				const tmpMax = new Date(this.anwKontrolleMaxDate)
+				tmpMax.setHours(23, 59)
+				this.anwKontrolleMaxDate = tmpMax.getTime()
+				
 				el.removeAttribute('permissions')
 
 				resolve()
@@ -274,7 +279,7 @@ export default {
 			return new Promise((resolve) => {
 				this.$api.call(ApiKontrolle.getLehreinheitenForLehrveranstaltung(lv_id, sem_kurzbz)).then( res => {
 					// lva wide le options also show the assigned lektor to tell similar lehreinheiten apart
-					const data = this.processLeSetupResponse(res, le_ids, true)
+					const data = this.processLeSetupResponse(res, le_ids)
 
 					// keep a stable copy for the multiselect, available_le_info gets refiltered
 					// by handleLeSetup whenever an admin switches the maUID dropdown
@@ -284,7 +289,7 @@ export default {
 		},
 		// shared post processing of the le option endpoints: merges rows of the same lehreinheit into one
 		// entry with a combined infoString, stores the le termine and preselects the le with the closest termin
-		processLeSetupResponse(res, le_ids, includeLektorName = false) {
+		processLeSetupResponse(res, le_ids) {
 			// merge entries with same LE
 			const data = []
 
@@ -306,9 +311,15 @@ export default {
 				if (existing) {
 					// supplement info
 					existing.infoString += ', '
+					existing.groupString += ', '
 					if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
+						existing.groupString += entry.gruppe_kurzbz
 						existing.infoString += entry.gruppe_kurzbz
 					} else {
+						existing.groupString += entry.kurzbzlang + '-' + entry.semester
+							+ (entry.verband ? entry.verband : '')
+							+ (entry.gruppe ? entry.gruppe : '')
+						
 						existing.infoString += entry.kurzbzlang + '-' + entry.semester
 							+ (entry.verband ? entry.verband : '')
 							+ (entry.gruppe ? entry.gruppe : '')
@@ -317,9 +328,14 @@ export default {
 					// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
 					// so a new entry will always start with those groups, others are appended afterwards
 					entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
+					entry.groupString = ''
 					if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
+						entry.groupString += entry.gruppe_kurzbz
 						entry.infoString += entry.gruppe_kurzbz
 					} else {
+						entry.groupString += entry.kurzbzlang + '-' + entry.semester
+							+ (entry.verband ? entry.verband : '')
+							+ (entry.gruppe ? entry.gruppe : '')
 						entry.infoString += entry.kurzbzlang + '-' + entry.semester
 							+ (entry.verband ? entry.verband : '')
 							+ (entry.gruppe ? entry.gruppe : '')
@@ -332,7 +348,6 @@ export default {
 			data.forEach(entry => {
 				entry.csvInfoString = entry.infoString
 				entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
-				if (includeLektorName) entry.infoString += ' | ' + entry.vorname + ' ' + entry.nachname
 			})
 
 			// always (re)select the le with the closest termin, this also runs on maUID switch
