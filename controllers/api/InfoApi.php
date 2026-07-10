@@ -19,7 +19,8 @@ class InfoApi extends FHCAPI_Controller
 				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r'),
 				'getLvViewDataInfo' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
 				'getAktuellesSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
-				'getViewDataStudent' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r')
+				'getViewDataStudent' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getLektorLessons' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r')
 			)
 		);
 
@@ -72,6 +73,27 @@ class InfoApi extends FHCAPI_Controller
 		$this->terminateWithSuccess(array('uid' => getAuthUID(), 'person_id' => getAuthPersonId()));
 	}
 	
+	/**
+	 * GET METHOD
+	 * optional parameters 'von', 'bis' (date 'Y-m-d'); default to today.
+	 * returns the lessons the logged in Lektor teaches within the range, grouped per Lehreinheit/day.
+	 * -> used by the cis4 "Anwesenheiten (Lehrende)" dashboard widget to build deep links
+	 */
+	public function getLektorLessons()
+	{
+		$von = $this->input->get('von');
+		$bis = $this->input->get('bis');
+
+		// fall back to today for missing/invalid dates (query is parameterized, but keep the DB clean)
+		if (!is_string($von) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $von)) $von = date('Y-m-d');
+		if (!is_string($bis) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis)) $bis = $von;
+
+		$result = $this->_ci->AnwesenheitModel->getLektorLessonsInRange($this->_uid, $von, $bis);
+
+		if (!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess(getData($result));
+	}
+
 	/**
 	 * GET METHOD
 	 * returns List of all studiensemester as well as current one

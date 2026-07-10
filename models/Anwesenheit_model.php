@@ -330,6 +330,45 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$ma_uid, $date, $le_id]);
 	}
 
+	/**
+	 * Returns all lessons a Mitarbeiter (Lektor) teaches within a date range [von, bis],
+	 * grouped per Lehreinheit and day. Used by the CIS4 "Anwesenheiten (Lehrende)" dashboard
+	 * widget to build the deep links (stg_kz, sem, lvid, sem_kurzbz) into the attendance tool.
+	 */
+	public function getLektorLessonsInRange($ma_uid, $von, $bis)
+	{
+		$query = "
+			SELECT
+				le.lehrveranstaltung_id,
+				sp.lehreinheit_id,
+				le.studiensemester_kurzbz,
+				le.lehrform_kurzbz,
+				lv.studiengang_kz,
+				lv.semester,
+				lv.bezeichnung,
+				lv.kurzbz,
+				sp.datum,
+				MIN(st.beginn)     AS beginn,
+				MAX(st.ende)       AS ende,
+				MIN(sp.ort_kurzbz) AS ort_kurzbz,
+				array_to_string(
+					array_agg(DISTINCT sp.gruppe_kurzbz)
+						FILTER (WHERE sp.gruppe_kurzbz IS NOT NULL AND sp.gruppe_kurzbz <> ''),
+					', '
+				) AS gruppen
+			FROM lehre.tbl_stundenplan sp
+				JOIN lehre.tbl_stunde            st USING (stunde)
+				JOIN lehre.tbl_lehreinheit       le ON (le.lehreinheit_id       = sp.lehreinheit_id)
+				JOIN lehre.tbl_lehrveranstaltung lv ON (lv.lehrveranstaltung_id = le.lehrveranstaltung_id)
+			WHERE sp.mitarbeiter_uid = ?
+				AND sp.datum BETWEEN ? AND ?
+			GROUP BY le.lehrveranstaltung_id, sp.lehreinheit_id, le.studiensemester_kurzbz,
+				le.lehrform_kurzbz, lv.studiengang_kz, lv.semester, lv.bezeichnung, lv.kurzbz, sp.datum
+			ORDER BY sp.datum, MIN(st.beginn)";
+
+		return $this->execReadOnlyQuery($query, [$ma_uid, $von, $bis]);
+	}
+
 	public function getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, $root)
 	{
 		$query = "

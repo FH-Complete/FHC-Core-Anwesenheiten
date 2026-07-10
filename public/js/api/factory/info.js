@@ -9,13 +9,24 @@ export default {
 		
 	},
 	getViewDataStudent() {
-		
+
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getViewDataStudent';
 		return {
 			method: 'get',
 			url
 		}
-		
+
+	},
+	getLektorLessons(von, bis) {
+
+		const params = { von, bis }
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getLektorLessons';
+		return {
+			method: 'get',
+			url,
+			params
+		}
+
 	},
 	getEntschuldigungFile(dms_id) {
 		
