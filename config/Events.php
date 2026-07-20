@@ -50,3 +50,36 @@ Events::on('getAnwesenheitenForLvAndSemester', function ($prestudent_ids, $lv_id
 	$downloadFunc($result->retval);
 });
 	
+Events::on('extendStundenplanData', function($data_reference) {
+	$ci =& get_instance();
+
+	$data =& $data_reference();
+
+	$ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+
+	$semKurzbzByDatum = array(); // cache: datum => studiensemester_kurzbz
+
+	foreach($data as $item) {
+		if (empty($item->gruppe) || !isset($item->gruppe[0]))
+			continue;
+
+		$sem = $item->gruppe[0]->semester;
+		$stg_kz = $item->gruppe[0]->studiengang_kz;
+
+		// resolve sem_kurzbz from the lesson date (cached per date)
+		$datum = $item->datum;
+		if (!array_key_exists($datum, $semKurzbzByDatum)) {
+			$semRes = $ci->StudiensemesterModel->getByDate($datum);
+			$semRow = (isSuccess($semRes) && hasData($semRes)) ? current(getData($semRes)) : null;
+			$semKurzbzByDatum[$datum] = $semRow ? $semRow->studiensemester_kurzbz : null;
+		}
+
+		$item->digi_anw_data = array(
+			'sem' => $sem,
+			'stg_kz' => $stg_kz,
+			'lv_id' => $item->lehrveranstaltung_id,
+			'sem_kurzbz' => $semKurzbzByDatum[$datum]
+		);
+	}
+	
+});
