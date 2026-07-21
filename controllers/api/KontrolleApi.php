@@ -61,7 +61,7 @@ class KontrolleApi extends FHCAPI_Controller
 				'getLehreinheitenForLehrveranstaltungAndMaUid' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 
 				// loads le multiselect options
-				'getLehreinheitenForLehrveranstaltung' => array('extension/anw_r_full_assistenz:r'),
+				'getLehreinheitenForLehrveranstaltung' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 			)
 		);
 
