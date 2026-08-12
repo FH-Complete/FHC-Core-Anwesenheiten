@@ -148,6 +148,25 @@ class AdministrationApi extends FHCAPI_Controller
 				if(count($anwesenheit_user_ids) > 0) {
 					// if update status is "abwesend", find out if there has been anwesend checkin status from before the entschuldigung was akzeptiert
 					if($updateStatus == $this->_ci->config->item('ABWESEND_STATUS')) {
+						// only entries which currently hold the entschuldigt status were set by an accepted
+						// entschuldigung. a declined entschuldigung must never overwrite a positive
+						// anwesenheitskontrolle, therefore entries with anwesend status stay untouched.
+						// this also covers entschuldigungen which go from offen directly to abgelehnt,
+						// because those never wrote an entschuldigt status in the first place.
+						// entries which already are abwesend need no update either.
+						$result = $this->_ci->AnwesenheitUserModel->getStatusForIds($anwesenheit_user_ids);
+						if (isError($result))
+							$this->terminateWithError($result);
+
+						$entschuldigtStatus = $this->_ci->config->item('ENTSCHULDIGT_STATUS');
+						$statusEntries = hasData($result) ? getData($result) : [];
+
+						$entschuldigteEntries = array_filter($statusEntries, function($entry) use ($entschuldigtStatus) {
+							return $entry->status === $entschuldigtStatus;
+						});
+
+						$anwesenheit_user_ids = array_values(array_map($funcAUID, $entschuldigteEntries));
+
 						$stati = [];
 						forEach($anwesenheit_user_ids as $id) { 
 							// query last status for each relevant "uncovered" user_entry

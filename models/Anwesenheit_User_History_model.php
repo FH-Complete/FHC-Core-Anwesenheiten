@@ -49,6 +49,7 @@ class Anwesenheit_User_History_model extends \DB_Model
 					ORDER BY updateamum DESC
 					LIMIT 1
 				)
+				ORDER BY updateamum DESC
 				LIMIT 1";
 
 		return $this->execReadOnlyQuery($query, [$anwesenheit_user_id, $anwesenheit_user_id, $anwesenheit_user_id]);

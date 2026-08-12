@@ -141,6 +141,19 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids, $le_id]);
 	}
 
+	/**
+	 * loads the current status of the given anwesenheit_user entries
+	 * (used to decide which entries a declined entschuldigung is allowed to change)
+	 */
+	public function getStatusForIds($anwesenheit_user_ids)
+	{
+		$query = "SELECT anwesenheit_user_id, status
+			FROM extension.tbl_anwesenheit_user
+			WHERE anwesenheit_user_id IN ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids]);
+	}
+
 	public function getEntschuldigungsstatusForPersonIds($personIds)
 	{
 
