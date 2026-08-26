@@ -226,7 +226,7 @@ export default {
 			const collapsables = document.getElementById('filterCollapsables' + tableID);
 			const rect = tableDataSet.getBoundingClientRect();
 			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-			this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight
+			this.$entryParams.tabHeights['studentAnw'].value = screenY - rect.top - collapsables.clientHeight - this.$contentBottomOffset()
 
 			if(this.$refs.uebersichtTable.tabulator) this.$refs.uebersichtTable.tabulator.redraw(true)
 
@@ -271,6 +271,8 @@ export default {
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="studentViewTabulatorOptions"
 				:tabulator-events="studentViewTabulatorEventHandlers"
+				:isUsingPresets="true"
+				presetsId="anwesenheitenStudentUebersichtTable"
 				:tableOnly="true"
 				:sideMenu="false"
 			></core-filter-cmpt>

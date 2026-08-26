@@ -21,6 +21,10 @@ export const StudentByLvaComponent = {
 			headerMenuEntries: {},
 			tableBuiltPromise: null,
 			cellEditing: null,
+			// columns the table presets may handle. The row selection column has no field,
+			// so it stays out and keeps its place
+			presetColumns: ['datum', 'status', 'anteil', 'von', 'bis', 'lehreinheit_id', 'kinsertvon',
+				'kupdatevon', 'ainsertvon', 'aupdatevon', 'dauer', 'notiz'],
 			anwesenheitenByStudentByLvaTabulatorOptions: {
 				height: this.$entryParams?.tabHeights?.studentByLva ?? 400,
 				index: 'datum',
@@ -432,6 +436,9 @@ export const StudentByLvaComponent = {
 					@uuidDefined="handleUuidDefined"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
+					:isUsingPresets="true"
+					presetsId="anwesenheitenStudentByLvaTable"
+					:presetColumns="presetColumns"
 					:tableOnly="true"
 					:sideMenu="false" 
 					noColumnFilter>

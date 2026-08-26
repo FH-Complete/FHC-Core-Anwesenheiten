@@ -342,7 +342,7 @@ export default {
 			const rect = tableDataSet.getBoundingClientRect();
 
 			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-			this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
+			this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top - this.$contentBottomOffset()
 
 			if(this.$refs.entschuldigungsTable.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
 
@@ -509,6 +509,8 @@ export default {
 				ref="entschuldigungsTable"
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="entschuldigungsViewTabulatorOptions"
+				:isUsingPresets="true"
+				presetsId="anwesenheitenStudentEntschuldigungTable"
 				:table-only="true"
 				:newBtnShow="true"
 				:newBtnLabel="$p.t('global/entschuldigungHochladen')"

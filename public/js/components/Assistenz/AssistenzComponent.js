@@ -26,11 +26,6 @@ export const AssistenzComponent = {
 	},
 	data: function() {
 		return {
-			headerFiltersRestored: false,
-			filtersRestored: false,
-			colLayoutRestored: false,
-			sortRestored: false,
-			stateRestored: false,
 			selectedEntschuldigung: null,
 			selectedEntschuldigungValid: false,
 			selectedAnwArray: null,
@@ -49,8 +44,9 @@ export const AssistenzComponent = {
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
-					this.tableData = response.data
-					return response.data
+					const data = this.toTableData(response)
+					this.tableData = data
+					return data
 				},
 				ajaxConfig: "POST",
 				ajaxContentType:{
@@ -119,7 +115,17 @@ export const AssistenzComponent = {
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/aktion'))), headerSort: true,field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 260},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/begruendungAnw'))), headerSort: true,field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
-				persistence: false,
+				// every type on. Keep the keys instead of a plain true: the filter component
+				// switches the column, the header filter and the sort persistence off in this
+				// object as soon as a table preset is stored
+				persistence: {
+					sort: true,
+					filter: true,
+					headerFilter: true,
+					group: true,
+					page: true,
+					columns: true,
+				},
 				persistenceID: this.$entryParams.patchdate + "-assistenzTable"
 			},
 			assistenzViewTabulatorEventHandlers: [
@@ -399,6 +405,15 @@ export const AssistenzComponent = {
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
 		},
+		// getEntschuldigungen answers with a message instead of a list on several branches:
+		// entschuldigungen turned off, no studiengang assigned, no permission. Tabulator takes
+		// an array only and shows a data loading error for everything else
+		toTableData(response) {
+			if (Array.isArray(response?.data)) return response.data
+
+			console.warn('getEntschuldigungen returned no list:', response)
+			return []
+		},
 		refetchData() {
 			const stg_kz_arr =  this.$entryParams.permissions.assistenz ?
 				this.$entryParams.permissions.studiengaengeAssistenz :
@@ -406,7 +421,7 @@ export const AssistenzComponent = {
 
 				this.$api.call(ApiAdmin.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis))
 					.then(res => {
-				this.$refs.assistenzTable.tabulator.setData(res.data)
+				this.$refs.assistenzTable.tabulator.setData(this.toTableData(res))
 			})
 		},
 		handleUuidDefined(uuid) {
@@ -425,116 +440,8 @@ export const AssistenzComponent = {
 			const rect = tableDataSet.getBoundingClientRect();
 
 			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-			this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top
+			this.$entryParams.tabHeights['assistenz'].value = screenY - rect.top - this.$contentBottomOffset()
 		},
-		saveState(table) {
-			// avoid storing state after first restore part happened
-			if(!this.stateRestored) return 
-			const rawLayout = table.getColumnLayout();
-			const state = {
-				columns: rawLayout.map(col => ({
-					field: col.field,
-					visible: col.visible,
-					width: col.width,
-				})),
-					sort: table.getSorters().map(s => ({
-					field: s.field,
-					dir: s.dir,
-				})),
-				filters: table.getFilters(),
-				headerFilters: table.getHeaderFilters()
-			};
-			
-			localStorage.setItem(this.assistenzViewTabulatorOptions.persistenceID, JSON.stringify(state));
-		},
-		handleTableBuilt() {
-			const table = this.$refs.assistenzTable.tabulator
-			table.on("columnMoved", () => {
-				this.saveState(table);
-			});
-
-			table.on("columnResized", () => {
-				this.saveState(table);
-			});
-
-			table.on("columnVisibilityChanged", () => {
-				this.saveState(table);
-			});
-
-			table.on("filterChanged", () => {
-				this.saveState(table);
-			});
-
-			table.on("headerFilterChanged", () => {
-				this.saveState(table);
-			});
-
-			table.on("dataSorted", () => {
-				this.saveState(table);
-			});
-
-			table.on("columnSorted", () => {
-				this.saveState(table);
-			});
-
-			table.on("sortersChanged", () => {
-				this.saveState(table);
-			});
-
-			const saved = this.loadState();
-
-			table.on("renderComplete", () => {
-				if(!this.stateRestored) {
-					
-						if (saved?.columns && !this.colLayoutRestored) {
-							const layout = saved.columns.map(col => ({
-								field: col.field,
-								width: col.width,
-								visible: col.visible,
-								// add more if needed, but keep it simple
-							}));
-
-							table.setColumnLayout(layout);
-							this.colLayoutRestored = true;
-						}
-						
-						if (saved?.filters && !this.filtersRestored) {
-							this.filtersRestored = true // instantly avoid retriggers
-							table.setFilter(saved.filters);
-						}
-						if (saved?.headerFilters && !this.headerFiltersRestored) {
-							this.headerFiltersRestored = true // instantly avoid retriggers
-							for (let hf of saved.headerFilters) {
-								table.setHeaderFilterValue(hf.field, hf.value);
-							}
-						}
-
-						if (saved?.sort?.length && !this.sortRestored) {
-							this.sortRestored = true;
-							
-							setTimeout(() => {
-								const sortList = saved.sort.map(s => {
-									const col = table.columnManager.findColumn(s.field);
-									if (!col) {
-										return null;
-									}
-									return { column: col, dir: s.dir };
-								}).filter(Boolean);
-
-								table.setSort(sortList);
-							}, 100);
-						}
-						this.stateRestored = true
-					
-				}
-				
-			});
-			
-			
-		},
-		loadState() {
-			return JSON.parse(localStorage.getItem(this.assistenzViewTabulatorOptions.persistenceID) || "null");
-		}
 	},
 	mounted() {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
@@ -554,7 +461,6 @@ export const AssistenzComponent = {
 	},
 	beforeMounted() {
 		if(!this.$entryParams?.permissions?.entschuldigungen_enabled) {
-			// TODO: route to some 404 page or show entschuldigung disabled status
 			this.$router.back()
 		}
 	},
@@ -694,7 +600,8 @@ export const AssistenzComponent = {
 				@uuidDefined="handleUuidDefined"
 				:tabulator-options="assistenzViewTabulatorOptions"
 				:tabulator-events="assistenzViewTabulatorEventHandlers"
-				@tableBuilt="handleTableBuilt"
+				:isUsingPresets="true"
+				presetsId="anwesenheitenAssistenzTable"
 				:sideMenu="false"
 				:table-only="true"
 			></core-filter-cmpt>

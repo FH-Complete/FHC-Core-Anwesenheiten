@@ -6,12 +6,10 @@ import {StudentDropdown} from "../Setup/StudentDropdown.js"
 import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
 
 import ApiProfil from '../../api/factory/profil.js';
-import AnwTimeline from '../Assistenz/AnwTimeline.js';
 
 export const StudentComponent = {
 	name: 'StudentComponent',
 	components: {
-		AnwTimeline,
 		CoreNavigationCmpt,
 		CoreBaseLayout,
 		CoreTabs,

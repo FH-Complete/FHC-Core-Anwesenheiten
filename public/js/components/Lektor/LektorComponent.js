@@ -70,6 +70,10 @@ export const LektorComponent = {
 			kontrollZeitSourceStundenplanBeginn: false,
 			kontrollZeitSourceStundenplanEnde: false,
 			kontrollDatumSourceStundenplan: false,
+			// constant columns of the table. Their setup goes into the table presets and it
+			// survives a column rebuild. The date columns stay out, they look different for
+			// every lehreinheit and every date
+			presetColumns: ['foto', 'prestudent_id', 'student_uid', 'vorname', 'nachname', 'gruppe', 'sum'],
 			anwesenheitenTabulatorOptions: {
 				rowFormatter: this.entschuldigtColoring,
 				height: this.$entryParams.tabHeights.lektor,
@@ -106,13 +110,16 @@ export const LektorComponent = {
 					},
 					{title: this.$capitalize(this.$p.t('global/summe')), field: 'sum', formatter: this.percentFormatter,widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
 				],
+				// every type on. Keep the keys instead of a plain true: the filter component
+				// switches the column, the header filter and the sort persistence off in this
+				// object as soon as a table preset is stored
 				persistence: {
-					sort: false,
+					sort: true,
 					filter: true,
-					headerFilter: false,
+					headerFilter: true,
 					group: true,
 					page: true,
-					columns: false,
+					columns: true,
 				},
 				persistenceID: this.$entryParams.patchdate + "-lektorOverviewLe"
 			},
@@ -496,8 +503,7 @@ export const LektorComponent = {
 		},
 		async setAllColsAndData() {
 			this.selectedDateCount = this.lektorState.dates.length
-			this.$refs.anwesenheitenTable.tabulator.clearSort()
-			this.$refs.anwesenheitenTable.tabulator.setColumns(this.lektorState.tabulatorCols)
+			this.setTableColumns(this.lektorState.tabulatorCols)
 			this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData)
 		},
 		toggleShowAll() {
@@ -1101,8 +1107,7 @@ export const LektorComponent = {
 				})
 
 				this.lektorState.tabulatorCols = anwCols
-				this.$refs.anwesenheitenTable.tabulator.clearSort()
-				this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
+				this.setTableColumns(anwCols)
 				
 				this.$refs.anwesenheitenTable.tabulator.setData(this.lektorState.tableStudentData);
 			}
@@ -1408,7 +1413,7 @@ export const LektorComponent = {
 			const rect = tableDataSet.getBoundingClientRect();
 
 			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
-			this.$entryParams.tabHeights['lektor'].value = screenY - rect.top
+			this.$entryParams.tabHeights['lektor'].value = screenY - rect.top - this.$contentBottomOffset()
 
 			if(this.$refs.anwesenheitenTable.tabulator) this.$refs.anwesenheitenTable.tabulator.redraw(true)
 		},
@@ -1431,7 +1436,11 @@ export const LektorComponent = {
 		},
 		baseColumns() {
 			const fields = ['foto', 'prestudent_id', 'student_uid', 'vorname', 'nachname', 'gruppe']
-			return this.anwesenheitenTabulatorOptions.columns.filter(c => fields.includes(c.field))
+			const cols = this.anwesenheitenTabulatorOptions.columns.filter(c => fields.includes(c.field))
+
+			this.takeOverColumnVisibility(cols)
+
+			return this.orderByCurrentColumns(cols)
 		},
 		buildDateColumn(date) {
 			// field/title carry the raw column key (datum | von - bis | le_id),
@@ -1460,11 +1469,53 @@ export const LektorComponent = {
 		buildColsForDates(dates) {
 			const anwCols = this.baseColumns()
 			dates.forEach(d => anwCols.push(this.buildDateColumn(d)))
-			anwCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'sum'))
+
+			const sumCol = this.anwesenheitenTabulatorOptions.columns.find(col => col.field === 'sum')
+			this.takeOverColumnVisibility([sumCol])
+			anwCols.push(sumCol)
 
 			this.selectedDateCount = dates.length
 
 			return anwCols
+		},
+		// the table replaces its columns on every date or lehreinheit change. Such a rebuild
+		// resets the visibility, so take it over from the live table. This keeps what the
+		// user or an applied table preset set for the constant columns
+		takeOverColumnVisibility(cols) {
+			const table = this.$refs.anwesenheitenTable?.tabulator
+			if (!table) return
+
+			table.getColumns().forEach(liveCol => {
+				const col = cols.find(c => c.field === liveCol.getField())
+				if (col) col.visible = liveCol.isVisible()
+			})
+		},
+		// same reason for the column order, a rebuild resets it to the order of the definition
+		orderByCurrentColumns(cols) {
+			const table = this.$refs.anwesenheitenTable?.tabulator
+			if (!table) return cols
+
+			const currentFields = table.getColumns().map(col => col.getField())
+			const rank = col => {
+				const index = currentFields.indexOf(col.field)
+				return index === -1 ? currentFields.length : index
+			}
+
+			return cols.slice().sort((a, b) => rank(a) - rank(b))
+		},
+		// tabulator drops the header filters and the sort when the columns get replaced.
+		// Both belong to the column setup, restore them for the constant columns
+		setTableColumns(cols) {
+			const table = this.$refs.anwesenheitenTable.tabulator
+
+			const headerFilters = table.getHeaderFilters().filter(f => this.presetColumns.includes(f.field))
+			const sorters = table.getSorters().filter(s => this.presetColumns.includes(s.field))
+
+			table.clearSort()
+			table.setColumns(cols)
+
+			headerFilters.forEach(f => table.setHeaderFilterValue(f.field, f.value))
+			if (sorters.length) table.setSort(sorters.map(s => ({column: s.field, dir: s.dir})))
 		},
 		async restartKontrolle(kontrolle) {
 			if (await this.confirmKontrolleFremdeLe() === false) return
@@ -1556,19 +1607,13 @@ export const LektorComponent = {
 			// selectedDateCount watcher already queries counts when it changes to 1
 			this.handleChangeDatum(this.selectedDate) // look up if datum is in termin list
 
-			// todo: range status anzeigen irgendwo
-			// if(!this.kontrollDatumSourceStundenplan && newVal <= this.minDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-			// else if (!this.kontrollDatumSourceStundenplan && newVal > this.maxDate) this.$fhcAlert.alertWarning(this.$p.t('global/kontrolleDatumOutOfRange'))
-
 			this.lektorState.tabulatorCols = anwCols
 
-			this.$refs.anwesenheitenTable.tabulator.clearSort()
-			this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
+			this.setTableColumns(anwCols)
 
 		}
 	},
 	created(){
-		console.log('this.$entryParams', this.$entryParams)
 		this.lv_id = this.$entryParams.lv_id
 		this.sem_kurzbz = this.$entryParams.sem_kurzbz
 		this.ma_uid = this.$entryParams.permissions.authID
@@ -2102,6 +2147,9 @@ export const LektorComponent = {
 						ref="anwesenheitenTable"
 						:tabulator-options="anwesenheitenTabulatorOptions"
 						:tabulator-events="anwesenheitenTabulatorEventHandlers"
+						:isUsingPresets="true"
+						presetsId="anwesenheitenLektorTable"
+						:presetColumns="presetColumns"
 						:id-field="'anwesenheiten_id'"
 						:tableOnly="true"
 						:newBtnShow="true"

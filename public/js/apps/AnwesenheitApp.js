@@ -89,6 +89,16 @@ anwesenheitApp.config.globalProperties.$capitalize = (string) => {
 	return string[0].toUpperCase() + string.slice(1);
 }
 
+// cis4 renders the extension inside #cis-main, a container with a padding. A table which
+// fills the space down to the viewport bottom pushes that padding out of the viewport and
+// creates a vertical scrollbar. The legacy environment has no such container.
+anwesenheitApp.config.globalProperties.$contentBottomOffset = () => {
+	const cisMain = document.getElementById('cis-main')
+	if (!cisMain) return 0
+
+	return parseFloat(window.getComputedStyle(cisMain).paddingBottom) || 0
+}
+
 anwesenheitApp.config.globalProperties.$formatTime = (timeStamp, delimiter = '-', format = 'YYYY-MM-DD') => {
 	const date = new Date(timeStamp)
 	switch (format) {
