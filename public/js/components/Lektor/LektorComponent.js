@@ -997,8 +997,8 @@ export const LektorComponent = {
 			}
 			if (entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) {
 				zusatz = ' (d.d.'
-				if      (entry.ddtype == 'Intern') zusatz += 'i.)'
-				else if (entry.ddtype == 'Extern') zusatz += 'o.)'
+				if      (entry.ddtype == 'Intern') zusatz += 'int.)'
+				else if (entry.ddtype == 'Extern') zusatz += 'ext.)'
 				else                               zusatz += ')'
 			}
 
