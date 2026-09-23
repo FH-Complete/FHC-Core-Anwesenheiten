@@ -20,6 +20,7 @@ export default {
 	data: function() {
 		return {
 			noFileUpload: false,
+			uploading: false,
 			editEntschuldigung: null,
 			tabulatorUuid: Vue.ref(0),
 			entschuldigung: this.initEntschuldigungForm(),
@@ -153,7 +154,7 @@ export default {
 
 			formData.append('person_id', person_id);
 
-
+			this.uploading = true
 			this.$api.call(ApiProfil.editEntschuldigung(formData))
 				.then(response => {
 
@@ -168,9 +169,12 @@ export default {
 					}
 
 					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
+					this.$refs.modalContainerEntschuldigungEdit.hide()
 				}
-			}).finally(()=> {
-				this.$refs.modalContainerEntschuldigungEdit.hide()
+			}).catch(this.handleUploadRequestError)
+			.finally(()=> {
+				// the modal stays open after an error, so the user can choose another file right away
+				this.uploading = false
 			});
 
 		},
@@ -195,6 +199,7 @@ export default {
 
 			formData.append('person_id', person_id);
 
+			this.uploading = true
 			this.$api.call(ApiProfil.addEntschuldigung(formData))
 				.then(res => {
 				let rowData = res.data
@@ -209,10 +214,47 @@ export default {
 					, true);
 				this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
 				this.entschuldigung = this.initEntschuldigungForm();
-
+				this.$refs.modalContainerEntschuldigungUpload.hide()
+			}).catch(this.handleUploadRequestError)
+			.finally(() => {
+				// the modal stays open after an error, so the user can choose another file right away
+				this.uploading = false
 			})
+		},
+		handleUploadRequestError(error) {
+			// the api plugin already shows the backend message. A web server in front of PHP rejects a too large
+			// request with status 413 and without a json body, the api plugin then shows nothing.
+			if (error?.response?.status === 413)
+				this.$fhcAlert.alertError(this.$p.t('global/filesizeExceeded'))
+			else if (!error?.handled)
+				throw error
+		},
+		validateFile(file) {
+			if (!this.allowedFiletypes.includes(this.getFileExtension(file.name)))
+				return this.$p.t('global/errorEntUploadFiletype', {file: file.name, filetypes: this.filetypesLabel})
 
-			this.$refs.modalContainerEntschuldigungUpload.hide()
+			if (file.size === 0)
+				return this.$p.t('global/errorEntUploadEmptyFile', {file: file.name})
+
+			const maxFileSize = this.$entryParams.permissions.entschuldigungMaxFileSize
+			if (maxFileSize > 0 && file.size > maxFileSize)
+				return this.$p.t('global/errorEntUploadFileTooLarge', {
+					// round the file size up and the limit down, so a file above the limit never shows the same number
+					size: this.formatMegabytes(file.size, true),
+					max: this.formatMegabytes(maxFileSize, false)
+				})
+
+			return null
+		},
+		getFileExtension(fileName) {
+			// same rule as the backend upload: the text after the last dot in lower case
+			const parts = fileName.split('.')
+			return parts.length > 1 ? parts.pop().toLowerCase() : ''
+		},
+		formatMegabytes(bytes, roundUp) {
+			const tenths = bytes / 1048576 * 10
+			const megabytes = String((roundUp ? Math.ceil(tenths) : Math.floor(tenths)) / 10)
+			return this.$p.user_language.value === 'German' ? megabytes.replace('.', ',') : megabytes
 		},
 		formAction: function(cell) {
 			let download = document.createElement('div');
@@ -228,7 +270,8 @@ export default {
 				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
 				button.title = this.$p.t('global/download');
 				download.append(button);
-			} else {
+			} else if (cell.getData().akzeptiert == null) {
+				// the backend accepts a document only while the entschuldigung is open
 				button.innerHTML = '<i class="fa fa-upload"></i>';
 				button.style.minWidth = minwidth;
 				button.addEventListener('click', () => this.addEntschuldigungFile(cell.getData()));
@@ -364,28 +407,36 @@ export default {
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {
-			if(newVal == [] || newVal === null || newVal === undefined) return
-
-			// check filetype on input change
-			const file = newVal[0]
+			const file = newVal?.[0]
 			if(!file) return
 
-			if(file.type && !file.name.includes('jfif') && (
-				file.type.includes('jpg')
-				|| file.type.includes('jpeg')
-				|| file.type.includes('pdf')
-				|| file.type.includes('png'))
-			) {
-				// all fine
-			} else {
-				// clear and alert for filetypes
-				this.$fhcAlert.alertInfo(this.$p.t('global/allowedEntschuldigungFileTypes'))
+			// check the file on selection, so the user does not wait for an upload the server rejects
+			const error = this.validateFile(file)
+			if(error) {
+				this.$fhcAlert.alertWarning(error)
 				this.entschuldigung.files = []
 			}
-
 		}
 	},
 	computed: {
+		allowedFiletypes() {
+			return this.$entryParams.permissions.entschuldigungFiletypes
+		},
+		filetypesLabel() {
+			return this.allowedFiletypes.map(type => type.toUpperCase()).join(', ')
+		},
+		acceptedFiletypes() {
+			return this.allowedFiletypes.map(type => '.' + type).join(',')
+		},
+		uploadHint() {
+			const hint = [this.$p.t('global/entUploadAllowedFiletypes', {filetypes: this.filetypesLabel})]
+
+			const maxFileSize = this.$entryParams.permissions.entschuldigungMaxFileSize
+			if (maxFileSize > 0)
+				hint.push(this.$p.t('global/entUploadMaxFilesize', {max: this.formatMegabytes(maxFileSize, false)}))
+
+			return hint.join(' ')
+		},
 		getTooltipObj() {
 			return {
 				value: this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach]),
@@ -446,7 +497,8 @@ export default {
 					
 					<div class="row">
 						<div class="col-8">
-							<Upload :disabled="noFileUpload" accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
+							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
+							<div class="form-text">{{ uploadHint }}</div>
 						</div>
 						<div class="col-4">
 							<div class="row">
@@ -458,7 +510,9 @@ export default {
 					</div>
 				</template>
 				<template v-slot:footer>
-					<button class="btn btn-primary" @click="triggerUpload">{{$p.t('ui/hochladen')}}</button>
+					<button class="btn btn-primary" :disabled="uploading" @click="triggerUpload">
+						<i v-if="uploading" class="fa fa-spinner fa-spin me-1"></i>{{$p.t('ui/hochladen')}}
+					</button>
 				</template>
 			</bs-modal>
 			
@@ -501,12 +555,15 @@ export default {
 					
 					<div class="row">
 						<div class="col-12">
-							<Upload accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
+							<Upload :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
+							<div class="form-text">{{ uploadHint }}</div>
 						</div>
 					</div>
 				</template>
 				<template v-slot:footer>
-					<button class="btn btn-primary" @click="triggerEdit">{{$p.t('ui/hochladen')}}</button>
+					<button class="btn btn-primary" :disabled="uploading" @click="triggerEdit">
+						<i v-if="uploading" class="fa fa-spinner fa-spin me-1"></i>{{$p.t('ui/hochladen')}}
+					</button>
 				</template>
 			</bs-modal>
 			

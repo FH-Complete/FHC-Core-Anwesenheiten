@@ -22,6 +22,7 @@ class Kontrolle extends Auth_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('AuthLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->loadPhrases(
 			array(
@@ -55,6 +56,8 @@ class Kontrolle extends Auth_Controller
 				'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),
 				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
 				'entschuldigungMaxReach' => $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'),
+				'entschuldigungMaxFileSize' => $this->_ci->entschuldigunguploadlib->getMaxFileSize(),
+				'entschuldigungFiletypes' => EntschuldigungUploadLib::ALLOWED_FILETYPES,
 				'kontrolleDeleteMaxReach' => $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH'),
 				'kontrolleCreateMaxReachPast' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_PAST'),
 				'kontrolleCreateMaxReachFuture' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_FUTURE'),
