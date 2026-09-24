@@ -521,6 +521,12 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		$entschuldigung = getData($result)[0];
 
+		// the entschuldigung must belong to $person_id. for students, the berechtigung check above accepts only
+		// their own person_id, so a student cannot edit the entschuldigung of another person
+		if($entschuldigung->person_id != $person_id) {
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+		}
+		
 		// edge case where student still has old ui with nachreichen button enabled but in the meantime assistenz
 		// has already denied the entschuldigung request for some reason 
 		if($entschuldigung->akzeptiert !== null) {
@@ -568,7 +574,6 @@ class ProfilApi extends FHCAPI_Controller
 		$result = $this->_ci->EntschuldigungModel->update(
 			$entschuldigung->entschuldigung_id,
 			array(
-				'person_id' => $person_id,
 				'dms_id' => $dmsId,
 				'updatevon' => $this->_uid,
 				'updateamum' => date('Y-m-d H:i:s'),
