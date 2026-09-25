@@ -211,6 +211,27 @@ export default {
 				const le_ids = []
 				
 				const promises = []
+				// legacy le selection: the old limited view, only the lehreinheiten of one lektor.
+				// an admin sees the les of the lektor selected in the MaUIDDropdown
+				if (this.$entryParams.permissions.legacy_le_selection) {
+					if (this.$entryParams.permissions.admin && lv_id && sem_kurzbz) {
+						this.handleMaSetup(lv_id, sem_kurzbz, ma_uid).then(() => {
+							promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.value?.mitarbeiter_uid, sem_kurzbz, le_ids))
+							promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
+							Promise.all(promises).finally(() => {
+								resolve(true)
+							})
+						})
+					} else if (this.$entryParams.permissions.lektor && lv_id && sem_kurzbz) {
+						this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(() => {
+							resolve(true)
+						})
+					} else {
+						resolve(true)
+					}
+					return
+				}
+
 				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
 				if (this.$entryParams.permissions.admin && lv_id && sem_kurzbz && le_ids) {
 

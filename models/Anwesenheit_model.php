@@ -322,6 +322,7 @@ class Anwesenheit_model extends \DB_Model
 	{
 		$query = "SELECT DISTINCT tbl_lehreinheitmitarbeiter.lehreinheit_id, tbl_lehreinheit.lehrveranstaltung_id, tbl_lehreinheit.lehrform_kurzbz,
 						tbl_lehreinheitmitarbeiter.mitarbeiter_uid,
+						tbl_person.vorname, tbl_person.nachname,
 						tbl_lehreinheitgruppe.semester,
 						tbl_lehreinheitgruppe.verband,
 						tbl_lehreinheitgruppe.gruppe,
@@ -337,6 +338,8 @@ class Anwesenheit_model extends \DB_Model
 			JOIN lehre.tbl_lehreinheitgruppe USING(lehreinheit_id)
 			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
 			JOIN public.tbl_studiengang ON (tbl_lehreinheitgruppe.studiengang_kz = tbl_studiengang.studiengang_kz)
+			JOIN public.tbl_benutzer ON (public.tbl_benutzer.uid = tbl_lehreinheitmitarbeiter.mitarbeiter_uid)
+			JOIN public.tbl_person USING (person_id)
 			LEFT JOIN public.tbl_gruppe USING (gruppe_kurzbz)
 		WHERE lehrveranstaltung_id = ? AND studiensemester_kurzbz = ? AND mitarbeiter_uid = ?
 		ORDER BY tbl_lehreinheitgruppe.gruppe_kurzbz";
@@ -446,6 +449,22 @@ class Anwesenheit_model extends \DB_Model
 			WHERE lehrveranstaltung_id = ? AND mitarbeiter_uid = ?";
 
 		return $this->execReadOnlyQuery($query, [$lva_id, $ma_uid]);
+	}
+
+	/**
+	 * counts the lehreinheiten of the lva of $le_id in the studiensemester of $le_id which $ma_uid teaches.
+	 * > 0 means $ma_uid is a lektor of the same lva and semester, e.g. a colleague of the le lektor
+	 */
+	public function getLektorIsTeachingLvaOfLE($le_id, $ma_uid)
+	{
+		$query = "SELECT COUNT(*) AS teaches
+			FROM lehre.tbl_lehreinheit target
+				JOIN lehre.tbl_lehreinheit le ON (le.lehrveranstaltung_id = target.lehrveranstaltung_id
+					AND le.studiensemester_kurzbz = target.studiensemester_kurzbz)
+				JOIN lehre.tbl_lehreinheitmitarbeiter lm ON (lm.lehreinheit_id = le.lehreinheit_id)
+			WHERE target.lehreinheit_id = ? AND lm.mitarbeiter_uid = ?";
+
+		return $this->execReadOnlyQuery($query, [$le_id, $ma_uid]);
 	}
 
 	public function countLehreinheitenInLva($le_ids, $lva_id)

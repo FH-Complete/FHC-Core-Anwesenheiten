@@ -731,6 +731,15 @@ class KontrolleApi extends FHCAPI_Controller
 			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLE($le_id, $this->_uid);
 			if(!isError($lektorIsTeaching) && hasData($lektorIsTeaching)
 				&& ((int) getData($lektorIsTeaching)[0]->teaches) > 0) return true;
+
+			// every lektor of the lva may operate each lehreinheit of the lva in the same semester,
+			// e.g. run kontrollen as substitute for a colleague. the legacy le selection keeps the old
+			// limit to the own lehreinheiten
+			if(!$this->_ci->config->item('LEGACY_LE_SELECTION')) {
+				$lektorIsTeachingLva = $this->AnwesenheitModel->getLektorIsTeachingLvaOfLE($le_id, $this->_uid);
+				if(!isError($lektorIsTeachingLva) && hasData($lektorIsTeachingLva)
+					&& ((int) getData($lektorIsTeachingLva)[0]->teaches) > 0) return true;
+			}
 		}
 
 		return false;

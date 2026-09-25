@@ -105,14 +105,17 @@ export const LektorComponent = {
 				],
 				// every type on. Keep the keys instead of a plain true: the filter component
 				// switches the column, the header filter and the sort persistence off in this
-				// object as soon as a table preset is stored
+				// object as soon as a table preset is stored.
+				// columns: only the layout keys. With true tabulator stores every definition key, the
+				// Vue.computed in editorParams of the date columns cannot be serialized and the throw
+				// inside setColumns leaves the table half rebuilt
 				persistence: {
 					sort: true,
 					filter: true,
 					headerFilter: true,
 					group: true,
 					page: true,
-					columns: true,
+					columns: ['width', 'visible'],
 				},
 				persistenceID: this.$entryParams.patchdate + "-lektorOverviewLe"
 			},
