@@ -23,6 +23,7 @@ class Anw extends Auth_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 		$this->_ci->load->library('AuthLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->loadPhrases(
 			array(

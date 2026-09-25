@@ -54,6 +54,7 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 		$this->_ci->load->model('system/Webservicelog_model', 'WebservicelogModel');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -340,6 +341,9 @@ class ProfilApi extends FHCAPI_Controller
 			);
 		}
 
+		$requestSizeError = $this->_ci->entschuldigunguploadlib->checkRequestSize('addEntschuldigung');
+		if ($requestSizeError !== null) $this->terminateWithError($requestSizeError, 'general');
+
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
@@ -364,11 +368,11 @@ class ProfilApi extends FHCAPI_Controller
 		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH') + 1); // +1 since frontend validates with a 1day larger range currently
 		
 		if ($vonTimestamp < $dateLimitTimestamp && !$isAdmin) {
-			$this->terminateWithError("Provided date is older than allowed date");
+			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
 		}
 		
 		// if working on a new dump/system, make sure that "ext_anw_entschuldigungen" dms kategorie exists,
-		// or the upload will fail and respond with errorInvalidFiletype
+		// or the upload will fail and respond with errorEntUploadTechnical
 		if(!$noFileUpload) {
 			$file = array(
 				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
@@ -379,11 +383,12 @@ class ProfilApi extends FHCAPI_Controller
 				'insertvon' => $this->_uid,
 			);
 
-			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
+			$dmsFile = $this->_ci->dmslib->upload($file, 'files', EntschuldigungUploadLib::ALLOWED_FILETYPES);
 
 			if(!isSuccess($dmsFile)) {
-				$this->handleUploadError($dmsFile, 'addEntschuldigung');
-				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+				$this->terminateWithError(
+					$this->_ci->entschuldigunguploadlib->handleUploadError($dmsFile, 'addEntschuldigung'), 'general'
+				);
 			}
 
 			$dmsFile = getData($dmsFile);
@@ -412,49 +417,6 @@ class ProfilApi extends FHCAPI_Controller
 		$this->sendEmailToAssistenz($person_id, $dmsId, 'add', $entschuldigung_id, $von, $bis);
 
 		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => $entschuldigung_id]);
-	}
-	
-	private function handleUploadError($dmsResponse, $context, $fileFieldName = 'files') {
-
-		$phpErrorCode = $_FILES[$fileFieldName]['error'] ?? null;
-
-		$logData = array(
-			'context'             => $context,
-			'file_php_error_code' => $phpErrorCode,
-			'file_php_error_name' => $this->getPhpUploadErrorName($phpErrorCode),
-			'file_name'           => $_FILES[$fileFieldName]['name'] ?? null,
-			'file_type'           => $_FILES[$fileFieldName]['type'] ?? null,
-			'file_size'           => $_FILES[$fileFieldName]['size'] ?? null,
-			'dms_path_exists'     => file_exists(DMS_PATH),
-			'dms_path_writable'   => is_writable(DMS_PATH),
-			'error_raw'           => is_string(getError($dmsResponse)) ? trim(strip_tags(getError($dmsResponse))) : getError($dmsResponse),
-		);
-
-		$encoded = json_encode($logData, JSON_UNESCAPED_UNICODE);
-		
-		$this->_ci->WebservicelogModel->insert(array(
-			'webservicetyp_kurzbz' => 'content',
-			'beschreibung'         => 'EntschuldigungUploadError on '.$context,
-			'request_data'         => $encoded,
-			'execute_user' => getAuthUID(),
-			'execute_time' => 'NOW()'
-		));
-	}
-
-	private function getPhpUploadErrorName($code)
-	{
-		$map = array(
-			UPLOAD_ERR_OK        => 'UPLOAD_ERR_OK',
-			UPLOAD_ERR_INI_SIZE  => 'UPLOAD_ERR_INI_SIZE',
-			UPLOAD_ERR_FORM_SIZE => 'UPLOAD_ERR_FORM_SIZE',
-			UPLOAD_ERR_PARTIAL   => 'UPLOAD_ERR_PARTIAL',
-			UPLOAD_ERR_NO_FILE   => 'UPLOAD_ERR_NO_FILE',
-			UPLOAD_ERR_NO_TMP_DIR => 'UPLOAD_ERR_NO_TMP_DIR',
-			UPLOAD_ERR_CANT_WRITE => 'UPLOAD_ERR_CANT_WRITE',
-			UPLOAD_ERR_EXTENSION => 'UPLOAD_ERR_EXTENSION',
-		);
-
-		return isset($map[$code]) ? $map[$code] : 'UNKNOWN (' . $code . ')';
 	}
 
 	/**
@@ -485,6 +447,9 @@ class ProfilApi extends FHCAPI_Controller
 			);
 		}
 
+		$requestSizeError = $this->_ci->entschuldigunguploadlib->checkRequestSize('editEntschuldigung');
+		if ($requestSizeError !== null) $this->terminateWithError($requestSizeError, 'general');
+
 		if (isEmptyString($_POST['person_id']) || isEmptyString($_POST['entschuldigung_id'])) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		
 		$person_id = $_POST['person_id'];
@@ -513,9 +478,11 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		
 		// edge case where student still has old ui with nachreichen button enabled but in the meantime assistenz
-		// has already denied the entschuldigung request for some reason 
+		// or the autodecline job has already accepted or declined the entschuldigung request
 		if($entschuldigung->akzeptiert !== null) {
-			$this->terminateWithError($this->p->t('global', 'errorEntschuldigungUpload'), 'general');
+			$this->terminateWithError(
+				$this->p->t('global', $entschuldigung->akzeptiert ? 'errorEntAlreadyAccepted' : 'errorEntAlreadyDeclined'), 'general'
+			);
 		}
 		
 		$file = array(
@@ -527,10 +494,11 @@ class ProfilApi extends FHCAPI_Controller
 			'insertvon' => $this->_uid,
 		);
 
-		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
+		$dmsFile = $this->_ci->dmslib->upload($file, 'files', EntschuldigungUploadLib::ALLOWED_FILETYPES);
 		if(!isSuccess($dmsFile)) {
-			$this->handleUploadError($dmsFile, 'editEntschuldigung');
-			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+			$this->terminateWithError(
+				$this->_ci->entschuldigunguploadlib->handleUploadError($dmsFile, 'editEntschuldigung'), 'general'
+			);
 		}
 
 		// add old version to history table
