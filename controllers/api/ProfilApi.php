@@ -53,7 +53,6 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
-		$this->_ci->load->model('system/Webservicelog_model', 'WebservicelogModel');
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');

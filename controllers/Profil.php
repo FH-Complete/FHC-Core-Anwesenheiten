@@ -24,7 +24,6 @@ class Profil extends Auth_Controller
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 		$this->_ci->load->library('DmsLib');
-		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->loadPhrases(
 			array(

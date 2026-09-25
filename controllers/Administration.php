@@ -26,7 +26,6 @@ class Administration extends Auth_Controller
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 		$this->_ci->load->library('AuthLib');
 		$this->_ci->load->library('DmsLib');
-		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->loadPhrases(
 			array(

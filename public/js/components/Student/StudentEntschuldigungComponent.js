@@ -169,9 +169,8 @@ export default {
 
 			formData.append('person_id', person_id);
 
-			this.uploading = true
-
 			// only close the modal on success, on error the student can retry
+			this.uploading = true
 			this.$api.call(ApiProfil.editEntschuldigung(formData))
 				.then(response => {
 
@@ -225,16 +224,18 @@ export default {
 			this.uploading = true
 			this.$api.call(ApiProfil.addEntschuldigung(formData))
 				.then(res => {
-					let rowData = res.data
-					this.$refs.entschuldigungsTable.tabulator.addRow(
-						{
-							'dms_id': rowData.dms_id,
-							'akzeptiert': null,
-							'von': rowData.von,
-							'bis': rowData.bis,
-							'entschuldigung_id': rowData.entschuldigung_id
-						}
-						, true);
+					if (res.meta.status !== 'success' || !res.data) return
+
+					const rowData = res.data
+					const row = {
+						'dms_id': rowData.dms_id,
+						'akzeptiert': null,
+						'von': rowData.von,
+						'bis': rowData.bis,
+						'entschuldigung_id': rowData.entschuldigung_id
+					}
+					this.entschuldigungen?.unshift(row)
+					this.$refs.entschuldigungsTable.tabulator.addRow(row, true);
 					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
 					this.entschuldigung = this.initEntschuldigungForm();
 					this.$refs.modalContainerEntschuldigungUpload.hide()
@@ -302,7 +303,8 @@ export default {
 			if(data.dms_id) {
 				actions.append(this.createActionButton('fa-download', this.$p.t('global/download'), 'btn-outline-secondary',
 					() => this.downloadEntschuldigung(data.dms_id)));
-			} else {
+			} else if (data.akzeptiert == null) {
+				// the backend accepts a document only while the entschuldigung is open
 				actions.append(this.createActionButton('fa-upload', this.$p.t('global/upload'), 'btn-outline-primary',
 					() => this.addEntschuldigungFile(data)));
 			}
@@ -495,12 +497,6 @@ export default {
 
 			return hint.join(' ')
 		},
-		getTooltipObj() {
-			return {
-				value: this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach]),
-				class: "custom-tooltip"
-			}
-		},
 		helpText() {
 			return this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach])
 		},
@@ -560,26 +556,20 @@ export default {
 								>
 							</datepicker>
 						</div>
-					</div>
-		
-					
-					<div class="row">
-						<div class="col-8">
+						<div class="col-12">
+							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
 							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
 							<div class="form-text">{{ uploadHint }}</div>
-						</div>
-						<div class="col-4">
-							<div class="row">
-								<div class="col-2"></div>
-								<div class="col-2"><Checkbox v-model="noFileUpload" :binary="true"></Checkbox></div>
-								<div class="col-8"><span>{{$p.t('global/excuseUploadNoFile')}}</span></div>
+							<div class="form-check mt-2">
+								<input id="noFileUpload" v-model="noFileUpload" class="form-check-input" type="checkbox">
+								<label for="noFileUpload" class="form-check-label">{{$p.t('global/excuseUploadNoFile')}}</label>
 							</div>
 						</div>
 					</div>
 				</template>
 				<template v-slot:footer>
 					<button class="btn btn-primary" :disabled="uploading" @click="triggerUpload">
-						<i v-if="uploading" class="fa fa-spinner fa-spin me-1"></i>{{$p.t('ui/hochladen')}}
+						<i class="fa-solid me-2" :class="uploading ? 'fa-spinner fa-spin' : 'fa-upload'" aria-hidden="true"></i>{{$p.t('ui/hochladen')}}
 					</button>
 				</template>
 			</bs-modal>
@@ -617,6 +607,7 @@ export default {
 							</datepicker>
 						</div>
 						<div class="col-12">
+							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
 							<Upload :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
 							<div class="form-text">{{ uploadHint }}</div>
 						</div>
@@ -624,7 +615,7 @@ export default {
 				</template>
 				<template v-slot:footer>
 					<button class="btn btn-primary" :disabled="uploading" @click="triggerEdit">
-						<i v-if="uploading" class="fa fa-spinner fa-spin me-1"></i>{{$p.t('ui/hochladen')}}
+						<i class="fa-solid me-2" :class="uploading ? 'fa-spinner fa-spin' : 'fa-upload'" aria-hidden="true"></i>{{$p.t('ui/hochladen')}}
 					</button>
 				</template>
 			</bs-modal>
@@ -679,7 +670,7 @@ export default {
 						<button v-if="item.ent.dms_id" type="button" class="btn btn-sm btn-outline-secondary" @click="downloadEntschuldigung(item.ent.dms_id)">
 							<i class="fa-solid fa-download me-2" aria-hidden="true"></i>{{ $p.t('global/download') }}
 						</button>
-						<button v-else type="button" class="btn btn-sm btn-outline-primary" @click="addEntschuldigungFile(item.ent)">
+						<button v-else-if="item.ent.akzeptiert == null" type="button" class="btn btn-sm btn-outline-primary" @click="addEntschuldigungFile(item.ent)">
 							<i class="fa-solid fa-upload me-2" aria-hidden="true"></i>{{ $p.t('global/upload') }}
 						</button>
 						<button v-if="item.ent.akzeptiert == null" type="button" class="btn btn-sm btn-outline-secondary" @click="deleteEntschuldigung(item.ent)">
