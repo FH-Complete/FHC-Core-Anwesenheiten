@@ -114,17 +114,16 @@ class Anwesenheit_User_model extends \DB_Model
 			}
 		}
 
+		// trans_complete already commits or rolls back. no explicit trans_commit/trans_rollback
+		// after it: inside a caller transaction that would end the outer transaction early
 		$this->db->trans_complete();
 
 		// Check if everything went ok during the transaction
 		if ($this->db->trans_status() === false) {
-			$this->db->trans_rollback();
 			return error('error during updateAnwesenheiten transaction', EXIT_ERROR);
-		} else {
-			$this->db->trans_commit();
-			return success($updateResults);
 		}
 
+		return success($updateResults);
 	}
 
 	/**
@@ -213,20 +212,20 @@ class Anwesenheit_User_model extends \DB_Model
 			}
 		}
 
-		$this->db->trans_complete();
-
-		// Check if everything went ok during the transaction
-		if ($this->db->trans_status() === false || isError($result))
+		// KontrolleApi calls this inside its own transaction. There a nested trans_rollback only
+		// lowers the depth counter, so the caller has to roll back when this returns false
+		if (isError($result))
 		{
 			$this->db->trans_rollback();
 			return false;
 		}
-		else
-		{
-			$this->db->trans_commit();
-			return true;
-		}
 
+		// trans_complete already commits or rolls back. no explicit trans_commit/trans_rollback
+		// after it: at depth 1 that would commit the transaction of the caller early
+		$this->db->trans_complete();
+
+		// Check if everything went ok during the transaction
+		return $this->db->trans_status() !== false;
 	}
 
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
@@ -323,8 +322,6 @@ class Anwesenheit_User_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, [$anwesenheit_id]);
 	}
-	
-	
 
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
 	{
@@ -357,19 +354,6 @@ class Anwesenheit_User_model extends \DB_Model
 			WHERE prestudent_id IN ?";
 
 		return $this->execReadOnlyQuery($query, [$lv_id, $sem_kurzbz, $prestudent_Ids]);
-	}
-	public function deleteUserAnwesenheitById($anwesenheit_user_id)
-	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = ?";
-
-		return $this->execQuery($query, [$anwesenheit_user_id]);
-	}
-
-	public function deleteUserAnwesenheitByIds($ids)
-	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id IN ?";
-
-		return $this->execQuery($query, [$ids]);
 	}
 
 	public function deleteAllByAnwesenheitId($anwesenheit_id)

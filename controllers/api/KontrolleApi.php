@@ -73,13 +73,11 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 		$this->_ci->load->model('organisation/Erhalter_model', 'ErhalterModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
-		$this->_ci->load->library('DmsLib');
 		$this->_ci->load->model('system/Webservicelog_model', 'WebservicelogModel');
 
 
@@ -115,7 +113,6 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	public function fetchAllAnwesenheitenByLvaAssigned()
 	{
-
 		$result = $this->getPostJSON();
 
 		$this->_requireProps($result, array('le_id', 'lv_id', 'sem_kurzbz', 'ma_uid'));
@@ -128,60 +125,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
-		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, APP_ROOT);
-
-		// use this preliminary error message in a hardcoded way since this should only ever occur when installing the extension on a
-		// custom fhcomplete installation and even if it was a phrase, it would be dead weight in the namespace
-//		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorFindingStudentsForLVA'), 'general');
-		if(isError($result)) $this->terminateWithError("Datenbankfehler beim Laden der Studentenliste aus AnweseheitModel->getStudentsForLVAandLEandSemester. Bitte überprüfen sie die Verfügbarkeit und Korrektheit der dort referenzierten Tabellen.");
-		
-		// this usually happens when there are no students assigned to the lehreinheit yet, usually occurs when opening
-		// digi anw tool for future semesters
-		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', [$ma_uid, $le_id]), 'general');
-		$students = getData($result);
-
-		$func = function ($value) {
-			return $value->prestudent_id;
-		};
-
-		$prestudentIds = array_map($func, $students);
-		$result = $this->_ci->AnwesenheitModel->getAnwesenheitenEntriesForStudents($prestudentIds, $le_id);
-		$anwesenheiten = getData($result);
-
-		$funcPID = function ($value) {
-			return $value->person_id;
-		};
-
-		$personIds = array_map($funcPID, $students);
-		$entschuldigungsstatus = [];
-		if($this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
-			$result = $this->_ci->AnwesenheitUserModel->getEntschuldigungsstatusForPersonIds($personIds);
-			$entschuldigungsstatus = getData($result);
-		}
-
-		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
-		$studiensemester = getData($result);
-
-		// fetch all kontrollen -> times can be fetched from all kontrollen -> all entries can be shown
-		// block delete (date too old) in UI & deleteAnwesenheitskontrolle API endpoint
-		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeId($le_id);
-		$kontrollen = getData($result);
-		
-
-		$result = $this->_ci->ErhalterModel->load();
-		$erhalter = getData($result)[0];
-
-		$a_o_kz = '9' . sprintf("%03s", $erhalter->erhalter_kz);
-
-		$this->terminateWithSuccess(array(
-			'students' => $students,
-			'anwEntries' => $anwesenheiten,
-			'stsem' => $studiensemester,
-			'entschuldigtStati' => $entschuldigungsstatus,
-			'kontrollen' => $kontrollen,
-			'a_o_kz' => $a_o_kz
-		));
-
+		$this->_terminateWithLektorState($lv_id, array($le_id), $sem_kurzbz, [$ma_uid, $le_id]);
 	}
 
 	/**
@@ -214,10 +158,24 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 		}
 
+		$this->_terminateWithLektorState($lv_id, $le_ids, $sem_kurzbz, [$this->_uid, implode(', ', $le_ids)]);
+	}
+
+	/**
+	 * loads the students of the given lehreinheiten with their anwesenheiten, accepted entschuldigungen,
+	 * the studiensemester and the kontrollen. terminates with the state LektorComponent.setupData() expects
+	 */
+	private function _terminateWithLektorState($lv_id, $le_ids, $sem_kurzbz, $noStudentsFoundParams)
+	{
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLVAandMultipleLEandSemester($lv_id, $le_ids, $sem_kurzbz, APP_ROOT);
 
+		// use this preliminary error message in a hardcoded way since this should only ever occur when installing the extension on a
+		// custom fhcomplete installation and even if it was a phrase, it would be dead weight in the namespace
 		if(isError($result)) $this->terminateWithError("Datenbankfehler beim Laden der Studentenliste aus AnwesenheitModel->getStudentsForLVAandMultipleLEandSemester. Bitte überprüfen sie die Verfügbarkeit und Korrektheit der dort referenzierten Tabellen.");
-		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', [$this->_uid, implode(', ', $le_ids)]), 'general');
+
+		// this usually happens when there are no students assigned to the lehreinheit yet, usually occurs when opening
+		// digi anw tool for future semesters
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', $noStudentsFoundParams), 'general');
 		$students = getData($result);
 
 		$prestudentIds = array_map(function ($value) {
@@ -238,6 +196,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->StudiensemesterModel->load($sem_kurzbz);
 		$studiensemester = getData($result);
 
+		// fetch all kontrollen -> times can be fetched from all kontrollen -> all entries can be shown
+		// block delete (date too old) in UI & deleteAnwesenheitskontrolle API endpoint
 		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIds($le_ids);
 		$kontrollen = getData($result);
 
@@ -532,11 +492,13 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->_ci->config->item('ABWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
-		$this->_ci->db->trans_complete();
-
+		// check before trans_complete: a failed insert without a failed query would be committed
 		if($transactionResult == false || $this->_ci->db->trans_status() === false) {
+			$this->_ci->db->trans_rollback();
 			$this->terminateWithError($this->p->t('global', 'errorInsertUserAnwEntries'), 'general');
 		}
+
+		$this->_ci->db->trans_complete();
 
 		// count entschuldigt entries
 		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
@@ -568,11 +530,13 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->_ci->config->item('ANWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
-		$this->_ci->db->trans_complete();
-
+		// check before trans_complete: a failed insert without a failed query would be committed
 		if($transactionResult == false || $this->_ci->db->trans_status() === false) {
+			$this->_ci->db->trans_rollback();
 			$this->terminateWithError($this->p->t('global', 'errorInsertUserAnwEntries'), 'general');
 		}
+
+		$this->_ci->db->trans_complete();
 
 		$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 
@@ -606,8 +570,9 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
 		$dateTime = strtotime($dateString);
-		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
-		$dateLimit = strtotime("-$reach day");
+		// midnight: day based like the minDate of the frontend, a date exactly $reach days ago is still allowed
+		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_PAST');
+		$dateLimit = strtotime("-$reach day midnight");
 
 		$leResult = $this->_ci->LehreinheitModel->load($le_id);
 		if(!hasData($leResult)) $this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
@@ -822,8 +787,9 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLE($le_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 
-		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
-		$dateLimit = strtotime("-$reach day");
+		// midnight: day based, with a reach of 1 day a kontrolle created yesterday can still be deleted
+		$reach = $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH');
+		$dateLimit = strtotime("-$reach day midnight");
 
 		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 
@@ -1054,24 +1020,19 @@ class KontrolleApi extends FHCAPI_Controller
 		
 		// find students of le whose entschuldigt status is not anymore valid when times change
 		$resultCompare = $this->_ci->EntschuldigungModel->compareStatusZeitenForLE($vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'), $oldVon, $oldBis, $kontrolle->lehreinheit_id);
-//		$this->addMeta('$resultCompare', $resultCompare);
 		if(hasData($resultCompare)) {
 			$changed = getData($resultCompare);
-//			$this->addMeta('changedEntStati', $changed);
 
 			$changedPrestudentIDFunc = function ($value) {
 				return $value->prestudent_id;
 			};
 
 			$changedPrestudentIDarray = array_map($changedPrestudentIDFunc, $changed);
-//			$this->addMeta('$changedPrestudentIDarray', $changedPrestudentIDarray);
 			
 			// find the last status from history table by version number that does not carry entschuldigt status 
 			$changedAnwesenheiten = $this->AnwesenheitUserModel->findLastDifferentStatus($changedPrestudentIDarray, $anwesenheit_id);
-//			$this->addMeta('$changedAnwesenheiten', $changedAnwesenheiten);
 			if(hasData($changedAnwesenheiten)) {
 				$updateAnwesenheit = $this->AnwesenheitUserModel->updateAnwesenheiten(getData($changedAnwesenheiten), true);
-//				$this->addMeta('$updateAnwesenheit', $updateAnwesenheit);
 				if (isError($updateAnwesenheit))
 					$this->terminateWithError($updateAnwesenheit);
 
@@ -1112,46 +1073,8 @@ class KontrolleApi extends FHCAPI_Controller
 		{
 			$this->terminateWithSuccess(array([], []));
 		}
-		// filter for unique le_id keys
-		$distinctLeId = array_values(array_reduce($leForLvaAndMA, function ($carry, $leRow) {
-			// use the name as a key to ensure uniqueness
-			$carry[$leRow->lehreinheit_id] = $leRow;
-			return $carry;
-		}, []));
 
-		$allLeTermine = [];
-
-		forEach($distinctLeId as $leRow)
-		{
-			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
-//			$this->addMeta($leRow->lehreinheit_id, $result);
-			if(!isSuccess($result)) $this->terminateWithError(getError($result));
-			$leTermine = getData($result);
-			
-			// if someone knows how to this one in the previous sql query, feel free to change it and tell me - johann
-			$leTermineGrouped = [];
-			// group le termine only with consecutive hours, detect the odd case of same lesson
-			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14 
-			if($leTermine !== null) {
-				forEach($leTermine as $distinctLesson) {
-					if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
-						$leTermineGrouped[] = $distinctLesson;
-					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1) 
-						&& $leTermineGrouped[count($leTermineGrouped) - 1]->datum == $distinctLesson->datum) {
-						$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
-						$leTermineGrouped[count($leTermineGrouped) - 1]->stunde = $distinctLesson->stunde;
-					} else { // new block detected
-						$leTermineGrouped[] = $distinctLesson;
-					}
-				}
-			}
-			
-
-			$allLeTermine[$leRow->lehreinheit_id] = $leTermineGrouped;
-		}
-
-
-		$this->terminateWithSuccess(array($leForLvaAndMA, $allLeTermine));
+		$this->terminateWithSuccess(array($leForLvaAndMA, $this->_getGroupedTermineForLehreinheiten($leForLvaAndMA)));
 
 	}
 
@@ -1180,8 +1103,18 @@ class KontrolleApi extends FHCAPI_Controller
 		{
 			$this->terminateWithSuccess(array([], []));
 		}
+
+		$this->terminateWithSuccess(array($leForLva, $this->_getGroupedTermineForLehreinheiten($leForLva)));
+	}
+	
+	/**
+	 * loads the stundenplan termine of every distinct lehreinheit in $leRows. consecutive stunden of a day
+	 * are grouped into one termin. returns array(lehreinheit_id => termine)
+	 */
+	private function _getGroupedTermineForLehreinheiten($leRows)
+	{
 		// filter for unique le_id keys
-		$distinctLeId = array_values(array_reduce($leForLva, function ($carry, $leRow) {
+		$distinctLeId = array_values(array_reduce($leRows, function ($carry, $leRow) {
 			// use the name as a key to ensure uniqueness
 			$carry[$leRow->lehreinheit_id] = $leRow;
 			return $carry;
@@ -1192,13 +1125,13 @@ class KontrolleApi extends FHCAPI_Controller
 		forEach($distinctLeId as $leRow)
 		{
 			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
-//			$this->addMeta($leRow->lehreinheit_id, $result);
 			if(!isSuccess($result)) $this->terminateWithError(getError($result));
 			$leTermine = getData($result);
-			
+
+			// if someone knows how to this one in the previous sql query, feel free to change it and tell me - johann
 			$leTermineGrouped = [];
 			// group le termine only with consecutive hours, detect the odd case of same lesson
-			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14 
+			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14
 			if($leTermine !== null) {
 				forEach($leTermine as $distinctLesson) {
 					if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
@@ -1213,14 +1146,12 @@ class KontrolleApi extends FHCAPI_Controller
 				}
 			}
 
-
 			$allLeTermine[$leRow->lehreinheit_id] = $leTermineGrouped;
 		}
 
-
-		$this->terminateWithSuccess(array($leForLva, $allLeTermine));
+		return $allLeTermine;
 	}
-	
+
 	private function _setAuthUID()
 	{
 		$this->_uid = getAuthUID();

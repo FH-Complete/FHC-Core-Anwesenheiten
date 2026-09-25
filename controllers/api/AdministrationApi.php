@@ -22,17 +22,12 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_History_model', 'AnwesenheitUserHistoryModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
-		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
-		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 		$this->_ci->load->model('person/Person_model', 'PersonModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
-		$this->_ci->load->library('DmsLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -121,9 +116,6 @@ class AdministrationApi extends FHCAPI_Controller
 
 		// check if status is being updated at all
 		$statusChanged = $status !== $entschuldigung->akzeptiert;
-//		$this->addMeta('$statusChanged', $statusChanged);
-//		$this->addMeta('$status', $status);
-//		$this->addMeta('$entschuldigung->akzeptiert', $entschuldigung->akzeptiert);
 		
 		if($statusChanged) {
 			// if updateStatus goes entschuldigt -> abwesend, look into extension.anwesenheit_user_history in case the
@@ -135,7 +127,6 @@ class AdministrationApi extends FHCAPI_Controller
 			if (isError($result))
 				$this->terminateWithError($result);
 			$anwesenheit_user_idsArr = getData($result);
-//			$this->addMeta('$anwesenheit_user_idsArr', $anwesenheit_user_idsArr);
 			
 			if($anwesenheit_user_idsArr) {
 				$funcAUID = function ($value) {
@@ -143,7 +134,6 @@ class AdministrationApi extends FHCAPI_Controller
 				};
 
 				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
-//				$this->addMeta('$anwesenheit_user_ids_pre_filter', $anwesenheit_user_ids);
 				
 				if(count($anwesenheit_user_ids) > 0) {
 					// if update status is "abwesend", find out if there has been anwesend checkin status from before the entschuldigung was akzeptiert
@@ -219,24 +209,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$bis = isset($bisParam) ? $bisParam : $entschuldigung->bis;
 		
 		// add old version to history table
-		$this->_ci->EntschuldigungHistoryModel->insert(
-			array(
-				'entschuldigung_id' => $entschuldigung->entschuldigung_id,
-				'person_id' => $entschuldigung->person_id,
-				'von' => $entschuldigung->von,
-				'bis' => $entschuldigung->bis,
-				'dms_id' => $entschuldigung->dms_id,
-				'insertvon' => $entschuldigung->insertvon,
-				'insertamum' => $entschuldigung->insertamum,
-				'updatevon' => $entschuldigung->updatevon,
-				'updateamum' => $entschuldigung->updateamum,
-				'statussetvon' => $entschuldigung->statussetvon,
-				'statussetamum' => $entschuldigung->statussetamum,
-				'akzeptiert' => $entschuldigung->akzeptiert,
-				'notiz' => $entschuldigung->notiz,
-				'version' => $entschuldigung->version
-			)
-		);
+		$this->_ci->EntschuldigungHistoryModel->insertVersion($entschuldigung, $entschuldigung->dms_id);
 		
 		// only apply statusset cols when akzeptiert flag is different
 		if($statusChanged) {
@@ -316,7 +289,6 @@ class AdministrationApi extends FHCAPI_Controller
 					$this->p->t('global', 'entschuldigungStatusUpdateAutoEmailBetreff')
 				);
 			}
-//			$this->addMeta('emailfields', $body_fields);
 		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));

@@ -1,7 +1,5 @@
-import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
-import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {StudentDropdown} from "../Setup/StudentDropdown.js"
 import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
 
@@ -10,10 +8,8 @@ import ApiProfil from '../../api/factory/profil.js';
 export const StudentComponent = {
 	name: 'StudentComponent',
 	components: {
-		CoreNavigationCmpt,
 		CoreBaseLayout,
 		CoreTabs,
-		BsModal,
 		StudentDropdown,
 		StudentAnwesenheitComponent
 	},
@@ -118,14 +114,9 @@ export const StudentComponent = {
 				});
 
 		},
-		async awaitPhrasen() {
-			await this.$entryParams.phrasenPromise
-		},
 		redrawTable() {
 			// empty method so landing page doesnt break on this tab
 		}
-	},
-	created() {
 	},
 	mounted() {
 		this.checkEntryParamPermissions()
@@ -140,22 +131,17 @@ export const StudentComponent = {
 	<div class="row-cols">
 		<core-base-layout>	
 			<template #main>	
-				<div ref="studentHeaderRow" class="row">
-					<div class="col-6">
-						<h1 class="h4">
-							{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }} 
-							<span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span>
-						</h1>				
-					</div>
-					<div class="col-3">
-						<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
-							 id="studentUID" ref="studentDropdown" @studentChanged="studentChangedHandler">
-						</StudentDropdown>
-						
-					</div>
-					<div class="col-2 text-center">
-						<button type="button" class="btn btn-primary" @click="routeToCodeScan">{{ $p.t('global/codeEingeben') }}</button>
-					</div>
+				<div ref="studentHeaderRow" class="anw-student-head" :class="{'anw-student-head--guide': $entryParams?.permissions?.show_guide}">
+					<h1 class="h4 anw-student-head-name">
+						{{ viewDataStudent.vorname }} {{viewDataStudent.nachname }}
+						<span class="fhc-subtitle">{{viewDataStudent.semester }}{{viewDataStudent.verband }}{{viewDataStudent.gruppe }}</span>
+					</h1>
+					<StudentDropdown v-if="$entryParams?.permissions?.admin || $entryParams?.permissions?.assistenz"
+						 id="studentUID" ref="studentDropdown" class="anw-student-head-select" @studentChanged="studentChangedHandler">
+					</StudentDropdown>
+					<button type="button" class="btn btn-primary anw-student-head-code" @click="routeToCodeScan">
+						<i class="fa-solid fa-qrcode me-2" aria-hidden="true"></i>{{ $p.t('global/codeEingeben') }}
+					</button>
 				</div>
 				<template v-if="$entryParams?.permissions?.entschuldigungen_enabled">
 					<core-tabs :config="tabsStudent" ref="tabsStudent" @changed="handleTabChanged"></core-tabs>

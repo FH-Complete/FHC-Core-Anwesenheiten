@@ -73,15 +73,5 @@ export const studentFormatters = {
 	formStudiengangKz: function (cell) {
 		const rowData = cell.getRow().getData()
 		return rowData.kurzbzlang + ' ' + rowData.bezeichnung
-	},
-
-	customGroupHeader: function(value, count, data)
-	{
-		return '<div style="display:flex; justify-content: space-between;">' +
-			'<div>' + value + '</div>' +
-			'<div style="flex-grow: 1; text-align: right;">Anwesenheit ' + data[0].anwesenheit + " %" + '</div>' +
-			'</div>';
-	},
-
-
+	}
 }

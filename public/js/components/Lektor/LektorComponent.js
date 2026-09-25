@@ -1,11 +1,9 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
-import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import { lektorFormatters } from "../../formatters/formatters.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {LehreinheitenDropdown} from "../Setup/LehreinheitenDropdown.js";
 import {MaUIDDropdown} from "../Setup/MaUIDDropdown.js";
-import {KontrollenDropdown} from "../Setup/KontrollenDropdown.js";
 import {TermineDropdown} from "../Setup/TermineDropdown.js";
 import {AnwCountDisplay} from "./AnwCountDisplay.js";
 import {KontrolleDisplay} from "./KontrolleDisplay.js";
@@ -20,13 +18,11 @@ export const LektorComponent = {
 	components: {
 		CoreBaseLayout,
 		CoreFilterCmpt,
-		CoreNavigationCmpt,
 		BsModal,
 		Divider: primevue.divider,
 		TermineDropdown,
 		LehreinheitenDropdown,
 		MaUIDDropdown,
-		KontrollenDropdown,
 		AnwCountDisplay,
 		Multiselect: primevue.multiselect,
 		"datepicker": VueDatePicker,
@@ -43,10 +39,7 @@ export const LektorComponent = {
 			editKontrolle: null,
 			highlightMode: 'allowed',
 			selectedDateCount: 0,
-			externalModalContainer: null,
-			externalWindow: null,
 			tabulatorUuid: Vue.ref(0),
-			stunden: null,
 			loading: false,
 			tableBuiltResolve: null,
 			tableBuiltPromise: null,
@@ -180,7 +173,6 @@ export const LektorComponent = {
 					this.tableBuiltResolve()
 				}
 			}],
-			boundRegenerateQR: null,
 			boundProgressCounter: null,
 			changedData: [],
 			selectedLehreinheiten: [],
@@ -188,7 +180,6 @@ export const LektorComponent = {
 			multiselectDebounceTimer: null,
 			lastLoadedLeIds: [],
 			selectedDateUnwatch: null,
-			deleteData: null,
 			selectedDate: new Date(Date.now()),
 			qr: null,
 			url: null,
@@ -201,7 +192,6 @@ export const LektorComponent = {
 			checkInCount: 0,
 			abwesendCount: 0,
 			entschuldigtCount: 0,
-			studentCount: 0,
 			changes: false // if something could have happened to dataset -> reload on mounted
 		}
 	},
@@ -211,13 +201,6 @@ export const LektorComponent = {
 		},
 		maxDate: {
 			type: Object
-		}
-	},
-	props: {
-		permissions: [],
-		translateOffset: {
-			type: Number,
-			default: 60
 		}
 	},
 	methods: {
@@ -260,7 +243,8 @@ export const LektorComponent = {
 				
 				const date = this.formatDateToDbString(this.selectedDate)
 				const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-				this.reloadState(ma_uid, date)
+				// same as a pick from the legacy dropdown (handleLEChanged)
+				this.reloadState(ma_uid, date).finally(() => this.checkForBetreuungAndAlert())
 
 				this.getExistingQRCode()
 				return
@@ -452,20 +436,6 @@ export const LektorComponent = {
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
 		},
-		anwTooltip(e, cell) {
-			const value = cell.getValue()
-			let valueFormatted = ''
-
-			if (value === this.$entryParams.permissions.anwesend_status) {
-				valueFormatted = this.$capitalize(this.$p.t('global/anwesend'))
-			} else if (value === this.$entryParams.permissions.abwesend_status) {
-				valueFormatted = this.$capitalize(this.$p.t('global/abwesend'))
-			} else if (value === this.$entryParams.permissions.entschuldigt_status) {
-				valueFormatted = this.$capitalize(this.$p.t('global/entschuldigt'))
-			}
-
-			return valueFormatted
-		},
 		getExistingQRCode() {
 			this.$api.call(ApiKontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value))
 				.then(res => {
@@ -488,9 +458,6 @@ export const LektorComponent = {
 		stopPollingAnwesenheiten() {
 			clearInterval(this.timerIDPolling)
 			this.timerIDPolling = null
-		},
-		handleKontrolleChanged(kontrolle) {
-			this.deleteData = kontrolle
 		},
 		handleShowAllToggle() {
 			if (!this.lektorState.dates.length) {
@@ -708,12 +675,12 @@ export const LektorComponent = {
 			// attempt to degenerate one last time to not leave any codes in db
 			this.$api.call(ApiKontrolle.degenerateQRCode(this.anwesenheit_id, oldCode))
 		},
-		handleChangeDatum(date) {
+		isStundenplanDatum(date) {
 			const searchStr = this.formatDateToDbString(date)
-
-			const terminFound = this.$entryParams.available_termine.value.find(termin => termin.datum == searchStr)
-			if(terminFound) this.kontrollDatumSourceStundenplan = true
-			else this.kontrollDatumSourceStundenplan = false
+			return !!this.$entryParams.available_termine.value?.find(termin => termin.datum == searchStr)
+		},
+		handleChangeDatum(date) {
+			this.kontrollDatumSourceStundenplan = this.isStundenplanDatum(date)
 		},
 		handleChangeEnde(date) {
 			const padZero = (num) => String(num).padStart(2, '0');
@@ -837,10 +804,6 @@ export const LektorComponent = {
 				})
 		},
 		stopAnwesenheitskontrolle() {
-			if(this.externalWindow) { // portal the modal back into our dom and close window
-				this.externalWindow.close() // triggers handleClose on beforeunload event listener
-			}
-			
 			this.$refs.modalContainerQR.hide()
 
 			this.stopPollingAnwesenheiten() // stops polling loop on server
@@ -870,7 +833,7 @@ export const LektorComponent = {
 		reloadState(ma_uid, date) {
 			this.loading = true
 
-			this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid)).then(res => {
+			return this.$api.call(ApiKontrolle.fetchAllAnwesenheitenByLvaAssigned(this.lv_id, this.sem_kurzbz, this.$entryParams.selected_le_id.value, ma_uid)).then(res => {
 				if(res.meta.status === 'success') {
 					this.setupData(res.data)
 				}
@@ -896,6 +859,16 @@ export const LektorComponent = {
 		},
 		openLegend() {
 			this.$refs.modalContainerLegende.show()
+		},
+		isKontrolleDeletable(kontrolle) {
+			// same rule as deleteAnwesenheitskontrolle in the backend: full assistenz may delete every kontrolle,
+			// everyone else only kontrollen inserted within kontrolleDeleteMaxReach days (day based, not the kontrolle date)
+			if (this.$entryParams.permissions.admin || !kontrolle.insertamum) return true
+			const [year, month, day] = kontrolle.insertamum.substring(0, 10).split('-')
+			const limit = new Date()
+			limit.setHours(0, 0, 0, 0)
+			limit.setDate(limit.getDate() - (this.$entryParams.permissions.kontrolleDeleteMaxReach ?? 0))
+			return new Date(year, month - 1, day) >= limit
 		},
 		async deleteAnwesenheitskontrolle(kontrolle) {
 			if (await this.confirmEditFremdeLe() === false) return
@@ -1004,24 +977,6 @@ export const LektorComponent = {
 
 			return zusatz
 		},
-		linkKontrollData() {
-
-			this.lektorState.kontrollen.forEach(k => {
-				k.sumAnw = 0
-				k.anw = 0
-				k.abw = 0
-				k.ent = 0
-				k.groupSet = new Set()
-			})
-			this.lektorState.anwEntries.forEach(anw => {
-				const k = this.lektorState.kontrollen.find(k => k.anwesenheit_id === anw.anwesenheit_id)
-				k.sumAnw++
-				if (anw.status === this.$entryParams.permissions.anwesend_status) k.anw++
-				else if (anw.status === this.$entryParams.permissions.abwesend_status) k.abw++
-				else if (anw.status === this.$entryParams.permissions.entschuldigt_status) k.ent++
-			})
-
-		},
 		setEntries(anwEntries, kontrollen) {
 
 			// from anw entries
@@ -1084,7 +1039,6 @@ export const LektorComponent = {
 
 			// tableData prefilled with all dates & status
 			this.lektorState.tableStudentData = this.setupAllData()
-			this.studentCount = this.lektorState.students.length
 
 			if (this.lektorState.showAllVar) {
 				this.setShowAll()
@@ -1126,31 +1080,6 @@ export const LektorComponent = {
 			}
 			
 		},
-		setupLektorState() {
-			this.lektorState.students = this.$entryParams.lektorState.students
-			this.lektorState.anwEntries = this.$entryParams.lektorState.anwEntries
-			this.lektorState.stsem = this.$entryParams.lektorState.stsem
-			this.lektorState.entschuldigtStati = this.$entryParams.lektorState.entschuldigtStati
-			this.lektorState.kontrollen = this.$entryParams.lektorState.kontrollen
-			this.lektorState.a_o_kz = this.$entryParams.lektorState.a_o_kz
-			this.lektorState.gruppen = new Set()
-			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true" || false
-			
-			// put query params back into url for expected f5 behaviour
-			function updateQueryParam(key, value) {
-				const url = new URL(window.location);
-				url.searchParams.set(key, value);
-				window.history.replaceState({}, '', url);
-			}
-			
-			updateQueryParam('stg_kz', this.$entryParams.stg_kz);
-			updateQueryParam('sem', this.$entryParams.sem);
-			updateQueryParam('lvid', this.$entryParams.lv_id);
-			updateQueryParam('sem_kurzbz', this.$entryParams.sem_kurzbz);
-
-			this.$entryParams.lektorState = null
-			this.setupLektorComponent()
-		},
 		setupData(data) {
 			this.lektorState.students = data.students ?? []
 			this.lektorState.anwEntries = data.anwEntries ?? []
@@ -1167,6 +1096,10 @@ export const LektorComponent = {
 
 			this.lektorState.showAllVar = localStorage.getItem('DigiAnwShowAll') == "true"
 
+			// the table gets rebuilt from the new data, pending edits belong to the old data
+			// (e.g. another le) and would be saved against the new selected_le_id
+			this.changedData = []
+
 			this.setupLektorComponent()
 		},
 		getAvailableTermine() {
@@ -1180,7 +1113,6 @@ export const LektorComponent = {
 		},
 		async maUIDchangedHandler() {
 			this.$refs.anwesenheitenTable.tabulator.clearSort()
-			// this.$refs.LEDropdown.resetData()
 
 			this.$emit('maUIDChanged')
 			this.handleLEChanged()
@@ -1262,11 +1194,11 @@ export const LektorComponent = {
 				}
 			}
 			
-			// date of kontrolle needs to be in range or a stundenplantermin
-			if(!this.kontrollDatumSourceStundenplan && this.selectedDate < this.minDate) {
-				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
-				return false
-			} else if(this.selectedDate > this.maxDate) {
+			// date of kontrolle needs to be in range or a stundenplantermin. a termin of our stundenplan
+			// is always valid, also in the future. looked up directly instead of kontrollDatumSourceStundenplan,
+			// that flag only drives the warning and can be stale after a switch to an le without termine
+			if(!this.isStundenplanDatum(this.selectedDate)
+				&& (this.selectedDate < this.minDate || this.selectedDate > this.maxDate)) {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
 			}
@@ -1285,7 +1217,6 @@ export const LektorComponent = {
 			await this.tableBuiltPromise
 
 			this.boundPollAnwesenheit = this.pollAnwesenheit.bind(this)
-			this.boundRegenerateQR = this.regenerateQR.bind(this)
 			this.boundProgressCounter = this.progressCounter.bind(this)
 
 			// ceiling to check for inside progress calc
@@ -1316,7 +1247,7 @@ export const LektorComponent = {
 
 			const date = this.formatDateToDbString(this.selectedDate)
 			const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
-			this.reloadState(ma_uid, date)
+			this.reloadState(ma_uid, date).finally(() => this.checkForBetreuungAndAlert())
 
 			this.getExistingQRCode()
 		},
@@ -1354,47 +1285,6 @@ export const LektorComponent = {
 			} else if(entForSelectedDate.length) {
 				el.classList.add('anw-entschuldigt-offen');
 			}
-		},
-		togglePopOut() {
-			
-			if (!this.externalWindow) {
-				this.externalWindow = window.open("", "", "width=1000,height=1000");
-
-				const container = document.createElement("div");
-				container.id = "externalModalContainer";
-				container.style.setProperty('min-width', '100%')
-				container.style.setProperty('min-height', '100%')
-				this.externalModalContainer = container;
-
-				const toClone = document.getElementById('qrwrap')
-
-				// const toClone = document.getElementById('qrcontent')
-				// container.appendChild(toClone.cloneNode(true)) // breaks vue reactivity
-				container.appendChild(toClone)
-				
-				this.externalWindow.document.body.appendChild(container);
-
-				for (const el of document.head.querySelectorAll('style, link[rel=stylesheet]')) {
-					const clone = el.cloneNode(true)
-					this.externalWindow.document.head.appendChild(clone)
-				}
-				
-				// Handle window close event, called in the end of close browser window, stop kontrolle and move back qr modal
-				this.externalWindow.addEventListener("beforeunload", () => {
-					this.handleCloseExternalWindow()
-				});
-			} else {
-				this.externalWindow.close()
-			}
-		},
-		handleCloseExternalWindow() {
-			const qr = this.externalWindow.document.getElementById('qrwrap')
-			const main = document.getElementById('lektorWrap')
-			main.appendChild(qr)
-
-			this.externalWindow.close();
-			this.externalWindow = null;
-			this.externalModalContainer = null;
 		},
 		checkForBetreuungAndAlert() {
 			// throw an alert when Betreuung is selected which usually should not be attendance checked
@@ -1673,9 +1563,6 @@ export const LektorComponent = {
 			}
 			return this.$entryParams.selected_le_info?.value?.infoString ?? ''
 		},
-		getTabulatorStyle(){
-			return "transform: translateY(-"+this.translateOffset+"px); overflow: hidden;"
-		},
 		getTooltipKontrolleLoeschen() {
 			return {
 				value: this.$p.t('global/tooltipLektorDeleteKontrolle', [this.$entryParams.permissions.kontrolleDeleteMaxReach ]),
@@ -1927,9 +1814,11 @@ export const LektorComponent = {
 					
 										</button>
 										
-										<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger" v-tooltip.bottom="getTooltipDeleteKontrolle">
-											<i class="fa fa-trash"></i>
-										</button>
+										<span style="margin-left: 12px;" v-tooltip.bottom="isKontrolleDeletable(kontrolle) ? getTooltipDeleteKontrolle : getTooltipKontrolleLoeschen">
+											<button @click="deleteAnwesenheitskontrolle(kontrolle)" :disabled="!isKontrolleDeletable(kontrolle)" role="button" class="btn btn-danger">
+												<i class="fa fa-trash"></i>
+											</button>
+										</span>
 										
 										<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
 											<i class="fa fa-pen"></i>
@@ -2084,7 +1973,6 @@ export const LektorComponent = {
 							<div v-else class="row g-3 align-items-end">
 								<div class="col-5" v-if="$entryParams?.permissions?.admin">
 									<MaUIDDropdown 
-										:title="$capitalize($p.t('lehre/lektor'))" 
 										id="maUID" 
 										ref="MADropdown" 
 										@maUIDchanged="maUIDchangedHandler"
@@ -2093,7 +1981,6 @@ export const LektorComponent = {
 								<div :class="$entryParams?.permissions?.admin ? 'col-7' : 'col-12'">
 									<LehreinheitenDropdown 
 										id="lehreinheit" 
-										:title="$capitalize($p.t('lehre/lehreinheit'))" 
 										ref="LEDropdown" 
 										@leChanged="handleLEChanged"
 									/>

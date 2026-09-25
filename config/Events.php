@@ -5,7 +5,6 @@ use CI3_Events as Events;
 
 Events::on('lvMenuBuild', function ($menu_reference, $params) {
 
-//	extract($params);
 	$menu =& $menu_reference();
 
 	// config check to only allow defined stg_kz's to see the menu, see cis_menu_lv
@@ -25,7 +24,7 @@ Events::on('lvMenuBuild', function ($menu_reference, $params) {
 		$lv_id = $params['lvid'];
 		$angezeigtes_stsem = $params['angezeigtes_stsem'];
 		
-		$link = APP_ROOT."cis.php/extensions/FHC-Core-Anwesenheiten/?stg_kz=.$stg_kz.&sem=$semester&lvid=$lv_id&sem_kurzbz=$angezeigtes_stsem";
+		$link = APP_ROOT."cis.php/extensions/FHC-Core-Anwesenheiten/?stg_kz=$stg_kz&sem=$semester&lvid=$lv_id&sem_kurzbz=$angezeigtes_stsem";
 		$menu[]=array
 		(
 			'id'=>'core_menu_digitale_anwesenheitslisten',

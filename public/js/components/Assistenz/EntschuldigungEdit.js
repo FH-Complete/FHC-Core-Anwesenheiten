@@ -61,12 +61,10 @@ export const EntschuldigungEdit = {
 
 			if (!entschuldigung.von) {
 				this.$emit('validate', false)
-				// this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
 				return false
 			}
 			if (!entschuldigung.bis) {
 				this.$emit('validate', false)
-				// this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
 				return false
 			}
 			

@@ -1,27 +1,26 @@
-import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
-import {CoreRESTClient} from '../../../../../js/RESTClient.js';
-import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
-
 import ApiProfil from '../../api/factory/profil.js';
 
 export default {
 	name: 'ScanComponent',
-	components: {
-		CoreNavigationCmpt,
-		CoreBaseLayout,
-		CoreRESTClient
-	},
 	data: function() {
 		return {
 			internalZugangscode: this.zugangscode,
 			zugangscodeProcessed: false,
 			codeMaxlength: 8,
 			viewData: null,
+			von: null,
+			bis: null,
 			codeButtonDisabled: true
 		};
 	},
 	props: {
-		zugangscode: null
+		zugangscode: null,
+		// the extension shows the scan as a page of its own (route 'Scan'), the dashboard
+		// widget embeds it. Only the page can lead back into the extension
+		standalone: {
+			type: Boolean,
+			default: false
+		}
 	},
 	methods: {
 		sendCode() {
@@ -36,8 +35,8 @@ export default {
 
 						this.$fhcAlert.alertSuccess(this.$p.t('global/eintragErfolgreich'))
 
-						this.von = new Date(JSON.parse(res.data.von))
-						this.bis = new Date(JSON.parse(res.data.bis))
+						this.von = this.parseDate(JSON.parse(res.data.von))
+						this.bis = this.parseDate(JSON.parse(res.data.bis))
 
 						this.viewData = JSON.parse(res.data.viewData).retval[0]
 
@@ -53,6 +52,19 @@ export default {
 		checkValue(event) {
 			this.internalZugangscode = event.target.value
 			this.codeButtonDisabled = !(this.internalZugangscode && this.internalZugangscode.length === this.codeMaxlength)
+		},
+		// older safari versions only parse the iso form '2026-03-01T08:00:00' of a postgres timestamp
+		parseDate(value) {
+			const date = new Date(value)
+			if (!isNaN(date)) return date
+
+			return new Date(String(value).replace(' ', 'T'))
+		},
+		formatClock(date) {
+			return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+		},
+		goBack() {
+			this.$router.back()
 		}
 	},
 	mounted() {
@@ -68,47 +80,54 @@ export default {
 			if (this.internalZugangscode && this.zugangscodeProcessed) {
 				return this.$p.t('global/eintragErfolgreich')
 			} else return this.$p.t('global/bitteZugangscodeEingeben')
+		},
+		// vue router keeps the previous page of the app in the history state. A scanned qr code
+		// opens the scan page directly, then there is no page of the extension to go back to
+		showBackButton() {
+			return this.standalone && !!this.$router?.options.history.state?.back
+		},
+		titleTag() {
+			return this.standalone ? 'h1' : 'div'
 		}
 	},
 	template: `
-	<div class="row-cols mb-4">
-		<div class="row-col-4 mt-3 text-center">
-			<core-base-layout
-				:title=getBaseLayoutTitle>
-				<template #main>
-					<template v-if="!zugangscodeProcessed">
-						<div class="row">
-							<div class="col-sm-10 col-10 mx-auto">
-								<input :maxlength="calculatedMaxLength" class="form-control" :value="internalZugangscode" @input="checkValue($event)" :placeholder="$p.t('global/code')">
-							</div>
-						</div>
-						<div class="row mt-3">
-							<div class="col-md-12">
-								<button @click="sendCode" role="button" class="btn btn-primary align-self-center" :disabled=codeButtonDisabled>
-									{{ $p.t('global/codeSenden') }}
-								</button>
-							</div>
-						</div>
-					</template>
-					<template v-else> 
-						<div v-if="viewData">
-							<div>
-								<p>{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
-								<p>{{von.toLocaleDateString()}}:  {{von.toLocaleTimeString()}} - {{bis.toLocaleTimeString()}}</p>
-								<p>{{viewData.vorname}} {{viewData.nachname}} {{$p.t('global/wurdeRegistriert')}}.</p>
-							</div>
-						</div>
-					</template>
-				</template>
-			</core-base-layout>
+	<div class="anw-scan" :class="{'anw-scan--page': standalone}">
+		<div v-if="showBackButton" class="anw-scan-back">
+			<button type="button" class="btn btn-outline-secondary" @click="goBack">
+				<i class="fa-solid fa-arrow-left me-2" aria-hidden="true"></i>{{ $p.t('global/zurueck') }}
+			</button>
+		</div>
+
+		<div class="anw-scan-body">
+			<template v-if="!zugangscodeProcessed">
+				<i class="fa-solid fa-qrcode anw-scan-icon" aria-hidden="true"></i>
+				<component :is="titleTag" class="anw-scan-title">{{ getBaseLayoutTitle }}</component>
+				<form class="anw-scan-form" @submit.prevent="sendCode">
+					<input
+						:maxlength="calculatedMaxLength"
+						class="form-control anw-scan-input"
+						:value="internalZugangscode"
+						@input="checkValue($event)"
+						:placeholder="$p.t('global/code')"
+						:aria-label="$p.t('global/code')"
+						autocomplete="off"
+						autocapitalize="off"
+						autocorrect="off"
+						spellcheck="false"
+					>
+					<button type="submit" class="btn btn-primary" :disabled=codeButtonDisabled>
+						{{ $p.t('global/codeSenden') }}
+					</button>
+				</form>
+			</template>
+			<div v-else-if="viewData" class="anw-scan-success" role="status">
+				<i class="fa-solid fa-circle-check anw-scan-icon anw-scan-icon--success" aria-hidden="true"></i>
+				<component :is="titleTag" class="anw-scan-title">{{ getBaseLayoutTitle }}</component>
+				<p class="anw-scan-lv">{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
+				<p>{{von.toLocaleDateString()}}: {{formatClock(von)}} - {{formatClock(bis)}}</p>
+				<p class="mb-0">{{viewData.vorname}} {{viewData.nachname}} {{$p.t('global/wurdeRegistriert')}}.</p>
+			</div>
 		</div>
 	</div>
-
-
-
-	
-		
 `
 };
-
-

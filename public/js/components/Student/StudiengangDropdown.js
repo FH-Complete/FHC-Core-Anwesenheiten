@@ -12,7 +12,6 @@ export const StudiengangDropdown = {
 		return {
 			options: [],
 			selectedOption: [],
-			errors: null,
 		};
 	},
 	created() {
@@ -22,8 +21,7 @@ export const StudiengangDropdown = {
 		allowedStg: {
 			type: Array,
 			default: null
-		},
-		isAdmin: false,
+		}
 	},
 	methods: {
 		loadDropdown() {
@@ -42,8 +40,6 @@ export const StudiengangDropdown = {
 				} else {
 					this.options = data
 				}
-				
-				this.$entryParams.studiengaengeAdmin = res.data.retval.map(e => e.studiengang_kz)
 			});
 		},
 		sgChanged(e) {

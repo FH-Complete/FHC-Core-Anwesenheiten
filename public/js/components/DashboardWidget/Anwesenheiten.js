@@ -20,10 +20,6 @@ export default {
 		viewData: {
 			type: Object,
 			default: {}
-		},
-		editModeIsActive: {
-			type: Boolean,
-			default: false
 		}
 	},
 	data: () => ({

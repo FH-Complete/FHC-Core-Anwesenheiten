@@ -1,8 +1,4 @@
-import {CoreRESTClient} from '../../../../../js/RESTClient.js';
-import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
-
-import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
 import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
@@ -13,21 +9,15 @@ import ApiKontrolle from '../../api/factory/kontrolle.js';
 export default {
 	name: 'LandingPageComponent',
 	components: {
-		CoreBaseLayout,
-		CoreRESTClient,
 		CoreTabs,
-		BsModal,
 		StudentComponent,
 		LektorComponent,
 		AssistenzComponent
 	},
 	data: function() {
 		return {
-			headerMenuEntries: {},
-			sideMenuEntries: {},
 			currentTab: 0,
 			tabs: this.initTabs(),
-			loaded: false,
 			phrasenResolved: false,
 			permissioncount: Vue.ref(0),
 			anwKontrolleMinDate: null,
@@ -349,7 +339,6 @@ export default {
 			data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
 
 			this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
-			this.$entryParams.available_le_ids.value = [...le_ids]
 
 			return data
 		},
@@ -491,8 +480,6 @@ export default {
 	},
 	mounted() {
 		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
-			this.loaded = true
-
 			this.$entryParams.phrasenPromise.then(()=> this.phrasenResolved = true)
 
 		})
@@ -503,11 +490,6 @@ export default {
 
 	},
 	computed: {
-		getSubtitle(){
-			if(this.$entryParams?.viewDataLv?.kurzbz?.value && this.$entryParams?.viewDataLv?.bezeichnung?.value) {
-				return this.$entryParams.viewDataLv.kurzbz.value +' - '+ this.$entryParams.viewDataLv.bezeichnung.value
-			} else return ''
-		},
 		getCurrentTab() {
 			return 'tab' + this.currentTab
 		}

@@ -1,3 +1,6 @@
+import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
+import AnwHelp from '../AnwHelp.js';
+
 /**
  * Timeline of the entschuldigungen and the anwesenheitskontrollen of one person.
  *
@@ -5,8 +8,9 @@
  * percent of that window. It therefore never builds a wide scroll canvas, it resizes
  * with its container and it renders the bars of the current window only.
  *
- * Interaction: the mouse wheel zooms around the cursor, a drag pans, and the overview
- * strip below the lanes shows where the window sits inside the whole data.
+ * Interaction: the mouse wheel zooms around the cursor, a drag pans, the date fields
+ * set the window to whole days, and the overview strip below the lanes shows where the
+ * window sits inside the whole data. A click on a bar selects its entry in the lists.
  */
 
 const MINUTE = 60 * 1000
@@ -37,12 +41,17 @@ const TICK_STEPS = [
 const TICK_TARGET_WIDTH = 90 // px between two ruler labels
 const WHEEL_ZOOM_FACTOR = 0.0015 // wheel pixels to zoom factor
 const BUTTON_ZOOM_FACTOR = 1.6
+const MIN_HEIGHT = 460 // px, below that the page scrolls instead of squeezing the lanes
 
 const pad = (value) => String(value).padStart(2, '0')
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 export const AnwTimeline = {
 	name: "AnwTimeline",
+	components: {
+		datepicker: VueDatePicker,
+		AnwHelp
+	},
 	props: {
 		modelValue: { type: Object, default: null }, // entschuldigung to focus on open
 		anwArray: { type: Array, default: null },
@@ -57,7 +66,11 @@ export const AnwTimeline = {
 			drag: null,
 			overviewDrag: false,
 			panMoved: false,
-			resizeObserver: null
+			fitHeightPx: null,
+			fitFrame: null,
+			resizeObserver: null,
+			observedPlot: null,
+			observedParent: null
 		}
 	},
 	computed: {
@@ -155,10 +168,16 @@ export const AnwTimeline = {
 
 			return { left: left + '%', width: Math.max(right - left, 0.5) + '%' }
 		},
-		viewLabel() {
-			const withTime = this.span <= 3 * DAY
-
-			return this.formatMoment(this.viewStart, withTime) + ' – ' + this.formatMoment(this.viewEnd, withTime)
+		// the date fields show the days of the window. A window that ends at midnight
+		// ends with the day before
+		rangeFrom() {
+			return this.formatDayValue(this.viewStart)
+		},
+		rangeTo() {
+			return this.formatDayValue(Math.max(this.viewEnd - 1, this.viewStart))
+		},
+		fitStyle() {
+			return this.fitHeightPx ? { '--anw-tl-height': this.fitHeightPx + 'px' } : null
 		},
 		legend() {
 			return [
@@ -173,11 +192,8 @@ export const AnwTimeline = {
 		emptyLabel() {
 			return this.$p.t('global/noDataAvailable')
 		},
-		getTooltipAnwTimeline() {
-			return {
-				value: this.$p.t('global/tooltipAnwTimeline'),
-				class: "custom-tooltip"
-			}
+		helpText() {
+			return this.$p.t('global/tooltipAnwTimeline')
 		}
 	},
 	methods: {
@@ -259,14 +275,35 @@ export const AnwTimeline = {
 			return row.filter(item => item.end >= this.viewStart && item.start <= this.viewEnd)
 		},
 		// ------------------------------------------------------------------- view
-		setView(start, end) {
+		// free: the window stays where it is set, a range typed into the date fields
+		// may lie away from the data
+		setView(start, end, free = false) {
 			const span = clamp(end - start, MIN_SPAN, MAX_SPAN)
+			let center = (start + end) / 2
 
 			// the window stays next to the data, this stops the endless empty panning
-			const center = clamp((start + end) / 2, this.extent.start - span / 2, this.extent.end + span / 2)
+			if (!free) center = clamp(center, this.extent.start - span / 2, this.extent.end + span / 2)
 
 			this.viewStart = center - span / 2
 			this.viewEnd = center + span / 2
+		},
+		onRangeFrom(value) {
+			const start = this.parseDayValue(value)
+			if (isNaN(start) || start === this.parseDayValue(this.rangeFrom)) return
+
+			// a start behind the end keeps the length of the window
+			const end = this.viewEnd > start ? this.viewEnd : start + this.span
+
+			this.setView(start, end, true)
+		},
+		onRangeTo(value) {
+			const day = this.parseDayValue(value)
+			if (isNaN(day) || day === this.parseDayValue(this.rangeTo)) return
+
+			const end = day + DAY // the window includes the whole bis day
+			const start = this.viewStart < end ? this.viewStart : end - this.span
+
+			this.setView(start, end, true)
 		},
 		panBy(milliseconds) {
 			this.setView(this.viewStart + milliseconds, this.viewEnd + milliseconds)
@@ -300,13 +337,25 @@ export const AnwTimeline = {
 			this.setView(center - span / 2, center + span / 2)
 		},
 		selectItem(item) {
-			// a pan ends with a click, it must not select the bar below the cursor
-			if (this.panMoved) {
-				this.panMoved = false
-				return
-			}
+			if (!item) return
 
 			this.selected = this.isSelected(item) ? null : item
+
+			if (this.selected) this.$nextTick(() => this.scrollListTo(item))
+		},
+		// brings the entry of a clicked bar into the visible part of its list. It scrolls
+		// the list only: scrollIntoView() would scroll the page or the modal too
+		scrollListTo(item) {
+			const entry = this.$el.querySelector('.anw-tl-list [data-key="' + item.key + '"]')
+			const list = entry?.closest('.anw-tl-list')
+			if (!list) return
+
+			const listRect = list.getBoundingClientRect()
+			const entryRect = entry.getBoundingClientRect()
+
+			if (entryRect.top >= listRect.top && entryRect.bottom <= listRect.bottom) return
+
+			list.scrollTop += entryRect.top - listRect.top - (list.clientHeight - entryRect.height) / 2
 		},
 		isSelected(item) {
 			return !!this.selected && this.selected.key === item.key
@@ -327,22 +376,83 @@ export const AnwTimeline = {
 			if (!this.anwArray || !this.entArray) return
 
 			this.$nextTick(() => {
-				this.observePlotWidth()
+				this.observeSizes()
+				this.scheduleFitHeight()
 				if (focus || !this.viewEnd) this.initView()
 			})
 		},
-		observePlotWidth() {
+		// the plot width scales the ruler. The size of the parent changes when the modal or
+		// the tab around the timeline becomes visible, then the height gets measured again
+		observeSizes() {
 			const plot = this.$refs.plot
-			if (!plot || this.resizeObserver) return
+			if (!plot) return
 
 			this.plotWidth = plot.clientWidth || this.plotWidth
 
 			if (typeof ResizeObserver === 'undefined') return
 
-			this.resizeObserver = new ResizeObserver(entries => {
-				this.plotWidth = entries[0].contentRect.width || this.plotWidth
+			if (!this.resizeObserver) {
+				this.resizeObserver = new ResizeObserver(entries => {
+					entries.forEach(entry => {
+						if (entry.target === this.observedPlot) this.plotWidth = entry.contentRect.width || this.plotWidth
+					})
+					this.scheduleFitHeight()
+				})
+			}
+
+			// a reload renders a new plot element, the old one is gone
+			if (plot !== this.observedPlot) {
+				if (this.observedPlot) this.resizeObserver.unobserve(this.observedPlot)
+				this.resizeObserver.observe(plot)
+				this.observedPlot = plot
+			}
+
+			const parent = this.$el.parentElement
+			if (parent && parent !== this.observedParent) {
+				if (this.observedParent) this.resizeObserver.unobserve(this.observedParent)
+				this.resizeObserver.observe(parent)
+				this.observedParent = parent
+			}
+		},
+		scheduleFitHeight() {
+			if (this.fitFrame) return
+
+			this.fitFrame = window.requestAnimationFrame(() => {
+				this.fitFrame = null
+				this.fitHeight()
 			})
-			this.resizeObserver.observe(plot)
+		},
+		// the timeline grows down to the visible bottom: the body of the fullscreen modal in
+		// the assistenz view, the viewport otherwise. The paddings and borders of the
+		// containers below the timeline count too, so the page gets no scrollbar
+		fitHeight() {
+			const el = this.$el
+			if (!el?.getBoundingClientRect || !el.offsetParent) return // hidden modal or tab
+
+			const modalBody = el.closest('.modal-body')
+			const stop = modalBody ?? document.getElementById('cis-main') ?? document.body
+			let top
+			let bottom
+
+			if (modalBody) {
+				top = el.getBoundingClientRect().top - modalBody.getBoundingClientRect().top + modalBody.scrollTop
+				bottom = modalBody.clientTop + modalBody.clientHeight
+					- parseFloat(window.getComputedStyle(modalBody).paddingBottom)
+			} else {
+				const screenY = this.$entryParams?.isInFrame ? window.frameElement.clientHeight : window.visualViewport.height
+
+				top = el.getBoundingClientRect().top + window.scrollY
+				bottom = screenY - this.$contentBottomOffset()
+			}
+
+			let below = 0
+			for (let node = el.parentElement; node && node !== stop; node = node.parentElement) {
+				const style = window.getComputedStyle(node)
+
+				below += parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth)
+			}
+
+			this.fitHeightPx = Math.max(Math.floor(bottom - top - below), MIN_HEIGHT)
 		},
 		// ------------------------------------------------------------------ input
 		wheelDelta(event) {
@@ -375,7 +485,10 @@ export const AnwTimeline = {
 				x: event.clientX,
 				width: this.$refs.plot.getBoundingClientRect().width,
 				start: this.viewStart,
-				end: this.viewEnd
+				end: this.viewEnd,
+				// the pointer capture below sends the click to the plot and never to the bar,
+				// so onPointerUp selects the bar the pointer went down on
+				barKey: event.target.closest('.anw-tl-bar')?.dataset.key ?? null
 			}
 			event.currentTarget.setPointerCapture(event.pointerId)
 		},
@@ -391,8 +504,13 @@ export const AnwTimeline = {
 		onPointerUp(event) {
 			if (!this.drag) return
 
+			// a pan or a cancelled pointer selects nothing
+			const barKey = this.panMoved || event.type === 'pointercancel' ? null : this.drag.barKey
+
 			this.drag = null
 			this.releasePointer(event)
+
+			if (barKey) this.selectItem(this.allItems.find(item => item.key === barKey))
 		},
 		onOverviewDown(event) {
 			this.overviewDrag = true
@@ -450,6 +568,20 @@ export const AnwTimeline = {
 			const day = pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + '.' + date.getFullYear()
 
 			return withTime ? day + ' ' + this.formatTime(time) : day
+		},
+		// the date fields work with 'yyyy-MM-dd' (model-type), a day starts at local midnight
+		formatDayValue(time) {
+			const date = new Date(time)
+
+			return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+		},
+		parseDayValue(value) {
+			if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
+
+			const parts = String(value ?? '').split('-').map(Number)
+			if (parts.length !== 3 || parts.some(isNaN)) return NaN
+
+			return new Date(parts[0], parts[1] - 1, parts[2]).getTime()
 		},
 		floorToStep(time, step) {
 			const date = new Date(time)
@@ -530,16 +662,24 @@ export const AnwTimeline = {
 		}
 	},
 	mounted() {
+		window.addEventListener('resize', this.scheduleFitHeight)
 		this.onDataChanged(false)
 	},
+	// the student view keeps its tabs alive
+	activated() {
+		this.scheduleFitHeight()
+	},
 	unmounted() {
+		window.removeEventListener('resize', this.scheduleFitHeight)
+		if (this.fitFrame) window.cancelAnimationFrame(this.fitFrame)
+
 		if (!this.resizeObserver) return
 
 		this.resizeObserver.disconnect()
 		this.resizeObserver = null
 	},
 	template: /*html*/ `
-	<div v-if="anwArray && entArray" class="anw-tl row g-3">
+	<div v-if="anwArray && entArray" class="anw-tl row g-3" :class="{ 'anw-tl--fit': fitHeightPx }" :style="fitStyle">
 
 		<div class="col-xl-3">
 			<div class="card h-100">
@@ -547,10 +687,11 @@ export const AnwTimeline = {
 					<span class="fw-bold">{{ lanes[0].title }}</span>
 					<span class="badge bg-secondary">{{ lanes[0].count }}</span>
 				</div>
-				<div class="anw-tl-list list-group list-group-flush">
+				<div class="anw-tl-list anw-tl-list--ent list-group list-group-flush">
 					<button
 						v-for="item in entItems"
 						:key="item.key"
+						:data-key="item.key"
 						type="button"
 						class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-1 px-2"
 						:class="{ 'anw-tl-list-item--selected': isSelected(item) }"
@@ -567,10 +708,11 @@ export const AnwTimeline = {
 					<span class="fw-bold">{{ lanes[1].title }}</span>
 					<span class="badge bg-secondary">{{ lanes[1].count }}</span>
 				</div>
-				<div class="anw-tl-list list-group list-group-flush">
+				<div class="anw-tl-list anw-tl-list--anw list-group list-group-flush">
 					<button
 						v-for="item in anwItems"
 						:key="item.key"
+						:data-key="item.key"
 						type="button"
 						class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-1 px-2"
 						:class="{ 'anw-tl-list-item--selected': isSelected(item) }"
@@ -588,7 +730,31 @@ export const AnwTimeline = {
 		<div class="col-xl-9">
 			<div class="card h-100">
 				<div class="card-header py-2 d-flex flex-wrap align-items-center gap-2">
-					<span class="fw-bold">{{ viewLabel }}</span>
+					<div class="anw-tl-range d-flex align-items-center gap-2">
+						<datepicker
+							:model-value="rangeFrom"
+							@update:model-value="onRangeFrom"
+							:placeholder="$capitalize($p.t('ui/von'))"
+							:clearable="false"
+							auto-apply
+							:text-input="true"
+							:enable-time-picker="false"
+							format="dd.MM.yyyy"
+							model-type="yyyy-MM-dd"
+						></datepicker>
+						<span class="text-muted">–</span>
+						<datepicker
+							:model-value="rangeTo"
+							@update:model-value="onRangeTo"
+							:placeholder="$capitalize($p.t('global/bis'))"
+							:clearable="false"
+							auto-apply
+							:text-input="true"
+							:enable-time-picker="false"
+							format="dd.MM.yyyy"
+							model-type="yyyy-MM-dd"
+						></datepicker>
+					</div>
 
 					<div class="btn-group btn-group-sm ms-auto">
 						<button type="button" class="btn btn-outline-secondary" title="Zoom -" @click="zoomOut">
@@ -606,12 +772,10 @@ export const AnwTimeline = {
 							{{ $capitalize($p.t('global/alle')) }}
 						</button>
 					</div>
-					<span v-tooltip.bottom="getTooltipAnwTimeline" class="text-muted ms-1">
-						<i class="fa fa-circle-question"></i>
-					</span>
+					<anw-help class="ms-1" button-class="btn-sm text-muted" :text="helpText"></anw-help>
 				</div>
 
-				<div class="card-body py-2">
+				<div class="card-body py-2 anw-tl-body">
 					<div
 						ref="plot"
 						class="anw-tl-plot"
@@ -641,21 +805,23 @@ export const AnwTimeline = {
 							<div v-if="nowLeft !== null" class="anw-tl-now" :style="{ left: nowLeft + '%' }"></div>
 						</div>
 
-						<div v-for="lane in lanes" :key="lane.key" class="anw-tl-lane">
-							<div class="anw-tl-lane-title">{{ lane.title }}</div>
-							<div class="anw-tl-band">
-								<div v-for="(row, index) in lane.rows" :key="lane.key + '-row-' + index" class="anw-tl-row">
-									<div
-										v-for="item in visibleItems(row)"
-										:key="item.key"
-										class="anw-tl-bar"
-										:class="['anw-tl-tone--' + item.tone, { 'anw-tl-bar--selected': isSelected(item) }]"
-										:style="barStyle(item)"
-										:title="item.tooltip"
-										@click.stop="selectItem(item)"
-									></div>
+						<div class="anw-tl-lanes">
+							<div v-for="lane in lanes" :key="lane.key" class="anw-tl-lane">
+								<div class="anw-tl-lane-title">{{ lane.title }}</div>
+								<div class="anw-tl-band">
+									<div v-for="(row, index) in lane.rows" :key="lane.key + '-row-' + index" class="anw-tl-row">
+										<div
+											v-for="item in visibleItems(row)"
+											:key="item.key"
+											:data-key="item.key"
+											class="anw-tl-bar"
+											:class="['anw-tl-tone--' + item.tone, { 'anw-tl-bar--selected': isSelected(item) }]"
+											:style="barStyle(item)"
+											:title="item.tooltip"
+										></div>
+									</div>
+									<div v-if="!lane.rows.length" class="anw-tl-row"></div>
 								</div>
-								<div v-if="!lane.rows.length" class="anw-tl-row"></div>
 							</div>
 						</div>
 					</div>

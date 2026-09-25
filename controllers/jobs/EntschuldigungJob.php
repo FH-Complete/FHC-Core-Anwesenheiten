@@ -20,7 +20,6 @@ class EntschuldigungJob extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
 		$this->_ci->load->model('person/Person_model', 'PersonModel');
-		$this->_ci->load->model('crm/Student_model', 'StudentModel');
 
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
@@ -123,8 +122,6 @@ class EntschuldigungJob extends JOB_Controller
 
 			$entschuldigungenString .= '</tbody></table></div>';
 			
-//			var_dump($entschuldigungenString);
-			
 			$assistenzRow = $tripelArr[0][1];
 			$anrede = $assistenzRow->anrede;
 			$anredeFillString = $assistenzRow->anrede == "Herr" ? "r" : "";
@@ -219,24 +216,7 @@ class EntschuldigungJob extends JOB_Controller
 	}
 	
 	private function setEntHistoryEntry($ent) {
-		return $this->_ci->EntschuldigungHistoryModel->insert(
-			array(
-				'entschuldigung_id' => $ent->entschuldigung_id,
-				'person_id' => $ent->person_id,
-				'von' => $ent->von,
-				'bis' => $ent->bis,
-				'dms_id' => $ent->dms_id,
-				'insertvon' => $ent->insertvon,
-				'insertamum' => $ent->insertamum,
-				'updatevon' => $ent->updatevon,
-				'updateamum' => $ent->updateamum,
-				'statussetvon' => $ent->statussetvon,
-				'statussetamum' => $ent->statussetamum,
-				'akzeptiert' => $ent->akzeptiert,
-				'notiz' => $ent->notiz,
-				'version' => $ent->version
-			)
-		);
+		return $this->_ci->EntschuldigungHistoryModel->insertVersion($ent, $ent->dms_id);
 	}
 	
 	private function setEntDeclinedStatus($ent) {

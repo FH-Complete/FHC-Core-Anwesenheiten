@@ -1,9 +1,6 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-use \chillerlan\QRCode\QROptions;
-use \chillerlan\QRCode\QRCode;
-
 class ProfilApi extends FHCAPI_Controller
 {
 
@@ -51,7 +48,6 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 
 		$this->_ci->load->library('PermissionLib');
@@ -159,8 +155,6 @@ class ProfilApi extends FHCAPI_Controller
 
 			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
-			
-			$this->addMeta('$aktuellesSem', $aktuellesSem);
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
 
@@ -273,10 +267,6 @@ class ProfilApi extends FHCAPI_Controller
 		$von = $result->retval[0]->von;
 		$bis = $result->retval[0]->bis;
 
-//		if(!($von <= $nowString && $nowString <= $bis)) {
-//			$this->terminateWithError($this->p->t('global', 'errorCodeSentInTimeOutsideKontrolle'), 'general');
-//		}
-
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
 
 		// find relevant lehreinheit from relevant entry
@@ -373,11 +363,6 @@ class ProfilApi extends FHCAPI_Controller
 		
 		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH') + 1); // +1 since frontend validates with a 1day larger range currently
 		
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
-		
-//		$this->addMeta('$dateLimit', $dateLimitTimestamp);
-//		$this->addMeta('$vonTimestamp', $vonTimestamp);
-		
 		if ($vonTimestamp < $dateLimitTimestamp && !$isAdmin) {
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
@@ -442,7 +427,7 @@ class ProfilApi extends FHCAPI_Controller
 			'file_size'           => $_FILES[$fileFieldName]['size'] ?? null,
 			'dms_path_exists'     => file_exists(DMS_PATH),
 			'dms_path_writable'   => is_writable(DMS_PATH),
-			'error_raw'           => $this->_extractErrorString($dmsResponse),
+			'error_raw'           => is_string(getError($dmsResponse)) ? trim(strip_tags(getError($dmsResponse))) : getError($dmsResponse),
 		);
 
 		$encoded = json_encode($logData, JSON_UNESCAPED_UNICODE);
@@ -549,24 +534,7 @@ class ProfilApi extends FHCAPI_Controller
 		}
 
 		// add old version to history table
-		$this->_ci->EntschuldigungHistoryModel->insert(
-			array(
-				'entschuldigung_id' => $entschuldigung->entschuldigung_id,
-				'person_id' => $entschuldigung->person_id,
-				'von' => $entschuldigung->von,
-				'bis' => $entschuldigung->bis,
-				'dms_id' => $entschuldigung->dms_id,
-				'insertvon' => $entschuldigung->insertvon,
-				'insertamum' => $entschuldigung->insertamum,
-				'updatevon' => $entschuldigung->updatevon,
-				'updateamum' => $entschuldigung->updateamum,
-				'statussetvon' => $entschuldigung->statussetvon,
-				'statussetamum' => $entschuldigung->statussetamum,
-				'akzeptiert' => $entschuldigung->akzeptiert,
-				'notiz' => $entschuldigung->notiz,
-				'version' => $entschuldigung->version
-			)
-		);
+		$this->_ci->EntschuldigungHistoryModel->insertVersion($entschuldigung, $entschuldigung->dms_id);
 		
 		$dmsFile = getData($dmsFile);
 		$dmsId = $dmsFile['dms_id'];
@@ -616,7 +584,6 @@ class ProfilApi extends FHCAPI_Controller
 		$bisFormatted = $bisDateTime->format("d.m.Y H:i");
 
 		foreach($data as $mailrow) {
-//			$this->addMeta('emailData', $mailrow);
 			//emailTo usually is 1 address, sometimes several seperated by ','
 			$emails = explode(', ', $mailrow->email);
 
@@ -714,8 +681,6 @@ class ProfilApi extends FHCAPI_Controller
 			if (isError($deletedEntschuldigung))
 				$this->terminateWithError(getError($deletedEntschuldigung));
 
-			
-			
 			if(isset($entschuldigung->dms_id)) {
 
 				$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
@@ -726,24 +691,7 @@ class ProfilApi extends FHCAPI_Controller
 			}
 			
 			// add old version to history table without dms_id -> either never existed or should be deleted aswell
-			$this->_ci->EntschuldigungHistoryModel->insert(
-				array(
-					'entschuldigung_id' => $entschuldigung->entschuldigung_id,
-					'person_id' => $entschuldigung->person_id,
-					'von' => $entschuldigung->von,
-					'bis' => $entschuldigung->bis,
-					'dms_id' => null,
-					'insertvon' => $entschuldigung->insertvon,
-					'insertamum' => $entschuldigung->insertamum,
-					'updatevon' => $entschuldigung->updatevon,
-					'updateamum' => $entschuldigung->updateamum,
-					'statussetvon' => $entschuldigung->statussetvon,
-					'statussetamum' => $entschuldigung->statussetamum,
-					'akzeptiert' => $entschuldigung->akzeptiert,
-					'notiz' => $entschuldigung->notiz,
-					'version' => $entschuldigung->version
-				)
-			);
+			$this->_ci->EntschuldigungHistoryModel->insertVersion($entschuldigung, null);
 			
 			$this->sendEmailToAssistenz($person_id, $entschuldigung->dms_id, 'delete', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 

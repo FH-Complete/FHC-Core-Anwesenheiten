@@ -17,16 +17,12 @@ class Profil extends Auth_Controller
 
 		$this->_ci =& get_instance();
 
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
-		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
-		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 		$this->_ci->load->library('DmsLib');
 
 		$this->loadPhrases(
@@ -40,43 +36,13 @@ class Profil extends Auth_Controller
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID(); // sets property uid
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
-		$this->load->helper('hlp_language');
 	}
 
 
 	public function index()
 	{
 		$viewData = array(
-			'permissions' => [
-				'admin' => $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz'),
-				'assistenz' => $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz'),
-				'lektor' => $this->permissionlib->isBerechtigt('extension/anw_r_lektor'),
-				'student' => $this->permissionlib->isBerechtigt('extension/anw_r_student'),
-				'authID' => getAuthUID(),
-				'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),
-				'useRegenerateQR' => $this->_ci->config->item('USE_REGENERATE_QR'),
-				'entschuldigungMaxReach' => $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH'),
-				'kontrolleDeleteMaxReach' => $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH'),
-				'kontrolleCreateMaxReachPast' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_PAST'),
-				'kontrolleCreateMaxReachFuture' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_FUTURE'),
-				'positiveRatingThreshold' => $this->_ci->config->item('POSITIVE_RATING_THRESHOLD'),
-				'anwesend_status' => $this->_ci->config->item('ANWESEND_STATUS'),
-				'abwesend_status' => $this->_ci->config->item('ABWESEND_STATUS'),
-				'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),
-				'einheitDauer' => $this->_ci->config->item('EINHEIT_DAUER'),
-				'entschuldigungen_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
-				'studiengaengeAssistenz' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_r_ent_assistenz'),
-				'studiengaengeAdmin' => $this->permissionlib->getSTG_isEntitledFor('extension/anw_r_full_assistenz'),
-				'controller' => get_class($this),
-				'show_guide' => $this->_ci->config->item('SHOW_GUIDE'),
-				'guide_link' => $this->_ci->config->item('GUIDE_LINK'),
-				'no_qr_lehrform' => $this->_ci->config->item('NO_QR_LEHRFORM'),
-				'alert_lehrform' => $this->_ci->config->item('ALERT_LEHRFORM'),
-				'show_outgoing_semester_overlap' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP'),
-				'show_outgoing_semester_overlap_min_days' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'),
-				'legacy_le_selection' => $this->_ci->config->item('LEGACY_LE_SELECTION'),
-				'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
-			]
+			'permissions' => $this->_ci->anwesenheitenlib->getViewPermissions()
 		);
 
 		$this->_ci->load->view('extensions/FHC-Core-Anwesenheiten/Anwesenheiten', $viewData);

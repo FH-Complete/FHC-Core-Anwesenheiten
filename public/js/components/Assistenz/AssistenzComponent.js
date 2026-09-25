@@ -1,4 +1,3 @@
-import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
@@ -16,9 +15,7 @@ export const AssistenzComponent = {
 	components: {
 		BsModal,
 		CoreBaseLayout,
-		CoreNavigationCmpt,
 		CoreFilterCmpt,
-		CoreRESTClient,
 		Datepicker: VueDatePicker,
 		StudiengangDropdown,
 		EntschuldigungEdit,
@@ -31,22 +28,16 @@ export const AssistenzComponent = {
 			selectedAnwArray: null,
 			selectedEntArray: null,
 			tabulatorUuid: Vue.ref(0),
-			headerMenuEntries: {},
-			sideMenuEntries: {},
 			editCellValue: '',
-			tableData: null,
 			zeitraum: {
 				von: this.$formatTime(new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (30)))),
 				bis: this.$formatTime(new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (60))))
 			},
-			permissionsLoaded: false,
 			tableBuiltPromise: null,
 			assistenzViewTabulatorOptions: {
 				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
 				ajaxResponse: (url, params, response) => {
-					const data = this.toTableData(response)
-					this.tableData = data
-					return data
+					return this.toTableData(response)
 				},
 				ajaxConfig: "POST",
 				ajaxContentType:{
@@ -65,8 +56,6 @@ export const AssistenzComponent = {
 					}
 				},
 				debugInvalidComponentFuncs:false,
-				// debugEventsExternal: true,
-				// debugEventsInternal: true,
 				layout: 'fitData',
 				selectable: false,
 				placeholder: this.$p.t('global/noDataAvailable'),
@@ -117,14 +106,16 @@ export const AssistenzComponent = {
 				],
 				// every type on. Keep the keys instead of a plain true: the filter component
 				// switches the column, the header filter and the sort persistence off in this
-				// object as soon as a table preset is stored
+				// object as soon as a table preset is stored. columns keeps the layout keys only:
+				// with true, tabulator writes the stored title back into the column definition,
+				// and a Vue.computed title is readonly (TypeError when the table loads)
 				persistence: {
 					sort: true,
 					filter: true,
 					headerFilter: true,
 					group: true,
 					page: true,
-					columns: true,
+					columns: ['width', 'visible'],
 				},
 				persistenceID: this.$entryParams.patchdate + "-assistenzTable"
 			},
@@ -172,8 +163,7 @@ export const AssistenzComponent = {
 				}
 			],
 			notiz: '',
-			studiengang: null,
-			titleText: ''
+			studiengang: null
 		};
 	},
 	props: {
@@ -349,12 +339,6 @@ export const AssistenzComponent = {
 
 			return actionwrapper;
 		},
-		bisFilter: function (data, filterParams) {
-			return new Date(data.bis).getTime() <= new Date(filterParams.bis).getTime()
-		},
-		vonFilter: function (data, filterParams) {
-			return new Date(data.von).getTime() >= new Date(filterParams.von).getTime()
-		},
 		studiengangFilter: function (data, filterParams) {
 			return data.studiengang_kz === Number(filterParams.studiengang)
 		},
@@ -362,8 +346,6 @@ export const AssistenzComponent = {
 		{
 			this.$refs.assistenzTable.tabulator.clearFilter()
 
-			// if (this.zeitraum.von) this.$refs.assistenzTable.tabulator.addFilter(this.vonFilter, {von: this.zeitraum.von})
-			// if (this.zeitraum.bis) this.$refs.assistenzTable.tabulator.addFilter(this.bisFilter, {bis: this.zeitraum.bis})
 			if (this.studiengang) this.$refs.assistenzTable.tabulator.addFilter(this.studiengangFilter, {studiengang: this.studiengang})
 
 		},
@@ -390,8 +372,6 @@ export const AssistenzComponent = {
 			if(this.$entryParams.permissions === undefined) { // routed into app inner component skipping init in landing page
 				this.$entryParams.permissions = JSON.parse(this.permissions)
 			}
-
-			this.permissionsLoaded = true
 
 			if(this.$entryParams.phrasenPromise === undefined) {
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['global', 'person', 'lehre', 'table', 'filter', 'ui'])
@@ -485,18 +465,6 @@ export const AssistenzComponent = {
 				value: this.$p.t('global/tooltipAssistenzV2'),
 				class: "custom-tooltip"
 			}
-		},
-		getTooltipVonDatum() {
-			return {
-				value: this.$p.t('global/tooltipAssistenzVonDatum'),
-				class: "custom-tooltip"
-			}
-		},
-		getTooltipBisDatum() {
-			return {
-				value: this.$p.t('global/tooltipAssistenzBisDatum'),
-				class: "custom-tooltip"
-			}
 		}
 	},
 	template: `
@@ -519,7 +487,7 @@ export const AssistenzComponent = {
 			</bs-modal>
 
 
-			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" bodyClass="px-4 py-0" dialogClass="modal-dialog modal-fullscreen">
+			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" bodyClass="px-0 pt-3 pb-0" dialogClass="modal-dialog modal-fullscreen">
 				<template v-slot:title>
 					<div>
 						{{ $p.t('global/anwTimeline') }}
