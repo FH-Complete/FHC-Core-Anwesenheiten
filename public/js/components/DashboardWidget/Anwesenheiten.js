@@ -54,11 +54,6 @@ export default {
 				})
 		}
 	},
-	computed: {
-		css() {
-			return ['dashboard-widget-default', this.config.css];
-		}
-	},
 	async created() {
 		if (!this.viewData.uid || !this.viewData.person_id) {
 			await this.$api.call(ApiInfo.getViewDataStudent())

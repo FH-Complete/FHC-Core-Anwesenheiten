@@ -88,24 +88,61 @@ export default {
 		},
 		titleTag() {
 			return this.standalone ? 'h1' : 'div'
+		},
+		// inline styles: the dashboard does not load the extension css. The page gets a card
+		// frame and bigger icon and title, the widget stays compact
+		bodyStyle() {
+			return this.standalone ? {
+				padding: '2rem 1.5rem',
+				border: '1px solid var(--bs-border-color, #dee2e6)',
+				borderRadius: '0.5rem',
+				backgroundColor: 'var(--bs-body-bg, #fff)',
+				boxShadow: '0 0.125rem 0.5rem rgba(0, 0, 0, 0.06)'
+			} : {}
+		},
+		iconStyle() {
+			return {
+				marginBottom: '0.75rem',
+				color: 'var(--fhc-primary, #006095)',
+				fontSize: this.standalone ? '3rem' : '2rem'
+			}
+		},
+		titleStyle() {
+			return {
+				fontSize: this.standalone ? '1.5rem' : '1.125rem',
+				fontWeight: 600
+			}
+		},
+		// the code is short and random, a monospace font makes it easy to compare with the
+		// projector. The empty input keeps the normal font for the placeholder
+		inputStyle() {
+			return this.internalZugangscode ? {
+				fontFamily: 'var(--bs-font-monospace, monospace)',
+				fontSize: '1.5rem',
+				letterSpacing: '0.2em',
+				textAlign: 'center'
+			} : {
+				textAlign: 'center'
+			}
 		}
 	},
 	template: `
-	<div class="anw-scan" :class="{'anw-scan--page': standalone}">
-		<div v-if="showBackButton" class="anw-scan-back">
+	<div class="text-center" :class="standalone ? 'mx-auto px-0 py-3' : 'p-3'" :style="standalone ? {maxWidth: '30rem'} : {}">
+		<div v-if="showBackButton" class="mb-3 text-start">
 			<button type="button" class="btn btn-outline-secondary" @click="goBack">
 				<i class="fa-solid fa-arrow-left me-2" aria-hidden="true"></i>{{ $p.t('global/zurueck') }}
 			</button>
 		</div>
 
-		<div class="anw-scan-body">
+		<div :style="bodyStyle">
 			<template v-if="!zugangscodeProcessed">
-				<i class="fa-solid fa-qrcode anw-scan-icon" aria-hidden="true"></i>
-				<component :is="titleTag" class="anw-scan-title">{{ getBaseLayoutTitle }}</component>
-				<form class="anw-scan-form" @submit.prevent="sendCode">
+				<i class="fa-solid fa-qrcode d-block" :style="iconStyle" aria-hidden="true"></i>
+				<component :is="titleTag" class="mb-3" :style="titleStyle">{{ getBaseLayoutTitle }}</component>
+				<form class="d-flex flex-column mx-auto" style="gap: 0.75rem; max-width: 22rem;" @submit.prevent="sendCode">
 					<input
 						:maxlength="calculatedMaxLength"
-						class="form-control anw-scan-input"
+						class="form-control"
+						:style="inputStyle"
 						:value="internalZugangscode"
 						@input="checkValue($event)"
 						:placeholder="$p.t('global/code')"
@@ -120,11 +157,11 @@ export default {
 					</button>
 				</form>
 			</template>
-			<div v-else-if="viewData" class="anw-scan-success" role="status">
-				<i class="fa-solid fa-circle-check anw-scan-icon anw-scan-icon--success" aria-hidden="true"></i>
-				<component :is="titleTag" class="anw-scan-title">{{ getBaseLayoutTitle }}</component>
-				<p class="anw-scan-lv">{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
-				<p>{{von.toLocaleDateString()}}: {{formatClock(von)}} - {{formatClock(bis)}}</p>
+			<div v-else-if="viewData" role="status">
+				<i class="fa-solid fa-circle-check d-block" :style="[iconStyle, {color: '#28a745'}]" aria-hidden="true"></i>
+				<component :is="titleTag" class="mb-3" :style="titleStyle">{{ getBaseLayoutTitle }}</component>
+				<p class="mb-1" style="font-weight: 600;">{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
+				<p class="mb-1">{{von.toLocaleDateString()}}: {{formatClock(von)}} - {{formatClock(bis)}}</p>
 				<p class="mb-0">{{viewData.vorname}} {{viewData.nachname}} {{$p.t('global/wurdeRegistriert')}}.</p>
 			</div>
 		</div>
