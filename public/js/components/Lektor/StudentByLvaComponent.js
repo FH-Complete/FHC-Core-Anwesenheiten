@@ -356,7 +356,7 @@ export const StudentByLvaComponent = {
 	computed: {
 		getTooltipObj() {
 			return {
-				value: this.$p.t('global/tooltipStudentByLva'),
+				value: this.$p.t('global/tooltipStudentByLvaV2'),
 				class: "custom-tooltip"
 			}
 		}

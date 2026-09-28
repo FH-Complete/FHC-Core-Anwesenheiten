@@ -923,6 +923,7 @@ export const LektorComponent = {
 			return date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear();
 		},
 		formatZusatz(entry, stsem, config = {}) {
+			// appends every matching suffix in the order of the core lehrelisthelper
 			let zusatz = ''
 
 			const stsemdatumvon = new Date(stsem.start)
@@ -931,7 +932,7 @@ export const LektorComponent = {
 			const entryBis      = entry.bis ? new Date(entry.bis) : null
 
 			if (entry.studienstatus === 'Incoming') {
-				zusatz = ' (i)'
+				zusatz += ' (i)'
 			}
 
 			const isOutgoing = entry.bisio_id
@@ -962,17 +963,17 @@ export const LektorComponent = {
 				}
 
 				if (startsBeforeSemEnds && !alreadyEnded && stayLongEnough) {
-					zusatz = ' (o) (ab ' + this.toFrontendDate(entry.von) + ')'
+					zusatz += ' (o) (' + this.$p.t('global/anwZusatzOutgoingAb', [this.toFrontendDate(entry.von)]) + ')'
 				}
 			}
 
-			if (entry.lkt_ueberschreibbar === false) zusatz = ' (' + entry.anmerkung + ')'
-			if (entry.mitarbeiter_uid !== null)       zusatz = ' (ma)'
+			if (entry.lkt_ueberschreibbar === false) zusatz += ' (' + entry.anmerkung + ')'
+			if (entry.mitarbeiter_uid !== null)       zusatz += ' (ma)'
 			if (entry.stg_kz_student == this.lektorState.a_o_kz) {
-				zusatz = ' (a.o.)'
+				zusatz += ' (a.o.)'
 			}
 			if (entry.mobilitaetstyp_kurzbz && entry.doubledegree === 1) {
-				zusatz = ' (d.d.'
+				zusatz += ' (d.d.'
 				if      (entry.ddtype == 'Intern') zusatz += 'int.)'
 				else if (entry.ddtype == 'Extern') zusatz += 'ext.)'
 				else                               zusatz += ')'
@@ -1568,7 +1569,7 @@ export const LektorComponent = {
 		},
 		getTooltipKontrolleLoeschen() {
 			return {
-				value: this.$p.t('global/tooltipLektorDeleteKontrolle', [this.$entryParams.permissions.kontrolleDeleteMaxReach ]),
+				value: this.$p.t('global/tooltipLektorDeleteKontrolleV2', [this.$entryParams.permissions.kontrolleDeleteMaxReach ]),
 				class: "custom-tooltip"
 			}
 		},
@@ -1592,7 +1593,7 @@ export const LektorComponent = {
 		},
 		getTooltipLegende() {
 			return {
-				value: this.$p.t('global/tooltipLegende'),
+				value: this.$p.t('global/tooltipLegendeV2'),
 				class: "custom-tooltip"
 			}
 		},
@@ -1878,7 +1879,7 @@ export const LektorComponent = {
 					<bs-modal ref="modalContainerLegende" class="bootstrap-prompt" dialogClass="modal-lg">
 						<template v-slot:title>
 							<div>
-								{{ $p.t('global/statusLegende') }}
+								{{ $p.t('global/anwLegende') }}
 							</div>
 						</template>
 						<template v-slot:default>
@@ -1954,7 +1955,7 @@ export const LektorComponent = {
 										optionGroupLabel="label"
 										optionGroupChildren="items"
 										dataKey="lehreinheit_id"
-										placeholder="LV-Teile auswählen"
+										:placeholder="$p.t('global/anwLvTeileAuswaehlen')"
 										:maxSelectedLabels="3"
 										showToggleAll
 										scrollHeight=400

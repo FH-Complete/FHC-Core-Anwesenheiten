@@ -1,22 +1,87 @@
 
+// every sample uses the same status class as the lektor table, so the legend
+// always shows the colors of the table
 export const Statuslegende = {
 	name: 'Statuslegende',
-	template:`	
-		<div class="text-center">
-			<div class="col">
-				<div class="row" style="color: #28a745;"><h3>{{$capitalize($p.t('global/anwesend'))}} = <i class="fa fa-check"></i></h3></div>
+	computed: {
+		// the suffixes that LektorComponent.formatZusatz() appends to the nachname.
+		// (ar), (iar) and (nz) are the anmerkung of a grade the lektor must not overwrite
+		namenszusaetze() {
+			return [
+				{ code: '(i)', phrase: 'global/anwZusatzIncoming' },
+				{ code: '(o) (' + this.$p.t('global/anwZusatzOutgoingAb', ['…']) + ')', phrase: 'global/anwZusatzOutgoing' },
+				{ code: '(ma)', phrase: 'global/anwZusatzMitarbeiter' },
+				{ code: '(a.o.)', phrase: 'global/anwZusatzAusserordentlich' },
+				{ code: '(d.d.int.)', phrase: 'global/anwZusatzDoubleDegreeIntern' },
+				{ code: '(d.d.ext.)', phrase: 'global/anwZusatzDoubleDegreeExtern' },
+				{ code: '(ar)', phrase: 'global/anwZusatzAngerechnet' },
+				{ code: '(iar)', phrase: 'global/anwZusatzInternAngerechnet' },
+				{ code: '(nz)', phrase: 'global/anwZusatzNichtZugelassen' }
+			]
+		},
+		// the name columns of the table carry the row color
+		sampleName() {
+			return this.$capitalize(this.$p.t('person/vorname')) + ' ' + this.$capitalize(this.$p.t('person/nachname'))
+		}
+	},
+	template:`
+		<div class="anw-legend">
+			<section class="anw-legend-section">
+				<h6 class="anw-legend-heading">{{ $p.t('global/status') }}</h6>
+				<ul class="anw-legend-list anw-legend-list-grid">
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample anw-anwesend"><i class="fa fa-check" aria-hidden="true"></i></span>
+						<span>{{ $capitalize($p.t('global/anwesend')) }}</span>
+					</li>
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample anw-abwesend"><i class="fa fa-xmark" aria-hidden="true"></i></span>
+						<span>{{ $capitalize($p.t('global/abwesend')) }}</span>
+					</li>
+					<li v-if="$entryParams.permissions.entschuldigungen_enabled" class="anw-legend-item">
+						<span class="anw-legend-sample anw-entschuldigt"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
+						<span>{{ $capitalize($p.t('global/entschuldigt')) }}</span>
+					</li>
+				</ul>
+			</section>
 
-				<div class="row" style="color: #dc3545;"><h3>{{$capitalize($p.t('global/abwesend'))}} = <i class="fa fa-xmark"></i></h3></div>
+			<section class="anw-legend-section">
+				<h6 class="anw-legend-heading">{{ $p.t('global/entschuldigungen') }}</h6>
+				<ul class="anw-legend-list anw-legend-list-grid">
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample anw-entschuldigt">{{ sampleName }}</span>
+						<span>{{ $p.t('global/anwLegendeEntschuldigtBestaetigt') }}</span>
+					</li>
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample anw-entschuldigt-offen">{{ sampleName }}</span>
+						<span>{{ $p.t('global/anwLegendeEntschuldigtOffen') }}</span>
+					</li>
+				</ul>
+			</section>
 
-				<div v-if="this.$entryParams.permissions.entschuldigungen_enabled" class="row" style="color: #0335f5;"><h3>{{$capitalize($p.t('global/entschuldigt'))}} = <i class="fa-solid fa-user-shield"></i></h3></div>
+			<section class="anw-legend-section">
+				<h6 class="anw-legend-heading">{{ $p.t('global/anwNamenszusaetze') }}</h6>
+				<ul class="anw-legend-list anw-legend-list-grid">
+					<li v-for="zusatz in namenszusaetze" :key="zusatz.code" class="anw-legend-item">
+						<span class="anw-legend-sample">{{ zusatz.code }}</span>
+						<span>{{ $p.t(zusatz.phrase) }}</span>
+					</li>
+				</ul>
+			</section>
 
-				<div class="row"><h3>{{$capitalize($p.t('global/studentenInLVTeil'))}} = 👥</h3></div>
-				<div class="row"><h3>{{$capitalize($p.t('global/termineAusStundenplanV2'))}} = 📅</h3></div>
-				<div class="row" style="color: #0335f5"><h3>Name -> {{$capitalize($p.t('global/entschuldigtLegendeBlau'))}}</h3></div>
-				<div class="row" style="color: #12d5d5"><h3>Name -> {{$capitalize($p.t('global/entschuldigtLegendeTuerkis'))}}</h3></div>
-
-			</div>
-		</div>	
+			<section class="anw-legend-section">
+				<h6 class="anw-legend-heading">{{ $p.t('lehre/lehreinheit') }}</h6>
+				<ul class="anw-legend-list anw-legend-list-grid">
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample" aria-hidden="true">👥</span>
+						<span>{{ $p.t('global/anwStudierendeImLvTeil') }}</span>
+					</li>
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample" aria-hidden="true">📅</span>
+						<span>{{ $capitalize($p.t('global/termineAusStundenplanV2')) }}</span>
+					</li>
+				</ul>
+			</section>
+		</div>
 	`
 };
 

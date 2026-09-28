@@ -175,7 +175,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 		// this usually happens when there are no students assigned to the lehreinheit yet, usually occurs when opening
 		// digi anw tool for future semesters
-		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV2', $noStudentsFoundParams), 'general');
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'noStudentsFoundV3', $noStudentsFoundParams), 'general');
 		$students = getData($result);
 
 		$prestudentIds = array_map(function ($value) {
