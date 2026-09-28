@@ -26,6 +26,7 @@ class EntschuldigungUploadLib
 	{
 		$limits = array_filter(
 			array(
+				$this->_iniToBytes(ini_get('memory_limit')),
 				$this->_iniToBytes(ini_get('upload_max_filesize')),
 				$this->_iniToBytes(ini_get('post_max_size'))
 			),
