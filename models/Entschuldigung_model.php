@@ -68,6 +68,8 @@ class Entschuldigung_model extends \DB_Model
 	
 	// when changing anw kontrolle von - bis zeiten, compare if a student has different entschuldigt
 	// status between to timespans -> update this students anw_user entries 
+	// only an accepted entschuldigung counts, declined (false) and none (null) are the same. Before, a move
+	// between them returned the student and set a manual anwesend back to an old history status
 	public function compareStatusZeitenForLE($vonNew, $bisNew, $vonOld, $bisOld, $le_id) {
 		$qry = 'SELECT * FROM (
 			SELECT prestudent_id,
@@ -90,7 +92,7 @@ class Entschuldigung_model extends \DB_Model
 				   JOIN public.tbl_prestudent USING(prestudent_id)
 			WHERE lehreinheit_id = ?
 					  ) as alias
-		WHERE statusAkzeptiertNew IS DISTINCT FROM statusAkzeptiertOld';
+		WHERE (statusAkzeptiertNew IS TRUE) <> (statusAkzeptiertOld IS TRUE)';
 
 		return $this->execReadOnlyQuery($qry, array($vonNew, $bisNew, $vonOld, $bisOld, $le_id));
 	}

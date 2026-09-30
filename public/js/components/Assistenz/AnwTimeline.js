@@ -185,6 +185,7 @@ export const AnwTimeline = {
 				{ tone: 'rejected', label: this.$capitalize(this.$p.t('global/abgelehnt')) },
 				{ tone: 'open', label: this.$capitalize(this.$p.t('global/offen')) },
 				{ tone: 'present', label: this.$capitalize(this.$p.t('global/anwesend')) },
+				{ tone: 'late', label: this.$capitalize(this.$p.t('global/anwVerspaetet')) },
 				{ tone: 'absent', label: this.$capitalize(this.$p.t('global/abwesend')) },
 				{ tone: 'excused', label: this.$capitalize(this.$p.t('global/entschuldigt')) }
 			]
@@ -246,6 +247,13 @@ export const AnwTimeline = {
 			}
 			if (anw.status === (permissions.entschuldigt_status ?? 'entschuldigt')) {
 				return { tone: 'excused', label: this.$capitalize(this.$p.t('global/entschuldigt')) }
+			}
+			if (anw.status === (permissions.verspaetet_status ?? 'verspaetet')) {
+				return {
+					tone: 'late',
+					label: this.$capitalize(this.$p.t('global/anwVerspaetet'))
+						+ ' (' + this.$p.t('global/anwMinutenVersaeumt', {minuten: anw.fehlminuten}) + ')'
+				}
 			}
 
 			return { tone: 'unknown', label: anw.status ?? '' }

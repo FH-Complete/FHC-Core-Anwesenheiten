@@ -4,11 +4,13 @@ import {lektorFormatters} from "../../formatters/formatters.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
 import ApiProfil from '../../api/factory/profil.js';
 import ApiInfo from '../../api/factory/info.js';
+import {FehlminutenDialog} from "./FehlminutenDialog.js";
 
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
-		CoreFilterCmpt
+		CoreFilterCmpt,
+		FehlminutenDialog
 	},
 	data() {
 		return {
@@ -255,6 +257,48 @@ export const StudentByLvaComponent = {
 
 			changedRows.forEach(row => row.toggleSelect())
 		},
+		// the same fehlminuten for every selected row, the shortest kontrolle limits them
+		async setSelectedRowsVerspaetet() {
+			const permissions = this.$entryParams.permissions
+			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
+				.filter(row => row.getData().status !== permissions.entschuldigt_status)
+			if (!selectedRows.length) return
+
+			const selectedData = selectedRows.map(row => row.getData())
+			const dauer = Math.min(...selectedData.map(data => data.dauer))
+			const labels = selectedData.map(data => this.kontrolleLabel(data))
+			// prefill only when every selected row already holds the same minutes
+			const stored = new Set(selectedData.map(data => data.status === permissions.verspaetet_status ? data.fehlminuten : null))
+
+			const fehlminuten = await this.$refs.fehlminutenDialog.open({
+				name: this.vorname + ' ' + this.nachname,
+				kontrolle: labels.length > 3 ? labels.slice(0, 3).join(', ') + ' …' : labels.join(', '),
+				dauerLabel: this.$p.t(selectedData.length > 1 ? 'global/anwKontrolldauerKuerzesteMinuten' : 'global/anwKontrolldauerMinuten', {dauer}),
+				dauer,
+				value: stored.size === 1 ? [...stored][0] : null
+			})
+			if (fehlminuten === null) return
+
+			const changedData = selectedRows.map(row => {
+				const newData = {
+					anwesenheit_user_id: row.getData().anwesenheit_user_id,
+					datum: row.getData().datum,
+					status: permissions.verspaetet_status,
+					fehlminuten
+				}
+				row.update(newData)
+				return newData
+			})
+
+			this.saveChanges(changedData)
+
+			selectedRows.forEach(row => row.toggleSelect())
+		},
+		// '28.09.2026 08:00 - 11:30'
+		kontrolleLabel(data) {
+			const [year, month, day] = String(data.datum).split('-')
+			return day + '.' + month + '.' + year + ' ' + String(data.von).substring(11, 16) + ' - ' + String(data.bis).substring(11, 16)
+		},
 		setFilterTitle() {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
 				+ this.verband + this.gruppe + ' '
@@ -272,6 +316,10 @@ export const StudentByLvaComponent = {
 			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
 				cell.getElement().style.color = "#0335f5";
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
+			} else if (data === this.$entryParams.permissions.verspaetet_status) {
+				cell.getElement().style.color = "#b36b00";
+				const text = this.$p.t('global/anwFehlminutenKurz', {minuten: cell.getData().fehlminuten})
+				return '<div class="anw-cell-verspaetet"><i class="fa-solid fa-user-clock"></i><span>' + text + '</span></div>'
 			} else return '-'
 		},
 		handleUuidDefined(uuid) {
@@ -381,6 +429,9 @@ export const StudentByLvaComponent = {
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesend')) }}
 						</button>
+						<button @click="setSelectedRowsVerspaetet" role="button" class="btn anw-btn-verspaetet align-self-end" :disabled="!selected">
+							{{ $capitalize($p.t('global/anwVerspaetet')) }}
+						</button>
 						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/abwesend')) }}
 						</button>
@@ -394,6 +445,7 @@ export const StudentByLvaComponent = {
 			<div class="col-2">
 				<img v-if="foto" :src="foto" :class="isLowResolution(foto) ? 'image-low-resolution' : ''" style="width: 100%"/>
 			</div>
+			<FehlminutenDialog ref="fehlminutenDialog"></FehlminutenDialog>
 		</div>`
 };
 

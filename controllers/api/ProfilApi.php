@@ -44,6 +44,7 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_History_model', 'AnwesenheitUserHistoryModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
@@ -215,7 +216,9 @@ class ProfilApi extends FHCAPI_Controller
 	 * performs anwesenheitskontrolle checkIn for students if they scanned/entered a zugangscode into their
 	 * digital attendances mask.
 	 *
-	 * Does not update the status if anwesenheit_user entry is ENTSCHULDIGT_STATUS at time of checkIn.
+	 * Does not update the status if anwesenheit_user entry is ENTSCHULDIGT_STATUS or VERSPAETET_STATUS at time of checkIn.
+	 * For ENTSCHULDIGT_STATUS the scan goes into the history as ANWESEND_STATUS. If the Entschuldigung is declined
+	 * later, the entry goes back to ANWESEND_STATUS and not to ABWESEND_STATUS.
 	 *
 	 * Checks for:
 	 * 		1.) existing and valid zugangscode
@@ -286,7 +289,15 @@ class ProfilApi extends FHCAPI_Controller
 		// finally update the entry to anwesend
 		if($entryToUpdate) {
 
-			if($entryToUpdate->status !== $this->_ci->config->item('ENTSCHULDIGT_STATUS')) {
+			$entschuldigtStatus = $this->_ci->config->item('ENTSCHULDIGT_STATUS');
+
+			// a late scan must not overwrite the fehlminuten that the lektor entered
+			$keepStatus = array(
+				$entschuldigtStatus,
+				$this->_ci->config->item('VERSPAETET_STATUS')
+			);
+
+			if(!in_array($entryToUpdate->status, $keepStatus, true)) {
 				$result = $this->_ci->AnwesenheitUserModel->update($entryToUpdate->anwesenheit_user_id, 
 					array(
 					'status' => $this->_ci->config->item('ANWESEND_STATUS'), 
@@ -302,6 +313,11 @@ class ProfilApi extends FHCAPI_Controller
 					$this->_returnViewDataCheckIn($prestudent_id, $lehreinheit_id, $von, $bis);
 				}
 			} else {
+				// the student keeps the entschuldigt status while the entschuldigung is valid. The history
+				// keeps the scan, so a declined entschuldigung sets anwesend and not abwesend
+				if($entryToUpdate->status === $entschuldigtStatus)
+					$this->_addScanToHistory($entryToUpdate->anwesenheit_user_id, $uid);
+
 				$this->_returnViewDataCheckIn($prestudent_id, $lehreinheit_id, $von, $bis);
 
 			}
@@ -309,6 +325,32 @@ class ProfilApi extends FHCAPI_Controller
 		} else {
 			$this->terminateWithError($this->p->t('global', 'errorPersonStudentIDMismatch'), 'general');
 		}
+	}
+
+	/**
+	 * writes the scan of an entschuldigt entry into the history as anwesend. The entry keeps its status.
+	 * AdministrationApi::updateEntschuldigung uses the history row when it reverts a declined entschuldigung.
+	 * Writes nothing if the entry already reverts to anwesend or verspaetet. A scan does not replace
+	 * verspaetet, so the history row does not replace it either.
+	 */
+	private function _addScanToHistory($anwesenheit_user_id, $uid)
+	{
+		$anwesendStatus = $this->_ci->config->item('ANWESEND_STATUS');
+
+		$result = $this->_ci->AnwesenheitUserHistoryModel->getStatusPriorToEntschuldigtForId(
+			$anwesenheit_user_id,
+			$this->_ci->config->item('ENTSCHULDIGT_STATUS')
+		);
+		if (isError($result)) $this->terminateWithError($this->p->t('global', 'errorUpdateUserEntry'), 'general');
+
+		$keepStatus = array(
+			$anwesendStatus,
+			$this->_ci->config->item('VERSPAETET_STATUS')
+		);
+		if (hasData($result) && in_array(getData($result)[0]->status, $keepStatus, true)) return;
+
+		$result = $this->_ci->AnwesenheitUserHistoryModel->addScanEntry($anwesenheit_user_id, $anwesendStatus, $uid);
+		if (isError($result)) $this->terminateWithError($this->p->t('global', 'errorUpdateUserEntry'), 'general');
 	}
 
 	private function _returnViewDataCheckIn($prestudent_id, $lehreinheit_id, $von, $bis)

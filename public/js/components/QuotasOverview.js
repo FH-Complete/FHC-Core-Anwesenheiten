@@ -84,6 +84,8 @@ export default {
 							<i v-if="anw.status === 'anwesend'" class="fa fa-check" style="color: green"></i>
 							<i v-else-if="anw.status === 'abwesend'" class="fa fa-xmark" style="color: red"></i>
 							<i v-else-if="anw.status === 'entschuldigt'" class="fa fa-shield" style="color: blue"></i>
+							<i v-else-if="anw.status === 'verspaetet'" class="fa-solid fa-user-clock" style="color: #b36b00"
+								:title="$p.t('global/anwMinutenVersaeumt', {minuten: anw.fehlminuten})"></i>
 						</div>
 					</div>
 				</div>

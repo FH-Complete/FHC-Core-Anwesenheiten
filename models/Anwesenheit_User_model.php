@@ -36,12 +36,14 @@ class Anwesenheit_User_model extends \DB_Model
 			    statussetvon,
 			    statussetamum,
 			    notiz,
+			    fehlminuten,
 			    version,
 			    insertamum,
 			    insertvon,
 			    updateamum,
 			    updatevon
 			) VALUES (
+			    ?,
 			    ?,
 			    ?,
 			    ?,
@@ -65,6 +67,7 @@ class Anwesenheit_User_model extends \DB_Model
 			$entry->statussetvon,
 			$entry->statussetamum,
 			$entry->notiz,
+			$entry->fehlminuten,
 			$entry->version,
 			$entry->insertamum,
 			$entry->insertvon,
@@ -72,7 +75,13 @@ class Anwesenheit_User_model extends \DB_Model
 			$entry->updatevon]);
 	}
 
-	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false)
+	/**
+	 * fehlminuten count for status $verspaetetStatus only. An entry with that status sets them,
+	 * a change to another status clears them. An unchanged status keeps them (e.g. a notiz edit).
+	 * An entry with status $verspaetetStatus and without fehlminuten keeps the stored minutes,
+	 * this restores them when a status goes back to verspaetet.
+	 */
+	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false, $verspaetetStatus = null)
 	{
 		if (!is_array($changedAnwesenheiten) || !count($changedAnwesenheiten))
 			return success([]);
@@ -101,6 +110,14 @@ class Anwesenheit_User_model extends \DB_Model
 				'updateamum' => date('Y-m-d H:i:s')
 			);
 			if(property_exists($entry, 'notiz')) $fields['notiz'] = $entry->notiz;
+
+			if($verspaetetStatus !== null) {
+				if($entry->status === $verspaetetStatus) {
+					if(property_exists($entry, 'fehlminuten')) $fields['fehlminuten'] = (int) $entry->fehlminuten;
+				} elseif($entry->status !== $existing->status) {
+					$fields['fehlminuten'] = 0;
+				}
+			}
 
 			$result = $this->update($entry->anwesenheit_user_id, $fields);
 
@@ -151,6 +168,38 @@ class Anwesenheit_User_model extends \DB_Model
 			WHERE anwesenheit_user_id IN ?";
 
 		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids]);
+	}
+
+	/**
+	 * loads the duration of the kontrolle of each given entry in minutes, as the quote counts it
+	 * (used to check the fehlminuten of an entry)
+	 */
+	public function getKontrollDauerForIds($anwesenheit_user_ids)
+	{
+		$query = "SELECT anwesenheit_user_id,
+				CAST(extension.get_epoch_from_anw_times(von, bis) / 60 AS INTEGER) AS dauer
+			FROM extension.tbl_anwesenheit_user
+				JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
+			WHERE anwesenheit_user_id IN ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids]);
+	}
+
+	/**
+	 * loads the entry of the kontrolle with the most fehlminuten and the name of its student
+	 * (used to keep the kontrolle longer than these minutes when its times change)
+	 */
+	public function getMaxFehlminutenForKontrolle($anwesenheit_id, $verspaetetStatus)
+	{
+		$query = "SELECT fehlminuten, vorname, nachname
+			FROM extension.tbl_anwesenheit_user
+				JOIN public.tbl_prestudent USING (prestudent_id)
+				JOIN public.tbl_person USING (person_id)
+			WHERE anwesenheit_id = ? AND status = ?
+			ORDER BY fehlminuten DESC
+			LIMIT 1";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $verspaetetStatus]);
 	}
 
 	public function getEntschuldigungsstatusForPersonIds($personIds)
@@ -242,6 +291,7 @@ class Anwesenheit_User_model extends \DB_Model
 				extension.tbl_anwesenheit_user.updateamum as aupdatevon,
 				extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
 				extension.tbl_anwesenheit_user.notiz,
+				extension.tbl_anwesenheit_user.fehlminuten,
 				CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
 			FROM extension.tbl_anwesenheit
 					 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
@@ -270,6 +320,7 @@ class Anwesenheit_User_model extends \DB_Model
 			extension.tbl_anwesenheit.updatevon as kupdatevon,
 			extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis,
 			extension.tbl_anwesenheit_user.notiz,
+			extension.tbl_anwesenheit_user.fehlminuten,
 			extension.tbl_anwesenheit_user.insertvon as ainsertvon,
 			extension.tbl_anwesenheit_user.updatevon as aupdatevon,
 			CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER ) AS dauer
@@ -290,7 +341,7 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "
 			SELECT 
 				lehrveranstaltung_id, lehreinheit_id, anwesenheit_id, anwesenheit_user_id, prestudent_id,
-				von, bis, status, statussetvon, statussetamum, notiz, version, studiensemester_kurzbz, tbl_lehreinheit.lehrform_kurzbz,
+				von, bis, status, fehlminuten, statussetvon, statussetamum, notiz, version, studiensemester_kurzbz, tbl_lehreinheit.lehrform_kurzbz,
 				bezeichnung as le_bezeichnung,
 			extension.tbl_anwesenheit_user.insertamum as anwinsam, extension.tbl_anwesenheit_user.insertvon as anwinsvon,
 			extension.tbl_anwesenheit_user.updateamum as anwupdam, extension.tbl_anwesenheit_user.updatevon as anwupdvon,
@@ -364,22 +415,18 @@ class Anwesenheit_User_model extends \DB_Model
 	}
 
 	
+	// per student the latest history status (highest version) that differs from the current status.
+	// DISTINCT ON needs the outer ORDER BY, else postgres returns any row of the student
 	public function findLastDifferentStatus($prestudentIDs, $anwesenheit_id) {
-		$query = "SELECT DISTINCT ON (prestudent_id)
-						alias.prestudent_id as prestudent_id, alias.diff_status as status, alias.anwesenheit_user_id as anwesenheit_user_id, alias.notiz as notiz
-					FROM (
-							 SELECT
-								 hist.prestudent_id,
-								 hist.status AS diff_status,
-								 curr.anwesenheit_user_id,
-								 curr.notiz
-							 FROM extension.tbl_anwesenheit_user_history hist
-									  JOIN extension.tbl_anwesenheit_user curr ON hist.prestudent_id = curr.prestudent_id
-							 WHERE hist.status IS DISTINCT FROM curr.status AND hist.prestudent_id IN ? AND hist.anwesenheit_id = ? AND curr.anwesenheit_id = ?
-							 ORDER BY hist.version DESC
-						 ) as alias";
+		$query = "SELECT DISTINCT ON (curr.prestudent_id)
+						curr.prestudent_id, hist.status, curr.anwesenheit_user_id, curr.notiz
+					FROM extension.tbl_anwesenheit_user curr
+						JOIN extension.tbl_anwesenheit_user_history hist ON hist.anwesenheit_user_id = curr.anwesenheit_user_id
+					WHERE curr.anwesenheit_id = ? AND curr.prestudent_id IN ?
+						AND hist.status IS DISTINCT FROM curr.status
+					ORDER BY curr.prestudent_id, hist.version DESC NULLS LAST, hist.anwesenheit_user_history_id DESC";
 
-		return $this->execReadOnlyQuery($query, [$prestudentIDs, $anwesenheit_id, $anwesenheit_id]);
+		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $prestudentIDs]);
 
 	}
 }

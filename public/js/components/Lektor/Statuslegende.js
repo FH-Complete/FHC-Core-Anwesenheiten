@@ -34,6 +34,13 @@ export const Statuslegende = {
 						<span>{{ $capitalize($p.t('global/anwesend')) }}</span>
 					</li>
 					<li class="anw-legend-item">
+						<span class="anw-legend-sample anw-verspaetet gap-2">
+							<i class="fa-solid fa-user-clock" aria-hidden="true"></i>
+							<span>{{ $p.t('global/anwFehlminutenKurz', {minuten: 15}) }}</span>
+						</span>
+						<span>{{ $p.t('global/anwLegendeVerspaetet') }}</span>
+					</li>
+					<li class="anw-legend-item">
 						<span class="anw-legend-sample anw-abwesend"><i class="fa fa-xmark" aria-hidden="true"></i></span>
 						<span>{{ $capitalize($p.t('global/abwesend')) }}</span>
 					</li>

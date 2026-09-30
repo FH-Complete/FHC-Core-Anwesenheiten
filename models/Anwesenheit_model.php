@@ -29,9 +29,12 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getKontrollenForLeIds($le_ids)
 	{
+		// verspaetet counts as anwesend, the student was there. dauer is the duration that the
+		// quote counts, the upper limit for the fehlminuten of an entry
 		$query = "
 			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis,
-				   COUNT(*) FILTER (WHERE status = 'anwesend') AS anwesend,
+				   CAST(extension.get_epoch_from_anw_times(extension.tbl_anwesenheit.von, extension.tbl_anwesenheit.bis) / 60 AS INTEGER) AS dauer,
+				   COUNT(*) FILTER (WHERE status IN ('anwesend', 'verspaetet')) AS anwesend,
 				   COUNT(*) FILTER (WHERE status = 'abwesend') AS abwesend,
 				   COUNT(*) FILTER (WHERE status = 'entschuldigt') AS entschuldigt,
 				   extension.tbl_anwesenheit.insertvon, extension.tbl_anwesenheit.insertamum,
@@ -45,11 +48,19 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$le_ids]);
 	}
 
+	// duration in minutes that the quote counts for the given times of a kontrolle
+	public function getDauerForTimes($von, $bis)
+	{
+		$query = "SELECT CAST(extension.get_epoch_from_anw_times(CAST(? AS TIMESTAMP), CAST(? AS TIMESTAMP)) / 60 AS INTEGER) AS dauer";
+
+		return $this->execReadOnlyQuery($query, [$von, $bis]);
+	}
+
 	public function getKontrollenForLeIdAndDate($le_id, $date)
 	{
 		$query = "
 			SELECT anwesenheit_id, lehreinheit_id, TO_CHAR(CAST(von AS DATE), 'DD.MM.YYYY') AS datum, CAST(von AS TIME) AS von, CAST(bis AS TIME) AS bis,
-				   COUNT(*) FILTER (WHERE status = 'anwesend') AS anwesend,
+				   COUNT(*) FILTER (WHERE status IN ('anwesend', 'verspaetet')) AS anwesend,
 				   COUNT(*) FILTER (WHERE status = 'abwesend') AS abwesend,
 				   COUNT(*) FILTER (WHERE status = 'entschuldigt') AS entschuldigt,
 				   extension.tbl_anwesenheit.insertvon, extension.tbl_anwesenheit.insertamum,
@@ -154,7 +165,8 @@ class Anwesenheit_model extends \DB_Model
 				prestudent_id,
 				ta.anwesenheit_id,
 				DATE(ta.von) as datum,
-				extension.tbl_anwesenheit_user.status
+				extension.tbl_anwesenheit_user.status,
+				extension.tbl_anwesenheit_user.fehlminuten
 			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit ta on ta.anwesenheit_id = tbl_anwesenheit_user.anwesenheit_id
 			WHERE prestudent_id IN ? AND ta.lehreinheit_id IN ?;";
 
@@ -258,6 +270,7 @@ class Anwesenheit_model extends \DB_Model
 			       tbl_lehrveranstaltung.bezeichnung_english,
 			       lehrveranstaltung_id,
 				tbl_anwesenheit_status.status_kurzbz as student_status,
+				tbl_anwesenheit_user.fehlminuten,
 				Date(tbl_anwesenheit.von) as datum,
 				(tbl_anwesenheit.von) as von,
 				(tbl_anwesenheit.bis) as bis,
@@ -288,6 +301,7 @@ class Anwesenheit_model extends \DB_Model
 			statussetvon,
 			statussetamum,
 			notiz,
+			fehlminuten,
 			version,
 			insertamum,
 			insertvon,
@@ -301,6 +315,7 @@ class Anwesenheit_model extends \DB_Model
 			statussetvon,
 			statussetamum,
 			notiz,
+			fehlminuten,
 			version,
 			insertamum,
 			insertvon,
@@ -376,15 +391,16 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execQuery($query, [$lva_id, $sem_kurzbz]);
 	}
 
-	public function getCheckInCountsForAnwesenheitId($anwesenheit_id, $anwesendStatus, $abwesenStatus, $entschuldigtStatus)
+	// verspaetet counts as anwesend, the student was there
+	public function getCheckInCountsForAnwesenheitId($anwesenheit_id, $anwesendStatus, $abwesenStatus, $entschuldigtStatus, $verspaetetStatus)
 	{
-		$query = "SELECT COUNT(*) FILTER (WHERE status = ?) AS anwesend,
+		$query = "SELECT COUNT(*) FILTER (WHERE status = ? OR status = ?) AS anwesend,
 				COUNT(*) FILTER (WHERE status = ?) AS abwesend,
 				COUNT(*) FILTER (WHERE status = ?) AS entschuldigt
 			FROM extension.tbl_anwesenheit_user
 			WHERE anwesenheit_id = ?;";
 
-		return $this->execReadOnlyQuery($query, [$anwesendStatus, $abwesenStatus, $entschuldigtStatus, $anwesenheit_id]);
+		return $this->execReadOnlyQuery($query, [$anwesendStatus, $verspaetetStatus, $abwesenStatus, $entschuldigtStatus, $anwesenheit_id]);
 	}
 
 	public function getStudiengaenge()

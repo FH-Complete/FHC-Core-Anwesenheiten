@@ -161,11 +161,15 @@ class AdministrationApi extends FHCAPI_Controller
 						forEach($anwesenheit_user_ids as $id) { 
 							// query last status for each relevant "uncovered" user_entry
 							// that is to be reverted back to previous status, since they might have been anwesend in some
-							// and normally absent in others
+							// and normally absent in others. A qr scan during the entschuldigt status counts as
+							// anwesend, see ProfilApi::checkInAnwesenheit
 							
-							$result = $this->_ci->AnwesenheitUserHistoryModel->getStatusPriorToEntschuldigtForId($id);
-							if(count($result->retval) > 0) {
-								$stati[] = [$id, $result->retval[0]->status];
+							$result = $this->_ci->AnwesenheitUserHistoryModel->getStatusPriorToEntschuldigtForId($id, $entschuldigtStatus);
+							if (isError($result))
+								$this->terminateWithError($result);
+
+							if(hasData($result)) {
+								$stati[] = [$id, getData($result)[0]->status];
 							} else {
 								$stati[] = [$id, $updateStatus];
 							}
@@ -174,6 +178,8 @@ class AdministrationApi extends FHCAPI_Controller
 
 						$presentUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('ANWESEND_STATUS'));
 						$absentUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('ABWESEND_STATUS'));
+						// the update sets the status only, so the entry gets its stored fehlminuten back
+						$lateUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('VERSPAETET_STATUS'));
 
 						if(count($presentUserIds) > 0) {
 							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($presentUserIds, $this->_ci->config->item('ANWESEND_STATUS'));
@@ -182,6 +188,13 @@ class AdministrationApi extends FHCAPI_Controller
 							}
 						}
 						
+						if(count($lateUserIds) > 0) {
+							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($lateUserIds, $this->_ci->config->item('VERSPAETET_STATUS'));
+							if (isError($updateAnwesenheit)) {
+								$this->terminateWithError($updateAnwesenheit);
+							}
+						}
+
 						if(count($absentUserIds) > 0) {
 							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($absentUserIds, $this->_ci->config->item('ABWESEND_STATUS'));
 							if (isError($updateAnwesenheit)) {

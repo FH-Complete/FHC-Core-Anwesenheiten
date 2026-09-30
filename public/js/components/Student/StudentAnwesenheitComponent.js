@@ -119,12 +119,14 @@ export default {
 			return '<div class="anw-cell-center">' + this.einheitenText(cell.getValue()) + '</div>'
 		},
 		// status of one anwesenheit as the table and the list show it. anwesend and abwesend
-		// show the icon only, an entschuldigung adds its state
+		// show the icon only, an entschuldigung adds its state, verspaetet adds the missed minutes
 		anwStatus(row) {
 			const permissions = this.$entryParams.permissions
 
 			if (row.student_status === permissions.anwesend_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/anwesend'), label: ''}
+			if (row.student_status === permissions.verspaetet_status)
+				return {tone: 'late', icon: 'fa-user-clock', status: this.$p.t('global/anwVerspaetet'), label: this.$p.t('global/anwMinutenVersaeumt', {minuten: row.fehlminuten})}
 			if (row.student_status === permissions.entschuldigt_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/entschuldigt'), label: this.$p.t('global/entschuldigungAkzeptiert')}
 			if (row.student_status === permissions.abwesend_status) {
