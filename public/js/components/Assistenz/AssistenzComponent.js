@@ -6,13 +6,18 @@ import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
 import {StudiengangDropdown} from "../Student/StudiengangDropdown.js";
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
+import {AccountList} from "./AccountList.js";
 import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
 import AnwTimeline from "./AnwTimeline.js";
 import ApiAdmin from '../../api/factory/administration.js';
 
+// value of the status header filter per count
+const STATUS_FILTER = {offen: 'null', akzeptiert: 'true', abgelehnt: 'false'}
+
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
 	components: {
+		AccountList,
 		BsModal,
 		CoreBaseLayout,
 		CoreFilterCmpt,
@@ -35,26 +40,6 @@ export const AssistenzComponent = {
 			},
 			tableBuiltPromise: null,
 			assistenzViewTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen',
-				ajaxResponse: (url, params, response) => {
-					return this.toTableData(response)
-				},
-				ajaxConfig: "POST",
-				ajaxContentType:{
-					headers:{
-						'Content-Type': 'application/json'
-					},
-					body:()=> {
-						const berechtigungenArrayAdmin = this.$entryParams.permissions.admin && Array.isArray(this.$entryParams.permissions.studiengaengeAdmin) ? this.$entryParams.permissions.studiengaengeAdmin : []
-						const berechtigungenArrayAssistenz = this.$entryParams.permissions.assistenz && Array.isArray(this.$entryParams.permissions.studiengaengeAssistenz) ? this.$entryParams.permissions.studiengaengeAssistenz : []
-						const joined = [... new Set([... berechtigungenArrayAssistenz, ... berechtigungenArrayAdmin])]
-						return JSON.stringify({
-							stg_kz_arr: joined,
-							von: this.zeitraum.von,
-							bis: this.zeitraum.bis
-						})
-					}
-				},
 				debugInvalidComponentFuncs:false,
 				layout: 'fitData',
 				selectable: false,
@@ -62,8 +47,17 @@ export const AssistenzComponent = {
 				pagination: true,
 				paginationSize: 50,
 				height: this.$entryParams.tabHeights.assistenz,
+				// work order: open ones first, the oldest antrag on top. Tabulator sorts by the last entry
+				// first. A sort the user stored in the local storage replaces this one
+				initialSort: [
+					{column: 'entuploaddatum', dir: 'asc'},
+					{column: 'akzeptiert', dir: 'asc'}
+				],
 				columns: [
 					{title: Vue.computed(() => this.$capitalize(this.$p.t('ui/student_uid'))), field: 'student_uid',
+						formatter: this.studentUidFormatter,
+						// student_uid is an array: the sorter guess of tabulator calls value.match and throws
+						sorter: 'string',
 						headerFilter: true,
 						headerSort: true,
 						tooltip:false
@@ -88,6 +82,7 @@ export const AssistenzComponent = {
 						headerFilterParams:{values: {'true': 'Akzeptiert', 'false': 'Abgelehnt', 'null': 'Offen', '':'Alle'}},
 						headerFilterFunc: this.akzeptiertFilterFunc,
 						formatter: this.entschuldigungstatusFormatter,
+						sorter: this.statusSorter,
 						tooltip: false,
 						headerSort: true
 					},
@@ -96,11 +91,15 @@ export const AssistenzComponent = {
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/bis'))),headerSort: true, field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/antragsdatum'))),headerSort: true, field: 'entuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/fileuploaddatum'))),headerSort: true, field: 'fileuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					// filter and sort use the shown text, it lists every account for a person with more than one
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/organisationsform'))),headerSort: true, field: 'studentorgform',
+						formatter: cell => this.orgformText(cell.getData()),
 						headerFilter: true,
+						headerFilterFunc: (filterVal, rowVal, rowData) => this.orgformText(rowData).toLowerCase().includes(filterVal.toLowerCase()),
+						sorter: (a, b, aRow, bRow) => this.orgformText(aRow.getData()).localeCompare(this.orgformText(bRow.getData())),
 						tooltip: false
 					},
-					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz', formatter: studentFormatters.formStudiengangKz, tooltip:false},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz', formatter: this.studiengangFormatter, tooltip:false},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/aktion'))), headerSort: true,field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 260},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/begruendungAnw'))), headerSort: true,field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
@@ -149,6 +148,13 @@ export const AssistenzComponent = {
 					}
 				},
 				{
+					event: "dataFiltered",
+					handler: (filters, rows) => {
+						this.statusFilter = filters.find(filter => filter.field === 'akzeptiert')?.value ?? ''
+						this.updateCounts(rows.map(row => row.getData()))
+					}
+				},
+				{
 					event: "cellClick",
 					handler: async (e, cell) => {
 
@@ -163,7 +169,21 @@ export const AssistenzComponent = {
 				}
 			],
 			notiz: '',
-			studiengang: null
+			studiengang: null,
+			counts: {
+				gefiltert: {offen: 0, akzeptiert: 0, abgelehnt: 0},
+				gesamt: {offen: 0, akzeptiert: 0, abgelehnt: 0}
+			},
+			// open entschuldigungen: anzahl outside the date range, von - bis covers all of them
+			offene: {anzahl: 0, von: null, bis: null},
+			// the date range before "alle offenen laden", null while that mode is off
+			savedZeitraum: null,
+			loading: false,
+			loadRequest: 0,
+			// value of the status header filter, marks the active count
+			statusFilter: '',
+			statusAkzeptiert: false,
+			statusAccounts: []
 		};
 	},
 	props: {
@@ -252,18 +272,42 @@ export const AssistenzComponent = {
 			else if(filterVal === 'true') return rowVal === true
 			else if(filterVal === 'false') return rowVal === false
 		},
+		// order of the counts: offen, akzeptiert, abgelehnt
+		statusSorter(a, b) {
+			const rank = value => value === null ? 0 : value === true ? 1 : 2
+			return rank(a) - rank(b)
+		},
+		// a person with more than one account can belong to another assistenz. The uid, studiengang and
+		// orgform column then list every account, all from data.accounts, so the order is always the same
+		hasMehrereAccounts(data) {
+			return data.accounts?.length > 1
+		},
+		studentUidFormatter(cell) {
+			const data = cell.getData()
+			if (!this.hasMehrereAccounts(data))
+				return Array.isArray(data.student_uid) ? data.student_uid.join(', ') : (data.student_uid ?? '')
+
+			const title = this.$p.t('global/entMehrereAccountsKurz') + ': '
+				+ data.accounts.map(account => account.uid + ' (' + account.kurzbzlang + ', ' + (account.orgform_kurzbz ?? '-') + ')').join(', ')
+			return ' <i class="fa fa-users text-warning-emphasis ms-1" title="' + title + '"></i> ' + data.accounts.map(account => account.uid).join(', ')
+		},
+		studiengangFormatter(cell) {
+			const data = cell.getData()
+			if (!this.hasMehrereAccounts(data)) return studentFormatters.formStudiengangKz(cell)
+
+			return data.accounts.map(account => account.kurzbzlang + ' ' + account.bezeichnung).join(', ')
+		},
+		// '-' keeps the positions when an account has no orgform
+		orgformText(data) {
+			if (!this.hasMehrereAccounts(data)) return data.studentorgform ?? ''
+
+			return data.accounts.map(account => account.orgform_kurzbz ?? '-').join(', ')
+		},
+		// the colors live in FhcMain.css with a variant for the dark theme
 		entschuldigungstatusFormatter(cell) {
-			let data = cell.getValue()
-			if (data == null) {
-				cell.getElement().style.color = "#17a2b8"
-				return this.$p.t('global/offen')
-			} else if (data === true) {
-				cell.getElement().style.color = "#28a745";
-				return this.$p.t('global/akzeptiert')
-			} else if (data === false) {
-				cell.getElement().style.color = "#dc3545";
-				return this.$p.t('global/abgelehnt')
-			}
+			const data = cell.getValue()
+			const status = data === true ? 'akzeptiert' : data === false ? 'abgelehnt' : 'offen'
+			return '<span class="anw-ent-status--' + status + '">' + this.$p.t('global/' + status) + '</span>'
 		},
 		updateEntschuldigung: function(cell, status, notizParam = '')
 		{
@@ -277,6 +321,7 @@ export const AssistenzComponent = {
 				if (res.meta.status === "success")
 				{
 					cell.getRow().update({'akzeptiert': status, 'notiz': notiz});
+					this.updateCounts()
 					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
 				}
 			});
@@ -325,7 +370,7 @@ export const AssistenzComponent = {
 				button.style.minWidth = minwidth;
 				button.innerHTML = '<i class="fa fa-check"></i>';
 				button.title = this.$p.t('global/entschuldigungAkzeptieren');
-				button.addEventListener('click', () => this.updateEntschuldigung(cell, true));
+				button.addEventListener('click', () => this.acceptEntschuldigung(cell));
 				actionwrapper.append(button);
 			}
 			
@@ -334,7 +379,7 @@ export const AssistenzComponent = {
 			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
 			button.title = this.$p.t('global/entschuldigungAblehnen');
-			button.addEventListener('click', () => this.openRejectionModal(cell));
+			button.addEventListener('click', () => this.openStatusModal(cell, false));
 			actionwrapper.append(button);
 
 			return actionwrapper;
@@ -352,18 +397,25 @@ export const AssistenzComponent = {
 		handleInputNotiz(e) {
 			this.notiz = e.target.value;
 		},
-		rejectEntschuldigung() {
-			this.updateEntschuldigung(this.rejectCell, false, this.notiz)
-			this.rejectCell = null
+		acceptEntschuldigung(cell) {
+			// the assistenz of another studiengang can be responsible for a person with more than one account
+			if (cell.getData().accounts?.length > 1) this.openStatusModal(cell, true)
+			else this.updateEntschuldigung(cell, true)
+		},
+		confirmStatus() {
+			this.updateEntschuldigung(this.statusCell, this.statusAkzeptiert, this.statusAkzeptiert ? '' : this.notiz)
+			this.statusCell = null
 			this.notiz = ''
 
-			this.$refs.modalContainerRejectionReason.hide()
+			this.$refs.modalContainerStatus.hide()
 		},
-		openRejectionModal(cell) {
-			this.rejectCell = cell
+		openStatusModal(cell, akzeptiert) {
+			this.statusCell = cell
+			this.statusAkzeptiert = akzeptiert
+			this.statusAccounts = cell.getData().accounts ?? []
 
 			this.notiz = cell.getData().notiz
-			this.$refs.modalContainerRejectionReason.show()
+			this.$refs.modalContainerStatus.show()
 		},
 		sgChangedHandler: function(e) {
 			this.studiengang = e.value ? e.value.studiengang_kz : null
@@ -394,15 +446,93 @@ export const AssistenzComponent = {
 			console.warn('getEntschuldigungen returned no list:', response)
 			return []
 		},
-		refetchData() {
-			const stg_kz_arr =  this.$entryParams.permissions.assistenz ?
-				this.$entryParams.permissions.studiengaengeAssistenz :
-				this.$entryParams.permissions.admin ? this.$entryParams.permissions.studiengaengeAdmin : []
+		// studiengaenge of both rights, the first load, the reload and the count use the same ones
+		getStgKzArr() {
+			const permissions = this.$entryParams.permissions
+			const admin = permissions.admin && Array.isArray(permissions.studiengaengeAdmin) ? permissions.studiengaengeAdmin : []
+			const assistenz = permissions.assistenz && Array.isArray(permissions.studiengaengeAssistenz) ? permissions.studiengaengeAssistenz : []
+			return [... new Set([... assistenz, ... admin])]
+		},
+		// one load path for the first load, the date range and "alle offenen laden"
+		loadData() {
+			// an older request that answers late must not overwrite the newer data
+			const request = ++this.loadRequest
+			this.loading = true
+			this.fetchOffene()
 
-				this.$api.call(ApiAdmin.getEntschuldigungen(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis))
-					.then(res => {
-				this.$refs.assistenzTable.tabulator.setData(this.toTableData(res))
+			Promise.all([
+				this.$api.call(ApiAdmin.getEntschuldigungen(this.getStgKzArr(), this.zeitraum.von, this.zeitraum.bis)),
+				this.tableBuiltPromise
+			])
+				.then(([res]) => {
+					if (request === this.loadRequest) this.$refs.assistenzTable.tabulator.setData(this.toTableData(res))
+				})
+				.catch(this.$fhcAlert.handleSystemError)
+				.finally(() => {
+					if (request === this.loadRequest) this.loading = false
+				})
+		},
+		fetchOffene() {
+			// the count follows the studiengang dropdown like the table
+			const stg_kz_arr = this.studiengang ? [this.studiengang] : this.getStgKzArr()
+			this.$api.call(ApiAdmin.getOffeneTimespan(stg_kz_arr, this.zeitraum.von, this.zeitraum.bis))
+				.then(res => {
+					// a message object without anzahl if entschuldigungen are turned off
+					this.offene = Number.isInteger(res.data?.anzahl) ? res.data : {anzahl: 0, von: null, bis: null}
+				})
+				.catch(this.$fhcAlert.handleSystemError)
+		},
+		// widens the date range to the antragsdatum of all open entschuldigungen, the datepickers show what is loaded
+		alleOffenenLaden() {
+			if (!this.offene.von) return
+
+			if (!this.savedZeitraum) this.savedZeitraum = {...this.zeitraum}
+			this.zeitraum = {
+				von: this.offene.von < this.zeitraum.von ? this.offene.von : this.zeitraum.von,
+				bis: this.offene.bis > this.zeitraum.bis ? this.offene.bis : this.zeitraum.bis
+			}
+			this.offene.anzahl = 0
+		},
+		zeitraumZuruecksetzen() {
+			this.zeitraum = this.savedZeitraum
+			this.savedZeitraum = null
+		},
+		// a manual date change ends the "alle offenen" mode, the saved range no longer fits
+		setZeitraum(key, value) {
+			if (this.zeitraum[key] === value) return
+
+			this.savedZeitraum = null
+			this.zeitraum[key] = value
+		},
+		summe(counts) {
+			return counts.offen + counts.akzeptiert + counts.abgelehnt
+		},
+		// the counts work as quick filters on the status column, a second click shows all again
+		toggleStatusFilter(status) {
+			const value = this.isStatusFilter(status) ? '' : STATUS_FILTER[status]
+			this.$refs.assistenzTable.tabulator.setHeaderFilterValue('akzeptiert', value)
+		},
+		isStatusFilter(status) {
+			return this.statusFilter === STATUS_FILTER[status]
+		},
+		countByStatus(data) {
+			const counts = {offen: 0, akzeptiert: 0, abgelehnt: 0}
+			data.forEach(row => {
+				if (row.akzeptiert === true) counts.akzeptiert++
+				else if (row.akzeptiert === false) counts.abgelehnt++
+				else counts.offen++
 			})
+			return counts
+		},
+		// dataFiltered hands over the filtered rows, the active rows of the table are not up to date there yet
+		updateCounts(filteredData) {
+			const table = this.$refs.assistenzTable?.tabulator
+			if (!table) return
+
+			this.counts = {
+				gefiltert: this.countByStatus(filteredData ?? table.getData('active')),
+				gesamt: this.countByStatus(table.getData())
+			}
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
@@ -427,6 +557,7 @@ export const AssistenzComponent = {
 		this.tableBuiltPromise = new Promise(this.tableResolve)
 		this.checkEntryParamPermissions()
 		this.setup()
+		this.loadData()
 		
 		this.calculateTableHeight()
 		
@@ -445,14 +576,16 @@ export const AssistenzComponent = {
 		}
 	},
 	watch: {
-		'zeitraum.von'() {
-			this.refetchData()
-		},
-		'zeitraum.bis'() {
-			this.refetchData()
+		// deep: one load when von and bis change together
+		zeitraum: {
+			deep: true,
+			handler() {
+				this.loadData()
+			}
 		},
 		studiengang() {
 			this.filtern()
+			this.fetchOffene()
 		}
 	},
 	computed: {
@@ -471,18 +604,24 @@ export const AssistenzComponent = {
 
 	<core-base-layout>
 		<template #main>
-			<bs-modal ref="modalContainerRejectionReason" class="bootstrap-prompt" dialogClass="modal-lg">
-				<template v-slot:title>{{ $p.t('global/entschuldigungNotizAblehnen') }}</template>
+			<bs-modal ref="modalContainerStatus" class="bootstrap-prompt" dialogClass="modal-lg">
+				<template v-slot:title>{{ statusAkzeptiert ? $p.t('global/entschuldigungAkzeptieren') : $p.t('global/entschuldigungNotizAblehnen') }}</template>
 				<template v-slot:default>
 					<div>
-						<div class="mt-2">
+						<div v-if="statusAccounts.length > 1" class="alert alert-warning">
+							<p><i class="fa fa-triangle-exclamation me-2"></i>{{ $p.t('global/entMehrereAccounts') }}</p>
+							<AccountList :accounts="statusAccounts"></AccountList>
+						</div>
+						<div v-if="!statusAkzeptiert" class="mt-2">
 							<input maxlength=255 class="form-control" :value="notiz" @input="handleInputNotiz" :placeholder="$p.t('global/begruendungAnw')">
 						</div>
 					</div>
 					
 				</template>
 				<template v-slot:footer>
-					<button type="button" class="btn btn-primary" :disabled="!notiz" @click="rejectEntschuldigung">{{ $p.t('global/reject') }}</button>
+					<button type="button" class="btn btn-outline-secondary" @click="$refs.modalContainerStatus.hide()">{{ $p.t('ui','cancel') }}</button>
+					<button v-if="statusAkzeptiert" type="button" class="btn btn-primary" @click="confirmStatus">{{ $p.t('ui/bestaetigen') }}</button>
+					<button v-else type="button" class="btn btn-primary" :disabled="!notiz" @click="confirmStatus">{{ $p.t('global/reject') }}</button>
 				</template>
 			</bs-modal>
 
@@ -531,15 +670,19 @@ export const AssistenzComponent = {
 			
 				<div class="col-2">
 					<div class="row mb-3 align-items-center">
+						<label class="form-label small mb-1">{{ $capitalize($p.t('lehre/studiengang')) }}</label>
 						<StudiengangDropdown
 							:allowedStg="getAllowedStg" @sgChanged="sgChangedHandler">
 						</StudiengangDropdown>
 					</div>
 				</div>
+				<!-- the date range filters the antragsdatum, not the absence of the von/bis columns -->
 				<div class="col-2">
 					<div class="row mb-3 align-items-center">
+						<label class="form-label small mb-1">{{ $p.t('global/entAntragsdatumVon') }}</label>
 						<datepicker
-							v-model="zeitraum.von"
+							:model-value="zeitraum.von"
+							@update:model-value="setZeitraum('von', $event)"
 							:placeholder="$capitalize($p.t('ui/von'))"
 							:clearable="false"
 							auto-apply
@@ -551,8 +694,10 @@ export const AssistenzComponent = {
 				</div>
 				<div class="col-2">
 					<div class="row mb-3 align-items-center">
+						<label class="form-label small mb-1">{{ $p.t('global/entAntragsdatumBis') }}</label>
 						<datepicker
-							v-model="zeitraum.bis"
+							:model-value="zeitraum.bis"
+							@update:model-value="setZeitraum('bis', $event)"
 							:placeholder="$capitalize($p.t('global/bis'))"
 							:clearable="false"
 							auto-apply
@@ -563,16 +708,49 @@ export const AssistenzComponent = {
 					</div>
 				</div>
 			</div>
-			<core-filter-cmpt
-				ref="assistenzTable"
-				@uuidDefined="handleUuidDefined"
-				:tabulator-options="assistenzViewTabulatorOptions"
-				:tabulator-events="assistenzViewTabulatorEventHandlers"
-				:isUsingPresets="true"
-				presetsId="anwesenheitenAssistenzTable"
-				:sideMenu="false"
-				:table-only="true"
-			></core-filter-cmpt>
+			<div class="position-relative" :class="{'anw-loading': loading}">
+				<div v-if="loading" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-body bg-opacity-50" style="z-index: 20;" role="status">
+					<i class="fa-solid fa-spinner fa-pulse fa-3x" aria-hidden="true"></i>
+					<span class="visually-hidden">{{ $p.t('ui/loading') }}</span>
+				</div>
+				<core-filter-cmpt
+					ref="assistenzTable"
+					@uuidDefined="handleUuidDefined"
+					:tabulator-options="assistenzViewTabulatorOptions"
+					:tabulator-events="assistenzViewTabulatorEventHandlers"
+					:isUsingPresets="true"
+					presetsId="anwesenheitenAssistenzTable"
+					:sideMenu="false"
+					:table-only="true"
+				>
+					<!-- header filters from the local storage and a short date range can hide entschuldigungen
+					without notice. The counts show what is hidden, in red, and filter by status on click -->
+					<template #actions>
+						<span>
+							{{ $capitalize($p.t('global/gefiltert')) }}/{{ $capitalize($p.t('global/gesamt')) }}:
+							<strong>{{ summe(counts.gefiltert) }}</strong>/{{ summe(counts.gesamt) }}
+						</span>
+						<button
+							v-for="status in ['offen', 'akzeptiert', 'abgelehnt']"
+							:key="status"
+							type="button"
+							class="btn btn-sm"
+							:class="[counts.gefiltert[status] < counts.gesamt[status] ? 'btn-outline-danger' : 'btn-outline-secondary', {active: isStatusFilter(status)}]"
+							:aria-pressed="isStatusFilter(status)"
+							:title="isStatusFilter(status) ? $p.t('global/entStatusFilterAufheben') : $p.t('global/entNurStatusAnzeigen')"
+							@click="toggleStatusFilter(status)"
+						>
+							{{ $capitalize($p.t('global/' + status)) }}: <strong>{{ counts.gefiltert[status] }}</strong>/{{ counts.gesamt[status] }}
+						</button>
+						<button v-if="offene.anzahl > 0" type="button" class="btn btn-sm btn-outline-danger" :title="$p.t('global/entAlleOffenenLaden')" @click="alleOffenenLaden">
+							<i class="fa fa-triangle-exclamation"></i> {{ $p.t('global/entOffenAusserhalbZeitraum') }}: <strong>{{ offene.anzahl }}</strong>
+						</button>
+						<button v-if="savedZeitraum" type="button" class="btn btn-sm btn-outline-secondary" :title="$p.t('global/entZeitraumZuruecksetzen')" @click="zeitraumZuruecksetzen">
+							<i class="fa fa-rotate-left"></i> {{ $p.t('global/entAlleOffenenGeladen') }}
+						</button>
+					</template>
+				</core-filter-cmpt>
+			</div>
 		</template>
 	</core-base-layout>
 `

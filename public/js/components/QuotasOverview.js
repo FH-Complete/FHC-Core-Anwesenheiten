@@ -61,6 +61,7 @@ export default {
 			return `${hours}:${minutes}`;
 		}
 	},
+	// the dashboard does not load the extension css. The status colors reach 3:1 on the light and the dark widget
 	template: `
 		<div class="flex-grow-1" style="overflow-y: auto; overflow-x: hidden">
 			<div v-if="quotas === null" class="d-flex h-100 justify-content-center align-items-center">
@@ -68,7 +69,7 @@ export default {
 			</div>
 			<template v-else-if="quotas.length" v-for="(quota, index) in quotas" :key="'quota-'+index" style="margin-top: 8px;">
 				<div class="d-grid p-0" >
-					<div class="btn btn-link link-secondary text-decoration-none" @click="showLvaAnw(quota)">
+					<div class="btn btn-link text-body-secondary text-decoration-none" @click="showLvaAnw(quota)">
 						<p>{{ quota.bezeichnung }} - {{ quota.anwesenheit }} % </p>
 						<div v-if="quota.currentlyLoadingDetails" class="d-flex h-100 justify-content-center align-items-center">
 							<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
@@ -81,9 +82,9 @@ export default {
 					<div v-if="quota.showDetails && quota.details.length" v-for="(anw, index) in quota.details" class="row row-cols-auto" style="padding: 2px; margin: 0px;">
 						<div class="col-10 text-center">{{ anw.vonDate }}, {{ anw.vonTime }} - {{ anw.bisTime }}</div>
 						<div class="col-2">
-							<i v-if="anw.status === 'anwesend'" class="fa fa-check" style="color: green"></i>
+							<i v-if="anw.status === 'anwesend'" class="fa fa-check" style="color: var(--fhc-green-60, #329132)"></i>
 							<i v-else-if="anw.status === 'abwesend'" class="fa fa-xmark" style="color: red"></i>
-							<i v-else-if="anw.status === 'entschuldigt'" class="fa fa-shield" style="color: blue"></i>
+							<i v-else-if="anw.status === 'entschuldigt'" class="fa fa-shield" style="color: var(--fhc-primary-highlight, #0086cb)"></i>
 							<i v-else-if="anw.status === 'verspaetet'" class="fa-solid fa-user-clock" style="color: #b36b00"
 								:title="$p.t('global/anwMinutenVersaeumt', {minuten: anw.fehlminuten})"></i>
 						</div>

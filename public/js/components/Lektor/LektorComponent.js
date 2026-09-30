@@ -331,12 +331,13 @@ export const LektorComponent = {
 
 			const container = document.createElement("div");
 			container.style.textAlign = "center";
-			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span style="color: gray;">${this.stripSeconds(titleParts[1])}</span>`;
+			// text-body-secondary follows the theme, a fixed gray reaches 4:1 on the light and 2.9:1 on the dark header
+			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span class="text-body-secondary">${this.stripSeconds(titleParts[1])}</span>`;
 
 			// in the combined multi le view show which lehreinheit the kontrolle belongs to
 			if (this.multiLeMode && titleParts[2] !== undefined) {
 				const leLabel = this.getLeLabel(titleParts[2].trim())
-				container.innerHTML += `<br><span style="color: gray; font-size: 0.75em;">${leLabel}</span>`;
+				container.innerHTML += `<br><span class="text-body-secondary" style="font-size: 0.75em;">${leLabel}</span>`;
 			}
 			return container;
 		},
@@ -383,8 +384,9 @@ export const LektorComponent = {
 					const dateSpan = document.createElement('span');
 					dateSpan.innerText = this.formatEntschuldigungZeit(ent);
 
+					// same status colors as the entschuldigungsmanagement, FhcMain.css has the variants for the black tooltip
 					const statusSpan = document.createElement('span');
-					statusSpan.style.color = ent.akzeptiert ? '#2e7d32' : '#d32f2f';
+					statusSpan.className = 'anw-ent-status--' + (ent.akzeptiert === true ? 'akzeptiert' : ent.akzeptiert === false ? 'abgelehnt' : 'offen');
 					statusSpan.innerText = this.$p.t('global/statusLabel') + ': ' + this.formatAkzeptiertStatus(ent.akzeptiert);
 
 					grid.appendChild(dateSpan);
@@ -433,7 +435,7 @@ export const LektorComponent = {
 			const data = cell.getData()
 			const val = data.sum ?? data.anteil ?? '-'
 			const isLow = val !== '-' && val < (this.$entryParams.permissions.positiveRatingThreshold * 100)
-			return '<div style="display: flex;' + (isLow ? 'color: red; ' : '') + 'justify-content: center; align-items: center; height: 100%">' + val + ' %</div>'
+			return '<div' + (isLow ? ' class="anw-sum--low"' : '') + ' style="display: flex; justify-content: center; align-items: center; height: 100%">' + val + ' %</div>'
 		},
 		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()

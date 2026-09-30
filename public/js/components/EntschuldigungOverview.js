@@ -43,6 +43,7 @@ export default {
 			return datesFormatted
 		}
 	},
+	// the dashboard does not load the extension css. The status colors reach 3:1 on the light and the dark widget
 	template: `
 		<div class="flex-grow-1" style="overflow-y: auto; overflow-x: hidden">
 			<div v-if="entschuldigungen === null" class="d-flex h-100 justify-content-center align-items-center">
@@ -54,8 +55,8 @@ export default {
 					<div class="col-1 text-center">-</div>
 					<div class="col-5 text-center">{{ datesFormatted[index].bisShort }} </div>
 					<div class="col-1">
-						<i v-if="entschuldigung.akzeptiert === null" class="fa fa-circle-info text-info" style="transform: translateX(-2px)"></i>
-						<i v-else-if="entschuldigung.akzeptiert" class="fa fa-check" style="color: green"></i>
+						<i v-if="entschuldigung.akzeptiert === null" class="fa fa-circle-info" style="transform: translateX(-2px); color: var(--fhc-teal-60, #148c8c)"></i>
+						<i v-else-if="entschuldigung.akzeptiert" class="fa fa-check" style="color: var(--fhc-green-60, #329132)"></i>
 						<i v-else-if="!entschuldigung.akzeptiert" class="fa fa-xmark" style="color: red"></i>
 					</div>
 				</div>
