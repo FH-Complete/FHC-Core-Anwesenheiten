@@ -1,8 +1,11 @@
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
+import {AccountList} from "./AccountList.js";
+import {studentFormatters} from "../../formatters/formatters.js";
 
 export const EntschuldigungEdit = {
 	name: "EntschuldigungEdit",
 	components: {
+		AccountList,
 		Datepicker: VueDatePicker,
 		Textarea: primevue.textarea,
 		Tristate: primevue.tristatecheckbox
@@ -43,6 +46,10 @@ export const EntschuldigungEdit = {
 			d.setFullYear(d.getFullYear() - 1)
 
 			return d
+		},
+		// same format as the antragsdatum column of the table
+		formatAntragsdatum(value) {
+			return studentFormatters.formDate({getValue: () => value})
 		},
 		formatDate(date) {
 			const day = date.getDate();
@@ -103,11 +110,18 @@ export const EntschuldigungEdit = {
 				<p>
 					{{ modelValue.vorname }} {{ modelValue.nachname }}
 				</p>
-				<p>
+				<!-- more than one account: every uid with studiengang and orgform instead of the one studiengang of the row -->
+				<div v-if="modelValue.accounts?.length > 1">
+					<div class="alert alert-warning">
+						<p class="mb-1"><i class="fa fa-users me-2"></i>{{ $p.t('global/entMehrereAccountsKurz') }}:</p>
+						<AccountList :accounts="modelValue.accounts"></AccountList>
+					</div>
+				</div>
+				<p v-else>
 					{{ modelValue.kurzbzlang }} {{ modelValue.bezeichnung }} {{ modelValue.studentorgform }}
 				</p>
 				<p>
-					{{$p.t('global/uploaddatum')}}: {{modelValue.uploaddatum }}
+					{{$p.t('global/uploaddatum')}}: {{ formatAntragsdatum(modelValue.entuploaddatum) }}
 				</p>
 			</div>
 			

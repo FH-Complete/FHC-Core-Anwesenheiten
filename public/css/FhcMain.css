@@ -6,7 +6,7 @@
 /* Subtitle. Use it in span within main title. */
 .fhc-subtitle {
 	--bs-text-opacity: 1;
-	color: #6c757d!important;
+	color: var(--bs-secondary-color, #6c757d)!important;
 	font-size: .65em;
 	font-weight: normal;
 	padding-left: 20px;
@@ -134,12 +134,21 @@
 	gap: 0.375rem;
 }
 
+/* 4.5:1 on the light and the dark table rows and cards (cis4 html.dark) */
 .anw-status--present {
-	color: #28a745;
+	color: #1b7a34;
 }
 
 .anw-status--absent {
-	color: #dc3545;
+	color: #c82333;
+}
+
+html.dark .anw-status--present {
+	color: #69db7c;
+}
+
+html.dark .anw-status--absent {
+	color: #ff8787;
 }
 
 .anw-cell-center {
@@ -435,7 +444,7 @@
 	top: 1px;
 	transform: translateX(-50%);
 	font-size: 0.72rem;
-	color: #6c757d;
+	color: var(--bs-secondary-color, #6c757d);
 	white-space: nowrap;
 	pointer-events: none;
 }
@@ -464,8 +473,12 @@
 	top: 0;
 	bottom: 0;
 	width: 2px;
-	background-color: #dc3545;
+	background-color: #c82333;
 	opacity: 0.7;
+}
+
+html.dark .anw-tl-now {
+	background-color: #ff8787;
 }
 
 .anw-tl-lane {
@@ -481,7 +494,7 @@
 	font-size: 0.7rem;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: #6c757d;
+	color: var(--bs-secondary-color, #6c757d);
 }
 
 .anw-tl-band {
@@ -545,6 +558,11 @@
 	pointer-events: none;
 }
 
+/* --fhc-primary reaches 2.4:1 on the dark overview */
+html.dark .anw-tl-window {
+	border-color: #79b7d8;
+}
+
 .anw-tl-details {
 	min-height: 1.6rem;
 }
@@ -598,19 +616,25 @@
 	font-weight: 600;
 }
 
-/* status colors of the bars, the dots and the badges */
+/* the dark theme draws the tones light, the badge text dark */
+html.dark .anw-tl-badge {
+	color: #212529;
+}
+
+/* status colors of the bars, the dots and the badges, the palette of the tables: 3:1 on the
+   light and the dark cards, 4.5:1 for the badge text (cis4 html.dark) */
 .anw-tl-tone--accepted,
 .anw-tl-tone--present {
-	background-color: #28a745;
+	background-color: #1b7a34;
 }
 
 .anw-tl-tone--rejected,
 .anw-tl-tone--absent {
-	background-color: #dc3545;
+	background-color: #c82333;
 }
 
 .anw-tl-tone--open {
-	background-color: #17a2b8;
+	background-color: #0b7285;
 }
 
 .anw-tl-tone--excused {
@@ -618,6 +642,28 @@
 }
 
 .anw-tl-tone--unknown {
+	background-color: #5c636a;
+}
+
+html.dark .anw-tl-tone--accepted,
+html.dark .anw-tl-tone--present {
+	background-color: #69db7c;
+}
+
+html.dark .anw-tl-tone--rejected,
+html.dark .anw-tl-tone--absent {
+	background-color: #ff8787;
+}
+
+html.dark .anw-tl-tone--open {
+	background-color: #66d9e8;
+}
+
+html.dark .anw-tl-tone--excused {
+	background-color: #91a7ff;
+}
+
+html.dark .anw-tl-tone--unknown {
 	background-color: #adb5bd;
 }
 
@@ -679,12 +725,14 @@
 	}
 }
 
+/* hover popup of the counts and the kontrolle info. It follows the theme: the dark theme
+   draws the text and the status colors light */
 .legend-info {
 	position: absolute;
 	top: -120%;
 	left: -50%;
-	background: white;
-	border: 1px solid #ddd;
+	background: var(--bs-body-bg, #fff);
+	border: 1px solid var(--bs-border-color, #ddd);
 	padding: 0.75rem 1rem;
 	border-radius: 8px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -711,13 +759,14 @@
 	border-radius: 0 !important;
 }
 
-/* Anwesenheit status colors, shared by LektorComponent formatters/row coloring */
+/* Anwesenheit status colors, shared by LektorComponent formatters/row coloring. 4.5:1 on the light
+   and the dark table rows (cis4 html.dark), 3:1 for the icons on an unsaved (purple) cell */
 .anw-anwesend {
-	color: #28a745;
+	color: #1b7a34;
 }
 
 .anw-abwesend {
-	color: #dc3545;
+	color: #c82333;
 }
 
 .anw-entschuldigt {
@@ -725,11 +774,59 @@
 }
 
 .anw-entschuldigt-offen {
-	color: #12d5d5;
+	color: #0b7285;
 }
 
 .anw-dirty {
 	background-color: #E0BBE4 !important;
+}
+
+html.dark .anw-anwesend {
+	color: #69db7c;
+}
+
+html.dark .anw-abwesend {
+	color: #ff8787;
+}
+
+html.dark .anw-entschuldigt {
+	color: #91a7ff;
+}
+
+html.dark .anw-entschuldigt-offen {
+	color: #66d9e8;
+}
+
+/* the cis4 dark theme sets the color of every table row and the background of every cell with
+   !important. Without these rules the row colors and the unsaved cell disappear */
+html.dark .tabulator .tabulator-row.anw-entschuldigt {
+	color: #91a7ff !important;
+}
+
+html.dark .tabulator .tabulator-row.anw-entschuldigt-offen {
+	color: #66d9e8 !important;
+}
+
+html.dark .tabulator .tabulator-cell.anw-dirty {
+	background-color: #6b4577 !important;
+}
+
+/* a selected row (#9abcea, core Tabulator5.css) needs darker icons for 3:1 */
+html:not(.dark) .tabulator-row.tabulator-selected .anw-anwesend {
+	color: #146c43;
+}
+
+html:not(.dark) .tabulator-row.tabulator-selected .anw-abwesend {
+	color: #b02a37;
+}
+
+/* a quote below the positive rating threshold */
+.anw-sum--low {
+	color: #c82333;
+}
+
+html.dark .anw-sum--low {
+	color: #ff8787;
 }
 
 /* Statuslegende of the Lektor view. A sample looks like a cell of the Lektor table */
@@ -786,4 +883,55 @@
 	.anw-legend-sample {
 		flex-basis: 8rem;
 	}
+}
+
+/* the entschuldigungsmanagement shows its spinner while it loads, not the "no data" placeholder */
+.anw-loading .tabulator-placeholder {
+	visibility: hidden;
+}
+
+/* entschuldigungsmanagement: status and file icon, 4.5:1 on the light and the dark table rows (cis4 html.dark) */
+.anw-ent-status--offen {
+	color: #0b7285;
+}
+
+.anw-ent-status--akzeptiert {
+	color: #1b7a34;
+}
+
+.anw-ent-status--abgelehnt {
+	color: #c82333;
+}
+
+.anw-file-icon {
+	color: #00649c;
+}
+
+html.dark .anw-ent-status--offen {
+	color: #66d9e8;
+}
+
+html.dark .anw-ent-status--akzeptiert {
+	color: #69db7c;
+}
+
+html.dark .anw-ent-status--abgelehnt {
+	color: #ff8787;
+}
+
+html.dark .anw-file-icon {
+	color: #79b7d8;
+}
+
+/* the tabulator tooltip is black in both themes (core Tabulator5.css): the light variants */
+.tabulator-tooltip .anw-ent-status--offen {
+	color: #66d9e8;
+}
+
+.tabulator-tooltip .anw-ent-status--akzeptiert {
+	color: #69db7c;
+}
+
+.tabulator-tooltip .anw-ent-status--abgelehnt {
+	color: #ff8787;
 }

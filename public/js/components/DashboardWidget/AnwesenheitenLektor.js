@@ -53,9 +53,9 @@ export default {
 			if (now < start) return 'future'
 			return 'past'
 		},
+		// a past lesson gets the secondary text color (template), an opacity of 0.5 dropped it to 2.2:1
 		rowStyle(status) {
 			if (status === 'current') return { backgroundColor: 'rgba(25, 135, 84, 0.12)' }
-			if (status === 'past') return { opacity: 0.5 }
 			return {}
 		},
 		dayLabel(dt) {
@@ -155,13 +155,14 @@ export default {
 		<div v-else class="flex-grow-1" style="overflow-y: auto">
 			<div v-for="day in days" :key="day.iso">
 				<div class="anw-lektor-dayhdr small fw-bold px-2 py-1 border-bottom bg-body-secondary"
-					:class="{ 'text-primary': day.isToday }">
+					:class="{ 'text-primary-emphasis': day.isToday }">
 					{{ day.label }}<span v-if="day.isToday"> · Heute</span>
 				</div>
 				<a v-for="l in day.lessons" :key="day.iso + '-' + l.lehreinheit_id"
 					:href="buildLink(l)"
 					target="_blank"
-					class="anw-lektor-lesson d-flex align-items-center border-bottom px-2 py-2 text-body text-decoration-none"
+					class="anw-lektor-lesson d-flex align-items-center border-bottom px-2 py-2 text-decoration-none"
+					:class="l._status === 'past' ? 'text-body-secondary' : 'text-body'"
 					:style="rowStyle(l._status)"
 					:title="l.bezeichnung">
 					<div class="text-nowrap text-center me-3">

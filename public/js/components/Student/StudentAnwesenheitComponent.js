@@ -267,10 +267,8 @@ export default {
 		sumBottomCalcFormatter(cell) {
 			const val = Number.parseFloat(cell.getValue())
 			if(Number.isNaN(val)) return cell.getValue()
-			if (this.isQuoteLow(val)) {
-				const el = cell.getElement()
-				el.style.setProperty('color', 'red')
-			}
+			// the class follows the theme. Toggle it, a recalc formats the same calc cell again
+			cell.getElement().classList.toggle('anw-sum--low', this.isQuoteLow(val))
 
 			return cell.getValue()
 		},

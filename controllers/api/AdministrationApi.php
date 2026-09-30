@@ -10,6 +10,9 @@ class AdministrationApi extends FHCAPI_Controller
 				// fetch table data
 				'getEntschuldigungen' => array('extension/anw_r_ent_assistenz:r', 'extension/anw_r_full_assistenz:r'),
 				
+				// open entschuldigungen the date range of the table hides + the range of all open ones
+				'getOffeneTimespan' => array('extension/anw_r_ent_assistenz:r', 'extension/anw_r_full_assistenz:r'),
+				
 				// set status on entschuldigung
 				'updateEntschuldigung' => array('extension/anw_r_ent_assistenz:rw', 'extension/anw_r_full_assistenz:rw'),
 				
@@ -24,7 +27,6 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_History_model', 'AnwesenheitUserHistoryModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
-		$this->_ci->load->model('person/Person_model', 'PersonModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
@@ -65,17 +67,61 @@ class AdministrationApi extends FHCAPI_Controller
 		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis);
 		$entschuldigungen = getData($result);
 		if($entschuldigungen != null && count($entschuldigungen) > 0) {
+			// one query for the accounts of all persons. A person with more than one account can belong to
+			// the assistenz of another studiengang, the frontend warns before it changes the status
+			$person_ids = array_values(array_unique(array_map(function ($entschuldigung) {
+				return $entschuldigung->person_id;
+			}, $entschuldigungen)));
+
+			$result = $this->_ci->EntschuldigungModel->getStudentAccountsForPersons($person_ids);
+			if (isError($result))
+				$this->terminateWithError(getError($result), 'general');
+
+			$accountsByPerson = array();
+			foreach ((getData($result) ?: array()) as $account) {
+				$accountsByPerson[$account->person_id][] = $account;
+			}
+
 			foreach ($entschuldigungen as $entschuldigung) {
-				$result = $this->PersonModel->loadAllStudentUIDSForPersonID($entschuldigung->person_id);
-				$data = getData($result);
-				if(count($data) > 0) {
-					$entschuldigung->student_uid = $data[0]->uids;
-				}
+				$accounts = isset($accountsByPerson[$entschuldigung->person_id]) ? $accountsByPerson[$entschuldigung->person_id] : array();
+				$entschuldigung->student_uid = array_column($accounts, 'uid');
+				$entschuldigung->accounts = $accounts;
 			}
 		}
 		
 		
 		$this->terminateWithSuccess($entschuldigungen);
+	}
+
+	/**
+	 * POST METHOD
+	 * Expects parameter 'stg_kz_arr', 'von', 'bis'
+	 * Returns for the open Entschuldigungen of the Studiengaenge: 'anzahl' with an Antragsdatum outside
+	 * von - bis, 'von' and 'bis' the Antragsdatum range of all of them (null if there is none).
+	 */
+	public function getOffeneTimespan()
+	{
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
+		$result = $this->getPostJSON();
+		$stg_kz_arr = $result->stg_kz_arr;
+		$von = $result->von;
+		$bis = $result->bis;
+
+		if(!$stg_kz_arr || count($stg_kz_arr) < 1)
+			$this->terminateWithSuccess(array('anzahl' => 0, 'von' => null, 'bis' => null));
+
+		$result = $this->_ci->EntschuldigungModel->getOffeneTimespan($stg_kz_arr, $von, $bis);
+		if (isError($result))
+			$this->terminateWithError(getError($result), 'general');
+
+		$offene = getData($result)[0];
+		$offene->anzahl = (int)$offene->anzahl;
+		$this->terminateWithSuccess($offene);
 	}
 
 	/**

@@ -144,10 +144,8 @@ export const StudentByLvaComponent = {
 		sumBottomCalcFormatter(cell) {
 			const val = Number.parseFloat(cell.getValue())
 			if(Number.isNaN(val)) return cell.getValue()
-			if (val < (this.$entryParams.permissions.positiveRatingThreshold * 100)) {
-				const el = cell.getElement()
-				el.style.setProperty('color', 'red')
-			}
+			// the class follows the theme. Toggle it, a recalc formats the same calc cell again
+			cell.getElement().classList.toggle('anw-sum--low', val < (this.$entryParams.permissions.positiveRatingThreshold * 100))
 
 			return cell.getValue()
 		},
@@ -261,16 +259,20 @@ export const StudentByLvaComponent = {
 			
 			this.$emit('titleSet', this.filterTitle)
 		},
+		// the status classes of the lektor table, FhcMain.css has their dark theme variants
 		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()
+			const el = cell.getElement()
+			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt')
+
 			if (data === this.$entryParams.permissions.anwesend_status) {
-				cell.getElement().style.color = "#28a745";
+				el.classList.add('anw-anwesend');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
 			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				cell.getElement().style.color = "#dc3545";
+				el.classList.add('anw-abwesend');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
 			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				cell.getElement().style.color = "#0335f5";
+				el.classList.add('anw-entschuldigt');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
 		},

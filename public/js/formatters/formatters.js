@@ -45,7 +45,7 @@ export const studentFormatters = {
 
 		if(value) {
 			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%; cursor: pointer;">' +
-				'<a><i class="fa fa-file-pdf" style="color:#00649C"></i></a></div>'
+				'<a><i class="fa fa-file-pdf anw-file-icon"></i></a></div>'
 		} else return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">' +
 			'<a>-</a></div>'
 

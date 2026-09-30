@@ -79,16 +79,18 @@ export default {
 			// beginn/ende come as 'HH:mm:ss' strings -> show 'HH:mm'
 			return time ? String(time).slice(0, 5) : '';
 		},
-		// per-tile styling: dim past lessons, tint the one running right now
+		// per-tile styling: tint the one running right now. A past lesson gets the secondary text
+		// color (isPast in the template), an opacity of 0.5 dropped it to 2.2:1
 		eventStyle(l) {
 			const zone = this.timezone;
 			const start = luxon.DateTime.fromISO(l.isostart, { zone });
 			const end = luxon.DateTime.fromISO(l.isoend, { zone });
 			if (this.now >= start && this.now <= end)
 				return { backgroundColor: 'rgba(25, 135, 84, 0.12)' };
-			if (this.now > end)
-				return { opacity: 0.5 };
 			return {};
+		},
+		isPast(l) {
+			return this.now > luxon.DateTime.fromISO(l.isoend, { zone: this.timezone });
 		},
 		isCurrent(l) {
 			const zone = this.timezone;
@@ -163,7 +165,8 @@ export default {
 					:href="buildLink(event)"
 					target="_blank"
 					rel="noopener"
-					class="anw-lektor-cal-lesson d-flex align-items-center px-2 py-2 text-body text-decoration-none"
+					class="anw-lektor-cal-lesson d-flex align-items-center px-2 py-2 text-decoration-none"
+					:class="isPast(event) ? 'text-body-secondary' : 'text-body'"
 					:style="eventStyle(event)"
 					:title="event.bezeichnung"
 				>

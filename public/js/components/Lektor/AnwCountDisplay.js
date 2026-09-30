@@ -13,24 +13,25 @@ export const AnwCountDisplay = {
 		abwesend: '/',
 		entschuldigt: '/'
 	},
-	template:`	
+	// the status classes of the lektor table (FhcMain.css) follow the theme
+	template:`
 		<div class="text-center">
 			<div style="display: flex; justify-content: center; align-items: center;">
-				<div @mouseover="anwHovered = true" @mouseleave="anwHovered = false" style="position: relative; display: inline-block; color: #28a745;">
+				<div @mouseover="anwHovered = true" @mouseleave="anwHovered = false" class="anw-anwesend" style="position: relative; display: inline-block;">
 					<h3>{{anwesend}} <i class="fa fa-check"></i>
 						<div class="legend-info" v-show="anwHovered"> {{$capitalize($p.t('global/anwesend'))}}</div>
 					</h3>
 				</div>
 
-				<div @mouseover="abwHovered = true" @mouseleave="abwHovered = false" style="position: relative; display: inline-block; color: #dc3545; margin-left: 36px;">
+				<div @mouseover="abwHovered = true" @mouseleave="abwHovered = false" class="anw-abwesend" style="position: relative; display: inline-block; margin-left: 36px;">
 					<h3>{{abwesend}} <i class="fa fa-xmark"></i>
 						<div class="legend-info" v-show="abwHovered"> {{$capitalize($p.t('global/abwesend'))}}</div>
 					</h3>
 				</div>
 
 				<div @mouseover="entHovered = true" @mouseleave="entHovered = false" 
-				v-if="this.$entryParams.permissions.entschuldigungen_enabled" 
-				style="position: relative; display: inline-block; color: #0335f5; margin-left: 36px;">
+				v-if="this.$entryParams.permissions.entschuldigungen_enabled"
+				class="anw-entschuldigt" style="position: relative; display: inline-block; margin-left: 36px;">
 					<h3>{{entschuldigt}} <i class="fa-solid fa-user-shield"></i>
 						<div class="legend-info" v-show="entHovered"> {{$capitalize($p.t('global/entschuldigt'))}}</div>
 					</h3>

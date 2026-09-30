@@ -100,10 +100,11 @@ export default {
 				boxShadow: '0 0.125rem 0.5rem rgba(0, 0, 0, 0.06)'
 			} : {}
 		},
+		// the icon colors reach 3:1 on the light and the dark background, --fhc-primary only 2.3:1 on the dark one
 		iconStyle() {
 			return {
 				marginBottom: '0.75rem',
-				color: 'var(--fhc-primary, #006095)',
+				color: 'var(--fhc-primary-highlight, #0086cb)',
 				fontSize: this.standalone ? '3rem' : '2rem'
 			}
 		},
@@ -158,7 +159,7 @@ export default {
 				</form>
 			</template>
 			<div v-else-if="viewData" role="status">
-				<i class="fa-solid fa-circle-check d-block" :style="[iconStyle, {color: '#28a745'}]" aria-hidden="true"></i>
+				<i class="fa-solid fa-circle-check d-block" :style="[iconStyle, {color: 'var(--bs-success, #198754)'}]" aria-hidden="true"></i>
 				<component :is="titleTag" class="mb-3" :style="titleStyle">{{ getBaseLayoutTitle }}</component>
 				<p class="mb-1" style="font-weight: 600;">{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>
 				<p class="mb-1">{{von.toLocaleDateString()}}: {{formatClock(von)}} - {{formatClock(bis)}}</p>
