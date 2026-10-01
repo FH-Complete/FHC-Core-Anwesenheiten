@@ -439,6 +439,27 @@ class ProfilApi extends FHCAPI_Controller
 		return $date->getTimeStamp();
 	}
 
+	/**
+	 * private utility function
+	 * returns the last moment a student can upload a document for an entschuldigung:
+	 * the end of the day ENTSCHULDIGUNG_MAX_REACH workdays after $insertamum. weekends do not count.
+	 */
+	private function calcUploadDeadline($insertamum) {
+		$deadline = new DateTime($insertamum);
+		$workdaysLeft = $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH');
+
+		while ($workdaysLeft > 0) {
+			$deadline->modify('+1 day');
+
+			$isWeekend = (int) $deadline->format('N') >= 6; // 6 = Saturday, 7 = Sunday
+			if (!$isWeekend) $workdaysLeft--;
+		}
+
+		$deadline->setTime(23, 59, 59);
+
+		return $deadline;
+	}
+
 	public function editEntschuldigung() {
 		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
 			$this->terminateWithSuccess(
@@ -483,7 +504,16 @@ class ProfilApi extends FHCAPI_Controller
 				$this->p->t('global', $entschuldigung->akzeptiert ? 'errorEntAlreadyAccepted' : 'errorEntAlreadyDeclined'), 'general'
 			);
 		}
-		
+
+		// a document can be handed in only up to ENTSCHULDIGUNG_MAX_REACH workdays after the entschuldigung was created
+		$uploadDeadline = $this->calcUploadDeadline($entschuldigung->insertamum);
+		if(!$isAdmin && new DateTime() > $uploadDeadline) {
+			$this->terminateWithError($this->p->t('global', 'errorEntUploadDeadlinePassed', [
+				'deadline' => $uploadDeadline->format('d.m.Y'),
+				'workdays' => $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH')
+			]), 'general');
+		}
+
 		$file = array(
 			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 			'version' => 0,
