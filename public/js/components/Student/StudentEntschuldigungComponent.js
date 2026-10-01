@@ -127,6 +127,35 @@ export default {
 
 			return d
 		},
+		// mirrors ProfilApi::calcUploadDeadline: the end of the day entschuldigungMaxReach workdays
+		// after the creation date. weekends do not count.
+		// calculated in the server timezone, so the day ends at the same moment as in the backend
+		calcUploadDeadline(ent) {
+			const zone = (typeof FHC_JS_DATA_STORAGE_OBJECT !== 'undefined' && FHC_JS_DATA_STORAGE_OBJECT.timezone)
+				|| 'Europe/Vienna'
+
+			// a row added in this session has no insertamum, it was created today
+			let deadline = ent.insertamum
+				? luxon.DateTime.fromISO(String(ent.insertamum).substring(0, 10), { zone })
+				: luxon.DateTime.now().setZone(zone)
+
+			let workdaysLeft = this.$entryParams.permissions.entschuldigungMaxReach
+			while (workdaysLeft > 0) {
+				deadline = deadline.plus({ days: 1 })
+
+				const isWeekend = deadline.weekday >= 6 // 6 = Saturday, 7 = Sunday
+				if (!isWeekend) workdaysLeft--
+			}
+
+			return deadline.endOf('day')
+		},
+		// a document can be uploaded while the entschuldigung is open and the deadline is not over
+		uploadAllowed(ent) {
+			if (ent.akzeptiert != null) return false
+			if (this.$entryParams.permissions.admin) return true
+
+			return luxon.DateTime.now() <= this.calcUploadDeadline(ent)
+		},
 		isValidDateObj(date) {
 			return date instanceof Date && !isNaN(date.getTime());
 		},
@@ -303,8 +332,8 @@ export default {
 			if(data.dms_id) {
 				actions.append(this.createActionButton('fa-download', this.$p.t('global/download'), 'btn-outline-secondary',
 					() => this.downloadEntschuldigung(data.dms_id)));
-			} else if (data.akzeptiert == null) {
-				// the backend accepts a document only while the entschuldigung is open
+			} else if (this.uploadAllowed(data)) {
+				// the backend accepts a document only while the entschuldigung is open and the deadline is not over
 				actions.append(this.createActionButton('fa-upload', this.$p.t('global/upload'), 'btn-outline-primary',
 					() => this.addEntschuldigungFile(data)));
 			}
@@ -670,7 +699,7 @@ export default {
 						<button v-if="item.ent.dms_id" type="button" class="btn btn-sm btn-outline-secondary" @click="downloadEntschuldigung(item.ent.dms_id)">
 							<i class="fa-solid fa-download me-2" aria-hidden="true"></i>{{ $p.t('global/download') }}
 						</button>
-						<button v-else-if="item.ent.akzeptiert == null" type="button" class="btn btn-sm btn-outline-primary" @click="addEntschuldigungFile(item.ent)">
+						<button v-else-if="uploadAllowed(item.ent)" type="button" class="btn btn-sm btn-outline-primary" @click="addEntschuldigungFile(item.ent)">
 							<i class="fa-solid fa-upload me-2" aria-hidden="true"></i>{{ $p.t('global/upload') }}
 						</button>
 						<button v-if="item.ent.akzeptiert == null" type="button" class="btn btn-sm btn-outline-secondary" @click="deleteEntschuldigung(item.ent)">
