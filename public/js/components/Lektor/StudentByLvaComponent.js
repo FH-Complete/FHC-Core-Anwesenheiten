@@ -190,13 +190,12 @@ export const StudentByLvaComponent = {
 					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
 				}
 
+				// the lektor table reloads its data on anwesenheitenUpdated, so only the own sum here
 				this.$api.call(ApiProfil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id))
 					.then(res => {
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
-						const student = this.$entryParams.lektorState.students.find(s => s.prestudent_id === this.prestudent_id && s.person_id === this.person_id)
-						student.sum = this.sum
 
 						this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 
@@ -303,26 +302,11 @@ export const StudentByLvaComponent = {
 			
 			this.$emit('titleSet', this.filterTitle)
 		},
-		// the status classes of the lektor table, FhcMain.css has their dark theme variants
+		// the same status cell as the lektor table, the bulk button "Verspätet" changes the minutes here
 		anwesenheitFormatterValue(cell) {
-			const data = cell.getValue()
-			const el = cell.getElement()
-			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt')
-
-			if (data === this.$entryParams.permissions.anwesend_status) {
-				el.classList.add('anw-anwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
-			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				el.classList.add('anw-abwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
-			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				el.classList.add('anw-entschuldigt');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
-			} else if (data === this.$entryParams.permissions.verspaetet_status) {
-				cell.getElement().style.color = "#b36b00";
-				const text = this.$p.t('global/anwFehlminutenKurz', {minuten: cell.getData().fehlminuten})
-				return '<div class="anw-cell-verspaetet"><i class="fa-solid fa-user-clock"></i><span>' + text + '</span></div>'
-			} else return '-'
+			return lektorFormatters.anwStatusCell(cell, this.$entryParams.permissions, {
+				fehlminutenText: () => this.$p.t('global/anwFehlminutenKurz', {minuten: cell.getData().fehlminuten})
+			})
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
@@ -358,8 +342,6 @@ export const StudentByLvaComponent = {
 				.then(res => {
 				if (res.meta.status !== "success" || !res.data) return
 
-				this.prestudent_id = res.data[0].prestudent_id
-				this.person_id = res.data[0].person_id
 				this.vorname = res.data[0].vorname
 				this.nachname = res.data[0].nachname
 				this.semester = res.data[0].semester

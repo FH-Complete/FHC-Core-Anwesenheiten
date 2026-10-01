@@ -36,6 +36,51 @@ export const lektorFormatters = {
 		hours = (hours < 10) ? '0' + hours : hours;
 		minutes = (minutes < 10) ? '0' + minutes : minutes;
 		return hours + ':' + minutes
+	},
+	// status cell of the Lektor table and of its detail view (StudentByLvaComponent). Both use it, so a status looks
+	// the same in both: the status class on the cell (colors in FhcMain.css, light and dark), the icon and for
+	// verspaetet the fehlminuten. options.fehlminutenText() gives the text of the minutes. options.onEditFehlminuten
+	// makes the minutes a button that opens the dialog again, the list editor fires nothing for the same status
+	anwStatusCell: function (cell, permissions, options = {}) {
+		const status = cell.getValue()
+		const el = cell.getElement()
+		const looks = {
+			[permissions.anwesend_status]: {cls: 'anw-anwesend', icon: 'fa fa-check'},
+			[permissions.abwesend_status]: {cls: 'anw-abwesend', icon: 'fa fa-xmark'},
+			[permissions.entschuldigt_status]: {cls: 'anw-entschuldigt', icon: 'fa-solid fa-user-shield'},
+			[permissions.verspaetet_status]: {cls: 'anw-verspaetet', icon: 'fa-solid fa-user-clock'}
+		}
+
+		el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt', 'anw-verspaetet')
+		const look = looks[status]
+		if (!look) return '-'
+		el.classList.add(look.cls)
+
+		const wrap = document.createElement('div')
+		wrap.className = 'anw-cell-status'
+		wrap.innerHTML = '<i class="' + look.icon + '" aria-hidden="true"></i>'
+		if (status !== permissions.verspaetet_status) return wrap
+
+		const minutes = document.createElement(options.onEditFehlminuten ? 'button' : 'span')
+		minutes.textContent = options.fehlminutenText()
+		if (options.onEditFehlminuten) {
+			minutes.type = 'button'
+			minutes.className = 'anw-fehlminuten-btn'
+			minutes.title = options.editTitle ?? ''
+			// stop the events before they reach the cell, else the list editor opens as well
+			minutes.addEventListener('mousedown', e => {
+				e.preventDefault()
+				e.stopPropagation()
+			})
+			minutes.addEventListener('click', e => {
+				e.preventDefault()
+				e.stopPropagation()
+				options.onEditFehlminuten()
+			})
+		}
+		wrap.appendChild(minutes)
+
+		return wrap
 	}
 }
 

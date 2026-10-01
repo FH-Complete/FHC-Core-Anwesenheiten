@@ -134,19 +134,20 @@ export const LektorComponent = {
 					if(field === "gruppe" || field === "foto" || field === "prestudent_id" ||
 						field === "vorname" || field === "nachname" || field === "sum") {
 
-						if(this.changedData.length && await this.$fhcAlert.confirm({
-							message: this.$p.t('global/anwUnsavedChangesConfirm'),
-							acceptLabel: this.$p.t('global/anwDiscardAndContinue'),
-							acceptClass: 'btn btn-danger',
-							rejectLabel: this.$p.t('global/zurueck'),
-							rejectClass: 'btn btn-outline-secondary'
-						}) === false) {
-							return
-						}
+						if(this.changedData.length) {
+							if(await this.$fhcAlert.confirm({
+								message: this.$p.t('global/anwUnsavedChangesConfirm'),
+								acceptLabel: this.$p.t('global/anwDiscardAndContinue'),
+								acceptClass: 'btn btn-danger',
+								rejectLabel: this.$p.t('global/zurueck'),
+								rejectClass: 'btn btn-outline-secondary'
+							}) === false) {
+								return
+							}
 
-						// maybe incorporate more changes to dataState to avoid reloads
-						//  in the future when performance is an issue
-						if(!this.changes) this.$entryParams.lektorState = this.lektorState
+							// the detail view shows the stored data, so the table must show it too
+							this.discardChanges()
+						}
 
 						this.selectedStudent = {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz, title: ''}
 						Vue.nextTick(()=>{
@@ -206,8 +207,7 @@ export const LektorComponent = {
 			polling: false,
 			checkInCount: 0,
 			abwesendCount: 0,
-			entschuldigtCount: 0,
-			changes: false // if something could have happened to dataset -> reload on mounted
+			entschuldigtCount: 0
 		}
 	},
 	inject: {
@@ -437,60 +437,13 @@ export const LektorComponent = {
 			const isLow = val !== '-' && val < (this.$entryParams.permissions.positiveRatingThreshold * 100)
 			return '<div' + (isLow ? ' class="anw-sum--low"' : '') + ' style="display: flex; justify-content: center; align-items: center; height: 100%">' + val + ' %</div>'
 		},
+		// the same status cell as the detail view, a click on the minutes opens the dialog again
 		anwesenheitFormatterValue(cell) {
-			const data = cell.getValue()
-			const el = cell.getElement()
-			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt', 'anw-verspaetet')
-
-			if (data === this.$entryParams.permissions.verspaetet_status) {
-				el.classList.add('anw-verspaetet');
-				return this.verspaetetCellContent(cell)
-			} else if (data === this.$entryParams.permissions.anwesend_status) {
-				el.classList.add('anw-anwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
-			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				el.classList.add('anw-abwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
-			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				el.classList.add('anw-entschuldigt');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
-			} else return '-'
-		},
-		// icon and fehlminuten of a verspaetet cell. A click on the minutes opens the dialog again,
-		// the list editor would not fire for the same status
-		verspaetetCellContent(cell) {
-			const wrap = document.createElement('div')
-			wrap.className = 'anw-cell-verspaetet'
-			wrap.innerHTML = '<i class="fa-solid fa-user-clock" aria-hidden="true"></i>'
-
-			const fehlminuten = this.getCellFehlminuten(cell)
-			const text = this.$p.t('global/anwFehlminutenKurz', {minuten: fehlminuten ?? '?'})
-
-			if (!this.checkCellEditability(cell)) {
-				const span = document.createElement('span')
-				span.textContent = text
-				wrap.appendChild(span)
-				return wrap
-			}
-
-			const btn = document.createElement('button')
-			btn.type = 'button'
-			btn.className = 'anw-fehlminuten-btn'
-			btn.textContent = text
-			btn.title = this.$p.t('global/anwFehlminutenAendern')
-			// stop the events before they reach the cell, else the list editor opens as well
-			btn.addEventListener('mousedown', e => {
-				e.preventDefault()
-				e.stopPropagation()
+			return lektorFormatters.anwStatusCell(cell, this.$entryParams.permissions, {
+				fehlminutenText: () => this.$p.t('global/anwFehlminutenKurz', {minuten: this.getCellFehlminuten(cell) ?? '?'}),
+				onEditFehlminuten: this.checkCellEditability(cell) ? () => this.editFehlminuten(cell) : null,
+				editTitle: this.$p.t('global/anwFehlminutenAendern')
 			})
-			btn.addEventListener('click', e => {
-				e.preventDefault()
-				e.stopPropagation()
-				this.editFehlminuten(cell)
-			})
-			wrap.appendChild(btn)
-
-			return wrap
 		},
 		statusLabel(status) {
 			const p = this.$entryParams.permissions
@@ -529,21 +482,13 @@ export const LektorComponent = {
 			const fehlminuten = this.getFehlminuten(data.prestudent_id, column.getField())
 			return value + ' (' + fehlminuten + ' ' + this.$p.t('global/minuten') + ')'
 		},
-		// counted duration of the kontrolle from the backend, the wall clock time as fallback
-		kontrolleDauer(kontrolle) {
-			if (!kontrolle) return 0
-			if (Number.isInteger(kontrolle.dauer)) return kontrolle.dauer
-
-			const [vh, vm] = kontrolle.von.split(':').map(Number)
-			const [bh, bm] = kontrolle.bis.split(':').map(Number)
-			return (bh * 60 + bm) - (vh * 60 + vm)
-		},
-		// opens the dialog for the fehlminuten of the cell. Resolves with the minutes, or with null on cancel
+		// opens the dialog for the fehlminuten of the cell. Resolves with the minutes, or with null on cancel.
+		// dauer: the lesson minutes of the kontrolle from the backend, the quote counts the same minutes
 		askFehlminuten(cell) {
 			const row = cell.getRow().getData()
 			const entry = this.findStudentEntry(row.prestudent_id, cell.getColumn().getField())
 			const kontrolle = this.lektorState.kontrollen.find(k => k.anwesenheit_id === entry?.anwesenheit_id)
-			const dauer = this.kontrolleDauer(kontrolle)
+			const dauer = kontrolle?.dauer ?? 0
 
 			return this.$refs.fehlminutenDialog.open({
 				name: row.vorname + ' ' + row.nachname,
@@ -569,6 +514,12 @@ export const LektorComponent = {
 		},
 		markDirty(cell, prestudent_id) {
 			cell.getElement().classList.toggle('anw-dirty', !!this.changedData.find(d => d.prestudent_id === prestudent_id))
+		},
+		// drops the unsaved changes, the table shows the stored statuses again. replaceData keeps the scroll position
+		discardChanges() {
+			this.changedData = []
+			this.lektorState.tableStudentData = this.setupAllData()
+			this.$refs.anwesenheitenTable.tabulator.replaceData(this.lektorState.tableStudentData)
 		},
 		getExistingQRCode() {
 			this.$api.call(ApiKontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value))
@@ -715,7 +666,6 @@ export const LektorComponent = {
 				.then(res => {
 				if (res.data) {
 					this.showQRLoadingSpinner = false
-					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
@@ -791,7 +741,6 @@ export const LektorComponent = {
 				this.$api.call(ApiKontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz))
 					.then(res => {
 						this.updateSumData(res.data.retval)
-						this.changes = true
 					})
 			}).finally(() =>  {
 				this.changedData = []
@@ -938,8 +887,7 @@ export const LektorComponent = {
 					const datefetch = this.formatDateToDbString(this.selectedDate)
 					const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 					this.reloadState(ma_uid, datefetch)
-					
-					this.changes = true
+
 					this.showQR(res.data)
 
 				})
@@ -1572,7 +1520,6 @@ export const LektorComponent = {
 				date))
 				.then(res => {
 					if (res.data?.svg) {
-						this.changes = true
 						this.$refs.modalContainerEditKontrolle.hide()
 						this.showQR(res.data)
 					}

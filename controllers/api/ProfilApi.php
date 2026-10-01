@@ -329,16 +329,16 @@ class ProfilApi extends FHCAPI_Controller
 
 	/**
 	 * writes the scan of an entschuldigt entry into the history as anwesend. The entry keeps its status.
-	 * AdministrationApi::updateEntschuldigung uses the history row when it reverts a declined entschuldigung.
-	 * Writes nothing if the entry already reverts to anwesend or verspaetet. A scan does not replace
-	 * verspaetet, so the history row does not replace it either.
+	 * A declined entschuldigung or a kontrolle that moves out of it sets the entry back to this history row
+	 * (Anwesenheit_User_model::revertEntschuldigt). Writes nothing if the entry already goes back to anwesend
+	 * or verspaetet. A scan does not replace verspaetet, so the history row does not replace it either.
 	 */
 	private function _addScanToHistory($anwesenheit_user_id, $uid)
 	{
 		$anwesendStatus = $this->_ci->config->item('ANWESEND_STATUS');
 
-		$result = $this->_ci->AnwesenheitUserHistoryModel->getStatusPriorToEntschuldigtForId(
-			$anwesenheit_user_id,
+		$result = $this->_ci->AnwesenheitUserModel->getFallbackForEntschuldigt(
+			array($anwesenheit_user_id),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS')
 		);
 		if (isError($result)) $this->terminateWithError($this->p->t('global', 'errorUpdateUserEntry'), 'general');

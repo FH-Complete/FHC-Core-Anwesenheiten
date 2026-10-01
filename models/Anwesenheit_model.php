@@ -48,14 +48,6 @@ class Anwesenheit_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, [$le_ids]);
 	}
 
-	// duration in minutes that the quote counts for the given times of a kontrolle
-	public function getDauerForTimes($von, $bis)
-	{
-		$query = "SELECT CAST(extension.get_epoch_from_anw_times(CAST(? AS TIMESTAMP), CAST(? AS TIMESTAMP)) / 60 AS INTEGER) AS dauer";
-
-		return $this->execReadOnlyQuery($query, [$von, $bis]);
-	}
-
 	public function getKontrollenForLeIdAndDate($le_id, $date)
 	{
 		$query = "

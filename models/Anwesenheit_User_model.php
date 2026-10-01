@@ -78,8 +78,6 @@ class Anwesenheit_User_model extends \DB_Model
 	/**
 	 * fehlminuten count for status $verspaetetStatus only. An entry with that status sets them,
 	 * a change to another status clears them. An unchanged status keeps them (e.g. a notiz edit).
-	 * An entry with status $verspaetetStatus and without fehlminuten keeps the stored minutes,
-	 * this restores them when a status goes back to verspaetet.
 	 */
 	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false, $verspaetetStatus = null)
 	{
@@ -158,19 +156,6 @@ class Anwesenheit_User_model extends \DB_Model
 	}
 
 	/**
-	 * loads the current status of the given anwesenheit_user entries
-	 * (used to decide which entries a declined entschuldigung is allowed to change)
-	 */
-	public function getStatusForIds($anwesenheit_user_ids)
-	{
-		$query = "SELECT anwesenheit_user_id, status
-			FROM extension.tbl_anwesenheit_user
-			WHERE anwesenheit_user_id IN ?";
-
-		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids]);
-	}
-
-	/**
 	 * loads the duration of the kontrolle of each given entry in minutes, as the quote counts it
 	 * (used to check the fehlminuten of an entry)
 	 */
@@ -186,17 +171,19 @@ class Anwesenheit_User_model extends \DB_Model
 	}
 
 	/**
-	 * loads the entry of the kontrolle with the most fehlminuten and the name of its student
-	 * (used to keep the kontrolle longer than these minutes when its times change)
+	 * loads the entry of the kontrolle with the most fehlminuten that do not fit its counted duration
+	 * and the name of its student (used to keep the kontrolle longer than these minutes when its times change)
 	 */
-	public function getMaxFehlminutenForKontrolle($anwesenheit_id, $verspaetetStatus)
+	public function getFehlminutenLongerThanKontrolle($anwesenheit_id, $verspaetetStatus)
 	{
-		$query = "SELECT fehlminuten, vorname, nachname
-			FROM extension.tbl_anwesenheit_user
+		$query = "SELECT u.fehlminuten, p.vorname, p.nachname
+			FROM extension.tbl_anwesenheit_user u
+				JOIN extension.tbl_anwesenheit k USING (anwesenheit_id)
 				JOIN public.tbl_prestudent USING (prestudent_id)
-				JOIN public.tbl_person USING (person_id)
-			WHERE anwesenheit_id = ? AND status = ?
-			ORDER BY fehlminuten DESC
+				JOIN public.tbl_person p USING (person_id)
+			WHERE u.anwesenheit_id = ? AND u.status = ?
+				AND u.fehlminuten >= CAST(extension.get_epoch_from_anw_times(k.von, k.bis) / 60 AS INTEGER)
+			ORDER BY u.fehlminuten DESC
 			LIMIT 1";
 
 		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $verspaetetStatus]);
@@ -414,19 +401,66 @@ class Anwesenheit_User_model extends \DB_Model
 		return $this->execQuery($query, [$anwesenheit_id]);
 	}
 
-	
-	// per student the latest history status (highest version) that differs from the current status.
-	// DISTINCT ON needs the outer ORDER BY, else postgres returns any row of the student
-	public function findLastDifferentStatus($prestudentIDs, $anwesenheit_id) {
-		$query = "SELECT DISTINCT ON (curr.prestudent_id)
-						curr.prestudent_id, hist.status, curr.anwesenheit_user_id, curr.notiz
-					FROM extension.tbl_anwesenheit_user curr
-						JOIN extension.tbl_anwesenheit_user_history hist ON hist.anwesenheit_user_id = curr.anwesenheit_user_id
-					WHERE curr.anwesenheit_id = ? AND curr.prestudent_id IN ?
-						AND hist.status IS DISTINCT FROM curr.status
-					ORDER BY curr.prestudent_id, hist.version DESC NULLS LAST, hist.anwesenheit_user_history_id DESC";
+	/**
+	 * loads for every given entry with status $entschuldigtStatus the state before the entschuldigung:
+	 * status and fehlminuten of the latest history row that is not entschuldigt (null without such a row)
+	 * and the counted duration of its kontrolle. Entries with another status are not in the result.
+	 *
+	 * 1.) student scans code -> anwesend, or the lektor sets a status
+	 * 2.) entschuldigung accepted -> entschuldigt, the history keeps the status before
+	 * 3.) entschuldigung declined or the kontrolle moved out of it -> back to the status of 1.)
+	 *
+	 * A qr scan during the entschuldigt status writes an anwesend row (ProfilApi::checkInAnwesenheit),
+	 * a notiz edit writes an entschuldigt row that the filter skips. The order uses the version and not
+	 * updateamum: an entry that nobody updated has no updateamum. The scan row has the current version
+	 * of the entry, so it wins over the rows from before the entschuldigung.
+	 */
+	public function getFallbackForEntschuldigt($anwesenheit_user_ids, $entschuldigtStatus)
+	{
+		$query = "SELECT u.anwesenheit_user_id, prior.status, prior.fehlminuten,
+				CAST(extension.get_epoch_from_anw_times(k.von, k.bis) / 60 AS INTEGER) AS dauer
+			FROM extension.tbl_anwesenheit_user u
+				JOIN extension.tbl_anwesenheit k USING (anwesenheit_id)
+				LEFT JOIN LATERAL (
+					SELECT h.status, h.fehlminuten
+					FROM extension.tbl_anwesenheit_user_history h
+					WHERE h.anwesenheit_user_id = u.anwesenheit_user_id AND h.status <> ?
+					ORDER BY h.version DESC NULLS LAST, h.anwesenheit_user_history_id DESC
+					LIMIT 1
+				) prior ON TRUE
+			WHERE u.anwesenheit_user_id IN ? AND u.status = ?";
 
-		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $prestudentIDs]);
+		return $this->execReadOnlyQuery($query, [$entschuldigtStatus, $anwesenheit_user_ids, $entschuldigtStatus]);
+	}
 
+	/**
+	 * sets the entries with status $entschuldigtStatus back to their state before the entschuldigung,
+	 * status and fehlminuten from the same history row (getFallbackForEntschuldigt), abwesend without one.
+	 * Fehlminuten that do not fit the kontrolle anymore (a shorter kontrolle) cover all of it: abwesend.
+	 * The other entries stay, a status set by hand wins over the entschuldigung
+	 */
+	public function revertEntschuldigt($anwesenheit_user_ids, $entschuldigtStatus, $verspaetetStatus, $abwesendStatus)
+	{
+		if (!count($anwesenheit_user_ids)) return success(array());
+
+		$result = $this->getFallbackForEntschuldigt($anwesenheit_user_ids, $entschuldigtStatus);
+		if (isError($result)) return $result;
+
+		$reverted = array();
+		foreach ((getData($result) ?: array()) as $row) {
+			$entry = (object) array(
+				'anwesenheit_user_id' => $row->anwesenheit_user_id,
+				'status' => $row->status ?: $abwesendStatus
+			);
+
+			if ($entry->status === $verspaetetStatus) {
+				if ($row->fehlminuten < $row->dauer) $entry->fehlminuten = $row->fehlminuten;
+				else $entry->status = $abwesendStatus;
+			}
+
+			$reverted[] = $entry;
+		}
+
+		return $this->updateAnwesenheiten($reverted, true, $verspaetetStatus);
 	}
 }

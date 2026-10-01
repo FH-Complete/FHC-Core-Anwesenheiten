@@ -320,30 +320,24 @@ class KontrolleApi extends FHCAPI_Controller
 
 	/**
 	 * the fehlminuten have no position, they can lie at the start or at the end of the kontrolle.
-	 * So new times cannot move them, the kontrolle has to stay longer than the most fehlminuten
-	 * of its entries. Terminates with the student and the minimum duration otherwise
+	 * So new times cannot move them, the kontrolle has to stay longer than the fehlminuten of every
+	 * verspaetet entry. Returns the error with the student and the minimum duration, null if all fit
 	 */
-	private function _checkDauerAgainstFehlminuten($anwesenheit_id, $von, $bis)
+	private function _checkDauerAgainstFehlminuten($anwesenheit_id)
 	{
-		$result = $this->_ci->AnwesenheitUserModel->getMaxFehlminutenForKontrolle($anwesenheit_id, $this->_ci->config->item('VERSPAETET_STATUS'));
-		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorUpdateAnwKontrolle'), 'general');
-		if(!hasData($result)) return;
+		$result = $this->_ci->AnwesenheitUserModel->getFehlminutenLongerThanKontrolle($anwesenheit_id, $this->_ci->config->item('VERSPAETET_STATUS'));
+		if(isError($result)) return $this->p->t('global', 'errorUpdateAnwKontrolle');
+		if(!hasData($result)) return null;
 		$entry = getData($result)[0];
 
-		$result = $this->_ci->AnwesenheitModel->getDauerForTimes($von, $bis);
-		if(isError($result) || !hasData($result)) $this->terminateWithError($this->p->t('global', 'errorUpdateAnwKontrolle'), 'general');
-		$dauer = (int) getData($result)[0]->dauer;
+		// the core api plugin renders the message as html
+		$name = htmlspecialchars($entry->vorname . ' ' . $entry->nachname, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-		if($dauer <= (int) $entry->fehlminuten) {
-			// the core api plugin renders the message as html
-			$name = htmlspecialchars($entry->vorname . ' ' . $entry->nachname, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-			$this->terminateWithError($this->p->t('global', 'anwKontrolleKuerzerAlsFehlminuten', array(
-				'name' => $name,
-				'fehlminuten' => (int) $entry->fehlminuten,
-				'minimum' => (int) $entry->fehlminuten + 1
-			)), 'general');
-		}
+		return $this->p->t('global', 'anwKontrolleKuerzerAlsFehlminuten', array(
+			'name' => $name,
+			'fehlminuten' => (int) $entry->fehlminuten,
+			'minimum' => (int) $entry->fehlminuten + 1
+		));
 	}
 
 	/**
@@ -1066,7 +1060,8 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');
 		}
 
-		$this->_checkDauerAgainstFehlminuten($anwesenheit_id, $vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'));
+		// the new times, the entschuldigt status and the fehlminuten check go together: all or nothing
+		$this->_ci->db->trans_begin();
 
 		$update = $this->_ci->AnwesenheitModel->update($anwesenheit_id, array(
 			'von' => $vonDate->format('Y-m-d H:i:s'),
@@ -1074,11 +1069,25 @@ class KontrolleApi extends FHCAPI_Controller
 			'updateamum' => date('Y-m-d H:i:s'),
 			'updatevon' => getAuthUID()
 		));
-		
-		if(isError($update)) {
-			$this->terminateWithError($this->p->t('global', 'errorUpdateAnwKontrolle'), 'general');
+		if(isError($update)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateAnwKontrolle'));
+
+		// the entschuldigt status depends on the kontrolle times: recalculate it for the students with an
+		// accepted entschuldigung for the old or for the new times only
+		$resultCompare = $this->_ci->EntschuldigungModel->compareStatusZeitenForLE($vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'), $oldVon, $oldBis, $kontrolle->lehreinheit_id);
+		if(isError($resultCompare)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateAnwKontrolle'));
+
+		if(hasData($resultCompare)) {
+			$result = $this->_recalculateEntschuldigt(getData($resultCompare), $anwesenheit_id);
+			if(isError($result)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateAnwKontrolle'));
 		}
-		
+
+		// after the recalculation: an entry that the new times cover is entschuldigt now and does not count
+		$fehlminutenError = $this->_checkDauerAgainstFehlminuten($anwesenheit_id);
+		if($fehlminutenError !== null) $this->_rollbackAndTerminate($fehlminutenError);
+
+		if($this->_ci->db->trans_status() === false) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateAnwKontrolle'));
+		$this->_ci->db->trans_commit();
+
 		// write log entry about changed kontrollzeiten
 		$this->_ci->WebservicelogModel->insert(array(
 			'webservicetyp_kurzbz' => 'content',
@@ -1095,72 +1104,58 @@ class KontrolleApi extends FHCAPI_Controller
 			'execute_user' => getAuthUID(),
 			'execute_time' => 'NOW()'
 		));
-		
-		// finally recalculate valid entschuldigung stati since they depend on kontrolle von & bis
-		
-		// find students of le whose entschuldigt status is not anymore valid when times change
-		$resultCompare = $this->_ci->EntschuldigungModel->compareStatusZeitenForLE($vonDate->format('Y-m-d H:i:s'), $bisDate->format('Y-m-d H:i:s'), $oldVon, $oldBis, $kontrolle->lehreinheit_id);
-		if(hasData($resultCompare)) {
-			$this->_recalculateEntschuldigt(getData($resultCompare), $anwesenheit_id);
-		}
+
 		$this->terminateWithSuccess($update);
 	}
 
 	/**
+	 * rolls back the open transaction and terminates with $message
+	 */
+	private function _rollbackAndTerminate($message)
+	{
+		$this->_ci->db->trans_rollback();
+		$this->terminateWithError($message, 'general');
+	}
+
+	/**
 	 * sets the entschuldigt status again after new kontrolle times, like accepting or declining the entschuldigung:
-	 * - covered now: entschuldigt. Before, the entry got an old history status or kept its status.
-	 * - not covered anymore: only an entschuldigt entry changes, a status set by hand stays. It falls back on the
-	 *   last other status in the history, abwesend without history. Before, an entry that was inserted as
-	 *   entschuldigt had no history and stayed entschuldigt.
+	 * - covered now: entschuldigt, the history keeps the status before.
+	 * - not covered anymore: only an entschuldigt entry changes, a status set by hand stays. The entry gets its
+	 *   state before the entschuldigung back, see Anwesenheit_User_model::revertEntschuldigt.
+	 * Returns the result of the last update
 	 */
 	private function _recalculateEntschuldigt($changedStudents, $anwesenheit_id)
 	{
 		$entschuldigtStatus = $this->_ci->config->item('ENTSCHULDIGT_STATUS');
 
 		$result = $this->_ci->AnwesenheitUserModel->getAllForKontrolle($anwesenheit_id);
-		if(isError($result)) $this->terminateWithError($result);
+		if(isError($result)) return $result;
 
 		$entries = array();
 		foreach((getData($result) ?: array()) as $entry) $entries[$entry->prestudent_id] = $entry;
 
 		$coveredIds = array();
-		$revertPrestudentIds = array();
+		$uncoveredIds = array();
 		foreach($changedStudents as $student) {
 			if(!isset($entries[$student->prestudent_id])) continue;
 			$entry = $entries[$student->prestudent_id];
 
-			if($student->statusakzeptiertnew === true) {
-				if($entry->status !== $entschuldigtStatus) $coveredIds[] = $entry->anwesenheit_user_id;
-			} elseif($entry->status === $entschuldigtStatus) {
-				$revertPrestudentIds[] = $student->prestudent_id;
-			}
+			if($student->statusakzeptiertnew !== true) $uncoveredIds[] = $entry->anwesenheit_user_id;
+			elseif($entry->status !== $entschuldigtStatus) $coveredIds[] = $entry->anwesenheit_user_id;
 		}
 
-		// status only, like an accepted entschuldigung: the entry keeps its fehlminuten for a later revert
+		// status only, like an accepted entschuldigung
 		if(count($coveredIds)) {
 			$result = $this->_ci->AnwesenheitModel->updateAnwesenheiten($coveredIds, $entschuldigtStatus);
-			if(isError($result)) $this->terminateWithError($result);
+			if(isError($result)) return $result;
 		}
 
-		if(!count($revertPrestudentIds)) return;
-
-		// find the last status from history table by version number that does not carry entschuldigt status
-		$result = $this->_ci->AnwesenheitUserModel->findLastDifferentStatus($revertPrestudentIds, $anwesenheit_id);
-		if(isError($result)) $this->terminateWithError($result);
-		$reverted = hasData($result) ? getData($result) : array();
-
-		$found = array_map(function ($row) {
-			return $row->prestudent_id;
-		}, $reverted);
-		foreach(array_diff($revertPrestudentIds, $found) as $prestudent_id) {
-			$reverted[] = (object) array(
-				'anwesenheit_user_id' => $entries[$prestudent_id]->anwesenheit_user_id,
-				'status' => $this->_ci->config->item('ABWESEND_STATUS')
-			);
-		}
-
-		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($reverted, true, $this->_ci->config->item('VERSPAETET_STATUS'));
-		if(isError($result)) $this->terminateWithError($result);
+		return $this->_ci->AnwesenheitUserModel->revertEntschuldigt(
+			$uncoveredIds,
+			$entschuldigtStatus,
+			$this->_ci->config->item('VERSPAETET_STATUS'),
+			$this->_ci->config->item('ABWESEND_STATUS')
+		);
 	}
 
 	/**

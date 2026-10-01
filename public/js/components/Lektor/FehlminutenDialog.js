@@ -66,7 +66,7 @@ export const FehlminutenDialog = {
 		}
 	},
 	template: `
-		<bs-modal ref="modal" class="bootstrap-prompt" bodyClass="px-4 py-4"
+		<bs-modal ref="modal" class="bootstrap-prompt" dialogClass="anw-fehlminuten-dialog" bodyClass="px-4 py-4"
 			@hidden-bs-modal="handleHidden" @shown-bs-modal="focusInput">
 			<template v-slot:title>
 				{{ $p.t('global/anwVerspaetungErfassen') }}
@@ -77,14 +77,15 @@ export const FehlminutenDialog = {
 					<p class="small text-body-secondary">{{ dialog.kontrolle }} · {{ dialog.dauerLabel }}</p>
 
 					<label :for="inputId" class="form-label fw-semibold">{{ $p.t('global/anwFehlminutenLabel') }}</label>
-					<div v-if="presets.length" class="d-flex flex-wrap gap-2 mb-2">
+					<div v-if="presets.length" class="btn-group btn-group-sm w-100 mb-2 anw-fehlminuten-presets" role="group">
 						<button v-for="preset in presets" :key="preset" type="button"
-							class="btn btn-sm" :class="dialog.value === preset ? 'btn-primary' : 'btn-outline-primary'"
+							class="btn" :class="dialog.value === preset ? 'btn-primary' : 'btn-outline-primary'"
+							:aria-pressed="dialog.value === preset"
 							@click="dialog.value = preset">
 							{{ preset }}
 						</button>
 					</div>
-					<div class="input-group" style="max-width: 14rem;">
+					<div class="input-group">
 						<input :id="inputId" ref="input" type="number" class="form-control"
 							:class="{'is-invalid': showInvalid}"
 							min="1" :max="max" step="1"

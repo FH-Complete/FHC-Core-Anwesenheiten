@@ -152,7 +152,11 @@ html.dark .anw-status--absent {
 }
 
 .anw-status--late {
-	color: #b36b00;
+	color: #8a5300;
+}
+
+html.dark .anw-status--late {
+	color: #ffc078;
 }
 
 .anw-cell-center {
@@ -646,7 +650,7 @@ html.dark .anw-tl-badge {
 }
 
 .anw-tl-tone--late {
-	background-color: #b36b00;
+	background-color: #8a5300;
 }
 
 .anw-tl-tone--unknown {
@@ -669,6 +673,10 @@ html.dark .anw-tl-tone--open {
 
 html.dark .anw-tl-tone--excused {
 	background-color: #91a7ff;
+}
+
+html.dark .anw-tl-tone--late {
+	background-color: #ffc078;
 }
 
 html.dark .anw-tl-tone--unknown {
@@ -786,11 +794,12 @@ html.dark .anw-tl-tone--unknown {
 }
 
 .anw-verspaetet {
-	color: #b36b00;
+	color: #8a5300;
 }
 
-/* icon and fehlminuten of a verspaetet cell in the Lektor table */
-.anw-cell-verspaetet {
+/* status cell of the Lektor table and its detail view (lektorFormatters.anwStatusCell): the icon, for verspaetet
+   also the fehlminuten */
+.anw-cell-status {
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -811,24 +820,40 @@ html.dark .anw-tl-tone--unknown {
 
 .anw-fehlminuten-btn:hover,
 .anw-fehlminuten-btn:focus-visible {
-	background-color: rgba(179, 107, 0, 0.12);
+	background-color: rgba(138, 83, 0, 0.12);
 }
 
-/* bulk action of the detail view, same color as the status */
+html.dark .anw-fehlminuten-btn:hover,
+html.dark .anw-fehlminuten-btn:focus-visible {
+	background-color: rgba(255, 192, 120, 0.16);
+}
+
+/* FehlminutenDialog: a narrow modal, the controls fill its width */
+.anw-fehlminuten-dialog {
+	--bs-modal-width: 26rem;
+}
+
+.anw-fehlminuten-presets > .btn {
+	flex: 1 1 0;
+	padding-left: 0;
+	padding-right: 0;
+}
+
+/* bulk action of the detail view, same color as the status. White text 6.3:1, in both themes */
 .anw-btn-verspaetet {
 	--bs-btn-color: #fff;
-	--bs-btn-bg: #b36b00;
-	--bs-btn-border-color: #b36b00;
+	--bs-btn-bg: #8a5300;
+	--bs-btn-border-color: #8a5300;
 	--bs-btn-hover-color: #fff;
-	--bs-btn-hover-bg: #985b00;
-	--bs-btn-hover-border-color: #985b00;
+	--bs-btn-hover-bg: #754600;
+	--bs-btn-hover-border-color: #754600;
 	--bs-btn-active-color: #fff;
-	--bs-btn-active-bg: #7f4c00;
-	--bs-btn-active-border-color: #7f4c00;
+	--bs-btn-active-bg: #5c3700;
+	--bs-btn-active-border-color: #5c3700;
 	--bs-btn-disabled-color: #fff;
-	--bs-btn-disabled-bg: #b36b00;
-	--bs-btn-disabled-border-color: #b36b00;
-	--bs-btn-focus-shadow-rgb: 179, 107, 0;
+	--bs-btn-disabled-bg: #8a5300;
+	--bs-btn-disabled-border-color: #8a5300;
+	--bs-btn-focus-shadow-rgb: 138, 83, 0;
 }
 
 .anw-dirty {
@@ -849,6 +874,10 @@ html.dark .anw-entschuldigt {
 
 html.dark .anw-entschuldigt-offen {
 	color: #66d9e8;
+}
+
+html.dark .anw-verspaetet {
+	color: #ffc078;
 }
 
 /* the cis4 dark theme sets the color of every table row and the background of every cell with
@@ -872,6 +901,15 @@ html:not(.dark) .tabulator-row.tabulator-selected .anw-anwesend {
 
 html:not(.dark) .tabulator-row.tabulator-selected .anw-abwesend {
 	color: #b02a37;
+}
+
+/* the fehlminuten are text: 4.5:1 on a selected row and on an unsaved (purple) cell */
+html:not(.dark) .tabulator-row.tabulator-selected .anw-verspaetet {
+	color: #5c3700;
+}
+
+html:not(.dark) .tabulator-cell.anw-dirty.anw-verspaetet {
+	color: #6b4000;
 }
 
 /* a quote below the positive rating threshold */
