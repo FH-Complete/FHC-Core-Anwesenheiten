@@ -41,6 +41,10 @@ export const Statuslegende = {
 						<span class="anw-legend-sample anw-entschuldigt"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
 						<span>{{ $capitalize($p.t('global/entschuldigt')) }}</span>
 					</li>
+					<li class="anw-legend-item">
+						<span class="anw-legend-sample">-</span>
+						<span>{{ $p.t('global/anwLegendeKeinEintrag') }}</span>
+					</li>
 				</ul>
 			</section>
 
