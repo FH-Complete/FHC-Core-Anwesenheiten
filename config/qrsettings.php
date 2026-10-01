@@ -48,4 +48,16 @@ $config['ALERT_LEHRFORM'] = array(
 //		'english_alert_text' => 'In the supervision teaching format, you can skip the attendance check with QR code and enter attendance directly!'
 //	)
 );
-	
+// limit for auto declining old entschuldigung applications that do not have a file attached yet
+$config['ENTSCHULDIGUNG_AUTODECLINE_THRESHOLD'] = '60 days';
+$config['ENTSCHULDIGUNG_EMAIL_INTERVAL'] = 3; // Workdays
+$config['URL_ASSISTENZ_ENTMANAGEMENT'] = 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
+// used to toggle outgoing kuerzel logic
+// if true also shows mobility of students that overlap over semester boudnaries,
+// without the mobility needed to be strictly in range
+$config['SHOW_OUTGOING_SEMESTER_OVERLAP'] = TRUE;
+// if student is abroad for at least 14 days in the current semester print the zusatz
+$config['SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'] = 14;
+
+// for superstrict installations where the old limited view is the preferred choice
+$config['LEGACY_LE_SELECTION'] = false;

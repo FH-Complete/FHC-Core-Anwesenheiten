@@ -1,8 +1,4 @@
-import {CoreRESTClient} from '../../../../../js/RESTClient.js';
-import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
-
-import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import StudentComponent from "../Student/StudentComponent.js"
 import LektorComponent from "../Lektor/LektorComponent.js"
 import AssistenzComponent from "../Assistenz/AssistenzComponent.js";
@@ -13,21 +9,15 @@ import ApiKontrolle from '../../api/factory/kontrolle.js';
 export default {
 	name: 'LandingPageComponent',
 	components: {
-		CoreBaseLayout,
-		CoreRESTClient,
 		CoreTabs,
-		BsModal,
 		StudentComponent,
 		LektorComponent,
 		AssistenzComponent
 	},
 	data: function() {
 		return {
-			headerMenuEntries: {},
-			sideMenuEntries: {},
 			currentTab: 0,
 			tabs: this.initTabs(),
-			loaded: false,
 			phrasenResolved: false,
 			permissioncount: Vue.ref(0),
 			anwKontrolleMinDate: null,
@@ -68,31 +58,49 @@ export default {
 
 			// redeclare function since at this point globalProperties are not ready
 			function capitalize(string) {
-				if(!string) return ''
+				if (!string) return ''
 				return string[0].toUpperCase() + string.slice(1);
 			}
-			
-			
-			if((permissions.lektor || permissions.admin) && notMissingParams) {
-				const kontrolleTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'})
-				tabs.push({key: 'Kontrolle', title: kontrolleTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'})
+
+
+			if ((permissions.lektor || permissions.admin) && notMissingParams) {
+				const kontrolleTitle = Vue.computed(() => {
+					return this.phrasenResolved ? capitalize(this.$p.t('global/kontrolle')) : 'K'
+				})
+				tabs.push({
+					key: 'Kontrolle',
+					title: kontrolleTitle,
+					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'
+				})
 			}
 
-			if((permissions.student || permissions.admin) && notMissingParams)  {
-				const profilTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'})
+			if ((permissions.student || permissions.admin) && notMissingParams) {
+				const profilTitle = Vue.computed(() => {
+					return this.phrasenResolved ? capitalize(this.$p.t('global/profil')) : 'P'
+				})
 
-				tabs.push({key: 'Profil', title: profilTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'})
+				tabs.push({
+					key: 'Profil',
+					title: profilTitle,
+					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'
+				})
 			}
 
-			if((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
-				const adminTitle = Vue.computed(()=> {return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'})
+			if ((permissions.admin || permissions.assistenz) && permissions.entschuldigungen_enabled) {
+				const adminTitle = Vue.computed(() => {
+					return this.phrasenResolved ? capitalize(this.$p.t('global/admin')) : 'A'
+				})
 
-				tabs.push({key: 'Admin', title: adminTitle, component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'})
+				tabs.push({
+					key: 'Admin',
+					title: adminTitle,
+					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'
+				})
 			}
 
 			const ret = {}
 			tabs.forEach((tab, i) => {
-				ret['tab'+i] = tab
+				ret['tab' + i] = tab
 			})
 
 			this.setCurrentTab(permissions.controller, tabs)
@@ -109,9 +117,9 @@ export default {
 			this.$entryParams.tabHeights.studentEnt = Vue.ref(400)
 			this.$entryParams.tabHeights.assistenz = Vue.ref(400)
 		},
-		setCurrentTab (controller, tabs) {
+		setCurrentTab(controller, tabs) {
 
-			switch(controller) {
+			switch (controller) {
 				case 'Admin':
 					this.currentTab = tabs.findIndex(t => t.key === 'Admin')
 					break;
@@ -125,9 +133,9 @@ export default {
 					this.currentTab = 0
 			}
 		},
-		async createdSetup () {
-			await new Promise (resolve => {
-				
+		async createdSetup() {
+			await new Promise(resolve => {
+
 				const queryString = window.location.search;
 				const searchParams = new URLSearchParams(queryString)
 				this.$entryParams.lv_id = searchParams.get('lvid')
@@ -141,27 +149,34 @@ export default {
 
 				this.setupViewDataRefs()
 
-				if(this.$entryParams.lv_id) {
+				if (this.$entryParams.lv_id) {
 					this.loadLvViewData()
 				}
 
 				this.$entryParams.phrasenPromise = this.$p.loadCategory(['ui', 'person', 'lehre', 'table', 'filter', 'global'])
-				this.$entryParams.phrasenPromise.then(()=> {this.phrasenResolved = true})
+				this.$entryParams.phrasenPromise.then(() => {
+					this.phrasenResolved = true
+				})
 				const el = document.getElementById("main");
 				this.$entryParams.permissions = JSON.parse(el.attributes.permissions.nodeValue)
 				this.$entryParams.cis4 = JSON.parse(el.attributes.cis4.nodeValue)
 
-				// console.log('$entryParams', this.$entryParams)
-
 				this.anwKontrolleMinDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReachPast)))
+				const tmpMin = new Date(this.anwKontrolleMinDate)
+				tmpMin.setHours(0, 0)
+				this.anwKontrolleMinDate = tmpMin.getTime()
+				
 				this.anwKontrolleMaxDate = new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReachFuture)))
-
+				const tmpMax = new Date(this.anwKontrolleMaxDate)
+				tmpMax.setHours(23, 59)
+				this.anwKontrolleMaxDate = tmpMax.getTime()
+				
 				el.removeAttribute('permissions')
 
 				resolve()
 			})
 		},
-		setupViewDataRefs(){
+		setupViewDataRefs() {
 			this.$entryParams.viewDataLv = {}
 			this.$entryParams.viewDataLv.benotung = Vue.ref('')
 			this.$entryParams.viewDataLv.bezeichnung = Vue.ref('')
@@ -184,34 +199,55 @@ export default {
 		loadLvViewData() {
 			this.$api.call(ApiInfo.getLvViewDataInfo(this.$entryParams.lv_id))
 				.then(res => {
-				if(res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
-			})
+					if (res?.data?.retval?.[0]) this.setLvViewData(res.data.retval[0])
+				})
 		},
 		async handleSetup() {
-			if(this.$entryParams.setupPromise) return
+			if (this.$entryParams.setupPromise) return
 			return new Promise(resolve => {
 				const ma_uid = this.$entryParams.permissions.authID
 				const sem_kurzbz = this.$entryParams.sem_kurzbz
 				const lv_id = this.$entryParams.lv_id
 				const le_ids = []
-
+				
 				const promises = []
-				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
-				if(this.$entryParams.permissions.admin && lv_id && sem_kurzbz && le_ids) {
-					const maProm = this.handleMaSetup(lv_id, sem_kurzbz, ma_uid)
-
-					maProm.then(()=> {
-
-						promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.value?.mitarbeiter_uid, sem_kurzbz, le_ids))
-						promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
-						Promise.all(promises).then(()=>{
-							resolve()
+				// legacy le selection: the old limited view, only the lehreinheiten of one lektor.
+				// an admin sees the les of the lektor selected in the MaUIDDropdown
+				if (this.$entryParams.permissions.legacy_le_selection) {
+					if (this.$entryParams.permissions.admin && lv_id && sem_kurzbz) {
+						this.handleMaSetup(lv_id, sem_kurzbz, ma_uid).then(() => {
+							promises.push(this.handleLeSetup(lv_id, this.$entryParams.selected_maUID.value?.mitarbeiter_uid, sem_kurzbz, le_ids))
+							promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
+							Promise.all(promises).finally(() => {
+								resolve(true)
+							})
 						})
+					} else if (this.$entryParams.permissions.lektor && lv_id && sem_kurzbz) {
+						this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(() => {
+							resolve(true)
+						})
+					} else {
+						resolve(true)
+					}
+					return
+				}
+
+				// load lektors teaching the lva aswell as students attending the lva in case of admin or assistenz rights
+				if (this.$entryParams.permissions.admin && lv_id && sem_kurzbz && le_ids) {
+
+					// Lva Setup lists all lehreinheiten of the lva (better than the old per maUID view) so admin gets it aswell,
+					// MaUIDDropdown options and the students for the profil tab are still needed
+					promises.push(this.handleMaSetup(lv_id, sem_kurzbz, ma_uid))
+					promises.push(this.handleLvaSetup(lv_id, sem_kurzbz, le_ids))
+					promises.push(this.handleStudentsSetup(lv_id, sem_kurzbz))
+					Promise.all(promises).finally(() => {
+						resolve(true)
 					})
 
-					// load teaching units/lehreinheiten of provided lektor maUID in case of lektor rights
-				} else if(this.$entryParams.permissions.lektor && lv_id && sem_kurzbz && le_ids) {
-					this.handleLeSetup(lv_id, ma_uid, sem_kurzbz, le_ids).finally(()=>{
+					// lva leads get every lehreinheit of the lva instead of just their own assigned ones
+
+				} else if (this.$entryParams.permissions.lektor && lv_id && sem_kurzbz && le_ids) {
+					this.handleLvaSetup(lv_id, sem_kurzbz, le_ids).finally(()=>  {
 						resolve(true)
 					})
 				} else {
@@ -222,54 +258,144 @@ export default {
 		},
 		handleStudentsSetup(lv_id, sem_kurzbz) {
 			return new Promise((resolve) => {
-					this.$api.call(ApiInfo.getStudentsForLvaInSemester(lv_id, sem_kurzbz))
+				this.$api.call(ApiInfo.getStudentsForLvaInSemester(lv_id, sem_kurzbz))
 					.then(res => {
-					this.$entryParams.availableStudents = []
+						this.$entryParams.availableStudents = []
 
-					res?.data?.retval?.forEach(e => {
-						const infoString = e.semester + e.verband + e.gruppe + ' ' + e.vorname + ' ' + e.nachname
-						this.$entryParams.availableStudents.push({
-							vorname: e.vorname, nachname: e.nachname,
-							prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
-							lehreinheit_id: e.lehreinheit_id, lehrveranstaltung_id: e.lehrveranstaltung_id,
-							semester: e.semester, verband: e.verband, gruppe: e.gruppe,
-							uid: e.uid, person_id: e.person_id,
-							infoString
+						res?.data?.retval?.forEach(e => {
+							const infoString = e.semester + e.verband + e.gruppe + ' ' + e.vorname + ' ' + e.nachname
+							this.$entryParams.availableStudents.push({
+								vorname: e.vorname, nachname: e.nachname,
+								prestudent_id: e.prestudent_id, studiensemester_kurzbz: e.studiensemester_kurzbz,
+								lehreinheit_id: e.lehreinheit_id, lehrveranstaltung_id: e.lehrveranstaltung_id,
+								semester: e.semester, verband: e.verband, gruppe: e.gruppe,
+								uid: e.uid, person_id: e.person_id,
+								infoString
+							})
 						})
-					})
-					
-					this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
 
-				}).finally(()=>{resolve()})
+						this.$entryParams.selected_student_info = this.$entryParams.availableStudents.length ? this.$entryParams.availableStudents[0] : null
+
+					}).finally(() => {
+					resolve()
+				})
 			})
+		},
+		handleLvaSetup(lv_id, sem_kurzbz, le_ids) {
+			return new Promise((resolve) => {
+				this.$api.call(ApiKontrolle.getLehreinheitenForLehrveranstaltung(lv_id, sem_kurzbz)).then( res => {
+					// lva wide le options also show the assigned lektor to tell similar lehreinheiten apart
+					const data = this.processLeSetupResponse(res, le_ids)
+
+					// keep a stable copy for the multiselect, available_le_info gets refiltered
+					// by handleLeSetup whenever an admin switches the maUID dropdown
+					const allLe = [...data]
+					const allLeSorted = allLe.sort((a, b) => (a.infoString ?? '').localeCompare(b.infoString ?? ''))
+					this.$entryParams.available_le_info_lva.value = allLeSorted
+				}).finally(()=> resolve())
+			})
+		},
+		// shared post processing of the le option endpoints: merges rows of the same lehreinheit into one
+		// entry with a combined infoString, stores the le termine and preselects the le with the closest termin
+		processLeSetupResponse(res, le_ids) {
+			// merge entries with same LE
+			const data = []
+
+			if (res.data[1]) {
+				Object.keys(res.data[1]).forEach(key => {
+					const val = res.data[1][key]
+
+					if (val && val.length) {
+						val.forEach(v => v.le_id = key)
+					}
+				})
+			}
+
+			this.$entryParams.allLeTermine = res.data[1] ?? []
+
+			res.data[0].forEach(entry => {
+
+				const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
+
+				// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
+				// so a new entry will always start with those groups, others are appended afterwards
+				const groupKey = (entry.gruppe_kurzbz !== null && entry.direktinskription == false)
+					? entry.gruppe_kurzbz
+					: entry.kurzbzlang + '-' + entry.semester
+						+ (entry.verband ? entry.verband : '')
+						+ (entry.gruppe ? entry.gruppe : '')
+
+				if (existing) {
+					// co-taught lehreinheiten return one row per lektor and group. collect every
+					// lektor (the mine/others grouping needs all of them) but list each group once only
+					if (!existing.mitarbeiter_uids.includes(entry.mitarbeiter_uid)) {
+						existing.mitarbeiter_uids.push(entry.mitarbeiter_uid)
+						existing.lektor_names.push(entry.vorname + ' ' + entry.nachname)
+					}
+					if (!existing.groupKeys.includes(groupKey)) {
+						existing.groupKeys.push(groupKey)
+						existing.groupString += ', ' + groupKey
+						existing.infoString += ', ' + groupKey
+					}
+				} else {
+					entry.mitarbeiter_uids = [entry.mitarbeiter_uid]
+					entry.lektor_names = [entry.vorname + ' ' + entry.nachname]
+					entry.groupKeys = [groupKey]
+					entry.groupString = groupKey
+					entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - ' + groupKey
+
+					data.push(entry)
+				}
+			})
+
+			data.forEach(entry => {
+				entry.csvInfoString = entry.infoString
+				entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
+			})
+
+			// always (re)select the le with the closest termin, this also runs on maUID switch
+			// where a previously selected le might not be part of the new option list anymore
+			this.$entryParams.selected_le_info.value = data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
+			this.$entryParams.available_le_info.value = [...data]
+			data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
+
+			this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
+
+			return data
 		},
 		handleMaSetup(lv_id, sem_kurzbz, ma_uid) {
 			return new Promise(resolve => {
 				this.$api.call(ApiInfo.getLektorsForLvaInSemester(lv_id, sem_kurzbz))
 					.then(res => {
-					this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
-					const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
+						this.$entryParams.available_maUID.value.splice(0, this.$entryParams.available_maUID.value.length)
 
-					const lektor = found ?? res.data.retval[0]
-					const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
-						+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
-						+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
-					this.$entryParams.selected_maUID.value = lektor ?{mitarbeiter_uid: lektor.mitarbeiter_uid, infoString} : null
+						const found = res.data?.retval?.find(lektor => lektor.mitarbeiter_uid === ma_uid)
 
-
-					res.data?.retval?.forEach(lektor => {
-						const infoString = lektor.anrede + ' ' + (lektor.titelpre ? lektor.titelpre + ' ' : '')
+						const lektor = found ?? res.data.retval[0]
+						const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
+						const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
 							+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
 							+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
-
-						this.$entryParams.available_maUID.value.push({
+						this.$entryParams.selected_maUID.value = lektor ? {
 							mitarbeiter_uid: lektor.mitarbeiter_uid,
 							infoString
-						})
-					})
+						} : null
 
-				}).finally(()=> {
+
+						res.data?.retval?.forEach(lektor => {
+							const anrede = lektor.anrede !== null && lektor.anrede !== undefined && lektor.anrede !== '' ? lektor.anrede + ' ' : ''
+							const infoString = anrede + (lektor.titelpre ? lektor.titelpre + ' ' : '')
+								+ lektor.vorname + (lektor.vornamen ? ' ' + lektor.vornamen : '') + ' ' + lektor.nachname
+								+ (lektor.titelpost ? ' ' + lektor.titelpost : '')
+
+							this.$entryParams.available_maUID.value.push({
+								mitarbeiter_uid: lektor.mitarbeiter_uid,
+								infoString
+							})
+						})
+
+					}).finally(() => {
 					resolve()
 				})
 			})
@@ -278,66 +404,8 @@ export default {
 			return new Promise(resolve => {
 				this.$api.call(ApiKontrolle.getLehreinheitenForLehrveranstaltungAndMaUid(lv_id, ma_uid, sem_kurzbz))
 					.then(res => {
-					// merge entries with same LE
-					const data = []
-
-					if(res.data[1]) {
-						// res.data[1] = null
-						Object.keys(res.data[1]).forEach(key => {
-							const val = res.data[1][key]
-							
-							if(val && val.length) {
-								val.forEach(v => v.le_id = key)
-								// spoof le termine to test with
-								// val.push({le_id: key, datum: '2025-04-17', beginn: '13:37:42', ende: '23:42:17'})
-							}
-						}) 
-					}
-					
-					this.$entryParams.allLeTermine = res.data[1] ?? []
-					
-					res.data[0].forEach(entry => {
-
-						const existing = data.find(e => e.lehreinheit_id === entry.lehreinheit_id)
-						if (existing) {
-							// supplement info
-							existing.infoString += ', '
-							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
-								existing.infoString += entry.gruppe_kurzbz
-							} else {
-								existing.infoString += entry.kurzbzlang + '-' + entry.semester
-									+ (entry.verband ? entry.verband : '')
-									+ (entry.gruppe ? entry.gruppe : '')
-							}
-						} else {
-							// entries are supposed to be fetched ordered by non null gruppe_kurzbz first
-							// so a new entry will always start with those groups, others are appended afterwards
-							entry.infoString = entry.kurzbz + ' - ' + entry.lehrform_kurzbz + ' - '
-							if (entry.gruppe_kurzbz !== null && entry.direktinskription == false) {
-								entry.infoString += entry.gruppe_kurzbz
-							} else {
-								entry.infoString += entry.kurzbzlang + '-' + entry.semester
-									+ (entry.verband ? entry.verband : '')
-									+ (entry.gruppe ? entry.gruppe : '')
-							}
-
-							data.push(entry)
-						}
-					})
-						
-					res.data[0].forEach(entry => {
-						entry.csvInfoString = entry.infoString
-						entry.infoString += ' | 👥' + entry.studentcount + ' | 📅' + entry.termincount
-					})
-
-					this.$entryParams.selected_le_info.value = this.$entryParams.selected_le_info.value ?? data.length ? this.findLeWithClosestTermin(data, this.$entryParams.allLeTermine) : null
-					this.$entryParams.available_le_info.value = [...data]
-					data.forEach(leEntry => le_ids.push(leEntry.lehreinheit_id))
-
-					this.$entryParams.selected_le_id.value = this.$entryParams.selected_le_info.value ? this.$entryParams.selected_le_info.value.lehreinheit_id : null
-					this.$entryParams.available_le_ids.value = [...le_ids]
-
-				}).finally(() => {
+						this.processLeSetupResponse(res, le_ids)
+					}).finally(() => {
 					resolve()
 				})
 			})
@@ -352,53 +420,87 @@ export default {
 			this.$entryParams.viewDataLv.raumtyp_kurzbz = data.raumtyp_kurzbz
 		},
 		handleTabChanged(key) {
-			if(this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
+			if (this.$refs.tabsMain?._?.refs?.current) this.$refs.tabsMain._.refs.current.redrawTable()
 		},
 		findLeWithClosestTermin(leChoices, leTermine) {
-			const flat = Object.values(leTermine).filter(Array.isArray).flat();
-			
-			if(flat && flat.length) {
+			// the closest termin preselect only considers lehreinheiten the user teaches,
+			// termine of colleagues les (lva wide option list) must not hijack the default.
+			// users without own les (admin/assistenz view) fall back to the whole list
+			const authUid = this.$entryParams.permissions.authID
+			const ownChoices = leChoices.filter(choice => choice.mitarbeiter_uids?.includes(authUid))
+			const relevantChoices = ownChoices.length ? ownChoices : leChoices
+			const relevantLeIds = relevantChoices.map(choice => String(choice.lehreinheit_id))
+
+			const flat = Object.values(leTermine).filter(Array.isArray).flat()
+				.filter(termin => relevantLeIds.includes(String(termin.le_id)));
+
+			if (flat && flat.length) {
 				const closest = this.findClosestTermin(flat)
 
-				if(!closest) { // all possible termine are too far back in the past
+				if (!closest) { // all possible termine are too far back in the past
 					this.$fhcAlert.alertWarning(this.$p.t('global/noLePreselectTermineTooOld'))
-					
-					return leChoices[0]
+
+					return relevantChoices[0]
 				}
-				
+
 				const choiceFound = leChoices.find(choice => choice.lehreinheit_id == closest.le_id)
 				return choiceFound
-				
-			} else if(leChoices && leChoices.length) { // no termine to determine closest le by
-				return leChoices[0]
+
+			} else if (relevantChoices && relevantChoices.length) { // no termine to determine closest le by
+				return relevantChoices[0]
 			} else { // no termine and no le found
 				return null
 			}
 		},
 		findClosestTermin(termine) {
-			const todayTime = new Date(Date.now()).getTime()
+			if (!termine || termine.length === 0) return null;
 
-			termine.forEach((termin) => { // calculate time & timediff from today
-				termin.timeDiff = Math.abs(new Date(termin.datum).getTime() - todayTime)
-				termin.time = new Date(termin.datum).getTime()
-			})
-			
-			// TODO: this approach messes with too much logic, maybe write method clone for startup logic?
-			// // avoid going for stunplantermine that lie too far back in the past
-			// const eligibleTermine = termine.filter(t => {
-			// 	t.time >= this.anwKontrolleMinDate
-			// })
-			
-			return termine.reduce((min, termin) => termin.timeDiff < min.timeDiff ? termin : min, termine[0]);
-		}
+			const now = luxon.DateTime.now().toUTC();
+
+			// prepare luxon utc timestamps & priority ranking overall & ranking in same day
+			const scoredTermine = termine.map(termin => {
+				const start = luxon.DateTime.fromFormat(`${termin.datum} ${termin.beginn}`, 'yyyy-MM-dd HH:mm:ss', {zone: 'utc'});
+				const end = luxon.DateTime.fromFormat(`${termin.datum} ${termin.ende}`, 'yyyy-MM-dd HH:mm:ss', {zone: 'utc'});
+
+				let score = 100;
+
+				if (start.hasSame(now, 'day')) {
+					if (now >= start && now <= end) {
+						score = 1; // currently active lesson
+					} else if (now < start) {
+						score = 3; // future lesson later today
+					} else {
+						score = 4; // today but already over
+					}
+				} else if (start > now) {
+					score = 5; // future not today
+				} else {
+					score = 6; // past termine not today
+				}
+
+				return {
+					...termin,
+					score,
+					// absolute distance from the start of the lesson
+					diff: Math.abs(start.diff(now).as('milliseconds'))
+				};
+			});
+
+			return scoredTermine.reduce((best, current) => {
+				// if ranks are different, lower rank wins
+				if (current.score < best.score) return current;
+				if (current.score > best.score) return best;
+
+				// if they are in the same rank, pick the one closest to 'now' with the smallest absolute diff
+				return current.diff < best.diff ? current : best;
+			});
+		},
 	},
 	created(){
 		if(!this.$entryParams.permissions) this.createdSetup()
 	},
 	mounted() {
 		this.$entryParams.setupPromise = this.handleSetup().then(()=>{
-			this.loaded = true
-
 			this.$entryParams.phrasenPromise.then(()=> this.phrasenResolved = true)
 
 		})
@@ -409,11 +511,6 @@ export default {
 
 	},
 	computed: {
-		getSubtitle(){
-			if(this.$entryParams?.viewDataLv?.kurzbz?.value && this.$entryParams?.viewDataLv?.bezeichnung?.value) {
-				return this.$entryParams.viewDataLv.kurzbz.value +' - '+ this.$entryParams.viewDataLv.bezeichnung.value
-			} else return ''
-		},
 		getCurrentTab() {
 			return 'tab' + this.currentTab
 		}

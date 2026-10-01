@@ -95,7 +95,21 @@ class Entschuldigung_model extends \DB_Model
 		return $this->execReadOnlyQuery($qry, array($vonNew, $bisNew, $vonOld, $bisOld, $le_id));
 	}
 	
-	
+	// FROM and WHERE of the entschuldigungsmanagement table. The count query uses the same
+	// part, so the count and the table always select the same entschuldigungen
+	private function _fromStudiengaenge()
+	{
+		return "FROM extension.tbl_anwesenheit_entschuldigung
+						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
+						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
+						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
+						JOIN public.tbl_studiengang USING (studiengang_kz)
+						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
+						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+						LEFT JOIN campus.tbl_dms_version USING(dms_id)
+					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
+	}
 
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
 	{
@@ -125,17 +139,7 @@ class Entschuldigung_model extends \DB_Model
 						TO_CHAR(extension.tbl_anwesenheit_entschuldigung.insertamum, 'YYYY-MM-DD HH24:MI:00') as entuploaddatum,
 						TO_CHAR(campus.tbl_dms_version.insertamum, 'YYYY-MM-DD HH24:MI:00') as fileuploaddatum,
 						public.tbl_student.semester as semester
-					FROM extension.tbl_anwesenheit_entschuldigung
-						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
-						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
-						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
-						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
-						JOIN public.tbl_studiengang USING (studiengang_kz)
-						JOIN lehre.tbl_studienplan stpl USING(studienplan_id)
-						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
-						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-						LEFT JOIN campus.tbl_dms_version USING(dms_id)
-					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
+					" . $this->_fromStudiengaenge();
 
 		// $von & $bis are not clearable in UI but once were...
 		// used to be von/bis >=/<= ?
@@ -151,6 +155,52 @@ class Entschuldigung_model extends \DB_Model
 		$query.='ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';
 
 		return $this->execReadOnlyQuery($query, $params);
+	}
+	
+	// open entschuldigungen: anzahl counts the ones with an antragsdatum outside von - bis, the table does
+	// not load them. von and bis give the antragsdatum range of all open ones, so the frontend can load them all
+	public function getOffeneTimespan($stg_kz_arr, $von, $bis)
+	{
+		// like getEntschuldigungenForStudiengaenge: a missing date is no limit, nothing lies outside on that side
+		$outside = 'FALSE';
+		$params = [];
+		if($von) {
+			$outside.= ' OR Date(extension.tbl_anwesenheit_entschuldigung.insertamum) < ?';
+			$params[] = $von;
+		}
+		if($bis) {
+			$outside.= ' OR Date(extension.tbl_anwesenheit_entschuldigung.insertamum) > ?';
+			$params[] = $bis;
+		}
+		$params[] = $stg_kz_arr;
+
+		$query = "SELECT COUNT(DISTINCT CASE WHEN " . $outside . " THEN tbl_anwesenheit_entschuldigung.entschuldigung_id END) AS anzahl,
+						MIN(Date(extension.tbl_anwesenheit_entschuldigung.insertamum)) AS von,
+						MAX(Date(extension.tbl_anwesenheit_entschuldigung.insertamum)) AS bis
+					" . $this->_fromStudiengaenge() . "
+						AND extension.tbl_anwesenheit_entschuldigung.akzeptiert IS NULL";
+
+		return $this->execReadOnlyQuery($query, $params);
+	}
+
+	// active student accounts of the persons with their studiengang and the orgform of the last status
+	// (same order as Prestudentstatus_model::getLastStatus), one row per account in the order of the uids
+	public function getStudentAccountsForPersons($person_ids)
+	{
+		$query = 'SELECT tbl_benutzer.person_id, tbl_benutzer.uid, tbl_studiengang.kurzbzlang, tbl_studiengang.bezeichnung,
+						(SELECT tbl_prestudentstatus.orgform_kurzbz
+							FROM public.tbl_prestudentstatus
+							WHERE tbl_prestudentstatus.prestudent_id = tbl_student.prestudent_id
+							ORDER BY datum DESC, insertamum DESC, ext_id DESC
+							LIMIT 1) AS orgform_kurzbz
+					FROM public.tbl_student
+						JOIN public.tbl_benutzer ON (tbl_student.student_uid = tbl_benutzer.uid)
+						JOIN public.tbl_studiengang USING (studiengang_kz)
+					WHERE tbl_benutzer.aktiv = TRUE
+						AND tbl_benutzer.person_id IN ?
+					ORDER BY tbl_benutzer.uid';
+
+		return $this->execReadOnlyQuery($query, array($person_ids));
 	}
 	
 	public function checkZuordnungByDms($dms_id, $person_id = null)
@@ -213,60 +263,30 @@ class Entschuldigung_model extends \DB_Model
 
 		return $this->execReadOnlyQuery($query, [$person_id]);
 	}
+	
+	// used for autodecline job - filters for old applications still missing their attachment and which would
+	// have applied for a past timeframe
+	public function findOlderThanInterval($interval) {
+		$query = "SELECT *
+					FROM extension.tbl_anwesenheit_entschuldigung
+					WHERE akzeptiert IS NULL
+						AND insertamum <= NOW() - INTERVAL ?
+						AND dms_id IS null
+						AND bis <= NOW()";
 
-	/**
-	 * Expects parameter '$anw_user_ids'
-	 * Checks if anw_user_entries are linked to an exam kontrolle that has been held in the past relative to entschuldigung uploaddatum.
-	 */
-	public function checkForExam($anw_user_ids, $uploaddatum) {
-		$query = "SELECT anwesenheit_user_id
-				  FROM extension.tbl_anwesenheit_user 
-						JOIN extension.tbl_anwesenheit USING(anwesenheit_id)
-						JOIN lehre.tbl_lehreinheit USING(lehreinheit_id) 
-				  WHERE lehrform_kurzbz = 'EXAM' AND anwesenheit_user_id IN ? AND DATE(von) < DATE(?)";
-
-		return $this->execReadOnlyQuery($query, [$anw_user_ids, $uploaddatum]);
+		return $this->execReadOnlyQuery($query, [$interval]);
 	}
 
-	/**
-	 * this query loads all user anwesenheiten entries of a person
-	 * where the person has an entschuldigung in akzeptiert state but also a kontrolle
-	 * of a lehreinheit that is still marked as abwesend. This should only ever happen
-	 * if the lehreinheit in question is of Lehrform EXAM and the INSERTAMUM field of entschuldigung (which is set
-	 * when declaring an entschuldigung, not when uploading the document) is after the kontrolle von date (kvon in this query).
-	 */
-	public function getExamEntriesIgnoredByEntschuldigungenForPerson($person_id) {
+	// used to detect entschuldigungen older than a certain date to send stg assistenz an email to remind them to
+	// manually set the status declined if they think it should be declined. 
+	public function findOlderThanDateIntervalMissingUploads($dateTime) {
+		$query = "SELECT *
+					FROM extension.tbl_anwesenheit_entschuldigung
+					WHERE akzeptiert IS NULL
+						AND insertamum <= ?
+						AND dms_id IS null";
 
-		$query = "SELECT DISTINCT ON (tbl_anwesenheit_user.anwesenheit_id, tbl_anwesenheit_user.anwesenheit_user_id) 
-			anwesenheit_id, tbl_anwesenheit_user.anwesenheit_user_id,
-			extension.tbl_anwesenheit_user.status as konAnwesend, extension.tbl_anwesenheit.von as kVon,
-			extension.tbl_anwesenheit.bis as kBis,
-			akzeptierteEntsch.von as eVon,
-			akzeptierteEntsch.bis as eBis, pid, akzeptierteEntsch.entschuldigung_id as entid, akzeptierteEntsch.akzeptiert as entAkzeptiert
-		FROM extension.tbl_anwesenheit
-				 JOIN extension.tbl_anwesenheit_user USING(anwesenheit_id)
-				 JOIN
-		(SELECT extension.tbl_anwesenheit_entschuldigung.*, person_id as pid, student_uid, prestudent_id
-			FROM extension.tbl_anwesenheit_entschuldigung
-					 JOIN public.tbl_benutzer USING (person_id)
-					 JOIN public.tbl_student ON (public.tbl_benutzer.uid = public.tbl_student.student_uid)
-			WHERE
-				person_id = ? AND
-				akzeptiert = true) AS akzeptierteEntsch
-			ON (
-				akzeptierteEntsch.von <= extension.tbl_anwesenheit.von
-				AND
-				akzeptierteEntsch.bis >= extension.tbl_anwesenheit.bis
-				AND extension.tbl_anwesenheit_user.prestudent_id IN (
-				SELECT public.tbl_prestudent.prestudent_id
-				FROM public.tbl_prestudent JOIN public.tbl_student USING (prestudent_id)
-				WHERE public.tbl_prestudent.prestudent_id = public.tbl_student.prestudent_id
-				AND person_id = ?
-				)
-			)
-		WHERE extension.tbl_anwesenheit_user.status = 'abwesend'";
-
-		return $this->execReadOnlyQuery($query, [$person_id, $person_id]);
+		return $this->execReadOnlyQuery($query, [$dateTime]);
 	}
 	
 	public function getEntschuldigungsStatusForStudentOnDate($student_uid, $datum) {

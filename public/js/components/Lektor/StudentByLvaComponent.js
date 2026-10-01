@@ -1,6 +1,4 @@
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
-import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
-import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {lektorFormatters} from "../../formatters/formatters.js";
 
 import ApiKontrolle from '../../api/factory/kontrolle.js';
@@ -10,17 +8,17 @@ import ApiInfo from '../../api/factory/info.js';
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
-		CoreBaseLayout,
-		CoreFilterCmpt,
-		CoreNavigationCmpt,
+		CoreFilterCmpt
 	},
 	data() {
 		return {
 			tabulatorUuid: Vue.ref(0),
-			appSideMenuEntries: {},
-			headerMenuEntries: {},
 			tableBuiltPromise: null,
 			cellEditing: null,
+			// columns the table presets may handle. The row selection column has no field,
+			// so it stays out and keeps its place
+			presetColumns: ['datum', 'status', 'anteil', 'von', 'bis', 'lehreinheit_id', 'kinsertvon',
+				'kupdatevon', 'ainsertvon', 'aupdatevon', 'dauer', 'notiz'],
 			anwesenheitenByStudentByLvaTabulatorOptions: {
 				height: this.$entryParams?.tabHeights?.studentByLva ?? 400,
 				index: 'datum',
@@ -47,7 +45,7 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/lehreinheit_id')), field: 'lehreinheit_id', widthGrow: 1, visible: false},
-					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/insertvon')), field: 'kinsertvon', widthGrow: 1, visible: false},
+					{title: this.$capitalize(this.$p.t('global/kontrolliertVon')), field: 'kinsertvon', widthGrow: 1, visible: true},
 					{title: this.$capitalize(this.$p.t('global/kontrolle') + ' ' + this.$p.t('global/updatevon')), field: 'kupdatevon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/insertvon')), field: 'ainsertvon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/updatevon')), field: 'aupdatevon', widthGrow: 1, visible: false},
@@ -114,10 +112,6 @@ export const StudentByLvaComponent = {
 			}
 			],
 			filterTitle: "",
-			filterSubtitle: "",
-			changedData: [],
-			tableData: null,
-			initialTableData: null,
 			vorname: null,
 			nachname: null,
 			semester: null,
@@ -133,7 +127,6 @@ export const StudentByLvaComponent = {
 		'anwesenheitenUpdated'
 	],
 	props: {
-		permissions: [],
 		id: null,
 		lv_id: null,
 		sem_kz: null,
@@ -151,10 +144,8 @@ export const StudentByLvaComponent = {
 		sumBottomCalcFormatter(cell) {
 			const val = Number.parseFloat(cell.getValue())
 			if(Number.isNaN(val)) return cell.getValue()
-			if (val < (this.$entryParams.permissions.positiveRatingThreshold * 100)) {
-				const el = cell.getElement()
-				el.style.setProperty('color', 'red')
-			}
+			// the class follows the theme. Toggle it, a recalc formats the same calc cell again
+			cell.getElement().classList.toggle('anw-sum--low', val < (this.$entryParams.permissions.positiveRatingThreshold * 100))
 
 			return cell.getValue()
 		},
@@ -187,41 +178,6 @@ export const StudentByLvaComponent = {
 				row.getElement().children[0]?.children[0]?.remove()
 			}
 
-		},
-		setRowStatus(cell, row, status) {
-			if(cell.getData().status === status || cell.getData().status === this.$entryParams.permissions.entschuldigt_status) return
-
-			const newRow = {
-				anwesenheit_user_id: cell.getData().anwesenheit_user_id,
-				datum: cell.getData().datum,
-				status: status
-			}
-			this.handleChange(newRow)
-			row.update(newRow)
-		},
-		handleChange(row){
-			const existingEntryIndex = this.changedData.findIndex(element => element.datum === row.datum)
-			if(existingEntryIndex >= 0) this.changedData.splice(existingEntryIndex, 1)
-			else this.changedData.push(row)
-		},
-		formAction: function(cell)
-		{
-			const wrapper = document.createElement('div');
-			wrapper.className = "d-flex gap-3";
-
-			const setCheckedButton = document.createElement('button');
-			setCheckedButton.className = 'btn btn-outline-secondary';
-			setCheckedButton.innerHTML = '<i class="fa fa-check"></i>';
-			setCheckedButton.addEventListener('click', () => this.setRowStatus(cell, cell.getRow(), this.$entryParams.permissions.anwesend_status));
-			wrapper.append(setCheckedButton);
-
-			const setCrossedButton = document.createElement('button');
-			setCrossedButton.className = 'btn btn-outline-secondary';
-			setCrossedButton.innerHTML = '<i class="fa fa-xmark"></i>';
-			setCrossedButton.addEventListener('click', () => this.setRowStatus(cell, cell.getRow(), this.$entryParams.permissions.abwesend_status));
-			wrapper.append(setCrossedButton);
-
-			return wrapper;
 		},
 		async saveChanges(changedData){
 			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData)).then(res => {
@@ -300,26 +256,23 @@ export const StudentByLvaComponent = {
 		setFilterTitle() {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
 				+ this.verband + this.gruppe + ' '
-			this.filterSubtitle = this.$p.t('global/summe')
-				+ ': ' + this.sum+ ' %'
 			
 			this.$emit('titleSet', this.filterTitle)
 		},
-		routeToLandingPage() {
-			this.$router.push({
-				name: 'LandingPage'
-			})
-		},
+		// the status classes of the lektor table, FhcMain.css has their dark theme variants
 		anwesenheitFormatterValue(cell) {
 			const data = cell.getValue()
+			const el = cell.getElement()
+			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt')
+
 			if (data === this.$entryParams.permissions.anwesend_status) {
-				cell.getElement().style.color = "#28a745";
+				el.classList.add('anw-anwesend');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
 			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				cell.getElement().style.color = "#dc3545";
+				el.classList.add('anw-abwesend');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
 			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				cell.getElement().style.color = "#0335f5";
+				el.classList.add('anw-entschuldigt');
 				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
 			} else return '-'
 		},
@@ -348,10 +301,7 @@ export const StudentByLvaComponent = {
 						row.anteil = (row.dauer / sum * 100).toFixed(2)
 					})
 
-					this.tableData = res.data.retval
-					this.initialTableData = [...res.data.retval]
 					this.$refs.anwesenheitenByStudentByLvaTable.tabulator.setData(res.data.retval)
-					// return res.data.retval
 				}
 
 			})
@@ -395,16 +345,9 @@ export const StudentByLvaComponent = {
 		},
 		load(){
 			this.setupMounted()
-
-			// this.calculateTableHeight()
-			// window.addEventListener('resize', this.calculateTableHeight)
-			// window.addEventListener('orientationchange', this.calculateTableHeight)
 		}
 	},
 	mounted() {
-		// this.setupMounted()
-		//
-		// this.calculateTableHeight()
 		window.addEventListener('resize', this.calculateTableHeight)
 		window.addEventListener('orientationchange', this.calculateTableHeight)
 	},
@@ -413,12 +356,9 @@ export const StudentByLvaComponent = {
 		window.removeEventListener('orientationchange', this.calculateTableHeight)	
 	},
 	computed: {
-		dataChanged() {
-			return this.changedData.length
-		},
 		getTooltipObj() {
 			return {
-				value: this.$p.t('global/tooltipStudentByLva'),
+				value: this.$p.t('global/tooltipStudentByLvaV2'),
 				class: "custom-tooltip"
 			}
 		}
@@ -432,6 +372,9 @@ export const StudentByLvaComponent = {
 					@uuidDefined="handleUuidDefined"
 					:tabulator-options="anwesenheitenByStudentByLvaTabulatorOptions"
 					:tabulator-events="anwesenheitenByStudentByLvaTabulatorEventHandlers"
+					:isUsingPresets="true"
+					presetsId="anwesenheitenStudentByLvaTable"
+					:presetColumns="presetColumns"
 					:tableOnly="true"
 					:sideMenu="false" 
 					noColumnFilter>

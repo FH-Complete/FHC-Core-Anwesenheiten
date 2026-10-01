@@ -8,18 +8,13 @@ export const StudentDropdown = {
 	],
 	data () {
 		return {
-			errors: null,
 			internal_available_student_info: [],
 			internal_selected_student_info: null
 		};
 	},
-	props: {
-
-	},
 	methods: {
 		studentChanged(e) {
 
-			this.$entryParams.selected_student = e.value
 			this.$entryParams.selected_student_info = this.$entryParams.availableStudents.find(s => s.prestudent_id === e.value.prestudent_id)
 			this.$emit('studentChanged', e)
 		},
@@ -32,10 +27,6 @@ export const StudentDropdown = {
 				this.internal_selected_student_info =  this.$entryParams.selected_student_info
 			})
 		},
-		resetData() {
-			this.internal_available_student_info =  this.$entryParams.availableStudents
-			this.internal_selected_student_info =  this.$entryParams.selected_student_info
-		},
 		getOptionLabel(option) {
 			const gruppe = ' (' + option.semester + option.verband + option.gruppe + ')'
 			return option.nachname + ' ' + option.vorname + ' ' + gruppe.replace(/\s+/g, '') // remove spaces
@@ -45,13 +36,11 @@ export const StudentDropdown = {
 		this.setupData()
 	},
 	template: `
-		<div class="row">
-			<div class="col-3 d-flex align-items-center"><label for="leSelect">{{ $p.t('global/students') }}</label></div>
-			<div class="col-8">
-				<Dropdown @change="studentChanged" :style="{'width': '100%'}" :optionLabel="getOptionLabel" 
-				v-model="internal_selected_student_info" :options="internal_available_student_info">
-				</Dropdown>
-			</div>
+		<div class="d-flex align-items-center gap-2">
+			<label for="studentSelect" class="mb-0 text-nowrap">{{ $p.t('global/students') }}</label>
+			<Dropdown @change="studentChanged" class="flex-grow-1" style="min-width: 0;" inputId="studentSelect" :optionLabel="getOptionLabel"
+			v-model="internal_selected_student_info" :options="internal_available_student_info">
+			</Dropdown>
 		</div>
 	`
 }

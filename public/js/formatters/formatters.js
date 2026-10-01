@@ -1,7 +1,7 @@
 export const lektorFormatters = {
 	centeredFormatter: function(cell) {
 		const val = cell.getValue()
-		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">'+val+'</div>'
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 44px; max-height: 44px;">'+val+'</div>'
 	},
 	formDateOnly: function (cell) {
 		var value = cell.getValue();
@@ -22,7 +22,7 @@ export const lektorFormatters = {
 		let value = cell.getValue();
 		if(value === undefined) return
 
-		return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><img src="'+value+'" style="max-height: 64px"></img></div>'
+		return '<div style="display: flex; justify-content: center; align-items: center; height: 44px; max-height: 44px;"><img src="'+value+'" style="max-height: 64px"></img></div>'
 	},
 	dateOnlyTimeFormatter: function (cell) {
 		const value = cell.getValue();
@@ -45,7 +45,7 @@ export const studentFormatters = {
 
 		if(value) {
 			return '<div style="display: flex; justify-content: center; align-items: center; height: 100%; cursor: pointer;">' +
-				'<a><i class="fa fa-file-pdf" style="color:#00649C"></i></a></div>'
+				'<a><i class="fa fa-file-pdf anw-file-icon"></i></a></div>'
 		} else return '<div style="display: flex; justify-content: center; align-items: center; height: 100%">' +
 			'<a>-</a></div>'
 
@@ -73,15 +73,5 @@ export const studentFormatters = {
 	formStudiengangKz: function (cell) {
 		const rowData = cell.getRow().getData()
 		return rowData.kurzbzlang + ' ' + rowData.bezeichnung
-	},
-
-	customGroupHeader: function(value, count, data)
-	{
-		return '<div style="display:flex; justify-content: space-between;">' +
-			'<div>' + value + '</div>' +
-			'<div style="flex-grow: 1; text-align: right;">Anwesenheit ' + data[0].anwesenheit + " %" + '</div>' +
-			'</div>';
-	},
-
-
+	}
 }

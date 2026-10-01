@@ -6,18 +6,12 @@ export const LehreinheitenDropdown = {
 	emits: [
 		'leChanged'
 	],
-	props: {
-		title: ''
-	},
 	methods: {
 		leChanged(e) {
 			this.$entryParams.selected_le_id.value = e.value.lehreinheit_id
 			this.$entryParams.selected_le_info.value = e.value
 
 			this.$emit('leChanged')
-		},
-		getSelected(option) {
-			return option?.infoString === this.$entryParams.selected_le_info.value?.infoString
 		},
 		getOptionLabel(option) {
 			return option.infoString

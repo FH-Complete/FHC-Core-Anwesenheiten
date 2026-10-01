@@ -18,7 +18,7 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "
 			SELECT *
 			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
-			WHERE prestudent_id = ? AND lehreinheit_id = ? AND DATE(extension.tbl_anwesenheit.von) = ?
+			WHERE prestudent_id = ? AND lehreinheit_id = ? AND extension.tbl_anwesenheit.von = ?
 			ORDER BY von ASC;
 		";
 
@@ -74,6 +74,9 @@ class Anwesenheit_User_model extends \DB_Model
 
 	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false)
 	{
+		if (!is_array($changedAnwesenheiten) || !count($changedAnwesenheiten))
+			return success([]);
+
 		$this->db->trans_start(false);
 
 		$updateResults = [];
@@ -91,49 +94,63 @@ class Anwesenheit_User_model extends \DB_Model
 				$this->addHistoryEntry($existing);
 			}
 
-			if(property_exists($entry, 'notiz')) {
-				$result = $this->update($entry->anwesenheit_user_id, array(
-					'version' => $existing->version + 1,
-					'status' => $entry->status,
-					'notiz' => $entry->notiz,
-					'updatevon' => getAuthUID(),
-					'updateamum' => date('Y-m-d H:i:s')
-				));
+			$fields = array(
+				'version' => $existing->version + 1,
+				'status' => $entry->status,
+				'updatevon' => getAuthUID(),
+				'updateamum' => date('Y-m-d H:i:s')
+			);
+			if(property_exists($entry, 'notiz')) $fields['notiz'] = $entry->notiz;
 
-				if(isSuccess($result) && hasData($result)) {
-					$updateResults[] = getData($result);
-				}
-			} else {
-				$result = $this->update($entry->anwesenheit_user_id, array(
-					'version' => $existing->version + 1,
-					'status' => $entry->status,
-					'updatevon' => getAuthUID(),
-					'updateamum' => date('Y-m-d H:i:s')
-				));
-
-				if(isSuccess($result) && hasData($result)) {
-					$updateResults[] = getData($result);
-				}
-			}
-
+			$result = $this->update($entry->anwesenheit_user_id, $fields);
 
 			if (isError($result)) {
 				$this->db->trans_rollback();
 				return error($result->msg, EXIT_ERROR);
 			}
+
+			if(hasData($result)) {
+				$updateResults[] = getData($result);
+			}
 		}
 
+		// trans_complete already commits or rolls back. no explicit trans_commit/trans_rollback
+		// after it: inside a caller transaction that would end the outer transaction early
 		$this->db->trans_complete();
 
 		// Check if everything went ok during the transaction
-		if ($this->db->trans_status() === false || isError($result)) {
-			$this->db->trans_rollback();
-			return error($result->msg, EXIT_ERROR);
-		} else {
-			$this->db->trans_commit();
-			return success($updateResults);
+		if ($this->db->trans_status() === false) {
+			return error('error during updateAnwesenheiten transaction', EXIT_ERROR);
 		}
 
+		return success($updateResults);
+	}
+
+	/**
+	 * counts how many of the given anwesenheit_user entries do NOT belong to the given lehreinheit
+	 * (used to reject updates on foreign entries)
+	 */
+	public function countEntriesNotInLehreinheit($anwesenheit_user_ids, $le_id)
+	{
+		$query = "SELECT COUNT(*) AS cnt
+			FROM extension.tbl_anwesenheit_user
+				JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
+			WHERE anwesenheit_user_id IN ? AND lehreinheit_id <> ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids, $le_id]);
+	}
+
+	/**
+	 * loads the current status of the given anwesenheit_user entries
+	 * (used to decide which entries a declined entschuldigung is allowed to change)
+	 */
+	public function getStatusForIds($anwesenheit_user_ids)
+	{
+		$query = "SELECT anwesenheit_user_id, status
+			FROM extension.tbl_anwesenheit_user
+			WHERE anwesenheit_user_id IN ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids]);
 	}
 
 	public function getEntschuldigungsstatusForPersonIds($personIds)
@@ -141,7 +158,8 @@ class Anwesenheit_User_model extends \DB_Model
 
 		$query ='SELECT person_id, von, bis, akzeptiert
 			FROM extension.tbl_anwesenheit_entschuldigung
-			WHERE person_id IN ?';
+			WHERE person_id IN ?
+			ORDER BY von DESC';
 
 		return $this->execReadOnlyQuery($query, array($personIds));
 
@@ -165,7 +183,8 @@ class Anwesenheit_User_model extends \DB_Model
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
 				 JOIN public.tbl_prestudent USING(prestudent_id)
-			WHERE lehreinheit_id = ?;";
+				 JOIN public.tbl_benutzer USING(uid)
+			WHERE lehreinheit_id = ? AND public.tbl_benutzer.aktiv = true;";
 
 		$result = $this->execQuery($query, [$von, $bis, $le_id]);
 
@@ -193,20 +212,20 @@ class Anwesenheit_User_model extends \DB_Model
 			}
 		}
 
-		$this->db->trans_complete();
-
-		// Check if everything went ok during the transaction
-		if ($this->db->trans_status() === false || isError($result))
+		// KontrolleApi calls this inside its own transaction. There a nested trans_rollback only
+		// lowers the depth counter, so the caller has to roll back when this returns false
+		if (isError($result))
 		{
 			$this->db->trans_rollback();
 			return false;
 		}
-		else
-		{
-			$this->db->trans_commit();
-			return true;
-		}
 
+		// trans_complete already commits or rolls back. no explicit trans_commit/trans_rollback
+		// after it: at depth 1 that would commit the transaction of the caller early
+		$this->db->trans_complete();
+
+		// Check if everything went ok during the transaction
+		return $this->db->trans_status() !== false;
 	}
 
 	public function getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz)
@@ -301,10 +320,8 @@ class Anwesenheit_User_model extends \DB_Model
 			WHERE anwesenheit_id = ?
 		";
 
-		return $this->execQuery($query, [$anwesenheit_id]);
+		return $this->execReadOnlyQuery($query, [$anwesenheit_id]);
 	}
-	
-	
 
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
 	{
@@ -336,20 +353,7 @@ class Anwesenheit_User_model extends \DB_Model
 			FROM public.tbl_student
 			WHERE prestudent_id IN ?";
 
-		return $this->execQuery($query, [$lv_id, $sem_kurzbz, $prestudent_Ids]);
-	}
-	public function deleteUserAnwesenheitById($anwesenheit_user_id)
-	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id = ?";
-
-		return $this->execQuery($query, [$anwesenheit_user_id]);
-	}
-
-	public function deleteUserAnwesenheitByIds($ids)
-	{
-		$query = "DELETE FROM extension.tbl_anwesenheit_user WHERE anwesenheit_user_id IN ?";
-
-		return $this->execQuery($query, [$ids]);
+		return $this->execReadOnlyQuery($query, [$lv_id, $sem_kurzbz, $prestudent_Ids]);
 	}
 
 	public function deleteAllByAnwesenheitId($anwesenheit_id)

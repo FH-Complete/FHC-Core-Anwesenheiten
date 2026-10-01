@@ -1,41 +1,23 @@
 export default {
-	getAktuellesSemester() {
-		
-		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getAktuellesSemester';
-		return {
-			method: 'get',
-			url
-		}
-		
-	},
 	getViewDataStudent() {
-		
+
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getViewDataStudent';
 		return {
 			method: 'get',
 			url
 		}
-		
+
 	},
-	getEntschuldigungFile(dms_id) {
-		
-		const params = { dms_id }
-		const url = `extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile`;
+	getLektorLessons(von, bis) {
+
+		const params = { von, bis }
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getLektorLessons';
 		return {
 			method: 'get',
 			url,
 			params
 		}
-		
-	},
-	getStunden() {
-		
-		const url = 'extensions/FHC-Core-Anwesenheiten/api/InfoApi/getStunden';
-		return {
-			method: 'get',
-			url
-		}
-		
+
 	},
 	getStudiensemester() {
 		

@@ -12,31 +12,22 @@ class InfoApi extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				'getStudiensemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
-				'getStunden' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
 				'getStudentInfo' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
 				'getStudiengaenge' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
 				'getLektorsForLvaInSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r'),
 				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r'),
 				'getLvViewDataInfo' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
-				'getAktuellesSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
-				'getViewDataStudent' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r')
+				'getViewDataStudent' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
+				'getLektorLessons' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r')
 			)
 		);
 
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/QR_model', 'QRModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
-		$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
-		$this->_ci->load->model('ressource/stunde_model', 'StundeModel');
-		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
-		$this->_ci->load->library('DmsLib');
 
 		$this->loadPhrases(
 			array(
@@ -52,26 +43,33 @@ class InfoApi extends FHCAPI_Controller
 
 	/**
 	 * GET METHOD
-	 * returns List of all studiensemester as well as current one
-	 */
-	public function getAktuellesSemester()
-	{
-		$this->_ci->StudiensemesterModel->addOrder("start", "DESC");
-
-		$result = $this->_ci->StudiensemesterModel->getAkt();
-		$aktuell = getData($result);
-
-		$this->terminateWithSuccess($aktuell);
-	}
-
-	/**
-	 * GET METHOD
 	 * returns students own uid and person_id -> used in cis4 anwesenheiten widget
 	 */
 	public function getViewDataStudent() {
 		$this->terminateWithSuccess(array('uid' => getAuthUID(), 'person_id' => getAuthPersonId()));
 	}
 	
+	/**
+	 * GET METHOD
+	 * optional parameters 'von', 'bis' (date 'Y-m-d'); default to today.
+	 * returns the lessons the logged in Lektor teaches within the range, grouped per Lehreinheit/day.
+	 * -> used by the cis4 "Anwesenheiten (Lehrende)" dashboard widget to build deep links
+	 */
+	public function getLektorLessons()
+	{
+		$von = $this->input->get('von');
+		$bis = $this->input->get('bis');
+
+		// fall back to today for missing/invalid dates (query is parameterized, but keep the DB clean)
+		if (!is_string($von) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $von)) $von = date('Y-m-d');
+		if (!is_string($bis) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis)) $bis = $von;
+
+		$result = $this->_ci->AnwesenheitModel->getLektorLessonsInRange($this->_uid, $von, $bis);
+
+		if (!isSuccess($result)) $this->terminateWithError($result);
+		$this->terminateWithSuccess(getData($result));
+	}
+
 	/**
 	 * GET METHOD
 	 * returns List of all studiensemester as well as current one
@@ -86,15 +84,6 @@ class InfoApi extends FHCAPI_Controller
 		$aktuell = getData($result);
 
 		$this->terminateWithSuccess(array($studiensemester, $aktuell));
-	}
-
-	public function getStunden()
-	{
-		$this->_ci->StudiensemesterModel->addOrder("stunde", "ASC");
-		$result = $this->_ci->StundeModel->load();
-		$data = getData($result);
-
-		$this->terminateWithSuccess($data);
 	}
 
 	/**

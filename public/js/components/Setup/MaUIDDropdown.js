@@ -4,11 +4,8 @@ export const MaUIDDropdown = {
 		Dropdown: primevue.dropdown,
 	},
 	emits: [
-		'maUIDChanged'
+		'maUIDchanged'
 	],
-	props: {
-		title: ''
-	},
 	methods: {
 		maUIDChanged(e) {
 
@@ -22,9 +19,6 @@ export const MaUIDDropdown = {
 			).then(() => {
 				this.$emit('maUIDchanged')
 			})
-		},
-		getSelected(option) {
-			return option.mitarbeiter_uid === this.$entryParams.selected_maUID.value?.mitarbeiter_uid
 		},
 		getOptionLabel(option) {
 			return option.infoString

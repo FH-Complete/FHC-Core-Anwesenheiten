@@ -104,8 +104,6 @@ export default {
 
 		const params = {lv_id, sem_kz, id: prestudent_id}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getAnwesenheitSumByLva';
-		// return this.$fhcApi.post(url, payload, null)
-
 		return {
 			method: 'post',
 			url,

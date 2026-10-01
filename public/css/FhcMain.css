@@ -6,17 +6,10 @@
 /* Subtitle. Use it in span within main title. */
 .fhc-subtitle {
 	--bs-text-opacity: 1;
-	color: #6c757d!important;
+	color: var(--bs-secondary-color, #6c757d)!important;
 	font-size: .65em;
 	font-weight: normal;
 	padding-left: 20px;
-}
-
-/* Right align to core side navigation entries. */
-.align-to-coreNav {
-	position: inherit;
-	margin: 0 0 0 250px;
-	padding: 30px 30px;
 }
 
 /* Same style for all action buttons in Tabulator action column */
@@ -32,80 +25,714 @@
 	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.timeline-overlay {
-	position: absolute;
-	height: 80px;
-	border-radius: 4px;
-	box-sizing: border-box;
-	transition: all 0.3s ease;
-	z-index: 9001;
+/* ---------------------------------- help panel ---------------------------------- */
+
+/* the icon takes the color of its context, e.g. white in the blue modal header. A class
+   like text-muted overrides it */
+.anw-help-btn,
+.anw-help-btn:hover,
+.anw-help-btn:focus-visible,
+.btn.anw-help-btn:active {
+	color: inherit;
 }
 
-.timeline-overlay:hover {
-	transform: translateY(-20px);
-	background-color: rgba(0, 0, 0, 0.1) !important;
-	z-index: 9002;
-	box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+.anw-help-btn {
+	line-height: 1;
+	text-decoration: none;
 }
 
-.time-marker {
-	position: absolute;
-	top: 4px;
-	background: rgba(0, 0, 0, 0.6);
-	color: white;
-	font-size: 0.7rem;
-	padding: 2px 6px;
-	border-radius: 4px;
+/* the help opens as a fixed panel next to the icon. AnwHelp.place() sets its place, width
+   and max height inside the viewport, so neither a scrolling container nor a modal body
+   clips it. A v-tooltip centers on the icon at the right edge and gets squeezed there
+   (.custom-tooltip adds 160 px to the left) */
+.anw-help-text {
+	position: fixed;
+	z-index: 1080;
+	overflow-y: auto;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--bs-border-color, #dee2e6);
+	border-radius: 0.375rem;
+	background-color: var(--bs-body-bg, #fff);
+	box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+	color: var(--bs-body-color, #212529);
+	font-size: 0.875rem;
+	font-weight: normal;
+	line-height: 1.5;
+	text-align: left;
+	white-space: pre-line; /* the phrase keeps its paragraphs */
+}
+
+/* --------------------------------- student views -------------------------------- */
+
+.anw-student-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 1rem;
+	margin-bottom: 1rem;
+}
+
+.anw-student-head-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin-bottom: 0;
+	overflow-wrap: anywhere;
+}
+
+.anw-student-head-select {
+	flex: 0 1 28rem;
+	min-width: 0;
+}
+
+/* on a phone the code button is the main action, it takes a line of its own */
+@media (max-width: 575.98px) {
+	.anw-student-head-select,
+	.anw-student-head-code {
+		flex: 1 1 100%;
+	}
+}
+
+/* with show_guide the landing page puts the wiki link into the top right corner. On a phone
+   it sits next to the name, from sm on next to the code button */
+.anw-student-head--guide .anw-student-head-name {
+	padding-right: 5rem;
+}
+
+@media (min-width: 576px) {
+	.anw-student-head--guide {
+		padding-right: 5rem;
+	}
+
+	.anw-student-head--guide .anw-student-head-name {
+		padding-right: 0;
+	}
+}
+
+.anw-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.anw-toolbar-semester {
+	flex: 0 1 20rem;
+}
+
+@media (max-width: 767.98px) {
+	.anw-toolbar-semester {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+}
+
+/* status of an anwesenheit in the table and in the list */
+.anw-status {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* 4.5:1 on the light and the dark table rows and cards (cis4 html.dark) */
+.anw-status--present {
+	color: #1b7a34;
+}
+
+.anw-status--absent {
+	color: #c82333;
+}
+
+html.dark .anw-status--present {
+	color: #69db7c;
+}
+
+html.dark .anw-status--absent {
+	color: #ff8787;
+}
+
+.anw-cell-center {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 0.375rem;
+	height: 100%;
+}
+
+/* the group header of the anwesenheiten table: toggle arrow, title and quote on one line */
+.anw-student-table .tabulator-row.tabulator-group {
+	display: flex;
+	align-items: center;
+	padding: 0.5rem 0.75rem;
+	border-top: 1px solid var(--bs-border-color, #dee2e6);
+	border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+	background-color: var(--bs-secondary-bg, #e9ecef);
+}
+
+.anw-student-table .tabulator-row.tabulator-group .tabulator-group-toggle {
+	flex: 0 0 auto;
+}
+
+.anw-group-head {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.anw-group-title {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.time-marker.start {
-	left: 4px;
+/* the quote of a lehrveranstaltung, red below the positive rating threshold */
+.anw-group-quote,
+.anw-lv-quote {
+	flex: 0 0 auto;
+	padding: 0.125rem 0.625rem;
+	border: 1px solid transparent;
+	border-radius: 50rem;
+	font-size: 0.875em;
+	font-weight: 600;
+	white-space: nowrap;
 }
 
-.time-marker.end {
-	right: 4px;
+.anw-quote--ok {
+	border-color: var(--bs-success-border-subtle, #a3cfbb);
+	background-color: var(--bs-success-bg-subtle, #d1e7dd);
+	color: var(--bs-success-text-emphasis, #0a3622);
 }
 
-.custom-timeline {
+.anw-quote--low {
+	border-color: var(--bs-danger-border-subtle, #f1aeb5);
+	background-color: var(--bs-danger-bg-subtle, #f8d7da);
+	color: var(--bs-danger-text-emphasis, #58151c);
+}
+
+/* status of an entschuldigung */
+.anw-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.25rem 0.625rem;
+	border: 1px solid transparent;
+	border-radius: 50rem;
+	font-size: 0.875em;
+	font-weight: 600;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.anw-pill--accepted {
+	border-color: var(--bs-success-border-subtle, #a3cfbb);
+	background-color: var(--bs-success-bg-subtle, #d1e7dd);
+	color: var(--bs-success-text-emphasis, #0a3622);
+}
+
+.anw-pill--rejected {
+	border-color: var(--bs-danger-border-subtle, #f1aeb5);
+	background-color: var(--bs-danger-bg-subtle, #f8d7da);
+	color: var(--bs-danger-text-emphasis, #58151c);
+}
+
+.anw-pill--open {
+	border-color: var(--bs-info-border-subtle, #9eeaf9);
+	background-color: var(--bs-info-bg-subtle, #cff4fc);
+	color: var(--bs-info-text-emphasis, #055160);
+}
+
+.anw-action-btn {
+	min-width: 2rem;
+}
+
+/* below md the student views show cards instead of tables */
+.anw-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.anw-list-empty {
+	padding: 2rem 1rem;
+	color: var(--bs-secondary-color, #6c757d);
+	font-style: italic;
+	text-align: center;
+}
+
+.anw-card {
+	overflow: hidden;
+	border: 1px solid var(--bs-border-color, #dee2e6);
+	border-radius: 0.5rem;
+	background-color: var(--bs-body-bg, #fff);
+}
+
+.anw-lv-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	width: 100%;
+	padding: 0.75rem 1rem;
+	border: 0;
+	background: none;
+	color: inherit;
+	text-align: left;
+}
+
+.anw-lv-head:hover {
+	background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.anw-lv-head:focus-visible {
+	outline: 2px solid var(--fhc-primary, #006095);
+	outline-offset: -2px;
+}
+
+.anw-lv-title {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.anw-lv-chevron {
+	color: var(--bs-secondary-color, #6c757d);
+	transition: transform 0.2s ease-in-out;
+}
+
+.anw-lv-head[aria-expanded="true"] .anw-lv-chevron {
+	transform: rotate(180deg);
+}
+
+.anw-lv-bar {
+	grid-column: 1 / -1;
+	height: 0.375rem;
+}
+
+.anw-termine {
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid var(--bs-border-color, #dee2e6);
+	list-style: none;
+}
+
+.anw-termin {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.625rem 1rem;
+}
+
+.anw-termin + .anw-termin {
+	border-top: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.175));
+}
+
+.anw-termin-main {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.anw-termin-date {
+	font-weight: 600;
+}
+
+.anw-termin-time {
+	margin-left: 0.5rem;
+	color: var(--bs-secondary-color, #6c757d);
+	font-weight: normal;
+}
+
+.anw-termin-meta {
+	color: var(--bs-secondary-color, #6c757d);
+	font-size: 0.8125rem;
+}
+
+/* a long state wraps, the icon stays in front of the first word */
+.anw-status--stacked {
+	display: block;
+	flex: 0 1 auto;
+	max-width: 45%;
+	font-size: 0.875rem;
+	font-weight: 600;
+	text-align: right;
+}
+
+.anw-status--stacked .fa {
+	margin-right: 0.375rem;
+}
+
+.anw-ent {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	padding: 0.75rem 1rem;
+}
+
+.anw-ent-range {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.5rem;
+	margin: 0;
+}
+
+.anw-ent-range dt,
+.anw-ent-label {
+	color: var(--bs-secondary-color, #6c757d);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.anw-ent-range dd {
+	margin: 0;
+}
+
+.anw-ent-note-text {
+	overflow-wrap: anywhere;
+	white-space: pre-line;
+}
+
+.anw-ent-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+/* ---------------------------- anwesenheiten timeline ---------------------------- */
+
+/* the timeline brings its own space: no negative side margins of the bootstrap row (they
+   stuck out of the borderless core tabs, a horizontal scrollbar), 0.5rem next to the column
+   gutters instead, and 1rem at the bottom */
+.anw-tl.row {
+	margin-right: 0;
+	margin-left: 0;
+	padding: 0 0.5rem 1rem;
+}
+
+.anw-tl-list {
+	max-height: 240px;
+	overflow-y: auto;
+}
+
+.anw-tl-list-item--selected {
+	background-color: var(--fhc-background-highlight, #e9ecef);
+	font-weight: 600;
+}
+
+.anw-tl-plot {
+	position: relative;
+	user-select: none;
+	touch-action: none;
+	cursor: grab;
+}
+
+.anw-tl-plot--panning {
+	cursor: grabbing;
+}
+
+.anw-tl-ruler {
+	position: relative;
+	height: 20px;
+	border-bottom: 1px solid var(--fhc-border, #dee2e6);
+}
+
+.anw-tl-ruler-label {
+	position: absolute;
+	top: 1px;
+	transform: translateX(-50%);
+	font-size: 0.72rem;
+	color: var(--bs-secondary-color, #6c757d);
+	white-space: nowrap;
 	pointer-events: none;
 }
 
-.custom-timeline-scroll-wrapper {
-	overflow-x: auto;
-	width: 100%;
-}
-
-.select-container {
-	position: relative;
-	display: inline-block;
-	width: 100%;
-}
-
-.select-container select {
-	width: 100%;
-	appearance: none; /* Remove default arrow */
-	-webkit-appearance: none;
-	-moz-appearance: none;
-	padding-right: 2rem; /* make room for icon */
-}
-
-.dropdown-icon {
+.anw-tl-grid {
 	position: absolute;
-	right: 1rem;
-	top: 50%;
-	transform: translateY(-50%);
-	pointer-events: none; /* let clicks go through */
-	color: #555;
-	font-size: 0.8rem;
+	top: 20px;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	overflow: hidden;
+	pointer-events: none;
 }
 
+.anw-tl-gridline {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background-color: var(--fhc-border, #e9ecef);
+	opacity: 0.6;
+}
+
+.anw-tl-now {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background-color: #c82333;
+	opacity: 0.7;
+}
+
+html.dark .anw-tl-now {
+	background-color: #ff8787;
+}
+
+.anw-tl-lane {
+	position: relative;
+	margin-top: 10px;
+	padding-top: 14px;
+}
+
+.anw-tl-lane-title {
+	position: absolute;
+	top: 0;
+	left: 0;
+	font-size: 0.7rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--bs-secondary-color, #6c757d);
+}
+
+.anw-tl-band {
+	position: relative;
+	overflow: hidden;
+}
+
+.anw-tl-row {
+	position: relative;
+	height: 18px;
+	margin-bottom: 5px;
+}
+
+.anw-tl-bar {
+	position: absolute;
+	top: 0;
+	height: 100%;
+	min-width: 3px;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.anw-tl-bar:hover {
+	filter: brightness(1.15);
+}
+
+.anw-tl-bar--selected {
+	z-index: 2;
+	outline: 2px solid var(--fhc-text, #212529);
+	outline-offset: 1px;
+}
+
+.anw-tl-overview {
+	position: relative;
+	height: 26px;
+	margin-top: 12px;
+	border: 1px solid var(--fhc-border, #dee2e6);
+	border-radius: 4px;
+	background-color: var(--fhc-background-highlight, #f8f9fa);
+	overflow: hidden;
+	touch-action: none;
+	cursor: pointer;
+}
+
+.anw-tl-overview-bar {
+	position: absolute;
+	height: 8px;
+	min-width: 2px;
+	border-radius: 2px;
+	opacity: 0.85;
+}
+
+.anw-tl-window {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	min-width: 2px;
+	border: 1px solid var(--fhc-primary, #0d6efd);
+	border-radius: 3px;
+	background-color: rgba(13, 110, 253, 0.15);
+	pointer-events: none;
+}
+
+/* --fhc-primary reaches 2.4:1 on the dark overview */
+html.dark .anw-tl-window {
+	border-color: #79b7d8;
+}
+
+.anw-tl-details {
+	min-height: 1.6rem;
+}
+
+.anw-tl-range .dp__main {
+	width: 9.5rem;
+}
+
+.anw-tl-range .dp__input {
+	padding-top: 0.25rem;
+	padding-right: 0.5rem; /* no space for a clear icon, the fields are not clearable */
+	padding-bottom: 0.25rem;
+	font-size: 0.875rem;
+}
+
+/* on a phone the date fields share the first line of the header and drop the calendar
+   icon, a tap into the field opens the calendar too */
+@media (max-width: 575.98px) {
+	.anw-tl-range {
+		flex: 1 1 100%;
+	}
+
+	.anw-tl-range .dp__main {
+		flex: 1 1 0;
+		width: auto;
+		min-width: 0;
+	}
+
+	.anw-tl-range .dp__input_icon {
+		display: none;
+	}
+
+	.anw-tl-range .dp__input_icon_pad {
+		padding-left: 0.5rem;
+	}
+}
+
+.anw-tl-dot {
+	flex: 0 0 auto;
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+
+.anw-tl-badge {
+	display: inline-block;
+	padding: 0.15rem 0.5rem;
+	border-radius: 0.25rem;
+	color: #fff;
+	font-weight: 600;
+}
+
+/* the dark theme draws the tones light, the badge text dark */
+html.dark .anw-tl-badge {
+	color: #212529;
+}
+
+/* status colors of the bars, the dots and the badges, the palette of the tables: 3:1 on the
+   light and the dark cards, 4.5:1 for the badge text (cis4 html.dark) */
+.anw-tl-tone--accepted,
+.anw-tl-tone--present {
+	background-color: #1b7a34;
+}
+
+.anw-tl-tone--rejected,
+.anw-tl-tone--absent {
+	background-color: #c82333;
+}
+
+.anw-tl-tone--open {
+	background-color: #0b7285;
+}
+
+.anw-tl-tone--excused {
+	background-color: #0335f5;
+}
+
+.anw-tl-tone--unknown {
+	background-color: #5c636a;
+}
+
+html.dark .anw-tl-tone--accepted,
+html.dark .anw-tl-tone--present {
+	background-color: #69db7c;
+}
+
+html.dark .anw-tl-tone--rejected,
+html.dark .anw-tl-tone--absent {
+	background-color: #ff8787;
+}
+
+html.dark .anw-tl-tone--open {
+	background-color: #66d9e8;
+}
+
+html.dark .anw-tl-tone--excused {
+	background-color: #91a7ff;
+}
+
+html.dark .anw-tl-tone--unknown {
+	background-color: #adb5bd;
+}
+
+/* from xl on both columns stand side by side and the timeline fills the height that
+   AnwTimeline.fitHeight() measured. Narrower, the columns stack with their natural height */
+@media (min-width: 1200px) {
+	.anw-tl--fit {
+		height: var(--anw-tl-height);
+	}
+
+	.anw-tl--fit .anw-tl-list {
+		max-height: none;
+		min-height: 0;
+	}
+
+	/* the entschuldigungen are few, the kontrollen take the rest of the column */
+	.anw-tl--fit .anw-tl-list--ent {
+		flex: 0 1 auto;
+		max-height: 40%;
+	}
+
+	.anw-tl--fit .anw-tl-list--anw {
+		flex: 1 1 0;
+	}
+
+	.anw-tl--fit .anw-tl-body,
+	.anw-tl--fit .anw-tl-plot,
+	.anw-tl--fit .anw-tl-lanes,
+	.anw-tl--fit .anw-tl-lane,
+	.anw-tl--fit .anw-tl-band {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+
+	.anw-tl--fit .anw-tl-body {
+		flex: 1 1 auto;
+	}
+
+	.anw-tl--fit .anw-tl-plot,
+	.anw-tl--fit .anw-tl-lanes {
+		flex: 1 1 0;
+	}
+
+	.anw-tl--fit .anw-tl-lanes {
+		overflow: hidden;
+	}
+
+	/* both lanes get the same height, the rows of a lane share it */
+	.anw-tl--fit .anw-tl-lane,
+	.anw-tl--fit .anw-tl-band,
+	.anw-tl--fit .anw-tl-row {
+		flex: 1 1 0;
+	}
+
+	.anw-tl--fit .anw-tl-row {
+		height: auto;
+		min-height: 8px;
+	}
+}
+
+/* hover popup of the counts and the kontrolle info. It follows the theme: the dark theme
+   draws the text and the status colors light */
 .legend-info {
 	position: absolute;
 	top: -120%;
 	left: -50%;
-	background: white;
-	border: 1px solid #ddd;
+	background: var(--bs-body-bg, #fff);
+	border: 1px solid var(--bs-border-color, #ddd);
 	padding: 0.75rem 1rem;
 	border-radius: 8px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -130,4 +757,181 @@
 
 .option-entry.btn {
 	border-radius: 0 !important;
+}
+
+/* Anwesenheit status colors, shared by LektorComponent formatters/row coloring. 4.5:1 on the light
+   and the dark table rows (cis4 html.dark), 3:1 for the icons on an unsaved (purple) cell */
+.anw-anwesend {
+	color: #1b7a34;
+}
+
+.anw-abwesend {
+	color: #c82333;
+}
+
+.anw-entschuldigt {
+	color: #0335f5;
+}
+
+.anw-entschuldigt-offen {
+	color: #0b7285;
+}
+
+.anw-dirty {
+	background-color: #E0BBE4 !important;
+}
+
+html.dark .anw-anwesend {
+	color: #69db7c;
+}
+
+html.dark .anw-abwesend {
+	color: #ff8787;
+}
+
+html.dark .anw-entschuldigt {
+	color: #91a7ff;
+}
+
+html.dark .anw-entschuldigt-offen {
+	color: #66d9e8;
+}
+
+/* the cis4 dark theme sets the color of every table row and the background of every cell with
+   !important. Without these rules the row colors and the unsaved cell disappear */
+html.dark .tabulator .tabulator-row.anw-entschuldigt {
+	color: #91a7ff !important;
+}
+
+html.dark .tabulator .tabulator-row.anw-entschuldigt-offen {
+	color: #66d9e8 !important;
+}
+
+html.dark .tabulator .tabulator-cell.anw-dirty {
+	background-color: #6b4577 !important;
+}
+
+/* a selected row (#9abcea, core Tabulator5.css) needs darker icons for 3:1 */
+html:not(.dark) .tabulator-row.tabulator-selected .anw-anwesend {
+	color: #146c43;
+}
+
+html:not(.dark) .tabulator-row.tabulator-selected .anw-abwesend {
+	color: #b02a37;
+}
+
+/* a quote below the positive rating threshold */
+.anw-sum--low {
+	color: #c82333;
+}
+
+html.dark .anw-sum--low {
+	color: #ff8787;
+}
+
+/* Statuslegende of the Lektor view. A sample looks like a cell of the Lektor table */
+.anw-legend-section + .anw-legend-section {
+	margin-top: 1.25rem;
+}
+
+.anw-legend-heading {
+	margin-bottom: 0.25rem;
+	padding-bottom: 0.25rem;
+	border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+	color: var(--bs-secondary-color, #6c757d);
+	font-size: 0.8rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.anw-legend-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* two columns in the wide modal, one column on a phone */
+.anw-legend-list-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+	column-gap: 1.5rem;
+}
+
+.anw-legend-item {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.375rem 0;
+}
+
+.anw-legend-sample {
+	display: flex;
+	flex: 0 0 11rem;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.25rem;
+	padding: 0.25rem 0.5rem;
+	border: 1px solid var(--bs-border-color, #dee2e6);
+	border-radius: 0.25rem;
+	background-color: var(--bs-body-bg, #fff);
+	text-align: center;
+	line-height: 1.2;
+}
+
+@media (max-width: 400px) {
+	.anw-legend-sample {
+		flex-basis: 8rem;
+	}
+}
+
+/* the entschuldigungsmanagement shows its spinner while it loads, not the "no data" placeholder */
+.anw-loading .tabulator-placeholder {
+	visibility: hidden;
+}
+
+/* entschuldigungsmanagement: status and file icon, 4.5:1 on the light and the dark table rows (cis4 html.dark) */
+.anw-ent-status--offen {
+	color: #0b7285;
+}
+
+.anw-ent-status--akzeptiert {
+	color: #1b7a34;
+}
+
+.anw-ent-status--abgelehnt {
+	color: #c82333;
+}
+
+.anw-file-icon {
+	color: #00649c;
+}
+
+html.dark .anw-ent-status--offen {
+	color: #66d9e8;
+}
+
+html.dark .anw-ent-status--akzeptiert {
+	color: #69db7c;
+}
+
+html.dark .anw-ent-status--abgelehnt {
+	color: #ff8787;
+}
+
+html.dark .anw-file-icon {
+	color: #79b7d8;
+}
+
+/* the tabulator tooltip is black in both themes (core Tabulator5.css): the light variants */
+.tabulator-tooltip .anw-ent-status--offen {
+	color: #66d9e8;
+}
+
+.tabulator-tooltip .anw-ent-status--akzeptiert {
+	color: #69db7c;
+}
+
+.tabulator-tooltip .anw-ent-status--abgelehnt {
+	color: #ff8787;
 }

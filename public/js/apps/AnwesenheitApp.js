@@ -1,9 +1,5 @@
-import LektorComponent from "../components/Lektor/LektorComponent.js";
-import Phrasen from "../../../../js/plugin/Phrasen.js";
-import {StudentByLvaComponent} from "../components/Lektor/StudentByLvaComponent.js";
-import StudentComponent from "../components/Student/StudentComponent.js";
-import StudentAnwesenheitComponent from "../components/Student/StudentAnwesenheitComponent.js";
-import StudentEntschuldigungComponent from "../components/Student/StudentEntschuldigungComponent.js";
+// plugin or plugins doesnt matter it all loads all legacy plugins anyway, switch to FhcBase for more sanity
+import Phrasen from "../../../../js/plugins/Phrasen.js";
 import ScanComponent from "../components/Student/ScanComponent.js";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent.js";
 
@@ -21,7 +17,8 @@ const router = VueRouter.createRouter({
 			path: '/Profil/Scan/:zugangscode?',
 			name: 'Scan',
 			component: ScanComponent,
-			props: true
+			// standalone: the page offers a way back, the dashboard widget embeds the component without it
+			props: route => ({ zugangscode: route.params.zugangscode, standalone: true })
 		},
 		{
 			path: '/Profil/Entschuldigung',
@@ -43,35 +40,15 @@ const router = VueRouter.createRouter({
 	]
 })
 
-const anwesenheitApp = Vue.createApp({
-	components: {
-		LektorComponent,
-		StudentByLvaComponent,
-		StudentComponent,
-		StudentAnwesenheitComponent,
-		StudentEntschuldigungComponent
-	},
-	data() {
-		return {
-			title: "AnwesenheitApp",
-		}
-	},
-	props: {
-
-	},
-	methods: {
-	},
-	created(){
-
-	}
-});
+const anwesenheitApp = Vue.createApp({});
 anwesenheitApp.config.globalProperties.$entryParams = {
 	// TODO: update every patch to keep renew persistenceID for tabulator tables
-	patchdate: '2025-09-11',
+	patchdate: '2026-01-29',
 	isInFrame: !!window.frameElement,
-	isMobile: Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1,
-	available_le_ids: Vue.ref([]),
 	available_le_info: Vue.ref([]),
+	// lva wide le list for the lvlead/admin multiselect, stays stable while
+	// available_le_info gets refiltered on maUID switches
+	available_le_info_lva: Vue.ref([]),
 	selected_le_id: Vue.ref(),
 	selected_le_info: Vue.ref(),
 	available_maUID: Vue.ref([]),
@@ -83,6 +60,16 @@ anwesenheitApp.config.globalProperties.$entryParams = {
 anwesenheitApp.config.globalProperties.$capitalize = (string) => {
 	if(!string) return ''
 	return string[0].toUpperCase() + string.slice(1);
+}
+
+// cis4 renders the extension inside #cis-main, a container with a padding. A table which
+// fills the space down to the viewport bottom pushes that padding out of the viewport and
+// creates a vertical scrollbar. The legacy environment has no such container.
+anwesenheitApp.config.globalProperties.$contentBottomOffset = () => {
+	const cisMain = document.getElementById('cis-main')
+	if (!cisMain) return 0
+
+	return parseFloat(window.getComputedStyle(cisMain).paddingBottom) || 0
 }
 
 anwesenheitApp.config.globalProperties.$formatTime = (timeStamp, delimiter = '-', format = 'YYYY-MM-DD') => {

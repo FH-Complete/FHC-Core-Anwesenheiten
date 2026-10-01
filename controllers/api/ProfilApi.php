@@ -1,9 +1,6 @@
 <?php
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-use \chillerlan\QRCode\QROptions;
-use \chillerlan\QRCode\QRCode;
-
 class ProfilApi extends FHCAPI_Controller
 {
 
@@ -37,7 +34,7 @@ class ProfilApi extends FHCAPI_Controller
 				'checkInAnwesenheit' => array('extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
-				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r'),
+				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 				
 				// load anw details onclick in cis4 widget
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
@@ -51,12 +48,12 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('ressource/Mitarbeiter_model', 'MitarbeiterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -113,7 +110,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -156,7 +153,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -200,7 +197,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
 			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -269,10 +266,6 @@ class ProfilApi extends FHCAPI_Controller
 
 		$von = $result->retval[0]->von;
 		$bis = $result->retval[0]->bis;
-
-//		if(!($von <= $nowString && $nowString <= $bis)) {
-//			$this->terminateWithError($this->p->t('global', 'errorCodeSentInTimeOutsideKontrolle'), 'general');
-//		}
 
 		$lehreinheit_id = $result->retval[0]->lehreinheit_id;
 
@@ -347,6 +340,9 @@ class ProfilApi extends FHCAPI_Controller
 			);
 		}
 
+		$requestSizeError = $this->_ci->entschuldigunguploadlib->checkRequestSize('addEntschuldigung');
+		if ($requestSizeError !== null) $this->terminateWithError($requestSizeError, 'general');
+
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
@@ -370,15 +366,12 @@ class ProfilApi extends FHCAPI_Controller
 		
 		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH') + 1); // +1 since frontend validates with a 1day larger range currently
 		
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
-		
-//		$this->addMeta('$dateLimit', $dateLimitTimestamp);
-//		$this->addMeta('$vonTimestamp', $vonTimestamp);
-		
 		if ($vonTimestamp < $dateLimitTimestamp && !$isAdmin) {
-			$this->terminateWithError("Provided date is older than allowed date");
+			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
 		}
 		
+		// if working on a new dump/system, make sure that "ext_anw_entschuldigungen" dms kategorie exists,
+		// or the upload will fail and respond with errorEntUploadTechnical
 		if(!$noFileUpload) {
 			$file = array(
 				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
@@ -389,9 +382,12 @@ class ProfilApi extends FHCAPI_Controller
 				'insertvon' => $this->_uid,
 			);
 
-			$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'jpeg', 'png'));
+			$dmsFile = $this->_ci->dmslib->upload($file, 'files', EntschuldigungUploadLib::ALLOWED_FILETYPES);
+
 			if(!isSuccess($dmsFile)) {
-				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+				$this->terminateWithError(
+					$this->_ci->entschuldigunguploadlib->handleUploadError($dmsFile, 'addEntschuldigung'), 'general'
+				);
 			}
 
 			$dmsFile = getData($dmsFile);
@@ -443,12 +439,36 @@ class ProfilApi extends FHCAPI_Controller
 		return $date->getTimeStamp();
 	}
 
+	/**
+	 * private utility function
+	 * returns the last moment a student can upload a document for an entschuldigung:
+	 * the end of the day ENTSCHULDIGUNG_MAX_REACH workdays after $insertamum. weekends do not count.
+	 */
+	private function calcUploadDeadline($insertamum) {
+		$deadline = new DateTime($insertamum);
+		$workdaysLeft = $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH');
+
+		while ($workdaysLeft > 0) {
+			$deadline->modify('+1 day');
+
+			$isWeekend = (int) $deadline->format('N') >= 6; // 6 = Saturday, 7 = Sunday
+			if (!$isWeekend) $workdaysLeft--;
+		}
+
+		$deadline->setTime(23, 59, 59);
+
+		return $deadline;
+	}
+
 	public function editEntschuldigung() {
 		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
 			$this->terminateWithSuccess(
 				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
 			);
 		}
+
+		$requestSizeError = $this->_ci->entschuldigunguploadlib->checkRequestSize('editEntschuldigung');
+		if ($requestSizeError !== null) $this->terminateWithError($requestSizeError, 'general');
 
 		if (isEmptyString($_POST['person_id']) || isEmptyString($_POST['entschuldigung_id'])) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		
@@ -471,6 +491,29 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		$entschuldigung = getData($result)[0];
 
+		// the entschuldigung must belong to $person_id. for students, the berechtigung check above accepts only
+		// their own person_id, so a student cannot edit the entschuldigung of another person
+		if($entschuldigung->person_id != $person_id) {
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+		}
+		
+		// edge case where student still has old ui with nachreichen button enabled but in the meantime assistenz
+		// or the autodecline job has already accepted or declined the entschuldigung request
+		if($entschuldigung->akzeptiert !== null) {
+			$this->terminateWithError(
+				$this->p->t('global', $entschuldigung->akzeptiert ? 'errorEntAlreadyAccepted' : 'errorEntAlreadyDeclined'), 'general'
+			);
+		}
+
+		// a document can be handed in only up to ENTSCHULDIGUNG_MAX_REACH workdays after the entschuldigung was created
+		$uploadDeadline = $this->calcUploadDeadline($entschuldigung->insertamum);
+		if(!$isAdmin && new DateTime() > $uploadDeadline) {
+			$this->terminateWithError($this->p->t('global', 'errorEntUploadDeadlinePassed', [
+				'deadline' => $uploadDeadline->format('d.m.Y'),
+				'workdays' => $this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH')
+			]), 'general');
+		}
+
 		$file = array(
 			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 			'version' => 0,
@@ -480,30 +523,15 @@ class ProfilApi extends FHCAPI_Controller
 			'insertvon' => $this->_uid,
 		);
 
-		$dmsFile = $this->_ci->dmslib->upload($file, 'files', array('pdf', 'jpg', 'png'));
+		$dmsFile = $this->_ci->dmslib->upload($file, 'files', EntschuldigungUploadLib::ALLOWED_FILETYPES);
 		if(!isSuccess($dmsFile)) {
-			$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
+			$this->terminateWithError(
+				$this->_ci->entschuldigunguploadlib->handleUploadError($dmsFile, 'editEntschuldigung'), 'general'
+			);
 		}
 
 		// add old version to history table
-		$this->_ci->EntschuldigungHistoryModel->insert(
-			array(
-				'entschuldigung_id' => $entschuldigung->entschuldigung_id,
-				'person_id' => $entschuldigung->person_id,
-				'von' => $entschuldigung->von,
-				'bis' => $entschuldigung->bis,
-				'dms_id' => $entschuldigung->dms_id,
-				'insertvon' => $entschuldigung->insertvon,
-				'insertamum' => $entschuldigung->insertamum,
-				'updatevon' => $entschuldigung->updatevon,
-				'updateamum' => $entschuldigung->updateamum,
-				'statussetvon' => $entschuldigung->statussetvon,
-				'statussetamum' => $entschuldigung->statussetamum,
-				'akzeptiert' => $entschuldigung->akzeptiert,
-				'notiz' => $entschuldigung->notiz,
-				'version' => $entschuldigung->version
-			)
-		);
+		$this->_ci->EntschuldigungHistoryModel->insertVersion($entschuldigung, $entschuldigung->dms_id);
 		
 		$dmsFile = getData($dmsFile);
 		$dmsId = $dmsFile['dms_id'];
@@ -511,7 +539,6 @@ class ProfilApi extends FHCAPI_Controller
 		$result = $this->_ci->EntschuldigungModel->update(
 			$entschuldigung->entschuldigung_id,
 			array(
-				'person_id' => $person_id,
 				'dms_id' => $dmsId,
 				'updatevon' => $this->_uid,
 				'updateamum' => date('Y-m-d H:i:s'),
@@ -554,7 +581,6 @@ class ProfilApi extends FHCAPI_Controller
 		$bisFormatted = $bisDateTime->format("d.m.Y H:i");
 
 		foreach($data as $mailrow) {
-//			$this->addMeta('emailData', $mailrow);
 			//emailTo usually is 1 address, sometimes several seperated by ','
 			$emails = explode(', ', $mailrow->email);
 
@@ -652,8 +678,6 @@ class ProfilApi extends FHCAPI_Controller
 			if (isError($deletedEntschuldigung))
 				$this->terminateWithError(getError($deletedEntschuldigung));
 
-			
-			
 			if(isset($entschuldigung->dms_id)) {
 
 				$deletedFile = $this->_ci->dmslib->delete($entschuldigung->person_id, $entschuldigung->dms_id);
@@ -664,24 +688,7 @@ class ProfilApi extends FHCAPI_Controller
 			}
 			
 			// add old version to history table without dms_id -> either never existed or should be deleted aswell
-			$this->_ci->EntschuldigungHistoryModel->insert(
-				array(
-					'entschuldigung_id' => $entschuldigung->entschuldigung_id,
-					'person_id' => $entschuldigung->person_id,
-					'von' => $entschuldigung->von,
-					'bis' => $entschuldigung->bis,
-					'dms_id' => null,
-					'insertvon' => $entschuldigung->insertvon,
-					'insertamum' => $entschuldigung->insertamum,
-					'updatevon' => $entschuldigung->updatevon,
-					'updateamum' => $entschuldigung->updateamum,
-					'statussetvon' => $entschuldigung->statussetvon,
-					'statussetamum' => $entschuldigung->statussetamum,
-					'akzeptiert' => $entschuldigung->akzeptiert,
-					'notiz' => $entschuldigung->notiz,
-					'version' => $entschuldigung->version
-				)
-			);
+			$this->_ci->EntschuldigungHistoryModel->insertVersion($entschuldigung, null);
 			
 			$this->sendEmailToAssistenz($person_id, $entschuldigung->dms_id, 'delete', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 

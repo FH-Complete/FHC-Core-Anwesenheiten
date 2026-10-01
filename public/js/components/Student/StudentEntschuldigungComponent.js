@@ -5,54 +5,49 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
+import AnwHelp from '../AnwHelp.js';
+import NarrowScreen from '../../mixins/NarrowScreen.js';
 import ApiProfil from '../../api/factory/profil.js'
 export default {
 	name: 'StudentEntschuldigungComponent',
 	components: {
 		CoreBaseLayout,
-		CoreRESTClient,
 		CoreFilterCmpt,
 		BsModal,
 		Upload,
-		"datepicker": VueDatePicker,
-		Checkbox: primevue.checkbox
+		AnwHelp,
+		"datepicker": VueDatePicker
 	},
+	mixins: [NarrowScreen],
 	data: function() {
 		return {
 			noFileUpload: false,
+			uploading: false,
 			editEntschuldigung: null,
 			tabulatorUuid: Vue.ref(0),
 			entschuldigung: this.initEntschuldigungForm(),
 			minDate: this.calcMinDate(),
 			tableBuiltPromise: null,
+			// the rows of the table, the list below md shows the same rows
+			entschuldigungen: null,
 			entschuldigungsViewTabulatorOptions: {
-				ajaxURL: FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router+'/extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getEntschuldigungenByPersonID',
-				ajaxResponse: (url, params, response) => {
-					return response.data.retval
-				},
+				// data is fetched and set from outside (loadEntschuldigungen) instead of tabulator ajax options:
+				// the ajax fetch fired on table build, before person_id was resolved, and tabulator
+				// displayed a confusing error placeholder to students until the request chain settled
 				height: this.$entryParams.tabHeights.studentEnt,
-				ajaxConfig: "POST",
-				ajaxContentType: {
-					headers:{
-						'Content-Type': 'application/json'
-					},
-					body:()=>{
-						return JSON.stringify({
-							person_id: this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-						})
-					}
-				},
-				placeholder: this._.root.appContext.config.globalProperties.$p.t('global/noDataAvailable'),
+				placeholder: this.$p.t('global/noDataAvailable'),
 				debugInvalidComponentFuncs:false,
-				layout:"fitDataStretch",
+				// fitColumns keeps the table inside its container, the begruendung takes the free space
+				layout:"fitColumns",
 				pagination: true,
 				paginationSize: 100,
 				columns: [
-					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, minWidth: 200, tooltip: false, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 200, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 200, tooltip: false},
-					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', tooltip:false}
+					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, minWidth: 150, tooltip: false, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 140, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 140, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 110, tooltip: false},
+					// the textarea formatter wraps a long begruendung instead of cutting it off
+					{title: this.$capitalize(this.$p.t('global/begruendungAnw')), field: 'notiz', formatter: 'textarea', tooltip:false, minWidth: 200, widthGrow: 3}
 				],
 				persistence: {
 					sort: false,
@@ -60,7 +55,9 @@ export default {
 					headerFilter: false,
 					group: true,
 					page: true,
-					columns: true,
+					// visibility and order only. fitColumns computes the widths from the container,
+					// a stored width became a fixed width and did not fit the next window size
+					columns: ['visible'],
 				},
 				persistenceID: this.$entryParams.patchdate + "-studentEntschuldigungenTable"
 			},
@@ -71,7 +68,11 @@ export default {
 
 					this.tableBuiltResolve()
 				}
+			}, {
+				event: "renderComplete",
+				handler: () => this.fitToScrollbar()
 			}],
+			scrollbarWidth: 0,
 			filterTitle: ""
 		};
 	},
@@ -107,31 +108,75 @@ export default {
 
 			return `${day}.${month}.${year} ${hours}:${minutes}`;
 		},
+		// older safari versions only parse the iso form '2026-03-01T08:00:00' of a postgres timestamp
+		formatTimestamp(value) {
+			let date = new Date(value)
+			if (isNaN(date)) date = new Date(String(value).replace(' ', 'T'))
+			if (isNaN(date)) return value
+
+			return this.formatDate(date)
+		},
 		calcMinDate(){
-			// calc max reach offset into workdays
-			let d = new Date();
+			// step back entschuldigungMaxReach workdays, skipping weekends
+			// (holidays are not considered, there is no data source for them here)
+			const d = new Date();
 			for (let x = this.$entryParams.permissions.entschuldigungMaxReach; x > 0; x--) {
-				// step 3 times on monday, else step once per counter
-				d.setDate(d.getDate() - (d.getDay() === 1 ? 3 : 1));
+				d.setDate(d.getDate() - 1);
+				while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
 			}
 
 			return d
 		},
+		// mirrors ProfilApi::calcUploadDeadline: the end of the day entschuldigungMaxReach workdays
+		// after the creation date. weekends do not count.
+		// calculated in the server timezone, so the day ends at the same moment as in the backend
+		calcUploadDeadline(ent) {
+			const zone = (typeof FHC_JS_DATA_STORAGE_OBJECT !== 'undefined' && FHC_JS_DATA_STORAGE_OBJECT.timezone)
+				|| 'Europe/Vienna'
+
+			// a row added in this session has no insertamum, it was created today
+			let deadline = ent.insertamum
+				? luxon.DateTime.fromISO(String(ent.insertamum).substring(0, 10), { zone })
+				: luxon.DateTime.now().setZone(zone)
+
+			let workdaysLeft = this.$entryParams.permissions.entschuldigungMaxReach
+			while (workdaysLeft > 0) {
+				deadline = deadline.plus({ days: 1 })
+
+				const isWeekend = deadline.weekday >= 6 // 6 = Saturday, 7 = Sunday
+				if (!isWeekend) workdaysLeft--
+			}
+
+			return deadline.endOf('day')
+		},
+		// a document can be uploaded while the entschuldigung is open and the deadline is not over
+		uploadAllowed(ent) {
+			if (ent.akzeptiert != null) return false
+			if (this.$entryParams.permissions.admin) return true
+
+			return luxon.DateTime.now() <= this.calcUploadDeadline(ent)
+		},
 		isValidDateObj(date) {
 			return date instanceof Date && !isNaN(date.getTime());
 		},
+		// status of an entschuldigung as the table and the list show it
+		entStatus(akzeptiert) {
+			if (akzeptiert === true)
+				return {tone: 'accepted', icon: 'fa-circle-check', label: this.$p.t('global/entschuldigungStatusAkzeptiert')}
+			if (akzeptiert === false)
+				return {tone: 'rejected', icon: 'fa-circle-xmark', label: this.$p.t('global/entschuldigungStatusAbgelehnt')}
+
+			return {tone: 'open', icon: 'fa-hourglass-half', label: this.$p.t('global/entschuldigungStatusOffen')}
+		},
 		entschuldigungstatusFormatter(cell) {
-			let data = cell.getValue()
-			if (data == null) {
-				cell.getElement().style.color = "#17a2b8"
-				return this.$p.t('global/entschuldigungOffen')
-			} else if (data === true) {
-				cell.getElement().style.color = "#28a745";
-				return this.$p.t('global/entschuldigungAkzeptiert')
-			} else if (data === false) {
-				cell.getElement().style.color = "#dc3545";
-				return this.$p.t('global/entschuldigungAbgelehnt')
-			}
+			const status = this.entStatus(cell.getValue())
+
+			const pill = document.createElement('span')
+			pill.className = 'anw-pill anw-pill--' + status.tone
+			pill.innerHTML = '<i class="fa-solid ' + status.icon + '" aria-hidden="true"></i>'
+			pill.append(status.label)
+
+			return pill
 		},
 		triggerEdit() {
 
@@ -139,9 +184,9 @@ export default {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
 				return false
 			}
-			
+
 			const formData = new FormData();
-			
+
 			for (let i = 0; i < this.entschuldigung.files.length; i++) {
 				formData.append('files', this.entschuldigung.files[i]);
 			}
@@ -153,24 +198,32 @@ export default {
 
 			formData.append('person_id', person_id);
 
-
+			// only close the modal on success, on error the student can retry
+			this.uploading = true
 			this.$api.call(ApiProfil.editEntschuldigung(formData))
 				.then(response => {
 
 				if (response.meta.status === "success")
 				{
-					const rows = this.$refs.entschuldigungsTable.tabulator.getRows()
+					const entschuldigung_id = response.data.entschuldigung_id
 
-					let targetRow = rows.find(row => row.getData().entschuldigung_id == response.data.entschuldigung_id);
+					// the list and the table share the row objects, the update through the reactive
+					// list item also changes the table data. The table still needs the row update to render
+					const listItem = this.entschuldigungen?.find(ent => ent.entschuldigung_id == entschuldigung_id)
+					if (listItem) listItem.dms_id = response.data.dms_id
 
+					const targetRow = this.findTableRow(entschuldigung_id)
 					if (targetRow) {
 						targetRow.update({dms_id: response.data.dms_id});
 					}
 
 					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
+					this.$refs.modalContainerEntschuldigungEdit.hide()
 				}
-			}).finally(()=> {
-				this.$refs.modalContainerEntschuldigungEdit.hide()
+			}).catch(this.handleUploadRequestError)
+			.finally(()=> {
+				// the modal stays open after an error, so the user can choose another file right away
+				this.uploading = false
 			});
 
 		},
@@ -187,7 +240,7 @@ export default {
 			} else {
 				formData.append('noFileUpload', this.noFileUpload)
 			}
-			
+
 			formData.append('von', this.entschuldigung.von.toISOString());
 			formData.append('bis', this.entschuldigung.bis.toISOString());
 
@@ -195,59 +248,104 @@ export default {
 
 			formData.append('person_id', person_id);
 
+			// only close the modal once the upload actually succeeded, on error the
+			// student keeps the filled form and can retry
+			this.uploading = true
 			this.$api.call(ApiProfil.addEntschuldigung(formData))
 				.then(res => {
-				let rowData = res.data
-				this.$refs.entschuldigungsTable.tabulator.addRow(
-					{
+					if (res.meta.status !== 'success' || !res.data) return
+
+					const rowData = res.data
+					const row = {
 						'dms_id': rowData.dms_id,
 						'akzeptiert': null,
 						'von': rowData.von,
 						'bis': rowData.bis,
 						'entschuldigung_id': rowData.entschuldigung_id
 					}
-					, true);
-				this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
-				this.entschuldigung = this.initEntschuldigungForm();
+					this.entschuldigungen?.unshift(row)
+					this.$refs.entschuldigungsTable.tabulator.addRow(row, true);
+					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungUploaded'));
+					this.entschuldigung = this.initEntschuldigungForm();
+					this.$refs.modalContainerEntschuldigungUpload.hide()
+				}).catch(this.handleUploadRequestError)
+				.finally(() => {
+					// the modal stays open after an error, so the user can choose another file right away
+					this.uploading = false
+				})
+		},
+		handleUploadRequestError(error) {
+			// the api plugin already shows the backend message. A web server in front of PHP rejects a too large
+			// request with status 413 and without a json body, the api plugin then shows nothing.
+			if (error?.response?.status === 413)
+				this.$fhcAlert.alertError(this.$p.t('global/filesizeExceeded'))
+			else if (!error?.handled)
+				throw error
+		},
+		validateFile(file) {
+			if (!this.allowedFiletypes.includes(this.getFileExtension(file.name)))
+				return this.$p.t('global/errorEntUploadFiletype', {file: file.name, filetypes: this.filetypesLabel})
 
-			})
+			if (file.size === 0)
+				return this.$p.t('global/errorEntUploadEmptyFile', {file: file.name})
 
-			this.$refs.modalContainerEntschuldigungUpload.hide()
+			const maxFileSize = this.$entryParams.permissions.entschuldigungMaxFileSize
+			if (maxFileSize > 0 && file.size > maxFileSize)
+				return this.$p.t('global/errorEntUploadFileTooLarge', {
+					// round the file size up and the limit down, so a file above the limit never shows the same number
+					size: this.formatMegabytes(file.size, true),
+					max: this.formatMegabytes(maxFileSize, false)
+				})
+
+			return null
+		},
+		getFileExtension(fileName) {
+			// same rule as the backend upload: the text after the last dot in lower case
+			const parts = fileName.split('.')
+			return parts.length > 1 ? parts.pop().toLowerCase() : ''
+		},
+		formatMegabytes(bytes, roundUp) {
+			const tenths = bytes / 1048576 * 10
+			const megabytes = String((roundUp ? Math.ceil(tenths) : Math.floor(tenths)) / 10)
+			return this.$p.user_language.value === 'German' ? megabytes.replace('.', ',') : megabytes
+		},
+		findTableRow(entschuldigung_id) {
+			return this.$refs.entschuldigungsTable?.tabulator?.getRows()
+				.find(row => row.getData().entschuldigung_id == entschuldigung_id)
+		},
+		createActionButton(icon, title, variant, onClick) {
+			const button = document.createElement('button');
+			button.type = 'button';
+			button.className = 'btn btn-sm anw-action-btn ' + variant;
+			button.innerHTML = '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>';
+			button.title = title;
+			button.setAttribute('aria-label', title);
+			button.addEventListener('click', onClick);
+
+			return button;
 		},
 		formAction: function(cell) {
-			let download = document.createElement('div');
-			download.className = "d-flex gap-3";
+			const data = cell.getData()
+			const actions = document.createElement('div');
+			actions.className = "d-flex gap-2";
 
-			let button = document.createElement('button');
-			button.className = 'btn btn-outline-secondary';
-			const minwidth = '40px';
-			
-			if(cell.getData().dms_id) {
-				button.innerHTML = '<i class="fa fa-download"></i>';
-				button.style.minWidth = minwidth;
-				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
-				button.title = this.$p.t('global/download');
-				download.append(button);
-			} else {
-				button.innerHTML = '<i class="fa fa-upload"></i>';
-				button.style.minWidth = minwidth;
-				button.addEventListener('click', () => this.addEntschuldigungFile(cell.getData()));
-				button.title = this.$p.t('global/upload');
-				download.append(button);
+			if(data.dms_id) {
+				actions.append(this.createActionButton('fa-download', this.$p.t('global/download'), 'btn-outline-secondary',
+					() => this.downloadEntschuldigung(data.dms_id)));
+			} else if (this.uploadAllowed(data)) {
+				// the backend accepts a document only while the entschuldigung is open and the deadline is not over
+				actions.append(this.createActionButton('fa-upload', this.$p.t('global/upload'), 'btn-outline-primary',
+					() => this.addEntschuldigungFile(data)));
 			}
 
-			if (cell.getData().akzeptiert == null)
+			if (data.akzeptiert == null)
 			{
-				button = document.createElement('button');
-				button.className = 'btn btn-outline-secondary';
-				button.style.minWidth = minwidth;
-				button.innerHTML = '<i class="fa fa-xmark"></i>';
-				button.title = this.$p.t('global/entschuldigungLöschen');
-				button.addEventListener('click', () => this.deleteEntschuldigung(cell, 'decline'));
-				download.append(button);
+				// the dark theme of cis4 turns btn-outline-danger into white text on light red, so only the icon is red
+				actions.append(this.createActionButton('fa-trash-can text-danger', this.$p.t('global/entschuldigungLöschen'), 'btn-outline-secondary',
+					() => this.deleteEntschuldigung(data)));
 			}
 
-			return download;
+			return actions;
 		},
 		addEntschuldigungFile(entschuldigung) {
 			this.editEntschuldigung = entschuldigung
@@ -257,17 +355,19 @@ export default {
 		{
 			window.location = CoreRESTClient._generateRouterURI('extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile?entschuldigung=' + dms_id);
 		},
-		async deleteEntschuldigung(cell) {
+		async deleteEntschuldigung(entschuldigung) {
 			if (await this.$fhcAlert.confirmDelete() === false)
 				return;
 
-			let entschuldigung_id = cell.getData().entschuldigung_id;
+			const entschuldigung_id = entschuldigung.entschuldigung_id;
 			this.$api.call(ApiProfil.deleteEntschuldigung(entschuldigung_id, this.$entryParams.selected_student_info?.person_id))
 				.then(response => {
 
 				if (response.meta.status === "success")
 				{
-					cell.getRow().delete()
+					if (this.entschuldigungen)
+						this.entschuldigungen = this.entschuldigungen.filter(ent => ent.entschuldigung_id != entschuldigung_id)
+					this.findTableRow(entschuldigung_id)?.delete()
 					this.$fhcAlert.alertSuccess(this.$p.t('global/entschuldigungLöschenErfolg'));
 				}
 			});
@@ -276,12 +376,12 @@ export default {
 			this.$refs.modalContainerEntschuldigungUpload.show()
 		},
 		validate: function() {
-			// todo: check for von/bis input never toched => von still exists as initialized hours minutes object
-			if(!this.entschuldigung.von) {
+			// text input can produce invalid dates, treat them like missing input
+			if(!this.entschuldigung.von || !this.isValidDateObj(this.entschuldigung.von)) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
 				return false
 			}
-			if(!this.entschuldigung.bis) {
+			if(!this.entschuldigung.bis || !this.isValidDateObj(this.entschuldigung.bis)) {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
 				return false
 			}
@@ -289,7 +389,7 @@ export default {
 				this.$fhcAlert.alertWarning(this.$p.t('global/warningChooseFile'));
 				return false
 			}
-			
+
 			if (this.entschuldigung.bis < this.entschuldigung.von)
 			{
 				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateTimes'));
@@ -298,15 +398,40 @@ export default {
 
 			return true;
 		},
-		reload(){
-			const id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
-			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(id))
+		async loadEntschuldigungen() {
+			// wait until the profile viewData (person_id) is resolved, then fetch and set the data
+			await this.$entryParams.profileViewDataPromise
+
+			const person_id = this.$entryParams.selected_student_info ? this.$entryParams.selected_student_info.person_id : this.$entryParams.viewDataStudent.person_id
+			if (!person_id) return
+
+			this.$api.call(ApiProfil.getEntschuldigungenByPersonID(person_id))
 				.then(res => {
-				this.$refs.entschuldigungsTable.tabulator.setData(res.data.retval)
-			})
+					const rows = res.data.retval ?? []
+
+					this.entschuldigungen = rows
+					this.$refs.entschuldigungsTable?.tabulator?.setData(rows)
+				})
+		},
+		reload(){
+			this.loadEntschuldigungen()
 		},
 		redrawTable() {
+			if(this.isNarrow) return
 			if(this.$refs?.entschuldigungsTable?.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
+		},
+		// fitColumns sizes the columns when the table lays out. A vertical scrollbar that shows up
+		// later (more rows) pushes the columns behind it, so they need a new layout
+		fitToScrollbar() {
+			const tabulator = this.$refs.entschuldigungsTable?.tabulator
+			const holder = tabulator?.element.querySelector('.tabulator-tableholder')
+			if(!holder) return
+
+			const scrollbarWidth = holder.offsetWidth - holder.clientWidth
+			if(scrollbarWidth === this.scrollbarWidth) return
+
+			this.scrollbarWidth = scrollbarWidth
+			tabulator.redraw()
 		},
 		tableResolve(resolve) {
 			this.tableBuiltResolve = resolve
@@ -316,26 +441,28 @@ export default {
 			await this.$entryParams.phrasenPromise
 			await this.tableBuiltPromise
 
-			const cols = this.$refs.entschuldigungsTable.tabulator.getColumns()
+			// columns were defined in data() where phrasen might not have been resolved yet,
+			// re-apply the titles by field once the phrasen are guaranteed to be loaded
+			const titleKeys = {
+				akzeptiert: 'global/status',
+				von: 'ui/von',
+				bis: 'global/bis',
+				dms_id: 'ui/aktion',
+				notiz: 'global/begruendungAnw'
+			}
+			this.$refs.entschuldigungsTable.tabulator.getColumns().forEach(col => {
+				const key = titleKeys[col.getField()]
+				if (key) col.updateDefinition({title: this.$capitalize(this.$p.t(key))})
+			})
 
-			// phrasen bandaid
-
-			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('global/status')})
-			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$capitalize(this.$p.t('ui/von'))})
-			cols.find(e => e.getField() === 'student_status').updateDefinition({title: this.$capitalize(this.$p.t('global/bis'))})
-			cols.find(e => e.getField() === 'von').updateDefinition({title: this.$p.t('ui/aktion')})
-			cols.find(e => e.getField() === 'bis').updateDefinition({title: this.$p.t('global/notiz')})
-
-			this.entschuldigungsViewTabulatorOptions.columns[0].title = this.$capitalize(this.$p.t('global/status'))
-			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/von'))
-			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/bis'))
-			this.entschuldigungsViewTabulatorOptions.columns[1].title = this.$capitalize(this.$p.t('ui/aktion'))
-			this.entschuldigungsViewTabulatorOptions.columns[2].title = this.$capitalize(this.$p.t('global/notiz'))
+			this.loadEntschuldigungen()
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
 		},
 		calculateTableHeight() {
+			// below md the list replaces the hidden table
+			if(this.isNarrow) return
 
 			const tableID = this.tabulatorUuid ? ('-' + this.tabulatorUuid) : ''
 			const tableDataSet = document.getElementById('filterTableDataset' + tableID);
@@ -343,7 +470,7 @@ export default {
 			const rect = tableDataSet.getBoundingClientRect();
 
 			const screenY = this.$entryParams.isInFrame ? window.frameElement.clientHeight :  window.visualViewport.height
-			this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top
+			this.$entryParams.tabHeights['studentEnt'].value = screenY - rect.top - this.$contentBottomOffset()
 
 			if(this.$refs.entschuldigungsTable.tabulator) this.$refs.entschuldigungsTable.tabulator.redraw(true)
 
@@ -364,33 +491,52 @@ export default {
 	},
 	watch: {
 		'entschuldigung.files'(newVal) {
-			if(newVal == [] || newVal === null || newVal === undefined) return
-
-			// check filetype on input change
-			const file = newVal[0]
+			const file = newVal?.[0]
 			if(!file) return
 
-			if(file.type && !file.name.includes('jfif') && (
-				file.type.includes('jpg')
-				|| file.type.includes('jpeg')
-				|| file.type.includes('pdf')
-				|| file.type.includes('png'))
-			) {
-				// all fine
-			} else {
-				// clear and alert for filetypes
-				this.$fhcAlert.alertInfo(this.$p.t('global/allowedEntschuldigungFileTypes'))
+			// check the file on selection, so the user does not wait for an upload the server rejects
+			const error = this.validateFile(file)
+			if(error) {
+				this.$fhcAlert.alertWarning(error)
 				this.entschuldigung.files = []
 			}
 
+		},
+		// the table was hidden, it measures its height again once it shows
+		isNarrow(narrow) {
+			if (!narrow) this.$nextTick(this.calculateTableHeight)
 		}
 	},
 	computed: {
-		getTooltipObj() {
-			return {
-				value: this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach]),
-				class: "custom-tooltip"
-			}
+		allowedFiletypes() {
+			return this.$entryParams.permissions.entschuldigungFiletypes
+		},
+		filetypesLabel() {
+			return this.allowedFiletypes.map(type => type.toUpperCase()).join(', ')
+		},
+		acceptedFiletypes() {
+			return this.allowedFiletypes.map(type => '.' + type).join(',')
+		},
+		uploadHint() {
+			const hint = [this.$p.t('global/entUploadAllowedFiletypes', {filetypes: this.filetypesLabel})]
+
+			const maxFileSize = this.$entryParams.permissions.entschuldigungMaxFileSize
+			if (maxFileSize > 0)
+				hint.push(this.$p.t('global/entUploadMaxFilesize', {max: this.formatMegabytes(maxFileSize, false)}))
+
+			return hint.join(' ')
+		},
+		helpText() {
+			return this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach])
+		},
+		// the entschuldigungen as the list shows them
+		listItems() {
+			return (this.entschuldigungen ?? []).map(ent => ({
+				ent,
+				status: this.entStatus(ent.akzeptiert),
+				von: this.formatTimestamp(ent.von),
+				bis: this.formatTimestamp(ent.bis)
+			}))
 		}
 	},
 	template: `
@@ -400,15 +546,15 @@ export default {
 		<template #main>
 			<bs-modal ref="modalContainerEntschuldigungUpload" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
-					<div v-tooltip.bottom="getTooltipObj">
+					<span class="d-inline-flex align-items-center gap-2">
 						{{$p.t('global/addEntschuldigung')}}
-						<i class="fa fa-circle-question"></i>
-					</div>
+						<anw-help button-class="fs-5" :text="helpText"></anw-help>
+					</span>
 				</template>
 				<template v-slot:default>
-					<div class="row mb-3 align-items-center">
-						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label></div>
-						<div class="col-10">
+					<div class="row g-3">
+						<div class="col-12 col-sm-6">
+							<label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label>
 							<datepicker
 								id="von"
 								v-model="entschuldigung.von"
@@ -423,10 +569,8 @@ export default {
 								>
 							</datepicker>
 						</div>
-					</div>
-					<div class="row mb-3 align-items-center">
-						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('global/bis'))}}</label></div>
-						<div class="col-10">
+						<div class="col-12 col-sm-6">
+							<label for="bis" class="form-label">{{$capitalize($p.t('global/bis'))}}</label>
 							<datepicker
 								id="bis"
 								v-model="entschuldigung.bis"
@@ -441,38 +585,35 @@ export default {
 								>
 							</datepicker>
 						</div>
-					</div>
-		
-					
-					<div class="row">
-						<div class="col-8">
-							<Upload :disabled="noFileUpload" accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
-						</div>
-						<div class="col-4">
-							<div class="row">
-								<div class="col-2"></div>
-								<div class="col-2"><Checkbox v-model="noFileUpload" :binary="true"></Checkbox></div>
-								<div class="col-8"><span>{{$p.t('global/excuseUploadNoFile')}}</span></div>
+						<div class="col-12">
+							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
+							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
+							<div class="form-text">{{ uploadHint }}</div>
+							<div class="form-check mt-2">
+								<input id="noFileUpload" v-model="noFileUpload" class="form-check-input" type="checkbox">
+								<label for="noFileUpload" class="form-check-label">{{$p.t('global/excuseUploadNoFile')}}</label>
 							</div>
 						</div>
 					</div>
 				</template>
 				<template v-slot:footer>
-					<button class="btn btn-primary" @click="triggerUpload">{{$p.t('ui/hochladen')}}</button>
+					<button class="btn btn-primary" :disabled="uploading" @click="triggerUpload">
+						<i class="fa-solid me-2" :class="uploading ? 'fa-spinner fa-spin' : 'fa-upload'" aria-hidden="true"></i>{{$p.t('ui/hochladen')}}
+					</button>
 				</template>
 			</bs-modal>
-			
+
 			<bs-modal ref="modalContainerEntschuldigungEdit" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
-					<div v-tooltip.bottom="getTooltipObj">
+					<span class="d-inline-flex align-items-center gap-2">
 						{{$p.t('global/editEntschuldigung')}}
-						<i class="fa fa-circle-question"></i>
-					</div>
+						<anw-help button-class="fs-5" :text="helpText"></anw-help>
+					</span>
 				</template>
 				<template v-slot:default v-if="editEntschuldigung">
-					<div class="row mb-3 align-items-center" >
-						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label></div>
-						<div class="col-10">
+					<div class="row g-3">
+						<div class="col-12 col-sm-6">
+							<label for="vonEdit" class="form-label">{{$capitalize($p.t('ui/von'))}}</label>
 							<datepicker
 								id="vonEdit"
 								v-model="editEntschuldigung.von"
@@ -482,10 +623,8 @@ export default {
 								:disabled="true">
 							</datepicker>
 						</div>
-					</div>
-					<div class="row mb-3 align-items-center">
-						<div class="col-2 align-items-center"><label for="von" class="form-label">{{$capitalize($p.t('global/bis'))}}</label></div>
-						<div class="col-10">
+						<div class="col-12 col-sm-6">
+							<label for="bisEdit" class="form-label">{{$capitalize($p.t('global/bis'))}}</label>
 							<datepicker
 								id="bisEdit"
 								v-model="editEntschuldigung.bis"
@@ -496,30 +635,79 @@ export default {
 								>
 							</datepicker>
 						</div>
-					</div>
-		
-					
-					<div class="row">
 						<div class="col-12">
-							<Upload accept=".jpg,.png,.pdf" v-model="entschuldigung.files"></Upload>
+							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
+							<Upload :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
+							<div class="form-text">{{ uploadHint }}</div>
 						</div>
 					</div>
 				</template>
 				<template v-slot:footer>
-					<button class="btn btn-primary" @click="triggerEdit">{{$p.t('ui/hochladen')}}</button>
+					<button class="btn btn-primary" :disabled="uploading" @click="triggerEdit">
+						<i class="fa-solid me-2" :class="uploading ? 'fa-spinner fa-spin' : 'fa-upload'" aria-hidden="true"></i>{{$p.t('ui/hochladen')}}
+					</button>
 				</template>
 			</bs-modal>
-			
-			<core-filter-cmpt
-				ref="entschuldigungsTable"
-				@uuidDefined="handleUuidDefined"
-				:tabulator-options="entschuldigungsViewTabulatorOptions"
-				:table-only="true"
-				:newBtnShow="true"
-				:newBtnLabel="$p.t('global/entschuldigungHochladen')"
-				@click:new="startUploadEntschuldigung"
-				:sideMenu="false"
-			></core-filter-cmpt>
+
+			<div v-show="!isNarrow">
+				<core-filter-cmpt
+					ref="entschuldigungsTable"
+					@uuidDefined="handleUuidDefined"
+					:tabulator-options="entschuldigungsViewTabulatorOptions"
+					:tabulator-events="entschuldigungsViewTabulatorEventHandlers"
+					:isUsingPresets="true"
+					presetsId="anwesenheitenStudentEntschuldigungTable"
+					:table-only="true"
+					:newBtnShow="true"
+					:newBtnLabel="$p.t('global/entschuldigungHochladen')"
+					@click:new="startUploadEntschuldigung"
+					:sideMenu="false"
+				></core-filter-cmpt>
+			</div>
+
+			<div v-if="isNarrow" class="anw-list">
+				<button type="button" class="btn btn-primary w-100" @click="startUploadEntschuldigung">
+					<i class="fa-solid fa-plus me-2" aria-hidden="true"></i>{{ $p.t('global/entschuldigungHochladen') }}
+				</button>
+
+				<div v-if="entschuldigungen === null" class="anw-list-empty">
+					<i class="fa-solid fa-spinner fa-pulse fa-2x" aria-hidden="true"></i>
+				</div>
+				<div v-else-if="!listItems.length" class="anw-list-empty">{{ $p.t('global/noDataAvailable') }}</div>
+
+				<div v-for="item in listItems" :key="item.ent.entschuldigung_id" class="anw-card anw-ent">
+					<div class="anw-ent-head">
+						<span class="anw-pill" :class="'anw-pill--' + item.status.tone">
+							<i class="fa-solid" :class="item.status.icon" aria-hidden="true"></i>{{ item.status.label }}
+						</span>
+					</div>
+					<dl class="anw-ent-range">
+						<div>
+							<dt>{{ $capitalize($p.t('ui/von')) }}</dt>
+							<dd>{{ item.von }}</dd>
+						</div>
+						<div>
+							<dt>{{ $capitalize($p.t('global/bis')) }}</dt>
+							<dd>{{ item.bis }}</dd>
+						</div>
+					</dl>
+					<div v-if="item.ent.notiz" class="anw-ent-note">
+						<div class="anw-ent-label">{{ $capitalize($p.t('global/begruendungAnw')) }}</div>
+						<div class="anw-ent-note-text">{{ item.ent.notiz }}</div>
+					</div>
+					<div class="anw-ent-actions">
+						<button v-if="item.ent.dms_id" type="button" class="btn btn-sm btn-outline-secondary" @click="downloadEntschuldigung(item.ent.dms_id)">
+							<i class="fa-solid fa-download me-2" aria-hidden="true"></i>{{ $p.t('global/download') }}
+						</button>
+						<button v-else-if="uploadAllowed(item.ent)" type="button" class="btn btn-sm btn-outline-primary" @click="addEntschuldigungFile(item.ent)">
+							<i class="fa-solid fa-upload me-2" aria-hidden="true"></i>{{ $p.t('global/upload') }}
+						</button>
+						<button v-if="item.ent.akzeptiert == null" type="button" class="btn btn-sm btn-outline-secondary" @click="deleteEntschuldigung(item.ent)">
+							<i class="fa-solid fa-trash-can text-danger me-2" aria-hidden="true"></i>{{ $p.t('global/loeschen') }}
+						</button>
+					</div>
+				</div>
+			</div>
 		</template>
 	</core-base-layout>
 `

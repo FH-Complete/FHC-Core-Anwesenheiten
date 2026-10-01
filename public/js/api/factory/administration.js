@@ -11,6 +11,17 @@ export default {
 		}
 
 	},
+	getOffeneTimespan(stg_kz_arr, von, bis) {
+
+		const params = {stg_kz_arr, von, bis}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getOffeneTimespan';
+		return {
+			method: 'post',
+			url,
+			params
+		}
+
+	},
 	updateEntschuldigung(entschuldigung_id, status, notiz, von, bis) {
 
 		const params = {entschuldigung_id, status, notiz, von, bis}
