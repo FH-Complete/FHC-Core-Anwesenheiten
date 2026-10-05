@@ -37,7 +37,10 @@ class ProfilApi extends FHCAPI_Controller
 				'checkInAnwesenheit' => array('extension/anw_r_student:rw','extension/anw_r_full_assistenz:rw'),
 				
 				// load anw sum table data
-				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
+				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
+				
+				// load anw details onclick in cis4 widget
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
 			)
 		);
 
@@ -111,7 +114,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
@@ -154,8 +157,10 @@ class ProfilApi extends FHCAPI_Controller
 
 		if($studiensemester === null || $studiensemester === 'null') {
 
-			$result = $this->_ci->StudiensemesterModel->getAkt();
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
 			$aktuellesSem = getData($result)[0];
+			
+			$this->addMeta('$aktuellesSem', $aktuellesSem);
 			$studiensemester = $aktuellesSem->studiensemester_kurzbz;
 		}
 
@@ -177,39 +182,37 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithSuccess($data);
 		}
 	}
-
-	// TODO: check if this can be removed, unused func
 	
-//	/**
-//	 * GET METHOD
-//	 * expects parameter 'studiensemester', 'uid'
-//	 *
-//	 * returns list of all anwesenheiten user entries of student in semester
-//	 */
-//	public function getAllAnwesenheitenByStudentByLva() {
-//
-//		$result = $this->getPostJSON();
-//		
-//		$prestudent_id = $result->prestudent_id;
-//		$lv_id = $result->lv_id;
-//		$sem_kurzbz = $result->sem_kurzbz;
-//		$uid = $result->uid;
-//
-//		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
-//		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
-//
-//		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
-//
-//			$result = $this->_ci->StudiensemesterModel->getAkt();
-//			$aktuellesSem = getData($result)[0];
-//			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
-//		}
-//		
-//		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz);
-//
-//		if(!isSuccess($res)) $this->terminateWithError($res);
-//		$this->terminateWithSuccess($res);
-//	}
+	/**
+	 * GET METHOD
+	 * expects parameter 'studiensemester', 'uid'
+	 *
+	 * returns list of all anwesenheiten user entries of student in semester
+	 */
+	public function getAllAnwesenheitenByStudentByLva() {
+
+		$result = $this->getPostJSON();
+		
+		$prestudent_id = $result->prestudent_id;
+		$lv_id = $result->lv_id;
+		$sem_kurzbz = $result->sem_kurzbz;
+		$uid = $result->uid;
+
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
+
+			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
+			$aktuellesSem = getData($result)[0];
+			$sem_kurzbz = $aktuellesSem->studiensemester_kurzbz;
+		}
+		
+		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz);
+
+		if(!isSuccess($res)) $this->terminateWithError($res);
+		$this->terminateWithSuccess($res);
+	}
 
 	/**
 	 * POST METHOD
@@ -372,9 +375,6 @@ class ProfilApi extends FHCAPI_Controller
 		
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		
-//		$this->addMeta('$dateLimit', $dateLimitTimestamp);
-//		$this->addMeta('$vonTimestamp', $vonTimestamp);
-		
 		if ($vonTimestamp < $dateLimitTimestamp && !$isAdmin) {
 			$this->terminateWithError("Provided date is older than allowed date");
 		}
@@ -384,9 +384,7 @@ class ProfilApi extends FHCAPI_Controller
 			$uploadDataResult = $this->uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
 
 			// If an error occurred
-			if (isError($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
-			// If no data
-			if (!hasData($uploadDataResult)) $this->terminateWithError('Upload error', 'errorInvalidFiletype'));
+			if (isError($uploadDataResult) || !hasData($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 
 			// Add file to the DMS (DB + file system)
 			$dmsFile = $this->_ci->dmslib->add(
@@ -401,9 +399,8 @@ class ProfilApi extends FHCAPI_Controller
 				getAuthUID() // insertvon
 			);
 
-			if(isError($dmsFile) || !hasData($dmsFile)) {
+			if(isError($dmsFile) || !hasData($dmsFile))
 				$this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
-			}
 
 			$dmsId = getData($dmsFile)->dms_id;
 		} else {
@@ -424,9 +421,11 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id, $dmsId, 'add');
+		$entschuldigung_id = getData($result);
+		
+		$this->sendEmailToAssistenz($person_id, $dmsId, 'add', $entschuldigung_id, $von, $bis);
 
-		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => getData($result)]);
+		$this->terminateWithSuccess(['dms_id' => $dmsId, 'von' => $von, 'bis' => $bis, 'entschuldigung_id' => $entschuldigung_id]);
 	}
 
 	/**
@@ -478,13 +477,17 @@ class ProfilApi extends FHCAPI_Controller
 		}
 		$entschuldigung = getData($result)[0];
 
+		// edge case where student still has old ui with nachreichen button enabled but in the meantime assistenz
+		// has already denied the entschuldigung request for some reason 
+		if($entschuldigung->akzeptiert !== null) {
+			$this->terminateWithError($this->p->t('global', 'errorEntschuldigungUpload'), 'general');
+		}
+
 		// Upload file
 		$uploadDataResult = $this->uploadFile($_FILES['files']['name'], array('jpg', 'png', 'pdf'));
 
 		// If an error occurred
-		if (isError($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
-		// If no data
-		if (!hasData($uploadDataResult)) $this->terminateWithError('Upload error', 'errorInvalidFiletype'));
+		if (isError($uploadDataResult) || !hasData($uploadDataResult)) $this->terminateWithError($this->p->t('global', 'errorInvalidFiletype'));
 
 		// Add file to the DMS (DB + file system)
 		$dmsFile = $this->_ci->dmslib->add(
@@ -536,12 +539,12 @@ class ProfilApi extends FHCAPI_Controller
 			)
 		);
 
-		$this->sendEmailToAssistenz($person_id, $dmsId, 'edit');
+		$this->sendEmailToAssistenz($person_id, $dmsId, 'edit', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 
-		$this->terminateWithSuccess(['dms_id' => $dmsId, 'entschuldigung_id' => getData($result)]);
+		$this->terminateWithSuccess(['dms_id' => $dmsId, 'entschuldigung_id' => $entschuldigung->entschuldigung_id]);
 	}
 
-	private function sendEmailToAssistenz($person_id_param, $dmsId, $type)
+	private function sendEmailToAssistenz($person_id_param, $dmsId, $type, $entschuldigung_id, $von, $bis)
 	{
 
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
@@ -563,49 +566,63 @@ class ProfilApi extends FHCAPI_Controller
 			return;
 		}
 		
-		$data = getData($result)[0];
-//		$this->addMeta('emailData', $data);
-		//emailTo usually is 1 address, sometimes several seperated by ','
-		$emails = explode(', ', $data->email);
+		$data = getData($result);
 
-		// Link to Entschuldigungsmanagement
-		$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
-		$studentname = $data->vorname.' '.$data->nachname;
-		$student_uid = $data->student_uid;
-		$stg = $data->kurzbzlang.' - '.$data->bezeichnung;
-		$orgform = $data->dual ? 'DUAL' : $data->orgform_kurzbz;
-		$sem = $data->semester.'. Semester';
+		$vonDateTime = new DateTime($von);
+		$vonFormatted = $vonDateTime->format("d.m.Y H:i");
+		$bisDateTime = new DateTime($bis);
+		$bisFormatted = $bisDateTime->format("d.m.Y H:i");
 
-		if($dmsId && $type == 'add' ) { // neue ent mit datei hochgeladen
-			$vorlage = 'AnwesenheitSanchoEntschuldigung';
-			$betreff = $this->p->t('global', 'entFullEmailBetreff');
-		} else if($dmsId && $type == 'edit') { // datei für alte ent hochgeladen
-			$vorlage = 'AnwEntFileAfter';
-			$betreff = $this->p->t('global', 'entEditEmailBetreff');
-		} else if(!$dmsId && $type == 'add') { // entschuldigung ohne datei uploaded
-			$vorlage = 'AnwEntNoFile';
-			$betreff = $this->p->t('global', 'entNewEmailBetreff');
-		}
+		foreach($data as $mailrow) {
+//			$this->addMeta('emailData', $mailrow);
+			//emailTo usually is 1 address, sometimes several seperated by ','
+			$emails = explode(', ', $mailrow->email);
 
-		foreach ($emails as $email)
-		{
-			// Prepare mail content
-			$body_fields = array(
-				'student' => $studentname,
-				'UID' => $student_uid,
-				'stg' => $stg,
-				'Orgform' => $orgform,
-				'sem' => $sem,
-				'linkEntschuldigungen' => $url
-			);
+			// Link to Entschuldigungsmanagement
+			$url = APP_ROOT. 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
+			$studentname = $mailrow->vorname.' '.$mailrow->nachname;
+			$student_uid = $mailrow->uid;
+			$stg = $mailrow->kurzbzlang.' - '.$mailrow->bezeichnung;
+			$orgform = $mailrow->orgform;
+			$sem = $mailrow->semester.'. Semester';
 
-			// Send mail
-			sendSanchoMail(
-				$vorlage,
-				$body_fields,
-				$email,
-				$betreff
-			);
+			if($dmsId && $type == 'add' ) { // neue ent mit datei hochgeladen
+				$vorlage = 'AnwesenheitSanchoEntschuldigung';
+				$betreff = $this->p->t('global', 'entFullEmailBetreff');
+			} else if($dmsId && $type == 'edit') { // datei für alte ent hochgeladen
+				$vorlage = 'AnwEntFileAfter';
+				$betreff = $this->p->t('global', 'entEditEmailBetreff');
+			} else if(!$dmsId && $type == 'add') { // entschuldigung ohne datei uploaded
+				$vorlage = 'AnwEntNoFile';
+				$betreff = $this->p->t('global', 'entNewEmailBetreff');
+			} else if($type == 'delete') { // entschuldigung wurde gelöscht -> unabhängig von datei
+				$vorlage = 'AnwEntDeleted';
+				$betreff = $this->p->t('global', 'entDeletedEmailBetreff');
+			}
+
+			foreach ($emails as $email)
+			{
+				// Prepare mail content
+				$body_fields = array(
+					'student' => $studentname,
+					'UID' => $student_uid,
+					'stg' => $stg,
+					'Orgform' => $orgform,
+					'sem' => $sem,
+					'entschuldigung_id' => $entschuldigung_id,
+					'von' => $vonFormatted,
+					'bis' => $bisFormatted,
+					'linkEntschuldigungen' => $url
+				);
+
+				// Send mail
+				sendSanchoMail(
+					$vorlage,
+					$body_fields,
+					$email,
+					$betreff
+				);
+			}
 		}
 
 	}
@@ -652,14 +669,37 @@ class ProfilApi extends FHCAPI_Controller
 			if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$deletedEntschuldigung = $this->_ci->EntschuldigungModel->delete($entschuldigung->entschuldigung_id);
-			
 			if (isError($deletedEntschuldigung))
 				$this->terminateWithError(getError($deletedEntschuldigung));
 
-			$deletedFile = $this->_ci->aktelib->removeByPersonIdAndDmsId($entschuldigung->person_id, $entschuldigung->dms_id);
+			if (isset($entschuldigung->dms_id)) {
+				$deletedFile = $this->_ci->aktelib->removeByPersonIdAndDmsId($entschuldigung->person_id, $entschuldigung->dms_id);
+				
+				if (isError($deletedFile))
+					$this->terminateWithError(getError($deletedFile));
+			}
 
-			if (isError($deletedFile))
-				$this->terminateWithError(getError($deletedFile));
+			// add old version to history table without dms_id -> either never existed or should be deleted aswell
+			$this->_ci->EntschuldigungHistoryModel->insert(
+				array(
+					'entschuldigung_id' => $entschuldigung->entschuldigung_id,
+					'person_id' => $entschuldigung->person_id,
+					'von' => $entschuldigung->von,
+					'bis' => $entschuldigung->bis,
+					'dms_id' => null,
+					'insertvon' => $entschuldigung->insertvon,
+					'insertamum' => $entschuldigung->insertamum,
+					'updatevon' => $entschuldigung->updatevon,
+					'updateamum' => $entschuldigung->updateamum,
+					'statussetvon' => $entschuldigung->statussetvon,
+					'statussetamum' => $entschuldigung->statussetamum,
+					'akzeptiert' => $entschuldigung->akzeptiert,
+					'notiz' => $entschuldigung->notiz,
+					'version' => $entschuldigung->version
+				)
+			);
+			
+			$this->sendEmailToAssistenz($person_id, $entschuldigung->dms_id, 'delete', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 
 			$this->terminateWithSuccess($this->p->t('global', 'successDeleteEnschuldigung'));
 		} else {

@@ -30,8 +30,19 @@ export const StudiengangDropdown = {
 			this.$api.call(ApiInfo.getStudiengaenge(this.allowedStg))
 				.then(res => {
 				if(res.meta.status !== "success") return
-				this.options = res.data.retval ?? [];
+					
+				const data =res.data.retval ?? [];
 
+				// apply this last resort filter if an assistenz who has simultaneous admin rights
+				// finds that they see too many stg's
+				if(this.allowedStg) {
+					this.options = data.filter(d => {
+						return this.allowedStg.includes(String(d.studiengang_kz))
+					})
+				} else {
+					this.options = data
+				}
+				
 				this.$entryParams.studiengaengeAdmin = res.data.retval.map(e => e.studiengang_kz)
 			});
 		},

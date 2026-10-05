@@ -77,7 +77,7 @@ class Anwesenheit_model extends \DB_Model
 	public function getStudentsForLVAandLEandSemester($lv_id, $le_id, $sem_kurzbz, $root)
 	{
 		$query = "SELECT
-				distinct on(nachname, vorname, public.tbl_benutzer.person_id) vorname, nachname, prestudent_id, public.tbl_benutzer.person_id,
+				distinct on(nachname, vorname, public.tbl_benutzer.person_id) vorname, nachname, prestudent_id, public.tbl_student.student_uid, public.tbl_benutzer.person_id,
 				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || public.tbl_benutzer.person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
@@ -86,6 +86,7 @@ class Anwesenheit_model extends \DB_Model
 				WHERE prestudent_id=tbl_student.prestudent_id
 				ORDER BY datum DESC, insertamum DESC, ext_id DESC LIMIT 1) as studienstatus,
 			   tbl_mitarbeiter.mitarbeiter_uid,
+			   tbl_bisio.bisio_id, tbl_bisio.bis, tbl_bisio.von,
 			   tbl_note.lkt_ueberschreibbar, tbl_note.anmerkung,
 			   tbl_mobilitaet.mobilitaetstyp_kurzbz,
 			   (CASE WHEN bis.tbl_mobilitaet.studiensemester_kurzbz = vw_student_lehrveranstaltung.studiensemester_kurzbz THEN 1 ELSE 0 END) as doubledegree,
@@ -176,10 +177,9 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getLETermine($le_id)
 	{
-		$query = "SELECT datum, MIN(beginn) as beginn, MAX(ende) as ende
+		$query = "SELECT DISTINCT datum, beginn, ende, stunde
 				FROM lehre.vw_stundenplan JOIN lehre.tbl_stunde USING(stunde)
 				WHERE lehreinheit_id = ?
-				GROUP BY datum
 				ORDER BY datum ASC";
 
 		return $this->execReadOnlyQuery($query, [$le_id]);
@@ -299,6 +299,7 @@ class Anwesenheit_model extends \DB_Model
 	{
 		$query = '
 			SELECT tbl_lehrveranstaltung.bezeichnung,
+			       tbl_lehrveranstaltung.bezeichnung_english,
 			       lehrveranstaltung_id,
 				tbl_anwesenheit_status.status_kurzbz as student_status,
 				Date(tbl_anwesenheit.von) as datum,
@@ -371,12 +372,16 @@ class Anwesenheit_model extends \DB_Model
 						tbl_lehreinheitgruppe.gruppe_kurzbz,
 						tbl_lehrveranstaltung.kurzbz,
 			 			tbl_studiengang.kurzbzlang,
+			 			tbl_gruppe.direktinskription,
+						tbl_gruppe.sichtbar,
+						tbl_gruppe.aktiv,
 			 			(SELECT COUNT(DISTINCT datum) FROM campus.vw_stundenplan WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as termincount,
 						(SELECT COUNT(*) FROM campus.vw_student_lehrveranstaltung WHERE lehreinheit_id = lehre.tbl_lehreinheit.lehreinheit_id) as studentcount
 		FROM lehre.tbl_lehreinheit JOIN lehre.tbl_lehreinheitmitarbeiter USING(lehreinheit_id)
 			JOIN lehre.tbl_lehreinheitgruppe USING(lehreinheit_id)
 			JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
 			JOIN public.tbl_studiengang ON (tbl_lehreinheitgruppe.studiengang_kz = tbl_studiengang.studiengang_kz)
+			LEFT JOIN public.tbl_gruppe USING (gruppe_kurzbz)
 		WHERE lehrveranstaltung_id = ? AND studiensemester_kurzbz = ? AND mitarbeiter_uid = ?
 		ORDER BY tbl_lehreinheitgruppe.gruppe_kurzbz";
 

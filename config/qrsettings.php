@@ -24,7 +24,8 @@ $config['ENTSCHULDIGT_STATUS'] = 'entschuldigt';
 $config['EINHEIT_DAUER'] = 0.75;
 // toggle für UI elemente & API endpunkte, bestehende daten bleiben unverändert
 $config['ENTSCHULDIGUNGEN_ENABLED'] = true;
-$config['KONTROLLE_CREATE_MAX_REACH'] = 14; // days +/- semester beginn bzw ende
+$config['KONTROLLE_CREATE_MAX_REACH_PAST'] = 14; // days +/- semester beginn bzw ende
+$config['KONTROLLE_CREATE_MAX_REACH_FUTURE'] = 3; // days +/- semester beginn bzw ende
 $config['POSITIVE_RATING_THRESHOLD'] = 0.75; // min. 75 % anwesenheit
 // show guide/tutorial link
 $config['SHOW_GUIDE'] = false;
@@ -47,4 +48,9 @@ $config['ALERT_LEHRFORM'] = array(
 //		'english_alert_text' => 'In the supervision teaching format, you can skip the attendance check with QR code and enter attendance directly!'
 //	)
 );
-	
+// limit for auto declining old entschuldigung applications that do not have a file attached yet
+$config['ENTSCHULDIGUNG_AUTODECLINE_THRESHOLD'] = '60 days';
+$config['ENTSCHULDIGUNG_EMAIL_INTERVAL'] = 3; // Workdays
+$config['URL_ASSISTENZ_ENTMANAGEMENT'] = 'index.ci.php/extensions/FHC-Core-Anwesenheiten/Administration';
+
+

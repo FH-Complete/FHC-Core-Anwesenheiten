@@ -36,9 +36,9 @@ export default {
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcFormatter: this.sumBottomCalcFormatter, bottomCalcParams: this.bottomCalcParamLookup, tooltip:false, bottomCalc: this.anwCalc, formatter: this.percentFormatter},
 					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, tooltip:false, minWidth: 150},
 				],
-				groupBy: ['bezeichnung'],
+				groupBy: ['lehrveranstaltung_id'],
 				groupStartOpen:false,
-				groupHeader: studentFormatters.customGroupHeader,
+				groupHeader: this.customGroupHeader,
 				groupToggleElement:"header",
 				persistence: {
 					sort: false,
@@ -63,6 +63,12 @@ export default {
 		};
 	},
 	methods: {
+		customGroupHeader(value, count, data) {
+			return '<div style="display:flex; justify-content: space-between;">' +
+				'<div>' + (this.$p.user_language.value == 'German' ? data[0].bezeichnung : data[0].bezeichnung_english) + '</div>' +
+				'<div style="flex-grow: 1; text-align: right;">'+this.$p.t('global/anwesenheit') + ': ' + data[0].anwesenheit + " %" + '</div>' +
+				'</div>';
+		},
 		percentFormatter: function (cell) {
 			const data = cell.getData()
 			const val = data.sum ??  data.anteil ?? '-'

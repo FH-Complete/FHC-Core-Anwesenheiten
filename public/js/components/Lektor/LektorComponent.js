@@ -33,6 +33,7 @@ export const LektorComponent = {
 	},
 	data() {
 		return {
+			showQRLoadingSpinner: false,
 			selectedStudent: null,
 			kontrolleVonBis: null,
 			editKontrolle: null,
@@ -76,6 +77,7 @@ export const LektorComponent = {
 				columns: [
 					{title: this.$capitalize(this.$p.t('global/foto')), field: 'foto', formatter: lektorFormatters.fotoFormatter, visible: true, minWidth: 100, maxWidth: 100, download: false, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('global/prestudentID')), field: 'prestudent_id', formatter: lektorFormatters.centeredFormatter, visible: false, minWidth: 150, download: true, tooltip: this.tooltipTableRow},
+					{title: this.$capitalize(this.$p.t('ui/student_uid')), field: 'student_uid', formatter: lektorFormatters.centeredFormatter, visible: false, minWidth: 150, download: true, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/vorname')), field: 'vorname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1,  minWidth: 150, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('person/nachname')), field: 'nachname', formatter: lektorFormatters.centeredFormatter, headerFilter: true, widthGrow: 1, minWidth: 150, tooltip: this.tooltipTableRow},
 					{title: this.$capitalize(this.$p.t('lehre/gruppe')), field: 'gruppe', headerFilter: 'list', tooltip: this.tooltipTableRow,
@@ -238,8 +240,6 @@ export const LektorComponent = {
 			abwesendCount: 0,
 			entschuldigtCount: 0,
 			studentCount: 0,
-			// minDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() - (this.$entryParams.permissions.kontrolleCreateMaxReach))),
-			// maxDate: new Date(Date.now()).setDate((new Date(Date.now()).getDate() + (this.$entryParams.permissions.kontrolleCreateMaxReach))),
 			changes: false // if something could have happened to dataset -> reload on mounted
 		}
 	},
@@ -281,34 +281,72 @@ export const LektorComponent = {
 			const val = cell.getValue()
 			return val !== '-' // dont allow edit on empty cols 
 		},
-		tooltipTableRow(e, cell, onRendered) { // tooltip formatter for whole row but used on every cell
-			const el = document.createElement('div')
+		tooltipTableRow(e, cell, onRendered) {
+			const el = document.createElement('div');
+			el.style.padding = '5px';
+			el.style.fontFamily = 'sans-serif';
 
-			const row = cell.getRow()
-			const data = row.getData()
-			const name = document.createElement('p')
-			
-			name.innerText = data.vorname + ' ' + data.nachname
-			el.appendChild(name)
-			
-			data?.entschuldigungen?.forEach(ent => {
-				const entschuldigung = document.createElement('p')
+			const data = cell.getRow().getData();
 
-				entschuldigung.innerText += this.formatEntschuldigungZeit(ent) + ' Entschuldigung status: ' + this.formatAkzeptiertStatus(ent.akzeptiert) + '\n'
-				el.appendChild(entschuldigung)
-			})
-			
-			return el
+			// Header Section
+			const header = document.createElement('div');
+			header.style.fontWeight = 'bold';
+			header.style.marginBottom = '10px';
+			header.style.borderBottom = '1px solid #ccc';
+			header.style.paddingBottom = '5px';
+
+			const limit = 10;
+			const count = data?.entschuldigungen?.length || 0;
+			const shownNumber = count >= limit ? limit : count;
+
+			header.innerText = `${data.vorname} ${data.nachname}`;
+			if (count > 0) {
+				header.innerText += ` (Entschuldigungen: ${shownNumber}/${count})`;
+			}
+			el.appendChild(header);
+
+			// Grid Section
+			if (count > 0) {
+				const grid = document.createElement('div');
+				grid.style.display = 'grid';
+				grid.style.gridTemplateColumns = 'auto auto';
+				grid.style.columnGap = '25px'; // The "Tab" space
+				grid.style.rowGap = '4px';
+
+				for (let i = 0; i < shownNumber; i++) {
+					const ent = data.entschuldigungen[i];
+
+					const dateSpan = document.createElement('span');
+					dateSpan.innerText = this.formatEntschuldigungZeit(ent);
+
+					const statusSpan = document.createElement('span');
+					statusSpan.style.color = ent.akzeptiert ? '#2e7d32' : '#d32f2f';
+					statusSpan.innerText = 'Status: ' + this.formatAkzeptiertStatus(ent.akzeptiert);
+
+					grid.appendChild(dateSpan);
+					grid.appendChild(statusSpan);
+				}
+				el.appendChild(grid);
+			} else {
+				const none = document.createElement('div');
+				none.innerText = 'Keine Entschuldigungen vorhanden';
+				el.appendChild(none);
+			}
+
+			return el;
 		},
 		formatEntschuldigungZeit(ent) {
 			const von = new Date(ent.von)
 			const bis = new Date(ent.bis)
+			const today = new Date()
+			const sameDay = this.areDatesSame(today, bis) && this.areDatesSame(von, today)
 			
-			const sameDay = this.areDatesSame(von, bis)
 			if(sameDay) {
-				return String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return  (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
 			} else {
-				return (von.getMonth() + 1) + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + (bis.getMonth() + 1) + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				// return (von.getMonth() + 1) + '.' + von.getDate() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + (bis.getMonth() + 1) + '.' + bis.getDate() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+				return (von.getDate()) + '.' + (von.getMonth()+1) + '.' + von.getFullYear() + ' ' + String(von.getHours()).padStart(2, '0') + ':' + String(von.getMinutes()).padStart(2, '0') + ' - ' + bis.getDate() + '.' + (bis.getMonth()+1) + '.' + bis.getFullYear() + ' ' + String(bis.getHours()).padStart(2, '0') + ':' + String(bis.getMinutes()).padStart(2, '0')
+
 			}
 		},
 		formatAkzeptiertStatus(akzeptiert) {
@@ -444,7 +482,7 @@ export const LektorComponent = {
 					minWidth: 150
 				})
 			})
-			newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+			newCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field == 'sum'))
 
 			this.lektorState.tableStudentData = this.setupAllData(newCols)
 			this.lektorState.tabulatorCols = newCols
@@ -461,8 +499,14 @@ export const LektorComponent = {
 					else return false
 				})
 				
+				// sort entschuldigungen descending, so tooltip shows most recent on top
+				// allEntStudent.sort(
+				//	
+				// )
+				
 				const nachname = student.nachname + student.zusatz
 				const row = {
+					student_uid: student.student_uid,
 					prestudent_id: student.prestudent_id,
 					foto: student.foto,
 					vorname: student.vorname,
@@ -525,14 +569,18 @@ export const LektorComponent = {
 				month: this.selectedDate.getMonth() + 1,
 				day: this.selectedDate.getDate()
 			}
-
+			
 			this.$api.call(ApiKontrolle.getNewQRCode(this.$entryParams.selected_le_id.value, date, this.lektorState.beginn, this.lektorState.ende))
 				.then(res => {
 				if (res.data) {
+					this.showQRLoadingSpinner = false
 					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
+			}).finally(()=>{
+				// just in case
+				this.showQRLoadingSpinner = false
 			})
 			
 		},
@@ -706,6 +754,7 @@ export const LektorComponent = {
 				return false;
 			}
 
+			this.showQRLoadingSpinner = true
 			this.qr = '' // indirectly set start button disabled
 
 			// fetch some data from stundenplan what should be happening rn
@@ -832,28 +881,37 @@ export const LektorComponent = {
 			kontrolle.editVon = {hours: vonSplit[0], minutes: vonSplit[1], seconds: vonSplit[2]}
 			const bisSplit = kontrolle.bis.split(':')
 			kontrolle.editBis = {hours: bisSplit[0], minutes: bisSplit[1], seconds: bisSplit[2]}
-			this.editKontrolle = kontrolle
+			if(this.editKontrolle === null) {
+				this.editKontrolle = kontrolle
+			} else {
+				this.editKontrolle = null
+			}
+			
 		},
 		formatDateToDbString(date) {
 			return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
 				.toISOString()
 				.split("T")[0];
 		},
+		formatZusatzDate(date){
+			const parts = date.split('-');
+			return `${parts[2]}.${parts[1]}.${parts[0]}`;
+		},
 		formatZusatz(entry, stsem) {
 			let zusatz = ''
-			const stsemdatumvon = new Date(stsem.von)
-			const stsemdatumbis = new Date(stsem.bis)
-			// if(entry.studienstatus === 'Abbrecher '||entry.studienstatus === 'Unterbrecher') {
-			// 	// this should never come up anyways?
-			// }
+			const stsemdatumvon = new Date(stsem.start)
+			const stsemdatumbis = new Date(stsem.ende)
 
+			const entryVon = new Date(entry.von)
+			const entryBis = new Date(entry.bis)
+			
 			if (entry.studienstatus === 'Incoming') zusatz = ' (i)'
 			if (entry.bisio_id && entry.studienstatus !== 'Incoming'
-				&& entry.bis > stsemdatumvon && entry.von < stsemdatumbis && ((entry.bis.getTime() - entry.von.getTime()) / 1000 * 3600 * 24) >= 30) {
-				zusatz = ' (o) (ab ' + entry.von + ')'
-			} else if (entry.bisio_id && entry.studienstatus !== 'Incoming' && entry.von && entry.von > stsemdatumvon) {
+				&& entryBis > stsemdatumvon && entryVon < stsemdatumbis && ((entryBis.getTime() - entryVon.getTime()) / 1000 * 3600 * 24) >= 30) {
+				zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
+			} else if (entry.bisio_id && entry.studienstatus !== 'Incoming' && entryVon && entryVon > stsemdatumvon) {
 				// if bis datum is not yet known but von is available already
-				zusatz = ' (o) (ab ' + entry.von + ')'
+				zusatz = ' (o) (ab ' + this.formatZusatzDate(entry.von) + ')'
 			}
 
 			if (entry.lkt_ueberschreibbar === false) zusatz = ' (' + entry.anmerkung + ')'
@@ -985,7 +1043,7 @@ export const LektorComponent = {
 					minWidth: 150
 				})
 			})
-			newCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+			newCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field == 'sum'))
 			// tableData prefilled with all dates & status
 			this.lektorState.tableStudentData = this.setupAllData(newCols)
 			this.studentCount = this.lektorState.students.length
@@ -1024,13 +1082,26 @@ export const LektorComponent = {
 				this.setShowAll()
 			} else {
 
-				this.anwesenheitenTabulatorOptions.columns[0].title = this.$capitalize(await this.$p.t('global/foto'))
-				this.anwesenheitenTabulatorOptions.columns[1].title = this.$capitalize(await this.$p.t('global/prestudentID'))
-				this.anwesenheitenTabulatorOptions.columns[2].title = this.$capitalize(await this.$p.t('person/vorname'))
-				this.anwesenheitenTabulatorOptions.columns[3].title = this.$capitalize(await this.$p.t('person/nachname'))
-				this.anwesenheitenTabulatorOptions.columns[4].title = this.$capitalize(await this.$p.t('lehre/gruppe'))
-				this.anwesenheitenTabulatorOptions.columns[6].title = this.$capitalize(await this.$p.t('global/summe'))
-				
+				// set phrasen by field id instead of index
+				this.anwesenheitenTabulatorOptions.columns.forEach(async (col) => {
+					switch(col.field) {
+						case 'foto': 
+							col.titel = this.$capitalize(await this.$p.t('global/foto'))
+						case 'prestudent_id':
+							col.titel = this.$capitalize(await this.$p.t('global/prestudentID'))
+						case 'student_id':
+							col.titel = this.$capitalize(await this.$p.t('ui/student_uid'))
+						case 'vorname':
+							col.titel = this.$capitalize(await this.$p.t('person/vorname'))
+						case 'nachname':
+							col.titel = this.$capitalize(await this.$p.t('person/nachname'))
+						case 'gruppe':
+							col.titel = this.$capitalize(await this.$p.t('lehre/gruppe'))
+						case 'sum':
+							col.titel = this.$capitalize(await this.$p.t('global/summe'))
+					}
+				})
+
 				this.lektorState.tabulatorCols = anwCols
 				this.$refs.anwesenheitenTable.tabulator.clearSort()
 				this.$refs.anwesenheitenTable.tabulator.setColumns(anwCols)
@@ -1187,7 +1258,7 @@ export const LektorComponent = {
 			if(!this.kontrollDatumSourceStundenplan && this.selectedDate <= this.minDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
-			} else if(!this.kontrollDatumSourceStundenplan && this.selectedDate > this.maxDate) {
+			} else if(this.selectedDate > this.maxDate) {
 				this.$fhcAlert.alertError(this.$p.t('global/kontrolleDatumOutOfRange'));
 				return false
 			}
@@ -1376,7 +1447,7 @@ export const LektorComponent = {
 					minWidth: 150
 				})
 			})
-			anwCols.push(this.anwesenheitenTabulatorOptions.columns[6])
+			anwCols.push(this.anwesenheitenTabulatorOptions.columns.find(col => col.field == 'sum'))
 			
 			this.selectedDateCount = dates.length
 			
@@ -1560,7 +1631,49 @@ export const LektorComponent = {
 		},
 		getTooltipDatumFromStundenplan() {
 			return {
-				value: this.$p.t('global/tooltipUnterrichtDatumCustomV2'),//'Datum wurde dem Stundenplan entnommen, nur in Ausnahmefällen überschreiben!',
+				value: this.$p.t('global/tooltipUnterrichtDatumCustomV2'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipLegende() {
+			return {
+				value: this.$p.t('global/tooltipLegende'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipCsv() {
+			return {
+				value: this.$p.t('global/tooltipCsv'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipEdit() {
+			return {
+				value: this.$p.t('global/tooltipEdit'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipSaveChanges() {
+			return {
+				value: this.$p.t('global/tooltipSaveChanges'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipRestartKontrolle() {
+			return {
+				value: this.$p.t('global/tooltipRestartKontrolle'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipDeleteKontrolle() {
+			return {
+				value: this.$p.t('global/tooltipDeleteKontrolle'),
+				class: "custom-tooltip"
+			}
+		},
+		getTooltipEditKontrollzeiten() {
+			return {
+				value: this.$p.t('global/tooltipEditKontrollzeiten'),
 				class: "custom-tooltip"
 			}
 		},
@@ -1618,93 +1731,113 @@ export const LektorComponent = {
 							</div>
 						</template>
 						<template v-slot:default>
-							<div class="row">
-								<div class="col-12">
-									
-									<h5>{{ $p.t('global/unterrichtzeit') }}</h5>
-									<div class="row align-items-center">
-										<div class="col-3" style="align-items: center; justify-items: center;">
-											<label for="beginn" class="form-label">{{ $p.t('global/anwKontrolleVon') }}</label>
+						
+								<div class="row">
+									<div class="col-12">
+										<h5 class="mb-4 border-bottom pb-2">{{ $p.t('global/unterrichtzeit') }}</h5>
+								
+										<div class="row align-items-center mb-3">
+											<div class="col-3">
+												<label for="beginn" class="form-label mb-0 fw-semibold">{{ $p.t('global/anwKontrolleVon') }}</label>
+											</div>
+											<div class="col-4">
+												<datepicker
+													v-model="lektorState.beginn"
+													@update:model-value="handleChangeBeginn"
+													:clearable="false"
+													:time-picker="true"
+													:text-input="true"
+													:auto-apply="true"
+												/>
+											</div>
+											<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn">
+												<div  
+													 class="d-flex align-items-start small" 
+													 v-tooltip.bottom="getTooltipZeitFromStundenplan">
+													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
+													<span>{{ $p.t('global/zeitNichtAusStundenplanBeginnV2') }}</span>
+												</div>
+											</div>
 										</div>
-										<div class="col-4">
-											<datepicker
-												v-model="lektorState.beginn"
-												@update:model-value="handleChangeBeginn"
-												:clearable="false"
-												:time-picker="true"
-												:text-input="true"
-												:auto-apply="true">
-											</datepicker>
-											
+								
+										<div class="row align-items-center mb-3">
+											<div class="col-3">
+												<label for="von" class="form-label mb-0 fw-semibold">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
+											</div>
+											<div class="col-4">
+												<datepicker
+													v-model="lektorState.ende"
+													@update:model-value="handleChangeEnde"
+													:clearable="false"
+													:time-picker="true"
+													:text-input="true"
+													:auto-apply="true"
+												/>
+											</div>
+											<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde">
+												<div  
+													 class="d-flex align-items-start small" 
+													 v-tooltip.bottom="getTooltipZeitFromStundenplan">
+													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
+													<span>{{ $p.t('global/zeitNichtAusStundenplanEndeV2') }}</span>
+												</div>
+											</div>
 										</div>
-										<div class="col-5" v-show="!kontrollZeitSourceStundenplanBeginn" v-tooltip.bottom="getTooltipZeitFromStundenplan">
-											<i class="fa-solid fa-triangle-exclamation"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanBeginnV2') }}</i>
-										</div>
-									</div>
-									<div class="row align-items-center mt-2">
-										<div class="col-3" style="align-items: center; justify-items: center;">
-											<label for="von" class="form-label">{{ $capitalize($p.t('global/anwKontrolleBis')) }}</label>
-										</div>
-										<div class="col-4">
-											<datepicker
-												v-model="lektorState.ende"
-												@update:model-value="handleChangeEnde"
-												:clearable="false"
-												:time-picker="true"
-												:text-input="true"
-												:auto-apply="true">
-											</datepicker>
-											
-										</div>
-										<div class="col-5" v-show="!kontrollZeitSourceStundenplanEnde" v-tooltip.bottom="getTooltipZeitFromStundenplan">
-											<i class="fa-solid fa-triangle-exclamation"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/zeitNichtAusStundenplanEndeV2') }}</i>
-										</div>
-									</div>
-									<div class="row mt-2">
-										<div class="col-3 d-flex" style="height: 40px; align-items: start; justify-items: center;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatumV2') }}</label></div>
-										<div class="col-4" style="height: 40px">
-											<datepicker
-												ref="insideDateSelect"
-												v-model="selectedDate"
-												:clearable="false"
-												locale="de"
-												format="dd.MM.yyyy"
-												:text-input="true"
-												@date-update="handleAutoApply"
-												:highlight="highlights">
-											
-												<template #action-row>
-													<div class="col">
-														<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
-														<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
-															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
-															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
-															<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
+								
+										<div class="row align-items-center mb-4">
+											<div class="col-3">
+												<label for="datum" class="form-label mb-0 fw-semibold">{{ $p.t('global/kontrolldatumV2') }}</label>
+											</div>
+											<div class="col-4">
+												<datepicker
+													ref="insideDateSelect"
+													v-model="selectedDate"
+													:clearable="false"
+													locale="de"
+													format="dd.MM.yyyy"
+													:text-input="true"
+													@date-update="handleAutoApply"
+													:highlight="highlights">
+													
+													<template #action-row>
+														<div class="col">
+															<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
+															<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
+																<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
+																<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
+																<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
+															</div>
 														</div>
-													</div>
-												</template>
-												
-											</datepicker>
+													</template>
+												</datepicker>
+											</div>
+											<div class="col-5" v-show="!kontrollDatumSourceStundenplan">
+												<div  
+													 class="d-flex align-items-start small" 
+													 v-tooltip.bottom="getTooltipDatumFromStundenplan">
+													<i class="fa-solid fa-triangle-exclamation mt-1 me-2"></i>
+													<span>{{ $p.t('global/datumNichtAusStundenplanV2') }}</span>
+												</div>
+											</div>
 										</div>
-										<div class="col-5" v-show="!kontrollDatumSourceStundenplan" v-tooltip.bottom="getTooltipDatumFromStundenplan">
-											<i class="fa-solid fa-triangle-exclamation"></i>
-											<i style="margin-left: 4px;">{{ $p.t('global/datumNichtAusStundenplanV2') }}</i>
+								
+										<hr class="my-4" />
+								
+										<div class="row">
+											<div class="col-12">
+												<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged" />
+											</div>
 										</div>
 									</div>
-									
-									<Divider/>
-									<div class="row align items center mt-8">
-										<TermineDropdown ref="termineDropdown" @terminChanged="handleTerminChanged"></TermineDropdown>
-									</div>
-									
 								</div>
-							</div>
 						</template>
 						<template v-slot:footer>
+							
 							<button v-if="currentLEhasRightToSkipQR" type="button" class="btn btn-primary" @click="insertAnwWithoutQR">{{ $p.t('global/kontrolleOhneQR') }}</button>
-							<button type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/neueAnwKontrolle') }}</button>
+							<button v-show="!showQRLoadingSpinner" :disabled="qr != null" type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/jetztStarten') }}</button>
+							<div v-show="showQRLoadingSpinner">
+								<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
+							</div>
 						</template>
 					</bs-modal>
 					
@@ -1726,15 +1859,16 @@ export const LektorComponent = {
 											<AnwCountDisplay :anwesend="kontrolle.anwesend" :abwesend="kontrolle.abwesend" :entschuldigt="kontrolle.entschuldigt"/>
 										</div>
 										<div class="col-3 d-flex justify-content-end">
-											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary">
+											<button @click="restartKontrolle(kontrolle)" role="button" class="btn btn-secondary" v-tooltip.bottom="getTooltipRestartKontrolle">
 												<i class="fa fa-rotate-right"></i>
+						
 											</button>
 											
-											<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger">
+											<button style="margin-left: 12px;" @click="deleteAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-danger" v-tooltip.bottom="getTooltipDeleteKontrolle">
 												<i class="fa fa-trash"></i>
 											</button>
 											
-											<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success">
+											<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
 												<i class="fa fa-pen"></i>
 											</button>
 											
@@ -1800,7 +1934,7 @@ export const LektorComponent = {
 					<bs-modal ref="modalContainerStudentByLva" class="bootstrap-prompt" dialogClass="modal-xl" :allowFullscreenExpand="true">
 						<template v-slot:title>
 							<div>
-								{{ selectedStudent?.title }}
+								{{ $capitalize($p.t('global/studentByLVATitle'))}}: {{ selectedStudent?.title }}
 							</div>
 						</template>
 						<template v-slot:default>
@@ -1855,54 +1989,72 @@ export const LektorComponent = {
 						
 	
 						<div class="col-6">
-							<div class="row">
-								<div class="col-5" v-if="$entryParams?.permissions?.admin" >
-									<MaUIDDropdown  :title="$capitalize($p.t('lehre/lektor') )" 
-									 id="maUID" ref="MADropdown" @maUIDchanged="maUIDchangedHandler">
-									</MaUIDDropdown>
+							<div class="row g-3 align-items-end">
+								<div class="col-5" v-if="$entryParams?.permissions?.admin">
+									<MaUIDDropdown 
+										:title="$capitalize($p.t('lehre/lektor'))" 
+										id="maUID" 
+										ref="MADropdown" 
+										@maUIDchanged="maUIDchangedHandler"
+									/>
 								</div>
-								<div :class=" $entryParams?.permissions?.admin ? 'col-5' : 'col-10'">
-									<LehreinheitenDropdown id="lehreinheit" :title="$capitalize($p.t('lehre/lehreinheit'))" ref="LEDropdown" @leChanged="handleLEChanged">
-									</LehreinheitenDropdown>
+								<div :class="$entryParams?.permissions?.admin ? 'col-7' : 'col-12'">
+									<LehreinheitenDropdown 
+										id="lehreinheit" 
+										:title="$capitalize($p.t('lehre/lehreinheit'))" 
+										ref="LEDropdown" 
+										@leChanged="handleLEChanged"
+									/>
 								</div>
-										
-								<div class="row mt-4">
-		
-									<div class="col-2" style="height: 40px; align-self: start;"><label for="datum" class="form-label">{{ $p.t('global/kontrolldatumV2') }}</label></div>
-									<div class="col-3" style="height: 40px;">
-										<datepicker
-											ref="outsideDateSelect"
-											v-model="selectedDate"
-											:clearable="false"
-											locale="de"
-											format="dd.MM.yyyy"
-											@date-update="handleAutoApply"
-											:text-input="true"
-											:highlight="highlights">
-											
-											<template #action-row>
-												<div class="col">
-													<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
-													<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
-														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
-														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
-														<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
-													</div>
+							</div>
+						
+							<div class="row mt-4 align-items-center">
+								<div class="col-auto">
+									<label for="datum" class="form-label mb-0">{{ $p.t('global/kontrolldatumV2') }}</label>
+								</div>
+								
+								<div class="col-4">
+									<datepicker
+										ref="outsideDateSelect"
+										v-model="selectedDate"
+										:clearable="false"
+										locale="de"
+										format="dd.MM.yyyy"
+										@date-update="handleAutoApply"
+										:text-input="true"
+										:highlight="highlights"
+									>
+										<template #action-row>
+											<div class="col">
+												<div class="row" style="margin-left: 12px;">{{ $p.t('global/highlightsettings') }}</div>
+												<div class="justify-content-center align-items-center flex-nowrap overflow-hidden" style="display: flex; height: 80px;">
+													<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'termine'" @click="highlightMode = 'termine';">{{$p.t('global/termineV2')}} </button>
+													<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'kontrollen'" @click="highlightMode = 'kontrollen';">{{$p.t('global/kontrollen')}}</button>
+													<button role="button" class="col text-white option-entry text-center h-100 w-100 btn" :selected="highlightMode == 'allowed'" @click="highlightMode = 'allowed';">{{$p.t('global/allowed')}}</button>
 												</div>
-											</template>
-											
-										</datepicker>
+											</div>
+										</template>
+									</datepicker>
+								</div>
+						
+								<div class="col-5 d-flex align-items-center">
+									<div class="form-check d-flex align-items-center gap-2">
+										<input 
+											type="checkbox" 
+											class="form-check-input m-0" 
+											@click="handleShowAllToggle" 
+											id="all" 
+											ref="showAllTickbox"
+											style="cursor: pointer; width: 1.2rem; height: 1.2rem;"
+										>
+										<label class="form-check-label mb-0" for="all" style="cursor: pointer; white-space: nowrap;">
+											{{ $p.t('global/showAllKontrollen') }} | 
+											<span>{{ selectedDateCount }} / {{ lektorState.kontrollen.length }}</span>
+										</label>
 									</div>
-									<div class="col-5" style="height: 40px; align-items: center; display: flex;">
-										<div class="row" style="width: 100%; align-items: center; justify-content: center;">
-											<input type="checkbox" style="max-width: 5%;" @click="handleShowAllToggle" id="all" ref="showAllTickbox">
-											<label for="all" style="max-width: 90%;">{{ $p.t('global/showAllKontrollen') }} | {{ selectedDateCount }} / {{ lektorState.kontrollen.length }}</label>
-										</div>
-									</div>
-								</div>				
+								</div>
 							</div>
 						</div>
-						
 					</div>
 					<core-filter-cmpt
 						title=""
@@ -1919,19 +2071,19 @@ export const LektorComponent = {
 						:sideMenu="false"
 						noColumnFilter>
 							<template #actions>
-								<button @click="saveChanges" :disabled="!changedData.length" role="button" :class="getSaveBtnClass">
+								<button @click="saveChanges" :disabled="!changedData.length" role="button" :class="getSaveBtnClass" v-tooltip.bottom="getTooltipSaveChanges">
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getEditBtnClass">
+								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
 									<i class="fa fa-pen"></i>
 								</button>
 								
-								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2">
+								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipCsv">
 									<i class="fa fa-file-csv"></i>
 								</button>
 								
-								<button @click="openLegend" role="button" class="btn btn-secondary ml-2">
+								<button @click="openLegend" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipLegende">
 									<i class="fa fa-book"></i>
 								</button>
 							</template>

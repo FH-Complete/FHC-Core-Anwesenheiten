@@ -18,7 +18,7 @@ class Anwesenheit_User_model extends \DB_Model
 		$query = "
 			SELECT *
 			FROM extension.tbl_anwesenheit_user JOIN extension.tbl_anwesenheit USING (anwesenheit_id)
-			WHERE prestudent_id = ? AND lehreinheit_id = ? AND DATE(extension.tbl_anwesenheit.von) = ?
+			WHERE prestudent_id = ? AND lehreinheit_id = ? AND extension.tbl_anwesenheit.von = ?
 			ORDER BY von ASC;
 		";
 
@@ -141,7 +141,8 @@ class Anwesenheit_User_model extends \DB_Model
 
 		$query ='SELECT person_id, von, bis, akzeptiert
 			FROM extension.tbl_anwesenheit_entschuldigung
-			WHERE person_id IN ?';
+			WHERE person_id IN ?
+			ORDER BY von DESC';
 
 		return $this->execReadOnlyQuery($query, array($personIds));
 
@@ -165,7 +166,8 @@ class Anwesenheit_User_model extends \DB_Model
 			FROM campus.vw_student_lehrveranstaltung
 				 JOIN public.tbl_student ON (uid = student_uid)
 				 JOIN public.tbl_prestudent USING(prestudent_id)
-			WHERE lehreinheit_id = ?;";
+				 JOIN public.tbl_benutzer USING(uid)
+			WHERE lehreinheit_id = ? AND public.tbl_benutzer.aktiv = true;";
 
 		$result = $this->execQuery($query, [$von, $bis, $le_id]);
 
@@ -199,10 +201,12 @@ class Anwesenheit_User_model extends \DB_Model
 		if ($this->db->trans_status() === false || isError($result))
 		{
 			$this->db->trans_rollback();
+			return false;
 		}
 		else
 		{
 			$this->db->trans_commit();
+			return true;
 		}
 
 	}

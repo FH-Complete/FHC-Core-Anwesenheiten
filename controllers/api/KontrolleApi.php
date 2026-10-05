@@ -19,34 +19,34 @@ class KontrolleApi extends FHCAPI_Controller
 				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
 				
 				// changing status or note of anwesenheit user entry
-				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'updateAnwesenheiten' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// requests new code when timer reaches its limit during kontrolle
-				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'regenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// deletes old code from db when refreshed is received
-				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'degenerateQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// start of a new kontrolle, inserts anw_user entries
-				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'getNewQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// start & end of kontrolle without the qr part for lessons where scanning is not intended
 				'insertAnwWithoutQR' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// requests qr code for existing kontrolle
-				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'restartKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// update von/bis times for existing kontrolle
-				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'updateKontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// in case kontrolle was not stopped intentionally jump right back in on startup
-				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'getExistingQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// method called at end of kontrolle to clean up qr code
-				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'deleteQRCode' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 				
 				// delete kontrolle and all corresponding anw_user entries
-				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:r'),
+				'deleteAnwesenheitskontrolle' => array('extension/anw_r_lektor:rw', 'extension/anw_r_full_assistenz:rw'),
 
 				// gets checkin & entschuldigt count for ongoing kontrolle
 				'pollAnwesenheiten' => array('extension/anw_r_lektor:r', 'extension/anw_r_full_assistenz:r'),
@@ -75,19 +75,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
-		// Loads LogLib with different debug trace levels to get data of the job that extends this class
-		// It also specify parameters to set database fields
-		$this->_ci->load->library('LogLib', array(
-			'classIndex' => 5,
-			'functionIndex' => 5,
-			'lineIndex' => 4,
-			'dbLogType' => 'API', // required
-			'dbExecuteUser' => 'RESTful API',
-			'requestId' => 'API',
-			'requestDataFormatter' => function ($data) {
-				return json_encode($data);
-			}
-		), 'logLib');
+		$this->_ci->load->model('system/Webservicelog_model', 'WebservicelogModel');
 
 
 		$this->loadPhrases(
@@ -96,8 +84,7 @@ class KontrolleApi extends FHCAPI_Controller
 				'ui'
 			)
 		);
-
-		require_once(FHCPATH.'include/lehreinheit.class.php');
+		
 		require_once(FHCPATH.'include/lehrveranstaltung.class.php');
 
 		$this->_setAuthUID(); // sets property uid
@@ -412,9 +399,9 @@ class KontrolleApi extends FHCAPI_Controller
 		$dateTime = strtotime($dateString);
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
-
-		$le = new lehreinheit();
-		$le->load($le_id);
+		
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 		
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($dateTime < $dateLimit && !$isAdmin) { 
@@ -494,8 +481,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 		
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($dateTime < $dateLimit && !$isAdmin) {
@@ -530,13 +517,17 @@ class KontrolleApi extends FHCAPI_Controller
 		$anwesenheit_id = $insert->retval;
 
 		// insert Anwesenheiten entries of every Student as Abwesend
-		$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
 			$le_id,
 			$anwesenheit_id,
 			$von, $bis,
 			$this->_ci->config->item('ANWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
 
+		if($transactionResult == false) {
+			$this->terminateWithError('Error during insert user Anwesenheiten entries transaction.');
+		}
+		
 		$kontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 		
 		$this->terminateWithSuccess($kontrolle);
@@ -546,13 +537,13 @@ class KontrolleApi extends FHCAPI_Controller
 
 		// kontrollen laden by le & date
 		$result = $this->_ci->AnwesenheitModel->getKontrollenForLeIdAndDate($le_id, $datum);
-		$this->addMeta('getKontrollenForLeIdAndDate$result', $result);
+//		$this->addMeta('getKontrollenForLeIdAndDate$result', $result);
 		
 		if(isError($result)) $this->terminateWithError("error checking for kontrollen on same date");
 		else if (!hasData($result)) return true; // no other kontrollen -> no collision
 		
 		$kontrollen = getData($result);
-		$this->addMeta('kontrollen', $kontrollen);
+//		$this->addMeta('kontrollen', $kontrollen);
 		
 		// check against other von/bis
 
@@ -604,12 +595,16 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
 
 		// insert Anwesenheiten entries of every Student as Abwesend
-		$this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
+		$transactionResult = $this->_ci->AnwesenheitUserModel->createNewUserAnwesenheitenEntries(
 			$le_id,
 			$anwesenheit_id,
 			$von, $bis,
 			$this->_ci->config->item('ABWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'));
+		
+		if($transactionResult == false) {
+			$this->terminateWithError('Error during insert user Anwesenheiten entries transaction.');
+		}
 
 		// count entschuldigt entries
 		$countPoll = $this->_ci->AnwesenheitModel->getCheckInCountsForAnwesenheitId($anwesenheit_id,
@@ -701,8 +696,8 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLE($le_id)
 	{
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if($isAdmin) return true;
@@ -773,8 +768,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 
 		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
 
@@ -793,13 +788,13 @@ class KontrolleApi extends FHCAPI_Controller
 		// check against kontrolle insert date since nominal von/bis date does not tell about the
 		// actuality of the check
 		$insertamum = $kontrolle->insertamum;
-		$this->addMeta('$insertamum', $insertamum);
+//		$this->addMeta('$insertamum', $insertamum);
 		$dateInsert = new DateTime($insertamum);
 		$insertFormatted = $dateInsert->format('Y-m-d');
 		$insertDateTime = strtotime($insertFormatted);
 		
-		$this->addMeta('$insertDateTime', $insertDateTime);
-		$this->addMeta('$dateLimit', $dateLimit);
+//		$this->addMeta('$insertDateTime', $insertDateTime);
+//		$this->addMeta('$dateLimit', $dateLimit);
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
 		if ($insertDateTime < $dateLimit && !$isAdmin) {
 			$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
@@ -817,8 +812,17 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 		$anwesenheiten = getData($result);
 
-		// delete history of user entries and write into log file
-		$this->_ci->logLib->logInfoDB(array($kontrolle, $anwesenheiten));
+		
+		// write log entry about changed kontrollzeiten
+		$this->_ci->WebservicelogModel->insert(array(
+			'webservicetyp_kurzbz' => 'content',
+			'beschreibung' => 'AnwKontrolle Delete',
+			'request_data' => json_encode(array($kontrolle, $anwesenheiten)),
+			'execute_user' => getAuthUID(),
+			'execute_time' => 'NOW()'
+		));
+		
+		
 		$this->_ci->AnwesenheitUserHistoryModel->deleteAllByAnwesenheitId($anwesenheit_id);
 
 		// delete user anwesenheiten by anwesenheit_id of kontrolle
@@ -920,8 +924,8 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day");
 
-		$le = new lehreinheit();
-		$le->load($le_id);
+		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$le = getData($leResult)[0];
 		
 		// remove date check when restarting since adding anew is allowed for all termine right now anyways
 //		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
@@ -983,6 +987,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$existsKontrolle = hasData($resultKontrolle);
 		if(!$existsKontrolle) $this->terminateWithError("Kontrolle does not exist.");
 		
+		// for the logs
+		$oldVon = $resultKontrolle->retval[0]->von;
+		$oldBis = $resultKontrolle->retval[0]->bis;
+		
 		$vonDate = new DateTime($resultKontrolle->retval[0]->von);
 		$vonDate->setTime($von->hours, $von->minutes, $von->seconds);
 		$bisDate = new DateTime($resultKontrolle->retval[0]->bis);
@@ -1001,10 +1009,27 @@ class KontrolleApi extends FHCAPI_Controller
 			'updateamum' => date('Y-m-d H:i:s'),
 			'updatevon' => getAuthUID()
 		));
-
+		
 		if(isError($update)) {
 			$this->terminateWithError('Error Updating Anwesenheitskontrolle', 'general');
 		}
+		
+		// write log entry about changed kontrollzeiten
+		$this->_ci->WebservicelogModel->insert(array(
+			'webservicetyp_kurzbz' => 'content',
+			'beschreibung' => 'AnwKontrolle Update',
+			'request_data' => json_encode(array(
+				'anwesenheit_id' => $anwesenheit_id,
+				'newVon' => $vonDate->format('Y-m-d H:i:s'),
+				'newBis' => $bisDate->format('Y-m-d H:i:s'),
+				'oldVon' => $oldVon,
+				'oldBis' => $oldBis,
+				'updateamum' => date('Y-m-d H:i:s'),
+				'updatevon' => getAuthUID()
+			)),
+			'execute_user' => getAuthUID(),
+			'execute_time' => 'NOW()'
+		));
 		
 		// finally recalculate valid entschuldigung stati since they depend on kontrolle von & bis
 		
@@ -1080,10 +1105,30 @@ class KontrolleApi extends FHCAPI_Controller
 		forEach($distinctLeId as $leRow)
 		{
 			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
+//			$this->addMeta($leRow->lehreinheit_id, $result);
 			if(!isSuccess($result)) $this->terminateWithError(getError($result));
 			$leTermine = getData($result);
+			
+			// if someone knows how to this one in the previous sql query, feel free to change it and tell me - johann
+			$leTermineGrouped = [];
+			// group le termine only with consecutive hours, detect the odd case of same lesson
+			// on the same day in two distinct time blocks eg hour 3-4 + later on hour 11-14 
+			if($leTermine !== null) {
+				forEach($leTermine as $distinctLesson) {
+					if(!count($leTermineGrouped)) { // arr empty, insert first stunde row of day and le
+						$leTermineGrouped[] = $distinctLesson;
+					} else if($leTermineGrouped[count($leTermineGrouped) - 1]->stunde == ($distinctLesson->stunde - 1) 
+						&& $leTermineGrouped[count($leTermineGrouped) - 1]->datum == $distinctLesson->datum) {
+						$leTermineGrouped[count($leTermineGrouped) - 1]->ende = $distinctLesson->ende;
+						$leTermineGrouped[count($leTermineGrouped) - 1]->stunde = $distinctLesson->stunde;
+					} else { // new block detected
+						$leTermineGrouped[] = $distinctLesson;
+					}
+				}
+			}
+			
 
-			$allLeTermine[$leRow->lehreinheit_id] = $leTermine;
+			$allLeTermine[$leRow->lehreinheit_id] = $leTermineGrouped;
 		}
 
 
