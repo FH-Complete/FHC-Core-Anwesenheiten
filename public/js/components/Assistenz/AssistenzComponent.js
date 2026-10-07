@@ -384,8 +384,11 @@ export const AssistenzComponent = {
 
 			return actionwrapper;
 		},
+		// the query keeps one studiengang_kz per entschuldigung, a person with more than one account
+		// must match every studiengang of its accounts
 		studiengangFilter: function (data, filterParams) {
-			return data.studiengang_kz === Number(filterParams.studiengang)
+			const accounts = data.accounts?.length ? data.accounts : [data]
+			return accounts.some(account => Number(account.studiengang_kz) === Number(filterParams.studiengang))
 		},
 		filtern: function()
 		{
