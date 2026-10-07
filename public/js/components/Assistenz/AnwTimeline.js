@@ -1,5 +1,5 @@
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-import AnwHelp from '../AnwHelp.js';
+import InViewHelp from '../../../../../js/components/InViewHelp.js';
 
 /**
  * Timeline of the entschuldigungen and the anwesenheitskontrollen of one person.
@@ -50,7 +50,7 @@ export const AnwTimeline = {
 	name: "AnwTimeline",
 	components: {
 		datepicker: VueDatePicker,
-		AnwHelp
+		InViewHelp
 	},
 	props: {
 		modelValue: { type: Object, default: null }, // entschuldigung to focus on open
@@ -184,7 +184,7 @@ export const AnwTimeline = {
 				{ tone: 'accepted', label: this.$capitalize(this.$p.t('global/akzeptiert')) },
 				{ tone: 'rejected', label: this.$capitalize(this.$p.t('global/abgelehnt')) },
 				{ tone: 'open', label: this.$capitalize(this.$p.t('global/offen')) },
-				{ tone: 'present', label: this.$capitalize(this.$p.t('global/anwesend')) },
+				{ tone: 'present', label: this.$capitalize(this.$p.t('global/anwesendV2')) },
 				{ tone: 'absent', label: this.$capitalize(this.$p.t('global/abwesend')) },
 				{ tone: 'excused', label: this.$capitalize(this.$p.t('global/entschuldigt')) }
 			]
@@ -193,7 +193,7 @@ export const AnwTimeline = {
 			return this.$p.t('global/noDataAvailable')
 		},
 		helpText() {
-			return this.$p.t('global/tooltipAnwTimeline')
+			return this.$p.t('global/tooltipAnwTimelineV3')
 		}
 	},
 	methods: {
@@ -239,7 +239,7 @@ export const AnwTimeline = {
 			const permissions = this.$entryParams?.permissions ?? {}
 
 			if (anw.status === (permissions.anwesend_status ?? 'anwesend')) {
-				return { tone: 'present', label: this.$capitalize(this.$p.t('global/anwesend')) }
+				return { tone: 'present', label: this.$capitalize(this.$p.t('global/anwesendV2')) }
 			}
 			if (anw.status === (permissions.abwesend_status ?? 'abwesend')) {
 				return { tone: 'absent', label: this.$capitalize(this.$p.t('global/abwesend')) }
@@ -734,7 +734,7 @@ export const AnwTimeline = {
 						<datepicker
 							:model-value="rangeFrom"
 							@update:model-value="onRangeFrom"
-							:placeholder="$capitalize($p.t('ui/von'))"
+							:placeholder="$capitalize($p.t('ui/dateFrom'))"
 							:clearable="false"
 							auto-apply
 							:text-input="true"
@@ -772,7 +772,7 @@ export const AnwTimeline = {
 							{{ $capitalize($p.t('global/alle')) }}
 						</button>
 					</div>
-					<anw-help class="ms-1" button-class="btn-sm text-muted" :text="helpText"></anw-help>
+					<in-view-help class="ms-1" button-class="btn-sm text-muted" :text="helpText"></in-view-help>
 				</div>
 
 				<div class="card-body py-2 anw-tl-body">
@@ -859,7 +859,7 @@ export const AnwTimeline = {
 					<div class="anw-tl-details d-flex flex-wrap align-items-baseline gap-3 small mt-2">
 						<template v-if="selected">
 							<span class="anw-tl-badge" :class="'anw-tl-tone--' + selected.tone">{{ selected.statusLabel }}</span>
-							<span><span class="text-muted">{{ $capitalize($p.t('ui/von')) }}:</span> {{ formatMoment(selected.start, true) }}</span>
+							<span><span class="text-muted">{{ $capitalize($p.t('ui/dateFrom')) }}:</span> {{ formatMoment(selected.start, true) }}</span>
 							<span><span class="text-muted">{{ $capitalize($p.t('global/bis')) }}:</span> {{ formatMoment(selected.end, true) }}</span>
 							<span v-if="selected.raw.le_bezeichnung">
 								<span class="text-muted">{{ $capitalize($p.t('lehre/lehreinheit')) }}:</span>

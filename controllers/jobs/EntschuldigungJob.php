@@ -25,7 +25,7 @@ class EntschuldigungJob extends JOB_Controller
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
 		$this->loadPhrases([
-			'anwesenheiten'
+			'global'
 		]);
 	}
 
@@ -147,7 +147,7 @@ class EntschuldigungJob extends JOB_Controller
 				'AnwEntMissingDocInfo',
 				$body_fields,
 				$email,
-				$this->p->t('anwesenheiten', 'oldEntsWithoutDocumentFound') // ironic to use phrasen for a hardcoded german template btw
+				$this->p->t('global', 'oldEntsWithoutDocumentFound') // ironic to use phrasen for a hardcoded german template btw
 			);
 
 			$emailcount++;

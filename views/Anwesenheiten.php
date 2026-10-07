@@ -10,16 +10,15 @@ $includesArray = array(
 	'primevue3' => true,
 	'customCSSs' => array(
 		'public/css/components/verticalsplit.css',
+		'public/css/components/inViewTooltip.css',
 		'vendor/vuejs/vuedatepicker_css/main.css',
 		'public/css/Fhc.css',
-		'public/extensions/FHC-Core-Anwesenheiten/css/PrimevueCustom.css',
 		'public/extensions/FHC-Core-Anwesenheiten/css/FhcMain.css'
 	),
 	'customJSs' => array(
 		'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
 		'vendor/npm-asset/primevue/dropdown/dropdown.js',
 		'vendor/npm-asset/primevue/divider/divider.js',
-		'vendor/npm-asset/primevue/tooltip/tooltip.js',
 		'vendor/npm-asset/primevue/panel/panel.js',
 		'vendor/npm-asset/primevue/checkbox/checkbox.js',
 		'vendor/npm-asset/primevue/textarea/textarea.js',

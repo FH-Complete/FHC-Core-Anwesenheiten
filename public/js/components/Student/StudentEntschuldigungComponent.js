@@ -5,7 +5,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-import AnwHelp from '../AnwHelp.js';
+import InViewHelp from '../../../../../js/components/InViewHelp.js';
 import NarrowScreen from '../../mixins/NarrowScreen.js';
 import ApiProfil from '../../api/factory/profil.js'
 export default {
@@ -15,7 +15,7 @@ export default {
 		CoreFilterCmpt,
 		BsModal,
 		Upload,
-		AnwHelp,
+		InViewHelp,
 		"datepicker": VueDatePicker
 	},
 	mixins: [NarrowScreen],
@@ -43,7 +43,7 @@ export default {
 				paginationSize: 100,
 				columns: [
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'akzeptiert', formatter: this.entschuldigungstatusFormatter, minWidth: 150, tooltip: false, widthGrow: 1},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: studentFormatters.formDate, minWidth: 140, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/dateFrom')), field: 'von', formatter: studentFormatters.formDate, minWidth: 140, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: studentFormatters.formDate, minWidth: 140, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('ui/aktion')), field: 'dms_id', formatter: this.formAction, widthGrow: 1, minWidth: 110, tooltip: false},
 					// the textarea formatter wraps a long begruendung instead of cutting it off
@@ -378,11 +378,11 @@ export default {
 		validate: function() {
 			// text input can produce invalid dates, treat them like missing input
 			if(!this.entschuldigung.von || !this.isValidDateObj(this.entschuldigung.von)) {
-				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeit'));
+				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterVonZeitV2'));
 				return false
 			}
 			if(!this.entschuldigung.bis || !this.isValidDateObj(this.entschuldigung.bis)) {
-				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeit'));
+				this.$fhcAlert.alertWarning(this.$p.t('global/warningEnterBisZeitV2'));
 				return false
 			}
 			if(!this.entschuldigung.files.length && !this.noFileUpload) {
@@ -445,7 +445,7 @@ export default {
 			// re-apply the titles by field once the phrasen are guaranteed to be loaded
 			const titleKeys = {
 				akzeptiert: 'global/status',
-				von: 'ui/von',
+				von: 'ui/dateFrom',
 				bis: 'global/bis',
 				dms_id: 'ui/aktion',
 				notiz: 'global/begruendungAnw'
@@ -527,7 +527,7 @@ export default {
 			return hint.join(' ')
 		},
 		helpText() {
-			return this.$p.t('global/tooltipStudentEntschuldigung', [this.$entryParams.permissions.entschuldigungMaxReach])
+			return this.$p.t('global/tooltipStudentEntschuldigungV2', [this.$entryParams.permissions.entschuldigungMaxReach])
 		},
 		// the entschuldigungen as the list shows them
 		listItems() {
@@ -548,13 +548,13 @@ export default {
 				<template v-slot:title>
 					<span class="d-inline-flex align-items-center gap-2">
 						{{$p.t('global/addEntschuldigung')}}
-						<anw-help button-class="fs-5" :text="helpText"></anw-help>
+						<in-view-help button-class="fs-5" :text="helpText"></in-view-help>
 					</span>
 				</template>
 				<template v-slot:default>
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
-							<label for="von" class="form-label">{{$capitalize($p.t('ui/von'))}}</label>
+							<label for="von" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
 							<datepicker
 								id="von"
 								v-model="entschuldigung.von"
@@ -607,13 +607,13 @@ export default {
 				<template v-slot:title>
 					<span class="d-inline-flex align-items-center gap-2">
 						{{$p.t('global/editEntschuldigung')}}
-						<anw-help button-class="fs-5" :text="helpText"></anw-help>
+						<in-view-help button-class="fs-5" :text="helpText"></in-view-help>
 					</span>
 				</template>
 				<template v-slot:default v-if="editEntschuldigung">
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
-							<label for="vonEdit" class="form-label">{{$capitalize($p.t('ui/von'))}}</label>
+							<label for="vonEdit" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
 							<datepicker
 								id="vonEdit"
 								v-model="editEntschuldigung.von"
@@ -683,7 +683,7 @@ export default {
 					</div>
 					<dl class="anw-ent-range">
 						<div>
-							<dt>{{ $capitalize($p.t('ui/von')) }}</dt>
+							<dt>{{ $capitalize($p.t('ui/dateFrom')) }}</dt>
 							<dd>{{ item.von }}</dd>
 						</div>
 						<div>

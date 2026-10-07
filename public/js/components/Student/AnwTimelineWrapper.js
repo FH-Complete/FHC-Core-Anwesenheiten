@@ -1,6 +1,6 @@
 
 import AnwTimeline from '../Assistenz/AnwTimeline.js';
-import ApiAdmin from "../../api/factory/administration.js";
+import ApiProfil from "../../api/factory/profil.js";
 
 export const AnwTimelineWrapper = {
 	name: 'AnwTimelineWrapper',
@@ -19,12 +19,15 @@ export const AnwTimelineWrapper = {
 		async reload() {
 			this.loadTimeline()
 		},
-		loadTimeline(){
-			this.$api.call(ApiAdmin.getTimeline(this.$entryParams.selected_student_info.person_id))
+		async loadTimeline(){
+			await this.$entryParams.profileViewDataPromise
+
+			// students see their own timeline: no selected student => person_id null
+			this.$api.call(ApiProfil.getTimeline(this.$entryParams.selected_student_info?.person_id ?? null))
 				.then(
 					(res) => {
-						this.selectedAnwArray = res.data[0].retval
-						this.selectedEntArray = res.data[1].retval
+						this.selectedAnwArray = Array.isArray(res.data?.[0]) ? res.data[0] : []
+						this.selectedEntArray = Array.isArray(res.data?.[1]) ? res.data[1] : []
 						this.selectedEntschuldigung = this.selectedEntArray.length ? this.selectedEntArray[0] : null
 					}
 				)

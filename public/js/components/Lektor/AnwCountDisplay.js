@@ -19,7 +19,7 @@ export const AnwCountDisplay = {
 			<div style="display: flex; justify-content: center; align-items: center;">
 				<div @mouseover="anwHovered = true" @mouseleave="anwHovered = false" class="anw-anwesend" style="position: relative; display: inline-block;">
 					<h3>{{anwesend}} <i class="fa fa-check"></i>
-						<div class="legend-info" v-show="anwHovered"> {{$capitalize($p.t('global/anwesend'))}}</div>
+						<div class="legend-info" v-show="anwHovered"> {{$capitalize($p.t('global/anwesendV2'))}}</div>
 					</h3>
 				</div>
 

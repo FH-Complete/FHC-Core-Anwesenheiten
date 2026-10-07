@@ -396,7 +396,7 @@ class KontrolleApi extends FHCAPI_Controller
 		));
 
 		if (isError($insert))
-			$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCode'), 'general');
+			$this->terminateWithError($this->p->t('global', 'errorSavingNewQRCodeV2'), 'general');
 
 		return $shortHash;
 	}
@@ -449,7 +449,7 @@ class KontrolleApi extends FHCAPI_Controller
 			'anwesenheit_id' => $anwesenheit_id
 		));
 
-		if(isError($deleteresp)) $this->terminateWithError($this->p->t('global', 'errorDegeneratingQRCode'), 'general');
+		if(isError($deleteresp)) $this->terminateWithError($this->p->t('global', 'errorDegeneratingQRCodeV2'), 'general');
 
 		$this->terminateWithSuccess(getData($deleteresp));
 	}
@@ -559,7 +559,7 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 
 		if(isEmptyString($le_id) || $le_id === 'null' || $date === 'null') {
-			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
 		}
 
 		$beginn = $result->beginn;
@@ -575,7 +575,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$dateLimit = strtotime("-$reach day midnight");
 
 		$leResult = $this->_ci->LehreinheitModel->load($le_id);
-		if(!hasData($leResult)) $this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+		if(!hasData($leResult)) $this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
 		$le = getData($leResult)[0];
 
 		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
@@ -612,7 +612,7 @@ class KontrolleApi extends FHCAPI_Controller
 		));
 
 		if (isError($insert))
-			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
 
 		return getData($insert);
 	}
@@ -885,7 +885,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$this->_ci->db->trans_commit();
 
-		$this->terminateWithSuccess($this->p->t('global', 'successDeleteKontrolleEntryAnDatum', [
+		$this->terminateWithSuccess($this->p->t('global', 'successDeleteKontrolleEntryAnDatumV2', [
 			'le_id' => $le_id,
 			'day' => $date->day,
 			'month' => $date->month,
@@ -955,7 +955,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$date = $result->datum;
 
 		if(isEmptyString($le_id) || $le_id === 'null' || $date === 'null') {
-			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolle'), 'general');
+			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
 		}
 
 		// authorizes against the lehreinheit the kontrolle actually belongs to

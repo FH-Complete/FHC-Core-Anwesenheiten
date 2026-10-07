@@ -31,7 +31,7 @@ export const Statuslegende = {
 				<ul class="anw-legend-list anw-legend-list-grid">
 					<li class="anw-legend-item">
 						<span class="anw-legend-sample anw-anwesend"><i class="fa fa-check" aria-hidden="true"></i></span>
-						<span>{{ $capitalize($p.t('global/anwesend')) }}</span>
+						<span>{{ $capitalize($p.t('global/anwesendV2')) }}</span>
 					</li>
 					<li class="anw-legend-item">
 						<span class="anw-legend-sample anw-abwesend"><i class="fa fa-xmark" aria-hidden="true"></i></span>

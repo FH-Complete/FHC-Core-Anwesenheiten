@@ -1,7 +1,7 @@
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import {lektorFormatters} from "../../formatters/formatters.js";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
-import AnwHelp from '../AnwHelp.js';
+import InViewHelp from '../../../../../js/components/InViewHelp.js';
 import NarrowScreen from '../../mixins/NarrowScreen.js';
 
 import {StudiensemesterDropdown} from './StudiensemesterDropdown.js';
@@ -20,7 +20,7 @@ export default {
 		CoreBaseLayout,
 		CoreFilterCmpt,
 		StudiensemesterDropdown,
-		AnwHelp
+		InViewHelp
 	},
 	mixins: [NarrowScreen],
 	data: function() {
@@ -44,11 +44,11 @@ export default {
 				columns: [
 					{title: 'Lehrveranstaltung', visible: false},
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', formatter: lektorFormatters.formDateOnly, tooltip:false, widthGrow: 1, minWidth: 100},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 70},
+					{title: this.$capitalize(this.$p.t('ui/dateFrom')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 70},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, tooltip:false, widthGrow: 1, minWidth: 70},
 					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', formatter: this.einheitenFormatter, tooltip:false, widthGrow: 2, minWidth: 180},
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcFormatter: this.sumBottomCalcFormatter, bottomCalcParams: this.bottomCalcParamLookup, tooltip:false, bottomCalc: this.anwCalc, formatter: this.percentFormatter, widthGrow: 1, minWidth: 80},
-					{title: this.$capitalize(this.$p.t('global/anwesend')), field: 'student_status', formatter: this.formAnwesenheit, tooltip:false, widthGrow: 2, minWidth: 190},
+					{title: this.$capitalize(this.$p.t('global/anwesendV2')), field: 'student_status', formatter: this.formAnwesenheit, tooltip:false, widthGrow: 2, minWidth: 190},
 				],
 				groupBy: ['lehrveranstaltung_id'],
 				groupStartOpen:false,
@@ -124,7 +124,7 @@ export default {
 			const permissions = this.$entryParams.permissions
 
 			if (row.student_status === permissions.anwesend_status)
-				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/anwesend'), label: ''}
+				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/anwesendV2'), label: ''}
 			if (row.student_status === permissions.entschuldigt_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/entschuldigt'), label: this.$p.t('global/entschuldigungAkzeptiert')}
 			if (row.student_status === permissions.abwesend_status) {
@@ -164,7 +164,7 @@ export default {
 				this.$api.call(ApiProfil.getAllAnwByUID(this.studiensemester, uid, person_id))
 				.then(res => {
 				if(res.meta.status !== "success") {
-					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheiten'))
+					this.$fhcAlert.alertError(this.$p.t('global/errorLoadingAnwesenheitenV2'))
 				} else {
 					const processedAnw = this.processAnw(res.data)
 
@@ -366,7 +366,7 @@ export default {
 		<template #main>
 			<div class="anw-toolbar">
 				<StudiensemesterDropdown class="anw-toolbar-semester" @ssChanged="ssChangedHandler"></StudiensemesterDropdown>
-				<anw-help class="ms-auto" button-class="fs-5 text-body-secondary" :text="helpText"></anw-help>
+				<in-view-help class="ms-auto" button-class="fs-5 text-body-secondary" :text="helpText"></in-view-help>
 			</div>
 
 			<div v-show="!isNarrow" class="anw-student-table">

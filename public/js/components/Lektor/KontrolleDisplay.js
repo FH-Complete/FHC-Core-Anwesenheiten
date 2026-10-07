@@ -1,13 +1,22 @@
 
 export const KontrolleDisplay = {
 	name: 'KontrolleDisplay',
-	data: function() {
-		return {
-			hovered: false,
-		}
-	},
 	props: {
 		kontrolle: null,
+	},
+	computed: {
+		// several rows: the sticky in-view tooltip, the user reads it longer than the hover pause
+		infoText() {
+			const k = this.kontrolle
+			return [
+				this.$p.t('global/anwKontrolleId') + ': ' + k.anwesenheit_id,
+				this.$p.t('global/anwLvTeilId') + ': ' + k.lehreinheit_id,
+				this.$p.t('global/insertvon') + ': ' + (k.insertvon ?? '-'),
+				this.$p.t('global/insertamum') + ': ' + this.formatTimestamp(k.insertamum),
+				this.$p.t('global/updatevon') + ': ' + (k.updatevon ?? '-'),
+				this.$p.t('global/updateamum') + ': ' + this.formatTimestamp(k.updateamum)
+			].join('\n')
+		}
 	},
 	methods: {
 		// '2026-09-28 10:12:33.123+02' -> '28.09.2026 10:12'
@@ -21,19 +30,9 @@ export const KontrolleDisplay = {
 	template:`
 		<div v-if="kontrolle" class="row">
 			<div class="col-1 ml-4 d-flex align-items-center">
-				<div style="position: relative; display: inline-block;">
-					<h6 @mouseover="hovered = true" @mouseleave="hovered = false">
-						<i class="fa-solid fa-circle-info"></i> 
-						<div class="legend-info" v-show="hovered" style="min-width: 400px; z-index: 8500;">
-							<div class="row"><p>{{ $p.t('global/anwKontrolleId') }}: {{kontrolle.anwesenheit_id}}</p></div>
-							<div class="row"><p>{{ $p.t('global/anwLvTeilId') }}: {{kontrolle.lehreinheit_id}}</p></div>
-							<div class="row"><p>{{ $p.t('global/insertvon') }}: {{kontrolle.insertvon ?? '-'}}</p></div>
-							<div class="row"><p>{{ $p.t('global/insertamum') }}: {{formatTimestamp(kontrolle.insertamum)}}</p></div>
-							<div class="row"><p>{{ $p.t('global/updatevon') }}: {{kontrolle.updatevon ?? '-'}}</p></div>
-							<div class="row"><p>{{ $p.t('global/updateamum') }}: {{formatTimestamp(kontrolle.updateamum)}}</p></div>
-						</div>
-					</h6>
-				</div>
+				<button type="button" class="btn btn-link p-0 mb-2 fs-6 fhc-in-view-help-btn" :aria-label="$p.t('global/details')" v-tooltip.sticky="infoText">
+					<i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+				</button>
 			</div>
 			<div class="col-11"><h4>{{kontrolle.datum}}: {{kontrolle.von}} - {{kontrolle.bis}}</h4></div>
 			

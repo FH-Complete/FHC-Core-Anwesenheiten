@@ -438,7 +438,7 @@ export default {
 				const closest = this.findClosestTermin(flat)
 
 				if (!closest) { // all possible termine are too far back in the past
-					this.$fhcAlert.alertWarning(this.$p.t('global/noLePreselectTermineTooOld'))
+					this.$fhcAlert.alertWarning(this.$p.t('global/noLePreselectTermineTooOldV2'))
 
 					return relevantChoices[0]
 				}
