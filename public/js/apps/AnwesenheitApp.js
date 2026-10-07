@@ -2,6 +2,7 @@
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 import ScanComponent from "../components/Student/ScanComponent.js";
 import LandingPageComponent from "../components/LandingPage/LandingPageComponent.js";
+import InViewTooltip from "../../../../js/directives/inViewTooltip.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -87,27 +88,11 @@ anwesenheitApp.use(router)
 anwesenheitApp.use(primevue.config.default, {
 		// TODO: set primevue locale with language
 		zIndex: {
-			overlay: 9000,
-			tooltip: 8000
+			overlay: 9000
 		}
 	})
 anwesenheitApp.use(Phrasen)
 
-function getTarget(el) {
-
-	return primevue.utils.DomHandler.hasClass(el, "p-inputwrapper")
-		? primevue.utils.DomHandler.findSingle(el, "input")
-		: el;
-}
-
-anwesenheitApp.directive("tooltip", {
-
-	mounted(el) {
-		const target = getTarget(el);
-		target.$_ptooltipZIndex ??=
-			anwesenheitApp.config.globalProperties.$primevue.config.zIndex.tooltip;
-	},
-	...primevue.tooltip,
-});
+anwesenheitApp.directive("tooltip", InViewTooltip);
 
 anwesenheitApp.mount("#main");

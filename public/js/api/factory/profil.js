@@ -98,6 +98,17 @@ export default {
 			url,
 			params
 		}
+	},
+	// person_id null => own person
+	getTimeline(person_id) {
+		const params = {person_id}
+		const url = 'extensions/FHC-Core-Anwesenheiten/api/ProfilApi/getTimeline';
+
+		return {
+			method: 'post',
+			url,
+			params
+		}
 		
 	},
 	getAnwesenheitSumByLva(lv_id, sem_kz, prestudent_id) {
