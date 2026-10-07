@@ -9,6 +9,7 @@ import {EntschuldigungEdit} from "./EntschuldigungEdit.js";
 import {AccountList} from "./AccountList.js";
 import {dateFilter} from "../../../../../js/tabulator/filters/Dates.js"
 import AnwTimeline from "./AnwTimeline.js";
+import InViewHelp from "../../../../../js/components/InViewHelp.js";
 import ApiAdmin from '../../api/factory/administration.js';
 
 // value of the status header filter per count
@@ -24,7 +25,8 @@ export const AssistenzComponent = {
 		Datepicker: VueDatePicker,
 		StudiengangDropdown,
 		EntschuldigungEdit,
-		AnwTimeline
+		AnwTimeline,
+		InViewHelp
 	},
 	data: function() {
 		return {
@@ -87,7 +89,7 @@ export const AssistenzComponent = {
 						headerSort: true
 					},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/file'))), headerSort: true,field: 'dms_id', formatter: studentFormatters.formFile},
-					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/von'))), headerSort: true,field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/dateFrom'))), headerSort: true,field: 'von', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/bis'))),headerSort: true, field: 'bis', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/antragsdatum'))),headerSort: true, field: 'entuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/fileuploaddatum'))),headerSort: true, field: 'fileuploaddatum', formatter: studentFormatters.formDate, headerFilterFunc: 'dates', headerFilter: dateFilter},
@@ -99,7 +101,12 @@ export const AssistenzComponent = {
 						sorter: (a, b, aRow, bRow) => this.orgformText(aRow.getData()).localeCompare(this.orgformText(bRow.getData())),
 						tooltip: false
 					},
-					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz', formatter: this.studiengangFormatter, tooltip:false},
+					// sort uses the shown text like the orgform column
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz',
+						formatter: cell => this.studiengangText(cell.getData()),
+						sorter: (a, b, aRow, bRow) => this.studiengangText(aRow.getData()).localeCompare(this.studiengangText(bRow.getData())),
+						tooltip:false
+					},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/aktion'))), headerSort: true,field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 260},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/begruendungAnw'))), headerSort: true,field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
@@ -291,9 +298,8 @@ export const AssistenzComponent = {
 				+ data.accounts.map(account => account.uid + ' (' + account.kurzbzlang + ', ' + (account.orgform_kurzbz ?? '-') + ')').join(', ')
 			return ' <i class="fa fa-users text-warning-emphasis ms-1" title="' + title + '"></i> ' + data.accounts.map(account => account.uid).join(', ')
 		},
-		studiengangFormatter(cell) {
-			const data = cell.getData()
-			if (!this.hasMehrereAccounts(data)) return studentFormatters.formStudiengangKz(cell)
+		studiengangText(data) {
+			if (!this.hasMehrereAccounts(data)) return data.kurzbzlang + ' ' + data.bezeichnung
 
 			return data.accounts.map(account => account.kurzbzlang + ' ' + account.bezeichnung).join(', ')
 		},
@@ -361,7 +367,7 @@ export const AssistenzComponent = {
 			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-timeline"></i>';
 			button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
-			button.title = this.$p.t('global/anwTimeline');
+			button.title = this.$p.t('global/anwTimelineV3');
 			actionwrapper.append(button);
 
 			if(cellData.dms_id) {
@@ -384,8 +390,11 @@ export const AssistenzComponent = {
 
 			return actionwrapper;
 		},
+		// the query keeps one studiengang_kz per entschuldigung, a person with more than one account
+		// must match every studiengang of its accounts
 		studiengangFilter: function (data, filterParams) {
-			return data.studiengang_kz === Number(filterParams.studiengang)
+			const accounts = data.accounts?.length ? data.accounts : [data]
+			return accounts.some(account => Number(account.studiengang_kz) === Number(filterParams.studiengang))
 		},
 		filtern: function()
 		{
@@ -592,12 +601,6 @@ export const AssistenzComponent = {
 		getAllowedStg() {
 			return this.$entryParams?.permissions?.assistenz ? this.$entryParams?.permissions?.studiengaengeAssistenz
 				: this.$entryParams?.permissions?.admin ? this.$entryParams?.permissions?.studiengaengeAdmin : []
-		},
-		getTooltipObj(){
-			return {
-				value: this.$p.t('global/tooltipAssistenzV2'),
-				class: "custom-tooltip"
-			}
 		}
 	},
 	template: `
@@ -605,7 +608,7 @@ export const AssistenzComponent = {
 	<core-base-layout>
 		<template #main>
 			<bs-modal ref="modalContainerStatus" class="bootstrap-prompt" dialogClass="modal-lg">
-				<template v-slot:title>{{ statusAkzeptiert ? $p.t('global/entschuldigungAkzeptieren') : $p.t('global/entschuldigungNotizAblehnen') }}</template>
+				<template v-slot:title>{{ statusAkzeptiert ? $p.t('global/entschuldigungAkzeptieren') : $p.t('global/entschuldigungAblehnen') }}</template>
 				<template v-slot:default>
 					<div>
 						<div v-if="statusAccounts.length > 1" class="alert alert-warning">
@@ -629,7 +632,7 @@ export const AssistenzComponent = {
 			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" bodyClass="px-0 pt-3 pb-0" dialogClass="modal-dialog modal-fullscreen">
 				<template v-slot:title>
 					<div>
-						{{ $p.t('global/anwTimeline') }}
+						{{ $p.t('global/anwTimelineV3') }}
 					</div>
 				</template>
 				<template v-slot:default>
@@ -645,7 +648,7 @@ export const AssistenzComponent = {
 			<bs-modal ref="modalContainerEditEntschuldigung" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
 					<div>
-						{{ $p.t('global/entschuldigungEdit') }}
+						{{ $p.t('global/entschuldigungEditieren') }}
 					</div>
 				</template>
 				<template v-slot:default>
@@ -663,9 +666,7 @@ export const AssistenzComponent = {
 			
 				<div class="col-6" style="display: flex; align-items: center;">
 					<h1 class="h4 mb-5" style="margin-right: 10px;">{{ $p.t('global/entschuldigungsmanagement') }}</h1>
-					<div style="max-width: 25%; align-self: normal;" v-tooltip.bottom="getTooltipObj">
-						<h4 style="margin: 0;"><i class="fa fa-circle-question"></i></h4>
-					</div>
+					<in-view-help class="align-self-start" button-class="fs-4" :text="$p.t('global/tooltipAssistenzV3')"></in-view-help>
 				</div>
 			
 				<div class="col-2">
@@ -683,7 +684,7 @@ export const AssistenzComponent = {
 						<datepicker
 							:model-value="zeitraum.von"
 							@update:model-value="setZeitraum('von', $event)"
-							:placeholder="$capitalize($p.t('ui/von'))"
+							:placeholder="$capitalize($p.t('ui/dateFrom'))"
 							:clearable="false"
 							auto-apply
 							:enable-time-picker="false"

@@ -52,7 +52,21 @@ class AnwesenheitenLib
 			'show_outgoing_semester_overlap' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP'),
 			'show_outgoing_semester_overlap_min_days' => $this->_ci->config->item('SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'),
 			'legacy_le_selection' => $this->_ci->config->item('LEGACY_LE_SELECTION'),
-			'lang' => getUserLanguage() // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
+			'lang' => getUserLanguage(), // used only for alert_lehrform mehrsprachigkeit until cis4 is shipped
+			'timeline' => $this->isTimelineAllowed()
 		];
+	}
+
+	/**
+	 * true if the user has one of the berechtigungen of the TIMELINE_BERECHTIGUNGEN config item.
+	 * a missing config item allows nobody
+	 */
+	public function isTimelineAllowed()
+	{
+		foreach ((array) $this->_ci->config->item('TIMELINE_BERECHTIGUNGEN') as $berechtigung) {
+			if ($this->_ci->permissionlib->isBerechtigt($berechtigung)) return true;
+		}
+
+		return false;
 	}
 }

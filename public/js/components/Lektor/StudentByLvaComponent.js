@@ -5,11 +5,13 @@ import ApiKontrolle from '../../api/factory/kontrolle.js';
 import ApiProfil from '../../api/factory/profil.js';
 import ApiInfo from '../../api/factory/info.js';
 import {FehlminutenDialog} from "./FehlminutenDialog.js";
+import InViewHelp from "../../../../../js/components/InViewHelp.js";
 
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
 		CoreFilterCmpt,
+		InViewHelp,
 		FehlminutenDialog
 	},
 	data() {
@@ -44,7 +46,7 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('global/datum')), field: 'datum', headerFilter: true, formatter: lektorFormatters.formDateOnly, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/status')), field: 'status', formatter: this.anwesenheitFormatterValue,  widthGrow: 1, minWidth: 150},
 					{title: this.$capitalize(this.$p.t('global/anteilAnw')), field: 'anteil', bottomCalcFormatter: this.sumBottomCalcFormatter, bottomCalc: this.anwCalc, formatter: this.percentFormatter},
-					{title: this.$capitalize(this.$p.t('ui/von')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
+					{title: this.$capitalize(this.$p.t('ui/dateFrom')), field: 'von', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/bis')), field: 'bis', formatter: lektorFormatters.dateOnlyTimeFormatter, widthGrow: 1},
 					{title: this.$capitalize(this.$p.t('global/lehreinheit_id')), field: 'lehreinheit_id', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/kontrolliertVon')), field: 'kinsertvon', widthGrow: 1, visible: true},
@@ -96,7 +98,7 @@ export const StudentByLvaComponent = {
 						this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]))
 							.then(res => {
 							if(res.meta.status === "success") {
-								this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdated'))
+								this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdatedV2'))
 							}
 						})
 					}
@@ -385,14 +387,6 @@ export const StudentByLvaComponent = {
 		window.removeEventListener('resize', this.calculateTableHeight)
 		window.removeEventListener('orientationchange', this.calculateTableHeight)	
 	},
-	computed: {
-		getTooltipObj() {
-			return {
-				value: this.$p.t('global/tooltipStudentByLvaV2'),
-				class: "custom-tooltip"
-			}
-		}
-	},
 	template:`
 		<div class="row">
 			<div class="col-10" style="mx-width: 80%">
@@ -411,7 +405,7 @@ export const StudentByLvaComponent = {
 					<template #actions>
 
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
-							{{ $capitalize($p.t('global/anwesend')) }}
+							{{ $capitalize($p.t('global/anwesendV2')) }}
 						</button>
 						<button @click="setSelectedRowsVerspaetet" role="button" class="btn anw-btn-verspaetet align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwVerspaetet')) }}
@@ -420,9 +414,7 @@ export const StudentByLvaComponent = {
 							{{ $capitalize($p.t('global/abwesend')) }}
 						</button>
 						
-						<div v-tooltip.bottom="getTooltipObj">
-							<h5><i class="fa fa-circle-question"></i></h5>
-						</div>
+						<in-view-help class="align-self-center" button-class="fs-5" :text="$p.t('global/tooltipStudentByLvaV2')"></in-view-help>
 					</template>
 				</core-filter-cmpt>
 			</div>

@@ -102,15 +102,15 @@ class Entschuldigung_model extends \DB_Model
 	private function _fromStudiengaenge()
 	{
 		return "FROM extension.tbl_anwesenheit_entschuldigung
-						JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
-						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
-						JOIN public.tbl_prestudentstatus status USING(prestudent_id)
-						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
-						JOIN public.tbl_studiengang USING (studiengang_kz)
-						JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
-						JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
-						LEFT JOIN campus.tbl_dms_version USING(dms_id)
-					WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
+					JOIN public.tbl_person ON extension.tbl_anwesenheit_entschuldigung.person_id = public.tbl_person.person_id
+					JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
+					JOIN public.tbl_prestudentstatus status USING(prestudent_id)
+					JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
+					JOIN public.tbl_studiengang USING (studiengang_kz)
+					JOIN public.tbl_studiensemester sem USING(studiensemester_kurzbz)
+					JOIN tbl_benutzer ON(public.tbl_student.student_uid = tbl_benutzer.uid)
+					LEFT JOIN campus.tbl_dms_version USING(dms_id)
+				WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 	}
 
 	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
@@ -189,7 +189,7 @@ class Entschuldigung_model extends \DB_Model
 	// (same order as Prestudentstatus_model::getLastStatus), one row per account in the order of the uids
 	public function getStudentAccountsForPersons($person_ids)
 	{
-		$query = 'SELECT tbl_benutzer.person_id, tbl_benutzer.uid, tbl_studiengang.kurzbzlang, tbl_studiengang.bezeichnung,
+		$query = 'SELECT tbl_benutzer.person_id, tbl_benutzer.uid, tbl_student.studiengang_kz, tbl_studiengang.kurzbzlang, tbl_studiengang.bezeichnung,
 						(SELECT tbl_prestudentstatus.orgform_kurzbz
 							FROM public.tbl_prestudentstatus
 							WHERE tbl_prestudentstatus.prestudent_id = tbl_student.prestudent_id

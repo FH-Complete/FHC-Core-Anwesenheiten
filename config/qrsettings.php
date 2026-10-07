@@ -63,3 +63,11 @@ $config['SHOW_OUTGOING_SEMESTER_OVERLAP_MIN_DAYS'] = 14;
 
 // for superstrict installations where the old limited view is the preferred choice
 $config['LEGACY_LE_SELECTION'] = false;
+
+// berechtigungen that see the timeline tab in the student view, an empty array hides it for everyone.
+// only the berechtigungen of the student view make sense here: anw_r_student, anw_r_full_assistenz, anw_r_ent_assistenz
+$config['TIMELINE_BERECHTIGUNGEN'] = array(
+	'extension/anw_r_student',
+	'extension/anw_r_full_assistenz',
+	'extension/anw_r_ent_assistenz'
+);

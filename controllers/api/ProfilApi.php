@@ -37,7 +37,10 @@ class ProfilApi extends FHCAPI_Controller
 				'getAnwesenheitSumByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r', 'extension/anw_r_lektor:r'),
 				
 				// load anw details onclick in cis4 widget
-				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r')
+				'getAllAnwesenheitenByStudentByLva' => array('extension/anw_r_student:r','extension/anw_r_full_assistenz:r'),
+
+				// timeline tab of the student view, none => own, person_id => further berechtigung check
+				'getTimeline' => array('extension/anw_r_student:r', 'extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r')
 			)
 		);
 
@@ -50,11 +53,13 @@ class ProfilApi extends FHCAPI_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('crm/Prestudent_model', 'PrestudentModel');
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('DmsLib');
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -94,7 +99,7 @@ class ProfilApi extends FHCAPI_Controller
 
 	/**
 	 * GET METHOD
-	 * expects parameter 'studiensemester', 'uid'
+	 * expects parameter 'studiensemester', 'uid', 'person_id'
 	 *
 	 * returns list of all anwesenheiten user entries of student in semester
 	 */
@@ -105,7 +110,8 @@ class ProfilApi extends FHCAPI_Controller
 		$uid = $this->_ci->input->get('uid');
 		$person_id = $this->_ci->input->get('person_id');
 
-		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		// the uid check does not cover the person_id of the entschuldigungen
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid) && $this->isAdminOrPersonCheckingItself($person_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 
@@ -193,7 +199,8 @@ class ProfilApi extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kurzbz;
 		$uid = $result->uid;
 
-		$berechtigt = $this->isAdminOrStudentCheckingItself($uid);
+		// the uid check does not cover the prestudent_id of the query
+		$berechtigt = $this->isAdminOrStudentCheckingItself($uid) && $this->isAdminOrPrestudentCheckingItself($prestudent_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
@@ -323,7 +330,7 @@ class ProfilApi extends FHCAPI_Controller
 			}
 
 		} else {
-			$this->terminateWithError($this->p->t('global', 'errorPersonStudentIDMismatch'), 'general');
+			$this->terminateWithError($this->p->t('global', 'errorPersonStudentIDMismatchV2'), 'general');
 		}
 	}
 
@@ -760,17 +767,12 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
-		// todo: alternatively lookup gethAuthUid in students table
-		// todo: this breaks when user has both berechtigungen, find alternative way to check if user is student
-		$isStudent = $this->permissionlib->isBerechtigt('extension/anw_r_student');
 		$person_id = $result->person_id;
 
-		// students are only allowed to fetch their own entschuldigungen
-		if($isStudent && $person_id !== getAuthPersonId()) $this->terminateWithError($this->p->t('ui', 'keineBerechtigung'), 'general');
+		if(!is_numeric($person_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
-		if(is_object($person_id) || isEmptyString($person_id)) {
-			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
-		}
+		// students are only allowed to fetch their own entschuldigungen
+		if(!$this->isAdminOrPersonCheckingItself($person_id)) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
 
@@ -790,10 +792,68 @@ class ProfilApi extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kz;
 		$prestudent_id = $result->id;
 
+		// students may only read their own quota
+		$isLektor = $this->permissionlib->isBerechtigt('extension/anw_r_lektor');
+		if(!$isLektor && !$this->isAdminOrPrestudentCheckingItself($prestudent_id)) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
 		$result = $this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
-		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCalculatingAnwQuota'), 'general');
+		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorCalculatingAnwQuotaV2'), 'general');
 		$this->terminateWithSuccess(getData($result));
+	}
+
+	/**
+	 * POST METHOD
+	 * expects parameter 'person_id', null => own person
+	 *
+	 * returns the anwesenheiten and entschuldigungen of the person for the timeline tab.
+	 * only for the berechtigungen of the TIMELINE_BERECHTIGUNGEN config item.
+	 * students get only their own data and only the fields the timeline shows: the notiz
+	 * of an anwesenheit is the note of the lektor, students do not see it
+	 */
+	public function getTimeline()
+	{
+		if(!$this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
+			$this->terminateWithSuccess(
+				array('ENTSCHULDIGUNGEN_ENABLED' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'))
+			);
+		}
+
+		if(!$this->_ci->anwesenheitenlib->isTimelineAllowed()) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		$result = $this->getPostJSON();
+		$person_id = isset($result->person_id) ? $result->person_id : null;
+		if($person_id === null) $person_id = getAuthPersonId();
+
+		if(!is_numeric($person_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		$isStaff = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz')
+			|| $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
+
+		if(!$isStaff && $person_id != getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		$anw = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByPersonId($person_id);
+		if(isError($anw)) $this->terminateWithError(getError($anw), 'general');
+
+		$ent = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+		if(isError($ent)) $this->terminateWithError(getError($ent), 'general');
+
+		$anw = getData($anw) ?: array();
+		$ent = getData($ent) ?: array();
+
+		if(!$isStaff) {
+			$anwFields = array('anwesenheit_id', 'anwesenheit_user_id', 'lehreinheit_id', 'von', 'bis', 'status', 'le_bezeichnung', 'lehrform_kurzbz');
+			$entFields = array('entschuldigung_id', 'von', 'bis', 'akzeptiert', 'notiz');
+
+			$anw = array_map(function($row) use ($anwFields) {
+				return (object) array_intersect_key((array) $row, array_flip($anwFields));
+			}, $anw);
+			$ent = array_map(function($row) use ($entFields) {
+				return (object) array_intersect_key((array) $row, array_flip($entFields));
+			}, $ent);
+		}
+
+		$this->terminateWithSuccess(array($anw, $ent));
 	}
 
 	/**
@@ -816,6 +876,47 @@ class ProfilApi extends FHCAPI_Controller
 		}
 
 		return false;
+	}
+
+	/**
+	 * @param $person_id
+	 * @return bool
+	 *
+	 * checks Berechtigungen for Admin/Assistenz or $person_id is the own person.
+	 * loose compare: GET values are strings, getAuthPersonId() and JSON values are ints
+	 */
+	private function isAdminOrPersonCheckingItself($person_id)
+	{
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
+		if($isAdmin) return true;
+
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
+		if($isAssistenz) return true;
+
+		// is_numeric first: in PHP 7 "123abc" == 123 is true
+		return is_numeric($person_id) && $person_id == getAuthPersonId();
+	}
+
+	/**
+	 * @param $prestudent_id
+	 * @return bool
+	 *
+	 * checks Berechtigungen for Admin/Assistenz or $prestudent_id belongs to the own person
+	 */
+	private function isAdminOrPrestudentCheckingItself($prestudent_id)
+	{
+		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
+		if($isAdmin) return true;
+
+		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
+		if($isAssistenz) return true;
+
+		if(!is_numeric($prestudent_id)) return false;
+
+		$result = $this->_ci->PrestudentModel->load($prestudent_id);
+		if(!hasData($result)) return false;
+
+		return getData($result)[0]->person_id == getAuthPersonId();
 	}
 
 	private function _setAuthUID()
