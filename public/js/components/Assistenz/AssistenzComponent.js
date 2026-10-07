@@ -99,7 +99,12 @@ export const AssistenzComponent = {
 						sorter: (a, b, aRow, bRow) => this.orgformText(aRow.getData()).localeCompare(this.orgformText(bRow.getData())),
 						tooltip: false
 					},
-					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz', formatter: this.studiengangFormatter, tooltip:false},
+					// sort uses the shown text like the orgform column
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/studiengang'))), headerSort: true,field: 'studiengang_kz',
+						formatter: cell => this.studiengangText(cell.getData()),
+						sorter: (a, b, aRow, bRow) => this.studiengangText(aRow.getData()).localeCompare(this.studiengangText(bRow.getData())),
+						tooltip:false
+					},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('ui/aktion'))), headerSort: true,field: 'entschuldigung_id', formatter: this.formAction, tooltip:false, minWidth: 260},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('global/begruendungAnw'))), headerSort: true,field: 'notiz', editor: "input", headerFilter: true, tooltip:false, maxWidth: 300}
 				],
@@ -291,9 +296,8 @@ export const AssistenzComponent = {
 				+ data.accounts.map(account => account.uid + ' (' + account.kurzbzlang + ', ' + (account.orgform_kurzbz ?? '-') + ')').join(', ')
 			return ' <i class="fa fa-users text-warning-emphasis ms-1" title="' + title + '"></i> ' + data.accounts.map(account => account.uid).join(', ')
 		},
-		studiengangFormatter(cell) {
-			const data = cell.getData()
-			if (!this.hasMehrereAccounts(data)) return studentFormatters.formStudiengangKz(cell)
+		studiengangText(data) {
+			if (!this.hasMehrereAccounts(data)) return data.kurzbzlang + ' ' + data.bezeichnung
 
 			return data.accounts.map(account => account.kurzbzlang + ' ' + account.bezeichnung).join(', ')
 		},
