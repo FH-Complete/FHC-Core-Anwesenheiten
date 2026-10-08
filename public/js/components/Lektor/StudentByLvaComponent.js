@@ -54,7 +54,7 @@ export const StudentByLvaComponent = {
 					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/insertvon')), field: 'ainsertvon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/anwUserEntry') + ' ' + this.$p.t('global/updatevon')), field: 'aupdatevon', widthGrow: 1, visible: false},
 					{title: this.$capitalize(this.$p.t('global/einheiten')), field: 'dauer', visible: false, bottomCalc: this.einheitenCalc, formatter: this.einheitenFormatter, widthGrow: 1, minWidth: 250},
-					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", tooltip:false, minWidth: 150}
+					{title: this.$capitalize(this.$p.t('global/notiz')), field: 'notiz', editor: "input", editable: this.isCellEditable, tooltip:false, minWidth: 150}
 				],
 				persistence: {
 					sort: false,
@@ -95,7 +95,7 @@ export const StudentByLvaComponent = {
 						// do nothing when just clicking edit input and not typing
 						
 					} else {
-						this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, [data]))
+						this.$api.call(ApiKontrolle.updateAnwesenheiten(data.lehreinheit_id, [data]))
 							.then(res => {
 							if(res.meta.status === "success") {
 								this.$fhcAlert.alertSuccess(this.$p.t('global/anwNotizUpdatedV2'))
@@ -157,8 +157,13 @@ export const StudentByLvaComponent = {
 
 			return this.formatMinutes(values.reduce((acc, cur) => cur+=acc,0))
 		},
+		// the backend flags each row with the edit right for its lehreinheit
+		isCellEditable(cell) {
+			return cell.getData().editable === true
+		},
 		selectableCheck(row) {
-			return row.getData().status !== this.$entryParams?.permissions?.entschuldigt_status
+			const data = row.getData()
+			return data.editable === true && data.status !== this.$entryParams?.permissions?.entschuldigt_status
 		},
 		formatMinutes(minutes) {
 			let valInEh = (minutes / 60 / this.$entryParams.permissions.einheitDauer)
@@ -178,19 +183,28 @@ export const StudentByLvaComponent = {
 		unselectableFormatter(row) {
 			const data = row.getData()
 
-			if(data.status === this.$entryParams.permissions.entschuldigt_status) {
+			if(data.editable !== true || data.status === this.$entryParams.permissions.entschuldigt_status) {
 				row.getElement().children[0]?.children[0]?.remove()
 			}
 
 		},
 		async saveChanges(changedData){
-			this.$api.call(ApiKontrolle.updateAnwesenheiten(this.$entryParams.selected_le_id.value, changedData)).then(res => {
-				if(res.meta.status === "success") {
+			if(!changedData.length) return
+
+			// updateAnwesenheiten checks one lehreinheit per call, the entries of the lva can span several
+			const leIds = [...new Set(changedData.map(entry => entry.lehreinheit_id))]
+			const calls = leIds.map(le_id => this.$api.call(ApiKontrolle.updateAnwesenheiten(le_id,
+				changedData.filter(entry => entry.lehreinheit_id === le_id))))
+
+			Promise.allSettled(calls).then(results => {
+				// the api plugin already shows the error of a rejected call
+				if(results.every(r => r.status === 'fulfilled' && r.value.meta.status === "success")) {
 					this.$fhcAlert.alertSuccess(this.$p.t('global/anwUserUpdateSuccess'))
-					this.$emit('anwesenheitenUpdated')
 				} else {
-					this.$fhcAlert.alertError(this.$p.t('global/errorAnwUserUpdate'))
+					// reload the table, the rows show the local change of the failed call
+					this.load()
 				}
+				if(results.some(r => r.status === 'fulfilled')) this.$emit('anwesenheitenUpdated')
 
 				// the lektor table reloads its data on anwesenheitenUpdated, so only the own sum here
 				this.$api.call(ApiProfil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id))
@@ -216,6 +230,7 @@ export const StudentByLvaComponent = {
 				if(data.status !== this.$entryParams.permissions.entschuldigt_status || data.status === this.$entryParams.permissions.anwesend_status) {
 					const newData = {
 						anwesenheit_user_id: data.anwesenheit_user_id,
+						lehreinheit_id: data.lehreinheit_id,
 						datum: data.datum,
 						status: this.$entryParams.permissions.anwesend_status,
 						notiz: data.notiz
@@ -242,6 +257,7 @@ export const StudentByLvaComponent = {
 				if(data.status !== this.$entryParams.permissions.entschuldigt_status || data.status === this.$entryParams.permissions.abwesend_status) {
 					const newData = {
 						anwesenheit_user_id: data.anwesenheit_user_id,
+						lehreinheit_id: data.lehreinheit_id,
 						datum: data.datum,
 						status: this.$entryParams.permissions.abwesend_status
 					}
