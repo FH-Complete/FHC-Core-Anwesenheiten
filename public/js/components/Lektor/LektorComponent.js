@@ -12,6 +12,7 @@ import {HighlightModeSelector} from "./HighlightModeSelector.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
 import {StudentByLvaComponent} from "./StudentByLvaComponent.js"
 import { hoverTooltip, hideTooltip } from "../../../../../js/directives/inViewTooltip.js"
+import {FehlminutenDialog} from "./FehlminutenDialog.js";
 
 export const LektorComponent = {
 	inheritAttrs: false,
@@ -31,7 +32,8 @@ export const LektorComponent = {
 		Statuslegende,
 		KontrolleDisplay,
 		StudentByLvaComponent,
-		HighlightModeSelector
+		HighlightModeSelector,
+		FehlminutenDialog
 	},
 	data() {
 		return {
@@ -136,9 +138,8 @@ export const LektorComponent = {
 
 						if (await this.confirmDiscardChanges() === false) return
 
-						// maybe incorporate more changes to dataState to avoid reloads
-						//  in the future when performance is an issue
-						if(!this.changes) this.$entryParams.lektorState = this.lektorState
+						// the detail view shows the stored data, so the table must show it too
+						if (this.changedData.length) this.discardChanges()
 
 						this.selectedStudent = {id: prestudent_id, lv_id: this.lv_id, sem_kz: this.sem_kurzbz, title: ''}
 						Vue.nextTick(()=>{
@@ -168,11 +169,21 @@ export const LektorComponent = {
 					const row = cell.getRow()
 					const prestudent_id = row.getData().prestudent_id
 
-					this.changeAnwStatus(cell, prestudent_id)
-					const el = cell.getElement()
+					if (cell.getValue() === this.$entryParams.permissions.fehlminuten_status) {
+						const result = await this.askFehlminuten(cell)
+						if (result === null) {
+							// cancelled: back to the previous status, restoreOldValue fires no cellEdited
+							cell.restoreOldValue()
+							return
+						}
+						this.changeAnwStatus(cell, prestudent_id, result.fehlminuten, result.notiz)
+						// the formatter ran before the dialog, show the confirmed minutes
+						this.rerenderCell(cell)
+					} else {
+						this.changeAnwStatus(cell, prestudent_id)
+					}
 
-					el.classList.toggle('anw-dirty', !!this.changedData.find(d => d.prestudent_id === prestudent_id))
-					
+					this.markDirty(cell, prestudent_id)
 				}
 			},
 			{
@@ -203,8 +214,7 @@ export const LektorComponent = {
 			polling: false,
 			checkInCount: 0,
 			abwesendCount: 0,
-			entschuldigtCount: 0,
-			changes: false // if something could have happened to dataset -> reload on mounted
+			entschuldigtCount: 0
 		}
 	},
 	inject: {
@@ -375,6 +385,7 @@ export const LektorComponent = {
 		},
 		checkCellEditability(cell) {
 			if (this.multiLeMode) return false // combined multi le view is read only for now
+			if (!this.canEditSelectedLe) return false
 			const val = cell.getValue()
 			return val !== undefined && val !== '-' // dont allow edit on empty cols
 		},
@@ -474,21 +485,99 @@ export const LektorComponent = {
 			const isLow = val !== '-' && val < (this.$entryParams.permissions.positiveRatingThreshold * 100)
 			return '<div' + (isLow ? ' class="anw-sum--low"' : '') + ' style="display: flex; justify-content: center; align-items: center; height: 100%">' + val + ' %</div>'
 		},
+		// the same status cell as the detail view, a click on the minutes opens the dialog again
 		anwesenheitFormatterValue(cell) {
-			const data = cell.getValue()
-			const el = cell.getElement()
-			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt')
+			return lektorFormatters.anwStatusCell(cell, this.$entryParams.permissions, {
+				fehlminutenText: () => this.$p.t('global/anwFehlminutenKurz', {minuten: this.getCellFehlminuten(cell) ?? '?'}),
+				onEditFehlminuten: this.checkCellEditability(cell) ? () => this.editFehlminuten(cell) : null,
+				editTitle: this.$p.t('global/anwFehlminutenAendernV2')
+			})
+		},
+		statusLabel(status) {
+			const p = this.$entryParams.permissions
+			const phrases = {
+				[p.anwesend_status]: 'global/anwesendV2',
+				[p.abwesend_status]: 'global/abwesend',
+				[p.entschuldigt_status]: 'global/entschuldigt',
+				[p.fehlminuten_status]: 'global/anwStatusFehlminuten'
+			}
+			return phrases[status] ? this.$capitalize(this.$p.t(phrases[status])) : status
+		},
+		// the kontrollen count the status fehlminuten as anwesend, like the backend does
+		countKey(status) {
+			const p = this.$entryParams.permissions
+			return status === p.fehlminuten_status ? p.anwesend_status : status
+		},
+		findStudentEntry(prestudent_id, columnKey) {
+			return this.lektorState.studentsData?.get(prestudent_id)
+				?.find(e => this.anwColumnKey(e.datum, e.von, e.bis, e.le_id) === columnKey)
+		},
+		// an unsaved change wins over the stored value. Minutes of another status do not count
+		getFehlminuten(prestudent_id, columnKey) {
+			const fehlminutenStatus = this.$entryParams.permissions.fehlminuten_status
+			const pending = this.changedData.find(e => e.prestudent_id === prestudent_id && e.date === columnKey)
+			if (pending && pending.status === fehlminutenStatus) return pending.fehlminuten
 
-			if (data === this.$entryParams.permissions.anwesend_status) {
-				el.classList.add('anw-anwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
-			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				el.classList.add('anw-abwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
-			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				el.classList.add('anw-entschuldigt');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
-			} else return '-'
+			const stored = this.findStudentEntry(prestudent_id, columnKey)
+			return stored?.status === fehlminutenStatus ? stored.fehlminuten : undefined
+		},
+		getCellFehlminuten(cell) {
+			return this.getFehlminuten(cell.getRow().getData().prestudent_id, cell.getColumn().getField())
+		},
+		// an unsaved notiz wins over the stored one
+		getCellNotiz(cell) {
+			const prestudent_id = cell.getRow().getData().prestudent_id
+			const columnKey = cell.getColumn().getField()
+			const pending = this.changedData.find(e => e.prestudent_id === prestudent_id && e.date === columnKey)
+			if (pending && 'notiz' in pending) return pending.notiz
+
+			return this.findStudentEntry(prestudent_id, columnKey)?.notiz
+		},
+		anwDownloadAccessor(value, data, type, params, column) {
+			if (value !== this.$entryParams.permissions.fehlminuten_status) return value
+
+			const fehlminuten = this.getFehlminuten(data.prestudent_id, column.getField())
+			return value + ' (' + fehlminuten + ')'
+		},
+		// opens the dialog for the fehlminuten of the cell. Resolves with {fehlminuten, notiz}, or with null on cancel.
+		// dauer: the lesson minutes of the kontrolle from the backend, the quote counts the same minutes
+		askFehlminuten(cell) {
+			const row = cell.getRow().getData()
+			const entry = this.findStudentEntry(row.prestudent_id, cell.getColumn().getField())
+			const kontrolle = this.lektorState.kontrollen.find(k => k.anwesenheit_id === entry?.anwesenheit_id)
+			const dauer = kontrolle?.dauer ?? 0
+
+			return this.$refs.fehlminutenDialog.open({
+				name: row.vorname + ' ' + row.nachname,
+				kontrolle: entry ? this.toFrontendDate(entry.datum) + ' ' + this.stripSeconds(entry.von + ' - ' + entry.bis) : '',
+				dauerLabel: this.$p.t('global/anwKontrolldauerMinuten', {dauer}),
+				dauer,
+				value: this.getCellFehlminuten(cell),
+				notiz: this.getCellNotiz(cell)
+			})
+		},
+		async editFehlminuten(cell) {
+			const result = await this.askFehlminuten(cell)
+			if (result === null) return
+
+			const prestudent_id = cell.getRow().getData().prestudent_id
+			this.changeAnwStatus(cell, prestudent_id, result.fehlminuten, result.notiz)
+
+			this.rerenderCell(cell)
+			this.markDirty(cell, prestudent_id)
+		},
+		// the same value re-runs the formatter and fires no cellEdited
+		rerenderCell(cell) {
+			cell.setValue(cell.getValue())
+		},
+		markDirty(cell, prestudent_id) {
+			cell.getElement().classList.toggle('anw-dirty', !!this.changedData.find(d => d.prestudent_id === prestudent_id))
+		},
+		// drops the unsaved changes, the table shows the stored statuses again. replaceData keeps the scroll position
+		discardChanges() {
+			this.changedData = []
+			this.lektorState.tableStudentData = this.setupAllData()
+			this.$refs.anwesenheitenTable.tabulator.replaceData(this.lektorState.tableStudentData)
 		},
 		getExistingQRCode() {
 			this.$api.call(ApiKontrolle.getExistingQRCode(this.$entryParams.selected_le_id.value))
@@ -635,7 +724,6 @@ export const LektorComponent = {
 				.then(res => {
 				if (res.data) {
 					this.showQRLoadingSpinner = false
-					this.changes = true
 					this.$refs.modalContainerNewKontrolle.hide()
 					this.showQR(res.data)
 				}
@@ -691,10 +779,18 @@ export const LektorComponent = {
 						const oldVal = valueToChange.status
 						valueToChange.status = change.status
 
+						// same rule as the backend: the status fehlminuten sets the minutes, another status clears them
+						if (change.status === this.$entryParams.permissions.fehlminuten_status) {
+							valueToChange.fehlminuten = change.fehlminuten
+						} else if (oldVal !== change.status) {
+							valueToChange.fehlminuten = 0
+						}
+						if ('notiz' in change) valueToChange.notiz = change.notiz
+
 						const kontrolleToUpdate = this.lektorState.kontrollen.find(k => k.anwesenheit_id == change.anwesenheit_id)
 						if (kontrolleToUpdate) {
-							kontrolleToUpdate[oldVal]--;
-							kontrolleToUpdate[change.status]++;
+							kontrolleToUpdate[this.countKey(oldVal)]--;
+							kontrolleToUpdate[this.countKey(change.status)]++;
 						}
 					}
 					
@@ -704,7 +800,6 @@ export const LektorComponent = {
 				this.$api.call(ApiKontrolle.getAnwQuoteForPrestudentIds(changedStudentsArr, this.$entryParams.lv_id, this.$entryParams.sem_kurzbz))
 					.then(res => {
 						this.updateSumData(res.data.retval)
-						this.changes = true
 					})
 			}).finally(() =>  {
 				this.changedData = []
@@ -851,8 +946,7 @@ export const LektorComponent = {
 					const datefetch = this.formatDateToDbString(this.selectedDate)
 					const ma_uid = this.$entryParams.selected_maUID.value?.mitarbeiter_uid ?? this.ma_uid
 					this.reloadState(ma_uid, datefetch)
-					
-					this.changes = true
+
 					this.showQR(res.data)
 
 				})
@@ -1043,6 +1137,8 @@ export const LektorComponent = {
 				this.lektorState.studentsData.get(entry.prestudent_id).push({
 					datum: entry.datum,
 					status: entry.status,
+					fehlminuten: entry.fehlminuten ?? 0,
+					notiz: entry.notiz,
 					anwesenheit_user_id: entry.anwesenheit_user_id,
 					anwesenheit_id: entry.anwesenheit_id,
 					von: kontrolle?.von,
@@ -1178,7 +1274,7 @@ export const LektorComponent = {
 		openNewAnwesenheitskontrolleModal() {
 			this.$refs.modalContainerNewKontrolle.show()
 		},
-		changeAnwStatus(cell, prestudent_id) {
+		changeAnwStatus(cell, prestudent_id, fehlminuten = null, notiz = null) {
 			const value = cell.getValue()
 			if (value === undefined) return
 			let date = cell.getColumn().getField() // '2024-10-16' or 'status'
@@ -1186,26 +1282,34 @@ export const LektorComponent = {
 				date = this.formatDateToDbString(this.selectedDate)
 			}
 
-			const arr = this.lektorState.studentsData.get(prestudent_id)
-			const found = arr.find(e => this.anwColumnKey(e.datum, e.von, e.bis, e.le_id) === date)
+			const found = this.findStudentEntry(prestudent_id, date)
 			const anwesenheit_user_id = found?.anwesenheit_user_id
 			const anwesenheit_id = found?.anwesenheit_id
 			const newEntry = {
 				prestudent_id, date, status: value, anwesenheit_user_id, anwesenheit_id
 			}
+			if (value === this.$entryParams.permissions.fehlminuten_status) {
+				newEntry.fehlminuten = fehlminuten
+				// the dialog gives the notiz as well, it goes along only when it changed
+				if (notiz !== null && notiz !== (found?.notiz ?? '')) newEntry.notiz = notiz || null
+			}
+
 			this.handleChange(newEntry)
 		},
 		handleChange(newEntry) {
 
-			// check if the entry is in the original tableData with the same status
-			const student = this.lektorState.studentsData.get(newEntry.prestudent_id)
-			const original = student.find(v => this.anwColumnKey(v.datum, v.von, v.bis, v.le_id) === newEntry.date)
+			// check if the entry is in the original tableData with the same status and fehlminuten
+			const original = this.findStudentEntry(newEntry.prestudent_id, newEntry.date)
 			const updateFoundIndex = this.changedData.findIndex(e => e.prestudent_id === newEntry.prestudent_id && e.date === newEntry.date)
 			if (updateFoundIndex >= 0) {
 				this.changedData.splice(updateFoundIndex, 1)
 			}
 
-			if (!original || newEntry.status !== original.status) {
+			const changed = !original || newEntry.status !== original.status
+				|| (newEntry.status === this.$entryParams.permissions.fehlminuten_status && newEntry.fehlminuten !== original.fehlminuten)
+				|| 'notiz' in newEntry
+
+			if (changed) {
 				this.changedData.push(newEntry)
 			}
 			
@@ -1371,9 +1475,11 @@ export const LektorComponent = {
 		},
 		statusEditorValues() {
 			const p = this.$entryParams.permissions
-			if (p.admin || p.assistenz) return [p.anwesend_status, p.abwesend_status, p.entschuldigt_status]
-			if (p.lektor) return [p.anwesend_status, p.abwesend_status]
-			return []
+			let stati = []
+			if (p.admin || p.assistenz) stati = [p.anwesend_status, p.fehlminuten_status, p.abwesend_status, p.entschuldigt_status]
+			else if (p.lektor) stati = [p.anwesend_status, p.fehlminuten_status, p.abwesend_status]
+
+			return stati.map(status => ({value: status, label: this.statusLabel(status)}))
 		},
 		baseColumns() {
 			const fields = ['foto', 'prestudent_id', 'student_uid', 'vorname', 'nachname', 'gruppe']
@@ -1400,6 +1506,7 @@ export const LektorComponent = {
 				},
 				editable: this.checkCellEditability,
 				formatter: this.anwesenheitFormatterValue,
+				accessorDownload: this.anwDownloadAccessor,
 				titleFormatter: this.anwColTitleFormatter,
 				hozAlign: 'center',
 				widthGrow: 1,
@@ -1474,7 +1581,6 @@ export const LektorComponent = {
 				date))
 				.then(res => {
 					if (res.data?.svg) {
-						this.changes = true
 						this.$refs.modalContainerEditKontrolle.hide()
 						this.showQR(res.data)
 					}
@@ -1510,6 +1616,9 @@ export const LektorComponent = {
 						// reload tableData since different kontroll times means different % for all students
 						this.reloadState(ma_uid, dateAnwFormat)
 					}
+				}).catch(() => {
+					// the api plugin shows the error (e.g. kontrolle shorter than the fehlminuten of a student)
+					this.loading = false
 				})
 		},
 		handleTitleSet(title) {
@@ -1607,6 +1716,12 @@ export const LektorComponent = {
 		getLeDropdownOptions() {
 			if (this.showFremdeLe || !this.showFremdeLeToggle) return this.getLEOptions
 			return this.getLEOptions.filter(group => !group.fremd)
+		},
+		canEditSelectedLe() {
+			// same rule as isAdminOrTeachesLE in the backend: a colleagues le is read only without the supplierung right
+			const le = this.$entryParams.selected_le_info?.value
+			const permissions = this.$entryParams.permissions
+			return !le || permissions.admin || permissions.supplierung || this.isOwnLe(le)
 		},
 		getTooltipGesamtansicht() {
 			return this.$p.t('global/tooltipAnwGesamtansicht')
@@ -1913,6 +2028,8 @@ export const LektorComponent = {
 						</template>
 					</bs-modal>		
 	
+					<FehlminutenDialog ref="fehlminutenDialog"></FehlminutenDialog>
+
 					<bs-modal ref="modalContainerLegende" class="bootstrap-prompt" dialogClass="modal-lg">
 						<template v-slot:title>
 							<div>
@@ -2048,9 +2165,9 @@ export const LektorComponent = {
 										</button>
 									</template>
 								</div>
-								<div class="col-12" v-if="multiLeMode" style="padding-right: 24px">
+								<div class="col-12" v-if="multiLeMode || !canEditSelectedLe" style="padding-right: 24px">
 									<div class="alert alert-info small py-1 px-2 mb-0">
-										<i class="fa fa-lock me-1"></i>{{ $p.t('global/anwGesamtansichtInfoV3') }}
+										<i class="fa fa-lock me-1"></i>{{ multiLeMode ? $p.t('global/anwGesamtansichtInfoV3') : $p.t('global/anwFremdeLeNurAnsicht', [$entryParams.selected_le_info.value?.lektor_names?.join(', ') ?? '']) }}
 									</div>
 								</div>
 							</div>
@@ -2126,7 +2243,7 @@ export const LektorComponent = {
 						:tableOnly="true"
 						:newBtnShow="true"
 						:newBtnLabel="$p.t('global/neueAnwKontrolle')"
-						:newBtnDisabled="!lektorState.students.length || multiLeMode"
+						:newBtnDisabled="!lektorState.students.length || multiLeMode || !canEditSelectedLe"
 						@click:new=openNewAnwesenheitskontrolleModal
 						:sideMenu="false"
 						noColumnFilter>
@@ -2135,7 +2252,7 @@ export const LektorComponent = {
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length || multiLeMode" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
+								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length || multiLeMode || !canEditSelectedLe" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
 									<i class="fa fa-pen"></i>
 								</button>
 								

@@ -4,13 +4,15 @@ import {lektorFormatters} from "../../formatters/formatters.js";
 import ApiKontrolle from '../../api/factory/kontrolle.js';
 import ApiProfil from '../../api/factory/profil.js';
 import ApiInfo from '../../api/factory/info.js';
+import {FehlminutenDialog} from "./FehlminutenDialog.js";
 import InViewHelp from "../../../../../js/components/InViewHelp.js";
 
 export const StudentByLvaComponent = {
 	name: 'StudentByLvaComponent',
 	components: {
 		CoreFilterCmpt,
-		InViewHelp
+		InViewHelp,
+		FehlminutenDialog
 	},
 	data() {
 		return {
@@ -204,13 +206,12 @@ export const StudentByLvaComponent = {
 				}
 				if(results.some(r => r.status === 'fulfilled')) this.$emit('anwesenheitenUpdated')
 
+				// the lektor table reloads its data on anwesenheitenUpdated, so only the own sum here
 				this.$api.call(ApiProfil.getAnwesenheitSumByLva(this.lv_id, this.sem_kz, this.id))
 					.then(res => {
 					if(res.meta.status === "success" && res.data)
 					{
 						this.sum = res.data[0].sum
-						const student = this.$entryParams.lektorState.students.find(s => s.prestudent_id === this.prestudent_id && s.person_id === this.person_id)
-						student.sum = this.sum
 
 						this.$refs.anwesenheitenByStudentByLvaTable.tabulator.recalc();
 
@@ -271,28 +272,64 @@ export const StudentByLvaComponent = {
 
 			changedRows.forEach(row => row.toggleSelect())
 		},
+		// the same fehlminuten for every selected row, the shortest kontrolle limits them
+		async setSelectedRowsFehlminuten() {
+			const permissions = this.$entryParams.permissions
+			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
+				.filter(row => row.getData().status !== permissions.entschuldigt_status)
+			if (!selectedRows.length) return
+
+			const selectedData = selectedRows.map(row => row.getData())
+			const dauer = Math.min(...selectedData.map(data => data.dauer))
+			const labels = selectedData.map(data => this.kontrolleLabel(data))
+			// prefill only when every selected row already holds the same minutes
+			const stored = new Set(selectedData.map(data => data.status === permissions.fehlminuten_status ? data.fehlminuten : null))
+			const notizen = new Set(selectedData.map(data => data.notiz ?? ''))
+			const notiz = notizen.size === 1 ? [...notizen][0] : ''
+
+			const result = await this.$refs.fehlminutenDialog.open({
+				name: this.vorname + ' ' + this.nachname,
+				kontrolle: labels.length > 3 ? labels.slice(0, 3).join(', ') + ' …' : labels.join(', '),
+				dauerLabel: this.$p.t(selectedData.length > 1 ? 'global/anwKontrolldauerKuerzesteMinuten' : 'global/anwKontrolldauerMinuten', {dauer}),
+				dauer,
+				value: stored.size === 1 ? [...stored][0] : null,
+				notiz
+			})
+			if (result === null) return
+
+			const changedData = selectedRows.map(row => {
+				const newData = {
+					anwesenheit_user_id: row.getData().anwesenheit_user_id,
+					datum: row.getData().datum,
+					status: permissions.fehlminuten_status,
+					fehlminuten: result.fehlminuten
+				}
+				// an unchanged field keeps the notiz of every row, also when the rows hold different ones
+				if (result.notiz !== notiz) newData.notiz = result.notiz || null
+				row.update(newData)
+				return newData
+			})
+
+			this.saveChanges(changedData)
+
+			selectedRows.forEach(row => row.toggleSelect())
+		},
+		// '28.09.2026 08:00 - 11:30'
+		kontrolleLabel(data) {
+			const [year, month, day] = String(data.datum).split('-')
+			return day + '.' + month + '.' + year + ' ' + String(data.von).substring(11, 16) + ' - ' + String(data.bis).substring(11, 16)
+		},
 		setFilterTitle() {
 			this.filterTitle = this.vorname + ' ' + this.nachname + ' ' + this.semester
 				+ this.verband + this.gruppe + ' '
 			
 			this.$emit('titleSet', this.filterTitle)
 		},
-		// the status classes of the lektor table, FhcMain.css has their dark theme variants
+		// the same status cell as the lektor table, the bulk button "Fehlminuten" changes the minutes here
 		anwesenheitFormatterValue(cell) {
-			const data = cell.getValue()
-			const el = cell.getElement()
-			el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt')
-
-			if (data === this.$entryParams.permissions.anwesend_status) {
-				el.classList.add('anw-anwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-check"></i></div>'
-			} else if (data === this.$entryParams.permissions.abwesend_status) {
-				el.classList.add('anw-abwesend');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa fa-xmark"></i></div>'
-			} else if (data === this.$entryParams.permissions.entschuldigt_status) {
-				el.classList.add('anw-entschuldigt');
-				return '<div style="display: flex; justify-content: center; align-items: center; height: 100%"><i class="fa-solid fa-user-shield"></i></div>'
-			} else return '-'
+			return lektorFormatters.anwStatusCell(cell, this.$entryParams.permissions, {
+				fehlminutenText: () => this.$p.t('global/anwFehlminutenKurz', {minuten: cell.getData().fehlminuten})
+			})
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
@@ -328,8 +365,6 @@ export const StudentByLvaComponent = {
 				.then(res => {
 				if (res.meta.status !== "success" || !res.data) return
 
-				this.prestudent_id = res.data[0].prestudent_id
-				this.person_id = res.data[0].person_id
 				this.vorname = res.data[0].vorname
 				this.nachname = res.data[0].nachname
 				this.semester = res.data[0].semester
@@ -393,6 +428,9 @@ export const StudentByLvaComponent = {
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesendV2')) }}
 						</button>
+						<button @click="setSelectedRowsFehlminuten" role="button" class="btn anw-btn-fehlminuten align-self-end" :disabled="!selected">
+							{{ $capitalize($p.t('global/anwStatusFehlminuten')) }}
+						</button>
 						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/abwesend')) }}
 						</button>
@@ -404,6 +442,7 @@ export const StudentByLvaComponent = {
 			<div class="col-2">
 				<img v-if="foto" :src="foto" :class="isLowResolution(foto) ? 'image-low-resolution' : ''" style="width: 100%"/>
 			</div>
+			<FehlminutenDialog ref="fehlminutenDialog"></FehlminutenDialog>
 		</div>`
 };
 

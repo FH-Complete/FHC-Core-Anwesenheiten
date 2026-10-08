@@ -12,9 +12,6 @@ import AnwTimeline from "./AnwTimeline.js";
 import InViewHelp from "../../../../../js/components/InViewHelp.js";
 import ApiAdmin from '../../api/factory/administration.js';
 
-// value of the status header filter per count
-const STATUS_FILTER = {offen: 'null', akzeptiert: 'true', abgelehnt: 'false'}
-
 export const AssistenzComponent = {
 	name: 'AssistenzComponent',
 	components: {
@@ -157,8 +154,7 @@ export const AssistenzComponent = {
 				{
 					event: "dataFiltered",
 					handler: (filters, rows) => {
-						this.statusFilter = filters.find(filter => filter.field === 'akzeptiert')?.value ?? ''
-						this.updateCounts(rows.map(row => row.getData()))
+						this.updateCounts(rows)
 					}
 				},
 				{
@@ -177,18 +173,13 @@ export const AssistenzComponent = {
 			],
 			notiz: '',
 			studiengang: null,
-			counts: {
-				gefiltert: {offen: 0, akzeptiert: 0, abgelehnt: 0},
-				gesamt: {offen: 0, akzeptiert: 0, abgelehnt: 0}
-			},
+			counts: {gefiltert: 0, gesamt: 0},
 			// open entschuldigungen: anzahl outside the date range, von - bis covers all of them
 			offene: {anzahl: 0, von: null, bis: null},
-			// the date range before "alle offenen laden", null while that mode is off
+			// the date range before "alle offenen anzeigen", null while that mode is off. The mode loads the open ones only
 			savedZeitraum: null,
 			loading: false,
 			loadRequest: 0,
-			// value of the status header filter, marks the active count
-			statusFilter: '',
 			statusAkzeptiert: false,
 			statusAccounts: []
 		};
@@ -279,7 +270,7 @@ export const AssistenzComponent = {
 			else if(filterVal === 'true') return rowVal === true
 			else if(filterVal === 'false') return rowVal === false
 		},
-		// order of the counts: offen, akzeptiert, abgelehnt
+		// work order: offen, akzeptiert, abgelehnt
 		statusSorter(a, b) {
 			const rank = value => value === null ? 0 : value === true ? 1 : 2
 			return rank(a) - rank(b)
@@ -327,7 +318,6 @@ export const AssistenzComponent = {
 				if (res.meta.status === "success")
 				{
 					cell.getRow().update({'akzeptiert': status, 'notiz': notiz});
-					this.updateCounts()
 					this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'));
 				}
 			});
@@ -470,7 +460,8 @@ export const AssistenzComponent = {
 			this.fetchOffene()
 
 			Promise.all([
-				this.$api.call(ApiAdmin.getEntschuldigungen(this.getStgKzArr(), this.zeitraum.von, this.zeitraum.bis)),
+				// "alle offenen anzeigen" spans a wide date range, the backend loads the open ones only
+				this.$api.call(ApiAdmin.getEntschuldigungen(this.getStgKzArr(), this.zeitraum.von, this.zeitraum.bis, this.savedZeitraum !== null)),
 				this.tableBuiltPromise
 			])
 				.then(([res]) => {
@@ -513,35 +504,12 @@ export const AssistenzComponent = {
 			this.savedZeitraum = null
 			this.zeitraum[key] = value
 		},
-		summe(counts) {
-			return counts.offen + counts.akzeptiert + counts.abgelehnt
-		},
-		// the counts work as quick filters on the status column, a second click shows all again
-		toggleStatusFilter(status) {
-			const value = this.isStatusFilter(status) ? '' : STATUS_FILTER[status]
-			this.$refs.assistenzTable.tabulator.setHeaderFilterValue('akzeptiert', value)
-		},
-		isStatusFilter(status) {
-			return this.statusFilter === STATUS_FILTER[status]
-		},
-		countByStatus(data) {
-			const counts = {offen: 0, akzeptiert: 0, abgelehnt: 0}
-			data.forEach(row => {
-				if (row.akzeptiert === true) counts.akzeptiert++
-				else if (row.akzeptiert === false) counts.abgelehnt++
-				else counts.offen++
-			})
-			return counts
-		},
 		// dataFiltered hands over the filtered rows, the active rows of the table are not up to date there yet
-		updateCounts(filteredData) {
+		updateCounts(filteredRows) {
 			const table = this.$refs.assistenzTable?.tabulator
 			if (!table) return
 
-			this.counts = {
-				gefiltert: this.countByStatus(filteredData ?? table.getData('active')),
-				gesamt: this.countByStatus(table.getData())
-			}
+			this.counts = {gefiltert: filteredRows.length, gesamt: table.getDataCount()}
 		},
 		handleUuidDefined(uuid) {
 			this.tabulatorUuid = uuid
@@ -725,29 +693,17 @@ export const AssistenzComponent = {
 					:table-only="true"
 				>
 					<!-- header filters from the local storage and a short date range can hide entschuldigungen
-					without notice. The counts show what is hidden, in red, and filter by status on click -->
+					without notice. The counts and the red button show what is hidden -->
 					<template #actions>
 						<span>
 							{{ $capitalize($p.t('global/gefiltert')) }}/{{ $capitalize($p.t('global/gesamt')) }}:
-							<strong>{{ summe(counts.gefiltert) }}</strong>/{{ summe(counts.gesamt) }}
+							<strong>{{ counts.gefiltert }}</strong>/{{ counts.gesamt }}
 						</span>
-						<button
-							v-for="status in ['offen', 'akzeptiert', 'abgelehnt']"
-							:key="status"
-							type="button"
-							class="btn btn-sm"
-							:class="[counts.gefiltert[status] < counts.gesamt[status] ? 'btn-outline-danger' : 'btn-outline-secondary', {active: isStatusFilter(status)}]"
-							:aria-pressed="isStatusFilter(status)"
-							:title="isStatusFilter(status) ? $p.t('global/entStatusFilterAufheben') : $p.t('global/entNurStatusAnzeigen')"
-							@click="toggleStatusFilter(status)"
-						>
-							{{ $capitalize($p.t('global/' + status)) }}: <strong>{{ counts.gefiltert[status] }}</strong>/{{ counts.gesamt[status] }}
+						<button v-if="offene.anzahl > 0" type="button" class="btn btn-sm btn-outline-danger" v-tooltip.bottom.sticky="$p.t('global/tooltipEntAlleOffenenAnzeigenv2')" @click="alleOffenenLaden">
+							<i class="fa fa-triangle-exclamation"></i> {{ $p.t('global/entAlleOffenenAnzeigen') }} - {{ $p.t('global/entAnzahlVerfuegbar', {count: offene.anzahl}) }}
 						</button>
-						<button v-if="offene.anzahl > 0" type="button" class="btn btn-sm btn-outline-danger" :title="$p.t('global/entAlleOffenenLaden')" @click="alleOffenenLaden">
-							<i class="fa fa-triangle-exclamation"></i> {{ $p.t('global/entOffenAusserhalbZeitraum') }}: <strong>{{ offene.anzahl }}</strong>
-						</button>
-						<button v-if="savedZeitraum" type="button" class="btn btn-sm btn-outline-secondary" :title="$p.t('global/entZeitraumZuruecksetzen')" @click="zeitraumZuruecksetzen">
-							<i class="fa fa-rotate-left"></i> {{ $p.t('global/entAlleOffenenGeladen') }}
+						<button v-if="savedZeitraum" type="button" class="btn btn-sm btn-outline-secondary" @click="zeitraumZuruecksetzen">
+							<i class="fa fa-rotate-left"></i> {{ $p.t('global/entZeitraumZuruecksetzen') }}
 						</button>
 					</template>
 				</core-filter-cmpt>

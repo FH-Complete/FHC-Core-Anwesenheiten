@@ -24,7 +24,6 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci =& get_instance();
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_model', 'AnwesenheitUserModel');
-		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_User_History_model', 'AnwesenheitUserHistoryModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_History_model', 'EntschuldigungHistoryModel');
 
@@ -47,7 +46,8 @@ class AdministrationApi extends FHCAPI_Controller
 
 	/**
 	 * POST METHOD
-	 * Expects parameter 'stg_kz_arr'
+	 * Expects parameter 'stg_kz_arr', 'von', 'bis'
+	 * Optional parameter 'nurOffene': true loads the open Entschuldigungen only
 	 */
 	public function getEntschuldigungen()
 	{
@@ -61,10 +61,11 @@ class AdministrationApi extends FHCAPI_Controller
 		$stg_kz_arr = $result->stg_kz_arr;
 		$von = $result->von;
 		$bis = $result->bis;
+		$nurOffene = isset($result->nurOffene) && $result->nurOffene === true;
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithSuccess($this->p->t('global', 'errorNoSTGassigned'));
-		
-		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis);
+
+		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis, $nurOffene);
 		$entschuldigungen = getData($result);
 		if($entschuldigungen != null && count($entschuldigungen) > 0) {
 			// one query for the accounts of all persons. A person with more than one account can belong to
@@ -182,59 +183,21 @@ class AdministrationApi extends FHCAPI_Controller
 				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
 				
 				if(count($anwesenheit_user_ids) > 0) {
-					// if update status is "abwesend", find out if there has been anwesend checkin status from before the entschuldigung was akzeptiert
 					if($updateStatus == $this->_ci->config->item('ABWESEND_STATUS')) {
-						// only entries which currently hold the entschuldigt status were set by an accepted
-						// entschuldigung. a declined entschuldigung must never overwrite a positive
-						// anwesenheitskontrolle, therefore entries with anwesend status stay untouched.
-						// this also covers entschuldigungen which go from offen directly to abgelehnt,
-						// because those never wrote an entschuldigt status in the first place.
-						// entries which already are abwesend need no update either.
-						$result = $this->_ci->AnwesenheitUserModel->getStatusForIds($anwesenheit_user_ids);
-						if (isError($result))
-							$this->terminateWithError($result);
+						// only entries with the entschuldigt status go back, to their state before the entschuldigung
+						// (a qr scan during it counts as anwesend, see ProfilApi::checkInAnwesenheit). A declined
+						// entschuldigung never overwrites a positive anwesenheitskontrolle, an entry with another
+						// status stays. An entschuldigung from offen to abgelehnt never wrote an entschuldigt status.
+						$updateAnwesenheit = $this->_ci->AnwesenheitUserModel->revertEntschuldigt(
+							$anwesenheit_user_ids,
+							$this->_ci->config->item('ENTSCHULDIGT_STATUS'),
+							$this->_ci->config->item('FEHLMINUTEN_STATUS'),
+							$updateStatus
+						);
 
-						$entschuldigtStatus = $this->_ci->config->item('ENTSCHULDIGT_STATUS');
-						$statusEntries = hasData($result) ? getData($result) : [];
-
-						$entschuldigteEntries = array_filter($statusEntries, function($entry) use ($entschuldigtStatus) {
-							return $entry->status === $entschuldigtStatus;
-						});
-
-						$anwesenheit_user_ids = array_values(array_map($funcAUID, $entschuldigteEntries));
-
-						$stati = [];
-						forEach($anwesenheit_user_ids as $id) { 
-							// query last status for each relevant "uncovered" user_entry
-							// that is to be reverted back to previous status, since they might have been anwesend in some
-							// and normally absent in others
-							
-							$result = $this->_ci->AnwesenheitUserHistoryModel->getStatusPriorToEntschuldigtForId($id);
-							if(count($result->retval) > 0) {
-								$stati[] = [$id, $result->retval[0]->status];
-							} else {
-								$stati[] = [$id, $updateStatus];
-							}
+						if (isError($updateAnwesenheit)) {
+							$this->terminateWithError($updateAnwesenheit);
 						}
-						// update twice, once for each status
-
-						$presentUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('ANWESEND_STATUS'));
-						$absentUserIds = $this->_ci->getIdsByStatus($stati, $this->_ci->config->item('ABWESEND_STATUS'));
-
-						if(count($presentUserIds) > 0) {
-							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($presentUserIds, $this->_ci->config->item('ANWESEND_STATUS'));
-							if (isError($updateAnwesenheit)) {
-								$this->terminateWithError($updateAnwesenheit);
-							}
-						}
-						
-						if(count($absentUserIds) > 0) {
-							$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($absentUserIds, $this->_ci->config->item('ABWESEND_STATUS'));
-							if (isError($updateAnwesenheit)) {
-								$this->terminateWithError($updateAnwesenheit);
-							}
-						}
-						
 					} else { // just update all stati in question to entschuldigt
 						$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
 
@@ -338,24 +301,6 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess($this->p->t('global', 'successUpdateEntschuldigung'));
-	}
-
-	/**
-	 * Filters an array of [user_id, status] pairs for a specific status
-	 * and returns a simple 1D array containing only the user IDs.
-	 *
-	 * @param array $stati The array of user status pairs: [[id, status], ...].
-	 * @param string $targetStatus The status value to filter by.
-	 * @return array A 1D array containing only the IDs of users with the target status.
-	 */
-	private function getIdsByStatus($stati,  $targetStatus) {
-		// 1. Filter the array to only include entries matching the $targetStatus
-		$filteredStati = array_filter($stati, function($entry) use ($targetStatus) {
-			return $entry[1] === $targetStatus;
-		});
-
-		// 2. Extract the user IDs from the filtered entries
-		return array_column($filteredStati, 0);
 	}
 
 	/**

@@ -45,7 +45,7 @@ export default {
 			url,
 			params
 		}
-		
+
 	},
 	getExistingQRCode(le_id) {
 

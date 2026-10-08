@@ -19,39 +19,44 @@ class Anwesenheit_User_History_model extends \DB_Model
 
 		return $this->execQuery($query, [$anwesenheit_id]);
 	}
-	
-	// looks up the status prior to being entschuldigt, in case a once accepted entschuldigung is 
-	// retroactively deemed abgelehnt and the student has been anwesend in the actual kontrolle
-	// 1.) student scans code -> anwesend
-	// 2.) student get entschuldigung for relevant timespan accepted
-	// 3.) anw status -> entschuldigt
-	// 4.) entschuldigung is actually not okay, revert back to last status
-	// 5.) use this method
-	//
-	// btw cant just use latest version of history, since history is written on every kind of update (e.g. notiz)
-	public function getStatusPriorToEntschuldigtForId($anwesenheit_user_id) {
-		$query = "WITH allEntries as(
-					SELECT anwesenheit_user_id, status, updateamum, version
-					FROM extension.tbl_anwesenheit_user_history
-					WHERE anwesenheit_user_id = ?
-					UNION
-					(SELECT anwesenheit_user_id, status, updateamum, version
-					 FROM extension.tbl_anwesenheit_user
-					 WHERE anwesenheit_user_id = ?)
-					ORDER BY version DESC
-				)
-				SELECT *
-				FROM allEntries
-				WHERE updateamum < (
-					SELECT updateamum
-					FROM allEntries
-					WHERE status = 'entschuldigt' AND anwesenheit_user_id = ?
-					ORDER BY updateamum DESC
-					LIMIT 1
-				)
-				ORDER BY updateamum DESC
-				LIMIT 1";
 
-		return $this->execReadOnlyQuery($query, [$anwesenheit_user_id, $anwesenheit_user_id, $anwesenheit_user_id]);
+	// writes the entry into the history as a qr scan would change it: status $anwesendStatus without fehlminuten,
+	// set by $uid now. The entry itself keeps its status. The scan of an entschuldigt entry uses this, see
+	// ProfilApi::checkInAnwesenheit and Anwesenheit_User_model::getFallbackForEntschuldigt
+	public function addScanEntry($anwesenheit_user_id, $anwesendStatus, $uid) {
+		$now = date('Y-m-d H:i:s');
+
+		$query = "INSERT INTO extension.tbl_anwesenheit_user_history (
+				anwesenheit_user_id,
+				anwesenheit_id,
+				prestudent_id,
+				status,
+				statussetvon,
+				statussetamum,
+				notiz,
+				fehlminuten,
+				version,
+				insertamum,
+				insertvon,
+				updateamum,
+				updatevon
+			) SELECT
+				anwesenheit_user_id,
+				anwesenheit_id,
+				prestudent_id,
+				?,
+				?,
+				?,
+				notiz,
+				0,
+				version,
+				insertamum,
+				insertvon,
+				?,
+				?
+			FROM extension.tbl_anwesenheit_user
+			WHERE anwesenheit_user_id = ?";
+
+		return $this->execQuery($query, [$anwesendStatus, $uid, $now, $now, $uid, $anwesenheit_user_id]);
 	}
 }

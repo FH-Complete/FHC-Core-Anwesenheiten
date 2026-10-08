@@ -118,26 +118,30 @@ export default {
 		einheitenFormatter: function (cell) {
 			return '<div class="anw-cell-center">' + this.einheitenText(cell.getValue()) + '</div>'
 		},
-		// status of one anwesenheit as the table and the list show it. anwesend and abwesend
-		// show the icon only, an entschuldigung adds its state
+		// status of one anwesenheit as the table and the list show it. anwesend shows the icon only,
+		// the status fehlminuten adds the minutes, an entschuldigung adds its state
 		anwStatus(row) {
 			const permissions = this.$entryParams.permissions
 
 			if (row.student_status === permissions.anwesend_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/anwesendV2'), label: ''}
+			if (row.student_status === permissions.fehlminuten_status) {
+				const label = [this.$p.t('global/anwFehlminutenAnzahl', {minuten: row.fehlminuten}), this.entschuldigungState(row)]
+					.filter(Boolean).join(' · ')
+				return {tone: 'fehlminuten', icon: 'fa-user-clock', status: this.$p.t('global/anwStatusFehlminuten'), label}
+			}
 			if (row.student_status === permissions.entschuldigt_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/entschuldigt'), label: this.$p.t('global/entschuldigungAkzeptiert')}
-			if (row.student_status === permissions.abwesend_status) {
-				let label = ''
-				if (row.hasOffene)
-					label = this.$p.t('global/entschuldigungOffen')
-				else if (row.hasAbgelehnte)
-					label = this.$p.t('global/entschuldigungAbgelehnt')
-
-				return {tone: 'absent', icon: 'fa-xmark', status: this.$p.t('global/abwesend'), label}
-			}
+			if (row.student_status === permissions.abwesend_status)
+				return {tone: 'absent', icon: 'fa-xmark', status: this.$p.t('global/abwesend'), label: this.entschuldigungState(row)}
 
 			return null
+		},
+		// state of an open or a declined entschuldigung for the kontrolle of the row, see processAnw
+		entschuldigungState(row) {
+			if (row.hasOffene) return this.$p.t('global/entschuldigungOffen')
+			if (row.hasAbgelehnte) return this.$p.t('global/entschuldigungAbgelehnt')
+			return ''
 		},
 		formAnwesenheit: function(cell)
 		{
@@ -213,15 +217,19 @@ export default {
 				const offene = ent.filter(e => e.akzeptiert === null)
 				const abgelehnte = ent.filter(e => e.akzeptiert === false)
 
+				// an accepted entschuldigung turns abwesend and fehlminuten into entschuldigt, so both show its state
+				const permissions = this.$entryParams.permissions
+				const excusable = [permissions.abwesend_status, permissions.fehlminuten_status]
+
 				// for every offene set anw_user entry property to true for every eligible date & abgelehnt combo
 				offene.forEach(o => {
-					const anwInDateRange = anw.filter(a => a.vonDate >= o.vonDate && a.bisDate <= o.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+					const anwInDateRange = anw.filter(a => a.vonDate >= o.vonDate && a.bisDate <= o.bisDate && excusable.includes(a.student_status))
 					anwInDateRange.forEach(a => a.hasOffene = true)
 				})
 
 				// for every abgelehnte set anw_user entry property to true for every eligible date & abgelehnt combo
 				abgelehnte.forEach(abg => {
-					const anwInRange = anw.filter(a => a.vonDate >= abg.vonDate && a.bisDate <= abg.bisDate && a.student_status === this.$entryParams.permissions.abwesend_status)
+					const anwInRange = anw.filter(a => a.vonDate >= abg.vonDate && a.bisDate <= abg.bisDate && excusable.includes(a.student_status))
 					anwInRange.forEach(a => a.hasAbgelehnte = true)
 				})
 			}
