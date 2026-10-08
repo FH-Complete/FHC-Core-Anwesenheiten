@@ -25,6 +25,7 @@ class AnwesenheitenLib
 			'admin' => $this->_ci->permissionlib->isBerechtigt('extension/anw_r_full_assistenz'),
 			'assistenz' => $this->_ci->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz'),
 			'lektor' => $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor'),
+			'supplierung' => $this->_ci->permissionlib->isBerechtigt('extension/anw_supplierung'),
 			'student' => $this->_ci->permissionlib->isBerechtigt('extension/anw_r_student'),
 			'authID' => getAuthUID(),
 			'regenerateQRTimer' => $this->_ci->config->item('REGENERATE_QR_TIMER'),

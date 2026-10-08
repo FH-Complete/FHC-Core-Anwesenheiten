@@ -385,6 +385,7 @@ export const LektorComponent = {
 		},
 		checkCellEditability(cell) {
 			if (this.multiLeMode) return false // combined multi le view is read only for now
+			if (!this.canEditSelectedLe) return false
 			const val = cell.getValue()
 			return val !== undefined && val !== '-' // dont allow edit on empty cols
 		},
@@ -1716,6 +1717,12 @@ export const LektorComponent = {
 			if (this.showFremdeLe || !this.showFremdeLeToggle) return this.getLEOptions
 			return this.getLEOptions.filter(group => !group.fremd)
 		},
+		canEditSelectedLe() {
+			// same rule as isAdminOrTeachesLE in the backend: a colleagues le is read only without the supplierung right
+			const le = this.$entryParams.selected_le_info?.value
+			const permissions = this.$entryParams.permissions
+			return !le || permissions.admin || permissions.supplierung || this.isOwnLe(le)
+		},
 		getTooltipGesamtansicht() {
 			return this.$p.t('global/tooltipAnwGesamtansicht')
 		},
@@ -2158,9 +2165,9 @@ export const LektorComponent = {
 										</button>
 									</template>
 								</div>
-								<div class="col-12" v-if="multiLeMode" style="padding-right: 24px">
+								<div class="col-12" v-if="multiLeMode || !canEditSelectedLe" style="padding-right: 24px">
 									<div class="alert alert-info small py-1 px-2 mb-0">
-										<i class="fa fa-lock me-1"></i>{{ $p.t('global/anwGesamtansichtInfoV3') }}
+										<i class="fa fa-lock me-1"></i>{{ multiLeMode ? $p.t('global/anwGesamtansichtInfoV3') : $p.t('global/anwFremdeLeNurAnsicht', [$entryParams.selected_le_info.value?.lektor_names?.join(', ') ?? '']) }}
 									</div>
 								</div>
 							</div>
@@ -2236,7 +2243,7 @@ export const LektorComponent = {
 						:tableOnly="true"
 						:newBtnShow="true"
 						:newBtnLabel="$p.t('global/neueAnwKontrolle')"
-						:newBtnDisabled="!lektorState.students.length || multiLeMode"
+						:newBtnDisabled="!lektorState.students.length || multiLeMode || !canEditSelectedLe"
 						@click:new=openNewAnwesenheitskontrolleModal
 						:sideMenu="false"
 						noColumnFilter>
@@ -2245,7 +2252,7 @@ export const LektorComponent = {
 									<i class="fa fa-save"></i>
 								</button>
 								
-								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length || multiLeMode" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
+								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length || multiLeMode || !canEditSelectedLe" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
 									<i class="fa fa-pen"></i>
 								</button>
 								
