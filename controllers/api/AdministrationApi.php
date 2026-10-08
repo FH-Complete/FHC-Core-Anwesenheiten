@@ -47,7 +47,8 @@ class AdministrationApi extends FHCAPI_Controller
 
 	/**
 	 * POST METHOD
-	 * Expects parameter 'stg_kz_arr'
+	 * Expects parameter 'stg_kz_arr', 'von', 'bis'
+	 * Optional parameter 'nurOffene': true loads the open Entschuldigungen only
 	 */
 	public function getEntschuldigungen()
 	{
@@ -61,10 +62,11 @@ class AdministrationApi extends FHCAPI_Controller
 		$stg_kz_arr = $result->stg_kz_arr;
 		$von = $result->von;
 		$bis = $result->bis;
+		$nurOffene = isset($result->nurOffene) && $result->nurOffene === true;
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithSuccess($this->p->t('global', 'errorNoSTGassigned'));
-		
-		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis);
+
+		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis, $nurOffene);
 		$entschuldigungen = getData($result);
 		if($entschuldigungen != null && count($entschuldigungen) > 0) {
 			// one query for the accounts of all persons. A person with more than one account can belong to

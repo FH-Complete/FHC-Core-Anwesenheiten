@@ -111,7 +111,7 @@ class Entschuldigung_model extends \DB_Model
 				WHERE tbl_benutzer.aktiv = TRUE AND tbl_studiengang.aktiv = true AND tbl_studiengang.studiengang_kz IN ? ";
 	}
 
-	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis)
+	public function getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis, $nurOffene = false)
 	{
 		$params = [$stg_kz_arr];
 		$query = "SELECT DISTINCT ON (dms_id,
@@ -150,6 +150,10 @@ class Entschuldigung_model extends \DB_Model
 		if($bis) {
 			$query.= 'AND Date(extension.tbl_anwesenheit_entschuldigung.insertamum) <= ? ';
 			$params[] = $bis;
+		}
+		// "alle offenen anzeigen" spans a wide date range, only the open ones keep the result small
+		if($nurOffene) {
+			$query.= 'AND extension.tbl_anwesenheit_entschuldigung.akzeptiert IS NULL ';
 		}
 
 		$query.='ORDER by vorname, von DESC, akzeptiert DESC NULLS FIRST';

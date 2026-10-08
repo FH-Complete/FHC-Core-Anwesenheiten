@@ -1,8 +1,8 @@
 export default {
 
-	getEntschuldigungen(stg_kz_arr, von, bis) {
+	getEntschuldigungen(stg_kz_arr, von, bis, nurOffene = false) {
 
-		const params = {stg_kz_arr, von, bis}
+		const params = {stg_kz_arr, von, bis, nurOffene}
 		const url = 'extensions/FHC-Core-Anwesenheiten/api/AdministrationApi/getEntschuldigungen';
 		return {
 			method: 'post',
