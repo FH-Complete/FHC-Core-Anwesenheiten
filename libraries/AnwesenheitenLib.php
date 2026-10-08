@@ -39,7 +39,7 @@ class AnwesenheitenLib
 			'anwesend_status' => $this->_ci->config->item('ANWESEND_STATUS'),
 			'abwesend_status' => $this->_ci->config->item('ABWESEND_STATUS'),
 			'entschuldigt_status' => $this->_ci->config->item('ENTSCHULDIGT_STATUS'),
-			'verspaetet_status' => $this->_ci->config->item('VERSPAETET_STATUS'),
+			'fehlminuten_status' => $this->_ci->config->item('FEHLMINUTEN_STATUS'),
 			'einheitDauer' => $this->_ci->config->item('EINHEIT_DAUER'),
 			'entschuldigungen_enabled' => $this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED'),
 			'studiengaengeAssistenz' => $this->_ci->permissionlib->getSTG_isEntitledFor('extension/anw_r_ent_assistenz'),

@@ -189,7 +189,7 @@ class AdministrationApi extends FHCAPI_Controller
 						$updateAnwesenheit = $this->_ci->AnwesenheitUserModel->revertEntschuldigt(
 							$anwesenheit_user_ids,
 							$this->_ci->config->item('ENTSCHULDIGT_STATUS'),
-							$this->_ci->config->item('VERSPAETET_STATUS'),
+							$this->_ci->config->item('FEHLMINUTEN_STATUS'),
 							$updateStatus
 						);
 

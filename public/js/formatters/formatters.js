@@ -39,7 +39,7 @@ export const lektorFormatters = {
 	},
 	// status cell of the Lektor table and of its detail view (StudentByLvaComponent). Both use it, so a status looks
 	// the same in both: the status class on the cell (colors in FhcMain.css, light and dark), the icon and for
-	// verspaetet the fehlminuten. options.fehlminutenText() gives the text of the minutes. options.onEditFehlminuten
+	// the status fehlminuten the minutes. options.fehlminutenText() gives the text of the minutes. options.onEditFehlminuten
 	// makes the minutes a button that opens the dialog again, the list editor fires nothing for the same status
 	anwStatusCell: function (cell, permissions, options = {}) {
 		const status = cell.getValue()
@@ -48,10 +48,10 @@ export const lektorFormatters = {
 			[permissions.anwesend_status]: {cls: 'anw-anwesend', icon: 'fa fa-check'},
 			[permissions.abwesend_status]: {cls: 'anw-abwesend', icon: 'fa fa-xmark'},
 			[permissions.entschuldigt_status]: {cls: 'anw-entschuldigt', icon: 'fa-solid fa-user-shield'},
-			[permissions.verspaetet_status]: {cls: 'anw-verspaetet', icon: 'fa-solid fa-user-clock'}
+			[permissions.fehlminuten_status]: {cls: 'anw-fehlminuten', icon: 'fa-solid fa-user-clock'}
 		}
 
-		el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt', 'anw-verspaetet')
+		el.classList.remove('anw-anwesend', 'anw-abwesend', 'anw-entschuldigt', 'anw-fehlminuten')
 		const look = looks[status]
 		if (!look) return '-'
 		el.classList.add(look.cls)
@@ -59,7 +59,7 @@ export const lektorFormatters = {
 		const wrap = document.createElement('div')
 		wrap.className = 'anw-cell-status'
 		wrap.innerHTML = '<i class="' + look.icon + '" aria-hidden="true"></i>'
-		if (status !== permissions.verspaetet_status) return wrap
+		if (status !== permissions.fehlminuten_status) return wrap
 
 		const minutes = document.createElement(options.onEditFehlminuten ? 'button' : 'span')
 		minutes.textContent = options.fehlminutenText()

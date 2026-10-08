@@ -185,7 +185,7 @@ export const AnwTimeline = {
 				{ tone: 'rejected', label: this.$capitalize(this.$p.t('global/abgelehnt')) },
 				{ tone: 'open', label: this.$capitalize(this.$p.t('global/offen')) },
 				{ tone: 'present', label: this.$capitalize(this.$p.t('global/anwesendV2')) },
-				{ tone: 'late', label: this.$capitalize(this.$p.t('global/anwVerspaetet')) },
+				{ tone: 'fehlminuten', label: this.$capitalize(this.$p.t('global/anwStatusFehlminuten')) },
 				{ tone: 'absent', label: this.$capitalize(this.$p.t('global/abwesend')) },
 				{ tone: 'excused', label: this.$capitalize(this.$p.t('global/entschuldigt')) }
 			]
@@ -248,11 +248,10 @@ export const AnwTimeline = {
 			if (anw.status === (permissions.entschuldigt_status ?? 'entschuldigt')) {
 				return { tone: 'excused', label: this.$capitalize(this.$p.t('global/entschuldigt')) }
 			}
-			if (anw.status === (permissions.verspaetet_status ?? 'verspaetet')) {
+			if (anw.status === (permissions.fehlminuten_status ?? 'fehlminuten')) {
 				return {
-					tone: 'late',
-					label: this.$capitalize(this.$p.t('global/anwVerspaetet'))
-						+ ' (' + this.$p.t('global/anwMinutenVersaeumt', {minuten: anw.fehlminuten}) + ')'
+					tone: 'fehlminuten',
+					label: this.$p.t('global/anwFehlminutenAnzahl', {minuten: anw.fehlminuten})
 				}
 			}
 

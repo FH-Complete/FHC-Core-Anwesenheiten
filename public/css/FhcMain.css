@@ -114,11 +114,11 @@ html.dark .anw-status--absent {
 	color: #ff8787;
 }
 
-.anw-status--late {
+.anw-status--fehlminuten {
 	color: #8a5300;
 }
 
-html.dark .anw-status--late {
+html.dark .anw-status--fehlminuten {
 	color: #ffc078;
 }
 
@@ -612,7 +612,7 @@ html.dark .anw-tl-badge {
 	background-color: #0335f5;
 }
 
-.anw-tl-tone--late {
+.anw-tl-tone--fehlminuten {
 	background-color: #8a5300;
 }
 
@@ -638,7 +638,7 @@ html.dark .anw-tl-tone--excused {
 	background-color: #91a7ff;
 }
 
-html.dark .anw-tl-tone--late {
+html.dark .anw-tl-tone--fehlminuten {
 	background-color: #ffc078;
 }
 
@@ -761,11 +761,11 @@ html.dark .anw-tl-tone--unknown {
 	color: #0b7285;
 }
 
-.anw-verspaetet {
+.anw-fehlminuten {
 	color: #8a5300;
 }
 
-/* status cell of the Lektor table and its detail view (lektorFormatters.anwStatusCell): the icon, for verspaetet
+/* status cell of the Lektor table and its detail view (lektorFormatters.anwStatusCell): the icon, for fehlminuten
    also the fehlminuten */
 .anw-cell-status {
 	display: flex;
@@ -808,7 +808,7 @@ html.dark .anw-fehlminuten-btn:focus-visible {
 }
 
 /* bulk action of the detail view, same color as the status. White text 6.3:1, in both themes */
-.anw-btn-verspaetet {
+.anw-btn-fehlminuten {
 	--bs-btn-color: #fff;
 	--bs-btn-bg: #8a5300;
 	--bs-btn-border-color: #8a5300;
@@ -844,7 +844,7 @@ html.dark .anw-entschuldigt-offen {
 	color: #66d9e8;
 }
 
-html.dark .anw-verspaetet {
+html.dark .anw-fehlminuten {
 	color: #ffc078;
 }
 
@@ -872,11 +872,11 @@ html:not(.dark) .tabulator-row.tabulator-selected .anw-abwesend {
 }
 
 /* the fehlminuten are text: 4.5:1 on a selected row and on an unsaved (purple) cell */
-html:not(.dark) .tabulator-row.tabulator-selected .anw-verspaetet {
+html:not(.dark) .tabulator-row.tabulator-selected .anw-fehlminuten {
 	color: #5c3700;
 }
 
-html:not(.dark) .tabulator-cell.anw-dirty.anw-verspaetet {
+html:not(.dark) .tabulator-cell.anw-dirty.anw-fehlminuten {
 	color: #6b4000;
 }
 

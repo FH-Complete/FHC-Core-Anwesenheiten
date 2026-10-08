@@ -257,7 +257,7 @@ export const StudentByLvaComponent = {
 			changedRows.forEach(row => row.toggleSelect())
 		},
 		// the same fehlminuten for every selected row, the shortest kontrolle limits them
-		async setSelectedRowsVerspaetet() {
+		async setSelectedRowsFehlminuten() {
 			const permissions = this.$entryParams.permissions
 			const selectedRows = this.$refs.anwesenheitenByStudentByLvaTable.tabulator.getSelectedRows()
 				.filter(row => row.getData().status !== permissions.entschuldigt_status)
@@ -267,24 +267,29 @@ export const StudentByLvaComponent = {
 			const dauer = Math.min(...selectedData.map(data => data.dauer))
 			const labels = selectedData.map(data => this.kontrolleLabel(data))
 			// prefill only when every selected row already holds the same minutes
-			const stored = new Set(selectedData.map(data => data.status === permissions.verspaetet_status ? data.fehlminuten : null))
+			const stored = new Set(selectedData.map(data => data.status === permissions.fehlminuten_status ? data.fehlminuten : null))
+			const notizen = new Set(selectedData.map(data => data.notiz ?? ''))
+			const notiz = notizen.size === 1 ? [...notizen][0] : ''
 
-			const fehlminuten = await this.$refs.fehlminutenDialog.open({
+			const result = await this.$refs.fehlminutenDialog.open({
 				name: this.vorname + ' ' + this.nachname,
 				kontrolle: labels.length > 3 ? labels.slice(0, 3).join(', ') + ' …' : labels.join(', '),
 				dauerLabel: this.$p.t(selectedData.length > 1 ? 'global/anwKontrolldauerKuerzesteMinuten' : 'global/anwKontrolldauerMinuten', {dauer}),
 				dauer,
-				value: stored.size === 1 ? [...stored][0] : null
+				value: stored.size === 1 ? [...stored][0] : null,
+				notiz
 			})
-			if (fehlminuten === null) return
+			if (result === null) return
 
 			const changedData = selectedRows.map(row => {
 				const newData = {
 					anwesenheit_user_id: row.getData().anwesenheit_user_id,
 					datum: row.getData().datum,
-					status: permissions.verspaetet_status,
-					fehlminuten
+					status: permissions.fehlminuten_status,
+					fehlminuten: result.fehlminuten
 				}
+				// an unchanged field keeps the notiz of every row, also when the rows hold different ones
+				if (result.notiz !== notiz) newData.notiz = result.notiz || null
 				row.update(newData)
 				return newData
 			})
@@ -304,7 +309,7 @@ export const StudentByLvaComponent = {
 			
 			this.$emit('titleSet', this.filterTitle)
 		},
-		// the same status cell as the lektor table, the bulk button "Verspätet" changes the minutes here
+		// the same status cell as the lektor table, the bulk button "Fehlminuten" changes the minutes here
 		anwesenheitFormatterValue(cell) {
 			return lektorFormatters.anwStatusCell(cell, this.$entryParams.permissions, {
 				fehlminutenText: () => this.$p.t('global/anwFehlminutenKurz', {minuten: cell.getData().fehlminuten})
@@ -407,8 +412,8 @@ export const StudentByLvaComponent = {
 						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesendV2')) }}
 						</button>
-						<button @click="setSelectedRowsVerspaetet" role="button" class="btn anw-btn-verspaetet align-self-end" :disabled="!selected">
-							{{ $capitalize($p.t('global/anwVerspaetet')) }}
+						<button @click="setSelectedRowsFehlminuten" role="button" class="btn anw-btn-fehlminuten align-self-end" :disabled="!selected">
+							{{ $capitalize($p.t('global/anwStatusFehlminuten')) }}
 						</button>
 						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/abwesend')) }}

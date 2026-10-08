@@ -271,30 +271,30 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 		}
 
-		$verspaetetStatus = $this->_ci->config->item('VERSPAETET_STATUS');
-		$this->_validateFehlminuten($changedAnwesenheiten, $verspaetetStatus);
+		$fehlminutenStatus = $this->_ci->config->item('FEHLMINUTEN_STATUS');
+		$this->_validateFehlminuten($changedAnwesenheiten, $fehlminutenStatus);
 
-		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten, true, $verspaetetStatus);
+		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten, true, $fehlminutenStatus);
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess(getData($result));
 	}
 
 	/**
-	 * every entry with status $verspaetetStatus needs fehlminuten from 1 to one minute less than the
+	 * every entry with status $fehlminutenStatus needs fehlminuten from 1 to one minute less than the
 	 * duration of its kontrolle, as the quote counts it. The full duration equals the status abwesend.
 	 * Terminates on an invalid value, else sets the checked integer on the entry
 	 */
-	private function _validateFehlminuten($changedAnwesenheiten, $verspaetetStatus)
+	private function _validateFehlminuten($changedAnwesenheiten, $fehlminutenStatus)
 	{
-		$verspaetetEntries = array_values(array_filter($changedAnwesenheiten, function ($entry) use ($verspaetetStatus) {
-			return property_exists($entry, 'status') && $entry->status === $verspaetetStatus;
+		$fehlminutenEntries = array_values(array_filter($changedAnwesenheiten, function ($entry) use ($fehlminutenStatus) {
+			return property_exists($entry, 'status') && $entry->status === $fehlminutenStatus;
 		}));
-		if(!count($verspaetetEntries)) return;
+		if(!count($fehlminutenEntries)) return;
 
 		$ids = array_map(function ($entry) {
 			return $entry->anwesenheit_user_id;
-		}, $verspaetetEntries);
+		}, $fehlminutenEntries);
 
 		$result = $this->_ci->AnwesenheitUserModel->getKontrollDauerForIds($ids);
 		if(isError($result)) $this->terminateWithError($this->p->t('global', 'errorAnwUserUpdate'), 'general');
@@ -306,7 +306,7 @@ class KontrolleApi extends FHCAPI_Controller
 			}
 		}
 
-		foreach($verspaetetEntries as $entry) {
+		foreach($fehlminutenEntries as $entry) {
 			$max = isset($dauerById[$entry->anwesenheit_user_id]) ? $dauerById[$entry->anwesenheit_user_id] - 1 : 0;
 			$fehlminuten = property_exists($entry, 'fehlminuten') ? filter_var($entry->fehlminuten, FILTER_VALIDATE_INT) : false;
 
@@ -321,11 +321,11 @@ class KontrolleApi extends FHCAPI_Controller
 	/**
 	 * the fehlminuten have no position, they can lie at the start or at the end of the kontrolle.
 	 * So new times cannot move them, the kontrolle has to stay longer than the fehlminuten of every
-	 * verspaetet entry. Returns the error with the student and the minimum duration, null if all fit
+	 * entry with the status fehlminuten. Returns the error with the student and the minimum duration, null if all fit
 	 */
 	private function _checkDauerAgainstFehlminuten($anwesenheit_id)
 	{
-		$result = $this->_ci->AnwesenheitUserModel->getFehlminutenLongerThanKontrolle($anwesenheit_id, $this->_ci->config->item('VERSPAETET_STATUS'));
+		$result = $this->_ci->AnwesenheitUserModel->getFehlminutenLongerThanKontrolle($anwesenheit_id, $this->_ci->config->item('FEHLMINUTEN_STATUS'));
 		if(isError($result)) return $this->p->t('global', 'errorUpdateAnwKontrolle');
 		if(!hasData($result)) return null;
 		$entry = getData($result)[0];
@@ -333,7 +333,7 @@ class KontrolleApi extends FHCAPI_Controller
 		// the core api plugin renders the message as html
 		$name = htmlspecialchars($entry->vorname . ' ' . $entry->nachname, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-		return $this->p->t('global', 'anwKontrolleKuerzerAlsFehlminuten', array(
+		return $this->p->t('global', 'anwKontrolleKuerzerAlsFehlminutenV2', array(
 			'name' => $name,
 			'fehlminuten' => (int) $entry->fehlminuten,
 			'minimum' => (int) $entry->fehlminuten + 1
@@ -416,7 +416,7 @@ class KontrolleApi extends FHCAPI_Controller
 	}
 	
 	/**
-	 * counts the entries of a kontrolle per status, verspaetet counts as anwesend
+	 * counts the entries of a kontrolle per status, the status fehlminuten counts as anwesend
 	 */
 	private function _getCheckInCounts($anwesenheit_id)
 	{
@@ -424,7 +424,7 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->_ci->config->item('ANWESEND_STATUS'),
 			$this->_ci->config->item('ABWESEND_STATUS'),
 			$this->_ci->config->item('ENTSCHULDIGT_STATUS'),
-			$this->_ci->config->item('VERSPAETET_STATUS'));
+			$this->_ci->config->item('FEHLMINUTEN_STATUS'));
 	}
 
 	/**
@@ -1153,7 +1153,7 @@ class KontrolleApi extends FHCAPI_Controller
 		return $this->_ci->AnwesenheitUserModel->revertEntschuldigt(
 			$uncoveredIds,
 			$entschuldigtStatus,
-			$this->_ci->config->item('VERSPAETET_STATUS'),
+			$this->_ci->config->item('FEHLMINUTEN_STATUS'),
 			$this->_ci->config->item('ABWESEND_STATUS')
 		);
 	}

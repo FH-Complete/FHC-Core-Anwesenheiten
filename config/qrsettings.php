@@ -21,7 +21,7 @@ $config['ANWESEND_STATUS'] = 'anwesend';
 $config['ABWESEND_STATUS'] = 'abwesend';
 $config['ENTSCHULDIGT_STATUS'] = 'entschuldigt';
 // present for a part of the kontrolle only, the fehlminuten of the entry do not count as attendance
-$config['VERSPAETET_STATUS'] = 'verspaetet';
+$config['FEHLMINUTEN_STATUS'] = 'fehlminuten';
 // dauer einer Unterrichtseinheit in Stunden
 $config['EINHEIT_DAUER'] = 0.75;
 // toggle für UI elemente & API endpunkte, bestehende daten bleiben unverändert

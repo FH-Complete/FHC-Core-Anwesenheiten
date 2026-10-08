@@ -119,16 +119,16 @@ export default {
 			return '<div class="anw-cell-center">' + this.einheitenText(cell.getValue()) + '</div>'
 		},
 		// status of one anwesenheit as the table and the list show it. anwesend shows the icon only,
-		// verspaetet adds the missed minutes, an entschuldigung adds its state
+		// the status fehlminuten adds the minutes, an entschuldigung adds its state
 		anwStatus(row) {
 			const permissions = this.$entryParams.permissions
 
 			if (row.student_status === permissions.anwesend_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/anwesendV2'), label: ''}
-			if (row.student_status === permissions.verspaetet_status) {
-				const label = [this.$p.t('global/anwMinutenVersaeumt', {minuten: row.fehlminuten}), this.entschuldigungState(row)]
+			if (row.student_status === permissions.fehlminuten_status) {
+				const label = [this.$p.t('global/anwFehlminutenAnzahl', {minuten: row.fehlminuten}), this.entschuldigungState(row)]
 					.filter(Boolean).join(' · ')
-				return {tone: 'late', icon: 'fa-user-clock', status: this.$p.t('global/anwVerspaetet'), label}
+				return {tone: 'fehlminuten', icon: 'fa-user-clock', status: this.$p.t('global/anwStatusFehlminuten'), label}
 			}
 			if (row.student_status === permissions.entschuldigt_status)
 				return {tone: 'present', icon: 'fa-check', status: this.$p.t('global/entschuldigt'), label: this.$p.t('global/entschuldigungAkzeptiert')}
@@ -217,9 +217,9 @@ export default {
 				const offene = ent.filter(e => e.akzeptiert === null)
 				const abgelehnte = ent.filter(e => e.akzeptiert === false)
 
-				// an accepted entschuldigung turns abwesend and verspaetet into entschuldigt, so both show its state
+				// an accepted entschuldigung turns abwesend and fehlminuten into entschuldigt, so both show its state
 				const permissions = this.$entryParams.permissions
-				const excusable = [permissions.abwesend_status, permissions.verspaetet_status]
+				const excusable = [permissions.abwesend_status, permissions.fehlminuten_status]
 
 				// for every offene set anw_user entry property to true for every eligible date & abgelehnt combo
 				offene.forEach(o => {

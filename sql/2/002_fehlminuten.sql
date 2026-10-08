@@ -1,11 +1,15 @@
--- status verspaetet: the student was present for a part of the kontrolle only.
--- fehlminuten holds the missed minutes, the quote deducts them for status verspaetet only.
+-- status fehlminuten: the student was present for a part of the kontrolle only.
+-- the column fehlminuten holds the missed minutes, the quote deducts them for status fehlminuten only.
 -- every other status ignores the value, so a declined entschuldigung that reverts the status
--- back to verspaetet also gets the minutes back.
+-- back to fehlminuten also gets the minutes back.
+
+-- an install of an earlier version of this script named the status verspaetet. The foreign keys cascade the rename
+UPDATE extension.tbl_anwesenheit_status SET status_kurzbz = 'fehlminuten', bezeichnung = 'Fehlminuten'
+WHERE status_kurzbz = 'verspaetet';
 
 INSERT INTO extension.tbl_anwesenheit_status (status_kurzbz, bezeichnung, beschreibung)
 VALUES
-	('verspaetet', 'Verspätet', 'Anwesend, die Fehlminuten zählen nicht zur Anwesenheit')
+	('fehlminuten', 'Fehlminuten', 'Anwesend, die Fehlminuten zählen nicht zur Anwesenheit')
 ON CONFLICT (status_kurzbz) DO NOTHING;
 
 DO $$
@@ -26,7 +30,7 @@ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
-COMMENT ON COLUMN extension.tbl_anwesenheit_user.fehlminuten IS 'Versäumte Minuten der Kontrolle. Die Anwesenheitsquote zieht sie nur beim Status verspaetet ab.';
+COMMENT ON COLUMN extension.tbl_anwesenheit_user.fehlminuten IS 'Versäumte Minuten der Kontrolle. Die Anwesenheitsquote zieht sie nur beim Status fehlminuten ab.';
 COMMENT ON COLUMN extension.tbl_anwesenheit_user_history.fehlminuten IS 'Versäumte Minuten der Kontrolle zum Zeitpunkt des History-Eintrags.';
 
 -- replaces the version of sql/1/001_function.sql
@@ -44,7 +48,7 @@ BEGIN
 	SELECT
 		INTO timerec ROUND((SUM(CASE WHEN status IN ('anwesend', 'entschuldigt')
 										 THEN extension.get_epoch_from_anw_times(von, bis)
-									 WHEN status = 'verspaetet'
+									 WHEN status = 'fehlminuten'
 										 THEN GREATEST(extension.get_epoch_from_anw_times(von, bis) - fehlminuten * 60, 0)
 									 ELSE 0 END) * 100.0)
 							   / SUM(extension.get_epoch_from_anw_times(von, bis)), 2) AS anwesenheitsquote

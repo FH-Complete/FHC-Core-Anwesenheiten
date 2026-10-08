@@ -223,7 +223,7 @@ class ProfilApi extends FHCAPI_Controller
 	 * performs anwesenheitskontrolle checkIn for students if they scanned/entered a zugangscode into their
 	 * digital attendances mask.
 	 *
-	 * Does not update the status if anwesenheit_user entry is ENTSCHULDIGT_STATUS or VERSPAETET_STATUS at time of checkIn.
+	 * Does not update the status if anwesenheit_user entry is ENTSCHULDIGT_STATUS or FEHLMINUTEN_STATUS at time of checkIn.
 	 * For ENTSCHULDIGT_STATUS the scan goes into the history as ANWESEND_STATUS. If the Entschuldigung is declined
 	 * later, the entry goes back to ANWESEND_STATUS and not to ABWESEND_STATUS.
 	 *
@@ -301,7 +301,7 @@ class ProfilApi extends FHCAPI_Controller
 			// a late scan must not overwrite the fehlminuten that the lektor entered
 			$keepStatus = array(
 				$entschuldigtStatus,
-				$this->_ci->config->item('VERSPAETET_STATUS')
+				$this->_ci->config->item('FEHLMINUTEN_STATUS')
 			);
 
 			if(!in_array($entryToUpdate->status, $keepStatus, true)) {
@@ -338,7 +338,7 @@ class ProfilApi extends FHCAPI_Controller
 	 * writes the scan of an entschuldigt entry into the history as anwesend. The entry keeps its status.
 	 * A declined entschuldigung or a kontrolle that moves out of it sets the entry back to this history row
 	 * (Anwesenheit_User_model::revertEntschuldigt). Writes nothing if the entry already goes back to anwesend
-	 * or verspaetet. A scan does not replace verspaetet, so the history row does not replace it either.
+	 * or to the status fehlminuten. A scan does not replace that status, so the history row does not replace it either.
 	 */
 	private function _addScanToHistory($anwesenheit_user_id, $uid)
 	{
@@ -352,7 +352,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		$keepStatus = array(
 			$anwesendStatus,
-			$this->_ci->config->item('VERSPAETET_STATUS')
+			$this->_ci->config->item('FEHLMINUTEN_STATUS')
 		);
 		if (hasData($result) && in_array(getData($result)[0]->status, $keepStatus, true)) return;
 
@@ -842,7 +842,7 @@ class ProfilApi extends FHCAPI_Controller
 		$ent = getData($ent) ?: array();
 
 		if(!$isStaff) {
-			$anwFields = array('anwesenheit_id', 'anwesenheit_user_id', 'lehreinheit_id', 'von', 'bis', 'status', 'le_bezeichnung', 'lehrform_kurzbz');
+			$anwFields = array('anwesenheit_id', 'anwesenheit_user_id', 'lehreinheit_id', 'von', 'bis', 'status', 'fehlminuten', 'le_bezeichnung', 'lehrform_kurzbz');
 			$entFields = array('entschuldigung_id', 'von', 'bis', 'akzeptiert', 'notiz');
 
 			$anw = array_map(function($row) use ($anwFields) {

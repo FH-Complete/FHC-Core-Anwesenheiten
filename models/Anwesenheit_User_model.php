@@ -76,10 +76,10 @@ class Anwesenheit_User_model extends \DB_Model
 	}
 
 	/**
-	 * fehlminuten count for status $verspaetetStatus only. An entry with that status sets them,
+	 * fehlminuten count for status $fehlminutenStatus only. An entry with that status sets them,
 	 * a change to another status clears them. An unchanged status keeps them (e.g. a notiz edit).
 	 */
-	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false, $verspaetetStatus = null)
+	public function updateAnwesenheiten($changedAnwesenheiten, $manualUpdate = false, $fehlminutenStatus = null)
 	{
 		if (!is_array($changedAnwesenheiten) || !count($changedAnwesenheiten))
 			return success([]);
@@ -109,8 +109,8 @@ class Anwesenheit_User_model extends \DB_Model
 			);
 			if(property_exists($entry, 'notiz')) $fields['notiz'] = $entry->notiz;
 
-			if($verspaetetStatus !== null) {
-				if($entry->status === $verspaetetStatus) {
+			if($fehlminutenStatus !== null) {
+				if($entry->status === $fehlminutenStatus) {
 					if(property_exists($entry, 'fehlminuten')) $fields['fehlminuten'] = (int) $entry->fehlminuten;
 				} elseif($entry->status !== $existing->status) {
 					$fields['fehlminuten'] = 0;
@@ -174,7 +174,7 @@ class Anwesenheit_User_model extends \DB_Model
 	 * loads the entry of the kontrolle with the most fehlminuten that do not fit its counted duration
 	 * and the name of its student (used to keep the kontrolle longer than these minutes when its times change)
 	 */
-	public function getFehlminutenLongerThanKontrolle($anwesenheit_id, $verspaetetStatus)
+	public function getFehlminutenLongerThanKontrolle($anwesenheit_id, $fehlminutenStatus)
 	{
 		$query = "SELECT u.fehlminuten, p.vorname, p.nachname
 			FROM extension.tbl_anwesenheit_user u
@@ -186,7 +186,7 @@ class Anwesenheit_User_model extends \DB_Model
 			ORDER BY u.fehlminuten DESC
 			LIMIT 1";
 
-		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $verspaetetStatus]);
+		return $this->execReadOnlyQuery($query, [$anwesenheit_id, $fehlminutenStatus]);
 	}
 
 	public function getEntschuldigungsstatusForPersonIds($personIds)
@@ -439,7 +439,7 @@ class Anwesenheit_User_model extends \DB_Model
 	 * Fehlminuten that do not fit the kontrolle anymore (a shorter kontrolle) cover all of it: abwesend.
 	 * The other entries stay, a status set by hand wins over the entschuldigung
 	 */
-	public function revertEntschuldigt($anwesenheit_user_ids, $entschuldigtStatus, $verspaetetStatus, $abwesendStatus)
+	public function revertEntschuldigt($anwesenheit_user_ids, $entschuldigtStatus, $fehlminutenStatus, $abwesendStatus)
 	{
 		if (!count($anwesenheit_user_ids)) return success(array());
 
@@ -453,7 +453,7 @@ class Anwesenheit_User_model extends \DB_Model
 				'status' => $row->status ?: $abwesendStatus
 			);
 
-			if ($entry->status === $verspaetetStatus) {
+			if ($entry->status === $fehlminutenStatus) {
 				if ($row->fehlminuten < $row->dauer) $entry->fehlminuten = $row->fehlminuten;
 				else $entry->status = $abwesendStatus;
 			}
@@ -461,6 +461,6 @@ class Anwesenheit_User_model extends \DB_Model
 			$reverted[] = $entry;
 		}
 
-		return $this->updateAnwesenheiten($reverted, true, $verspaetetStatus);
+		return $this->updateAnwesenheiten($reverted, true, $fehlminutenStatus);
 	}
 }
