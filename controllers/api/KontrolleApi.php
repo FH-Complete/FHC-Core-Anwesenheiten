@@ -233,6 +233,18 @@ class KontrolleApi extends FHCAPI_Controller
 		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
 		if(!isSuccess($res)) $this->terminateWithError($res);
+
+		// the entries span every lehreinheit of the lva. flag each row with the same check
+		// updateAnwesenheiten runs, so the ui only offers edits the backend accepts
+		if(hasData($res)) {
+			$editableLe = array();
+			foreach (getData($res) as $row) {
+				if(!array_key_exists($row->lehreinheit_id, $editableLe))
+					$editableLe[$row->lehreinheit_id] = $this->isAdminOrTeachesLE($row->lehreinheit_id);
+				$row->editable = $editableLe[$row->lehreinheit_id];
+			}
+		}
+
 		$this->terminateWithSuccess($res);
 	}
 
