@@ -66,6 +66,12 @@ export const AssistenzComponent = {
 						headerSort: true,
 						tooltip:false
 					},
+					{title: Vue.computed(()=>this.$capitalize(this.$p.t('person/wahlname'))), field: 'wahlname',
+						headerFilter: true,
+						headerSort: true,
+						tooltip:false,
+						visible: false
+					},
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('person/nachname'))), field: 'nachname',
 						headerFilter: true,
 						headerSort: true,

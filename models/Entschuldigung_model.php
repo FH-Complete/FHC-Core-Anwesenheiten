@@ -128,6 +128,7 @@ class Entschuldigung_model extends \DB_Model
 						public.tbl_person.person_id,
 						tbl_anwesenheit_entschuldigung.entschuldigung_id,
 						vorname,
+						wahlname,
 						nachname,
 						extension.tbl_anwesenheit_entschuldigung.akzeptiert as akzeptiert,
 						extension.tbl_anwesenheit_entschuldigung.notiz as notiz,

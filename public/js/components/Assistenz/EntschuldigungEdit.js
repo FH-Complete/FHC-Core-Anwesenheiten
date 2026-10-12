@@ -110,6 +110,10 @@ export const EntschuldigungEdit = {
 				<p>
 					{{ modelValue.vorname }} {{ modelValue.nachname }}
 				</p>
+				<p v-if="modelValue.wahlname">
+					{{$p.t('person/wahlname')}}: {{ modelValue.wahlname }}
+				</p>
+				<p>
 				<!-- more than one account: every uid with studiengang and orgform instead of the one studiengang of the row -->
 				<div v-if="modelValue.accounts?.length > 1">
 					<div class="alert alert-warning">
