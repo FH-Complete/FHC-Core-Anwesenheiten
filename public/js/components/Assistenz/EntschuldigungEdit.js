@@ -106,6 +106,9 @@ export const EntschuldigungEdit = {
 				<p>
 					{{ modelValue.vorname }} {{ modelValue.nachname }}
 				</p>
+				<p v-if="modelValue.wahlname">
+					{{$p.t('person/wahlname')}}: {{ modelValue.wahlname }}
+				</p>
 				<p>
 					{{ modelValue.kurzbzlang }} {{ modelValue.bezeichnung }} {{ modelValue.studentorgform }}
 				</p>
