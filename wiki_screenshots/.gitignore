@@ -1,0 +1,4 @@
+# output of the run: screenshots and reports
+png/
+# base url and passwords
+.env

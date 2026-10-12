@@ -1,0 +1,518 @@
+====== Digitale Anwesenheitskontrolle ======
+
+===== Zusammenfassung =====
+
+Das System „Digitale Anwesenheitsverwaltung“ unterstützt Lehrende bei der Kontrolle der Anwesenheit. Studierende registrieren sich per QR-Code oder Zugangscode. Die Studiengangsassistenz verwaltet die Entschuldigungen.
+
+==== Unterrichtende ====
+**Kontrolle starten:** Prüfen Sie die vorgeschlagene Startzeit, Endzeit und das Datum. Diese Werte kommen aus dem LV-Plan. In Ausnahmefällen können Sie eigene Werte eingeben. Nach dem Start zeigt das System einen QR-Code und einen 8-stelligen Zugangscode. Studierende scannen den QR-Code oder geben den Zugangscode ein.
+
+**Kontrolldauer:** Halten Sie die Kontrolle so lange aktiv wie nötig. Die Kontrolle muss mindestens 45 Minuten Unterricht abdecken. Das System erneuert den Zugangscode alle 30 Sekunden. So können Studierende den Code kaum an abwesende Personen weitergeben. Solange der QR-Code sichtbar ist, können sich Studierende registrieren.
+
+**Kontrolle beenden:** Nach dem Beenden erscheint die Kontrolle als neue Spalte in der Anwesenheitsliste. Das System berechnet die Anwesenheitsquoten neu. Studierende können sich danach nicht mehr registrieren.
+
+**Umgang mit Anwesenheitsproblemen:**
+
+  * **Individuelle Anpassungen**: Klicken Sie auf die Zeile einer Person. Die Detailansicht zeigt alle Anwesenheiten dieser Person in der Lehrveranstaltung. Dort können Sie die Einträge bearbeiten und Notizen erfassen.
+  * **Massenanpassungen**: Klicken Sie in der Übersicht auf die Einträge mehrerer Personen und ändern Sie den Status. Speichern Sie die Änderungen mit der Schaltfläche „Speichern“.
+  * **Fehlminuten**: Kommt eine Person zu spät oder geht sie früher, setzen Sie den Status „Fehlminuten“. Geben Sie die Fehlminuten ein. Diese Minuten zählen nicht zur Anwesenheit.
+
+==== Studierende ====
+
+  * **Übersicht**: Studierende sehen ihre Anwesenheiten pro Semester. Sie können die Listen pro Lehrveranstaltung ein- und ausklappen.
+  * **Entschuldigungen**: Über „Entschuldigung hochladen“ reichen Studierende ein Dokument mit Zeitraum ein. Erlaubt sind PDF, JPG, JPEG und PNG.
+  * **Dokument nachreichen**: Fehlt das Dokument noch, können Studierende es bis zu 5 Werktage nach dem Erstellen der Entschuldigung nachreichen.
+  * **Status**: Studierende können eine offene Entschuldigung löschen. Nach der Entscheidung der Studiengangsassistenz ist das nicht mehr möglich.
+  * **Codeeingabe**: Funktioniert der QR-Code nicht, geben Studierende den 8-stelligen Code manuell ein.
+
+==== Entschuldigungsmanagement ====
+  * **Entschuldigungen prüfen**: Die Studiengangsassistenz lädt das Dokument herunter und akzeptiert oder lehnt die Entschuldigung ab. Eine Ablehnung braucht eine Begründung.
+  * **Arbeitsreihenfolge**: Die Liste zeigt offene Entschuldigungen zuerst, danach sortiert nach Antragsdatum.
+  * **Automatische Anpassung**: Eine akzeptierte Entschuldigung setzt alle betroffenen Anwesenheiten im Zeitraum auf „entschuldigt“.
+  * **Priorität**: Lehrende können entschuldigte Anwesenheiten nicht bearbeiten.
+  * **Zukünftige Kontrollen**: Eine akzeptierte Entschuldigung gilt automatisch für neue Kontrollen im Zeitraum.
+  * **Rücknahme**: Wird eine Entschuldigung abgelehnt, erhalten die Einträge wieder ihren vorherigen Status.
+
+===== Details =====
+==== LV-Teil Kontrolle ====
+
+<note>Der Zugriff auf den Anwesenheitskontrollbereich erfordert die Berechtigung "extension/anw_r_lektor".
+
+Sie erreichen die LV-Teil Kontrolle im CIS über das Menü einer Lehrveranstaltung, zum Beispiel über "Meine LV". Wählen Sie dort den Eintrag "Digitales Anwesenheitsmanagement". Alternativ öffnen Sie die Kontrolle direkt aus dem LV-Plan. Klicken Sie im Termin auf das Symbol "Anwesenheitskontrolle öffnen". Die Detailansicht eines Termins zeigt denselben Link in der Zeile "Anwesenheitskontrolle".</note>
+
+{{ :extension:lektor1.png }}
+
+=== LV-Teil auswählen ===
+
+Beim Öffnen wählt das System Ihren LV-Teil mit dem nächsten Termin aus. Im Auswahlfeld stehen unter "Meine LV-Teile" die LV-Teile, denen Sie zugeteilt sind. Wählen Sie dort einen LV-Teil, um Kontrollen zu starten und zu bearbeiten.
+
+{{ :extension:lvteilauswahl.png }}
+
+Die LV-Teile Ihrer Kolleginnen und Kollegen blendet das System zuerst aus. So zeigen Sie diese LV-Teile an:
+
+  - Öffnen Sie das Auswahlfeld.
+  - Klicken Sie unten auf "Weitere LV-Teile dieser LV anzeigen".
+  - Wählen Sie den LV-Teil in der Gruppe "Weitere LV-Teile dieser LV".
+
+{{ :extension:lvteilauswahlweitere.png }}
+
+Die LV-Teile Ihrer Kolleginnen und Kollegen können Sie ansehen. Kontrollen starten, wiederholen, zeitlich bearbeiten oder löschen können Sie dort nur mit der Berechtigung "extension/anw_supplierung". Dasselbe gilt für Änderungen an der Anwesenheit. Weitere Voraussetzung: Sie unterrichten im selben Semester einen LV-Teil derselben Lehrveranstaltung. Vor jeder Änderung in einem fremden LV-Teil fragt das System nach einer Bestätigung.
+
+{{ :extension:lvteilfremd.png }}
+
+=== Gesamtansicht mehrerer LV-Teile ===
+
+Die Gesamtansicht zeigt die Kontrollen mehrerer LV-Teile in einer Tabelle. Nutzen Sie die Gesamtansicht zum Beispiel für einen gemeinsamen CSV-Export.
+
+  - Klicken Sie neben dem Auswahlfeld auf "Gesamtansicht". Das System wählt alle LV-Teile der Lehrveranstaltung aus.
+  - Wenn Sie nur bestimmte LV-Teile brauchen, entfernen Sie die anderen LV-Teile aus der Auswahl.
+  - Exportieren Sie die Tabelle mit der Schaltfläche mit dem CSV-Symbol.
+  - Klicken Sie auf "Zurück zu einem LV-Teil", um die Gesamtansicht zu beenden.
+
+{{ :extension:gesamtansichtauswahl.png }}
+
+Die Gesamtansicht ist schreibgeschützt. Starten und bearbeiten Sie Kontrollen in einem einzelnen LV-Teil.
+
+{{ :extension:gesamtansicht.png }}
+
+Die Gesamtansicht zeigt immer alle Kontrollen. Das Kontrolldatum und die Option "Alle Kontrollen anzeigen" stehen dort nicht zur Verfügung. Ihre Einstellung für die Ansicht eines einzelnen LV-Teils bleibt erhalten.
+
+=== Kontrollen anzeigen ===
+
+Standardmäßig zeigt die Liste die Kontrollen des gewählten Datums. Aktivieren Sie "Alle Kontrollen anzeigen", um alle Kontrolltermine zu laden. Neben dem Feld steht die Anzahl der Kontrollen am gewählten Datum und die Gesamtzahl.
+
+{{ :extension:lektor4.png }}
+
+=== Neue Kontrolle starten ===
+
+Klicken Sie auf "Neue Anwesenheitskontrolle starten". Wählen Sie Beginnzeit, Endzeit und Datum der Kontrolle. Sie können die Werte aus den Terminen des LV-Plans übernehmen. Sie können die Werte auch frei eingeben. Beginn und Ende der Kontrolle sollen mit dem Unterricht übereinstimmen. Das System berechnet die Anwesenheitsquote aus dieser Zeitspanne.
+
+Für das Datum gelten diese Regeln:
+
+  * Ein Termin aus dem LV-Plan ist immer gültig.
+  * Ein anderes Datum darf bis zu 14 Tage in der Vergangenheit liegen.
+  * Ein anderes Datum darf bis zu 3 Tage in der Zukunft liegen.
+
+Sie können pro Tag und LV-Teil mehrere Kontrollen starten. Die Kontrollzeiten dürfen sich nicht überschneiden. Jede Kontrolle muss mindestens 45 Minuten dauern. So können Sie zum Beispiel vormittags und nachmittags getrennte Kontrollen für denselben Unterricht durchführen.
+
+{{ :extension:lektor2.png }}
+
+{{ :extension:lektor2termine.png }}
+
+Weicht Ihre Kontrolldauer von den Terminen im LV-Plan ab, zeigt das System eine Warnung. Diese Werte sollen nur in Ausnahmefällen vom LV-Plan abweichen.
+
+{{ :extension:lektor3.png }}
+
+Für bestimmte Lehrformen kann die Administration die Schaltfläche "Anwesenheiten ohne QR-Code einfügen" freischalten. Damit tragen Sie alle Studierenden des LV-Teils direkt als anwesend ein. Danach korrigieren Sie einzelne Einträge in der Übersicht.
+
+=== QR-Code und Zugangscode ===
+
+Nach dem Start erscheint ein QR-Code und ein 8-stelliger Zugangscode. Studierende scannen den QR-Code oder geben den Zugangscode im digitalen Anwesenheitstool ein. Sie erhalten dann einen positiven Anwesenheitseintrag für die Kontrolle. Unter dem QR-Code sehen Sie live, wie viele Personen sich bereits registriert haben.
+
+{{ :extension:qr.png }}
+
+Sie können die Kontrolle beliebig lange aktiv halten und den Zeitpunkt der Kontrolle frei wählen. Das System erneuert den Zugangscode alle 30 Sekunden. Ein Code ist höchstens 60 Sekunden gültig. Für eine gute Datenqualität führen Sie die Kontrolle kurz und zu unterschiedlichen Zeitpunkten im Unterricht durch.
+
+{{ :extension:afterkontrolle.png }}
+
+Nach dem Beenden zeigt die Liste die Kontrolle als neue Spalte. Das System berechnet die Anwesenheitsquote der Studierenden neu. Liegt die Quote einer Person unter 75 %, zeigt die Spalte "Summe" den Wert rot.
+
+=== Übersicht exportieren ===
+
+Klicken Sie auf die Schaltfläche mit dem CSV-Symbol. Das System exportiert die aktuelle Ansicht als CSV-Datei. Sie können die Datei in einer Tabellenkalkulation öffnen. Beim Status "Fehlminuten" enthält die Datei auch die Minuten, zum Beispiel "fehlminuten (15)".
+
+{{ :extension:excelexport.png }}
+
+=== Legende ===
+
+Klicken Sie auf die Schaltfläche mit dem Buch-Symbol. Die Legende erklärt:
+
+  * die Status anwesend, Fehlminuten, abwesend und entschuldigt,
+  * das Zeichen "-": Die Person war bei dieser Kontrolle nicht der Gruppe zugeteilt,
+  * die Markierung offener und bestätigter Entschuldigungen,
+  * die Namenszusätze, zum Beispiel (i) für Incoming oder (o) für Outgoing.
+
+{{ :extension:legende.png }}
+
+=== Einträge einzelner Studierender bearbeiten ===
+
+Klicken Sie auf die Tabellenzeile einer Person. Die Detailansicht zeigt alle Anwesenheiten dieser Person in der Lehrveranstaltung. Markieren Sie einen oder mehrere Einträge. Setzen Sie den Status mit den Schaltflächen "Anwesend", "Fehlminuten" oder "Abwesend". Halten Sie weitere Informationen zu der Person in der Spalte "Notiz" fest.
+
+{{:extension:sbylvapreupdate.png?300|}} {{:extension:sbylvapostupdate.png?300|}} {{:extension:sbylvanote.png?300|}}
+
+=== Einträge mehrerer Studierender bearbeiten ===
+
+Haben mehrere Personen an einem Termin Probleme, ändern Sie die Einträge direkt in der Übersicht. Klicken Sie auf den Eintrag und wählen Sie den neuen Status. Das System markiert ungespeicherte Änderungen farbig. Bestätigen Sie die Änderungen mit der Schaltfläche "Speichern". Öffnen Sie mit ungespeicherten Änderungen die Detailansicht, fragt das System nach.
+
+{{:extension:anwoverviewupdate1.png?300|}}{{:extension:anwoverviewupdate2.png?300|}}{{:extension:anwoverviewupdate3.png?300|}}
+
+{{ :extension:anwdiscardconfirm.png }}
+
+=== Fehlminuten ===
+
+Kommt eine Person zu spät oder geht sie früher, setzen Sie den Status "Fehlminuten". Das System öffnet den Dialog "Fehlminuten erfassen". Geben Sie die Fehlminuten ein oder wählen Sie einen Vorschlagswert. Die Minuten können am Anfang oder am Ende der Kontrolle liegen.
+
+Im Feld "Begründung" halten Sie den Grund der Fehlminuten fest. Das Feld ist optional. Wählen Sie einen Grund wie "Verspätung" oder "Früher gegangen". Sie können auch einen eigenen Text eingeben. Das System speichert die Begründung in der Notiz des Eintrags. Die Detailansicht zeigt sie in der Spalte "Notiz".
+
+Für die Fehlminuten gelten diese Regeln:
+
+  * Erlaubt ist eine ganze Zahl ab 1 Minute.
+  * Der Wert muss kleiner als die Unterrichtszeit der Kontrolle sein.
+  * Hat die Person die ganze Kontrolle versäumt, setzen Sie den Status "abwesend".
+  * Die Fehlminuten zählen nicht zur Anwesenheit. Die restliche Zeit der Kontrolle zählt als anwesend.
+  * In den Zählern der Kontrolle zählt eine Person mit Fehlminuten als anwesend.
+
+Die Zelle zeigt die Minuten, zum Beispiel "−15 Min.". Klicken Sie auf diesen Wert, um die Minuten zu ändern. Speichern Sie die Änderung danach mit "Speichern". Setzen Sie einen anderen Status, löscht das System die Fehlminuten.
+
+Scannt eine Person mit Fehlminuten den QR-Code nachträglich, bleibt der Status "Fehlminuten" erhalten. Studierende sehen in ihrem Profil den Hinweis "Fehlminuten (15)".
+
+{{ :extension:fehlminuten.png }}
+
+=== Kontrollen bearbeiten, neu starten und löschen ===
+
+{{ :extension:lektor6.png }}
+
+Klicken Sie auf die Schaltfläche mit dem Stift-Symbol. Der Dialog "Anwesenheitskontrolle bearbeiten" zeigt alle Kontrollen des LV-Teils. Für jede Kontrolle stehen diese Aktionen bereit:
+
+  * **Neu starten**: Das System zeigt wieder einen QR-Code. Bereits registrierte Personen bleiben anwesend.
+  * **Löschen**: Das System löscht die Kontrolle und alle zugehörigen Anwesenheitseinträge. Danach berechnet das System die Quoten neu. Sie können eine Kontrolle bis zu 1 Tag nach dem Anlegen löschen.
+  * **Zeiten bearbeiten**: Ändern Sie Beginn und Ende der Kontrolle.
+
+Ändern Sie die Zeiten einer Kontrolle, prüft das System die Entschuldigungen neu. Liegt eine Person durch die Änderung nicht mehr in einer akzeptierten Entschuldigung, erhält sie ihren vorherigen Status zurück. Ist die neue Kontrolle kürzer als die Fehlminuten einer Person, lehnt das System die Änderung ab. Ändern Sie in diesem Fall zuerst die Fehlminuten.
+
+{{ :extension:lektor7.png }}
+
+=== Datumsauswahl ===
+
+In der Datumsauswahl können Sie diese Tage markieren lassen:
+
+  * "Unterricht laut LV-Plan": die Termine des LV-Teils,
+  * "Kontrollen": die Tage mit bereits durchgeführten Kontrollen,
+  * "Aktuell prüfbar": die Tage, an denen Sie eine Kontrolle ohne LV-Plan-Termin anlegen dürfen.
+
+{{:extension:lektor5termine.png?300|}} {{:extension:lektor5kontrollen.png?300|}} {{:extension:lektor5.png?300|}}
+
+<note important>Das System berechnet die Anwesenheitsquote pro Lehrveranstaltung über alle LV-Teile, an denen eine Person teilnimmt. Die Berechnung erfolgt nach Unterrichtszeit, nicht nach Anzahl der Kontrollen. Es zählt nur die Zeit innerhalb der Unterrichtseinheiten laut Stundenraster. Pausen zählen nicht.
+
+Beispiel: Eine Person besucht 8 von 10 regulären Terminen zu je 45 Minuten und die Klausur mit 90 Minuten. Die Quote beträgt 450/540 Minuten, also 83,33 %.
+
+Beispiel mit Fehlminuten: Eine Kontrolle dauert 90 Minuten. Die Person hat 15 Fehlminuten. Für diese Kontrolle zählen 75 Minuten als anwesend.
+
+Entschuldigte Einträge zählen als anwesend. Gibt es zu einer Lehrveranstaltung keine Kontrollen, beträgt die Quote 100 %.</note>
+
+=== Entschuldigungen aus Sicht der Lehrenden ===
+
+Studierende können Entschuldigungen für einen Zeitraum hochladen. Akzeptiert die Studiengangsassistenz die Entschuldigung, setzt das System alle Kontrollen im Zeitraum auf "entschuldigt". Eine Entschuldigung gilt nur für Kontrollen, die vollständig im Zeitraum liegen.
+
+Als Lehrende sehen Sie:
+
+  * die farbliche Markierung der Zeile bei einer offenen oder bestätigten Entschuldigung am gewählten Datum,
+  * entschuldigte Einträge am Schild-Symbol,
+  * im Tooltip der Zeile die Zeiträume und den Status von bis zu 10 Entschuldigungen.
+
+Den Grund und das Dokument der Entschuldigung sehen Sie nicht. Entschuldigte Einträge können weder Lehrende noch Administratoren im Tool bearbeiten.
+
+{{ :extension:studententschuldigt.png }}
+
+{{ :extension:studententschuldigttooltip.png }}
+
+==== Anwesenheitsprofil Student ====
+
+<note>Der Zugriff auf das Anwesenheitsprofil erfordert die Berechtigung "extension/anw_r_student".
+
+Studierende erreichen das Anwesenheitsprofil im CIS über das Menü einer Lehrveranstaltung, Eintrag "Digitales Anwesenheitsmanagement". Die gewählte Lehrveranstaltung schränkt die Funktionen hier nicht ein. Zusätzlich zeigt das Dashboard-Widget "Anwesenheiten" die Quoten und eine Codeeingabe.</note>
+
+Studierende sehen alle ihre Anwesenheiten pro Semester mit Datum, Zeit und Status. Klicken Sie auf die Kopfzeile einer Lehrveranstaltung, um die Liste auf- oder zuzuklappen. Beim Status "Fehlminuten" zeigt die Liste die Minuten. Auf dem Smartphone zeigt das System die Anwesenheiten und Entschuldigungen als Kartenliste.
+
+{{ :extension:studentanwprofilv2.png }}
+
+{{:extension:mobilanwesenheiten.png?250|}} {{:extension:mobilentschuldigungen.png?250|}}
+
+=== Timeline ===
+
+Der Tab "Timeline" zeigt die Anwesenheiten und Entschuldigungen im zeitlichen Verlauf. Die Liste links nennt alle Entschuldigungen und Kontrollen. Die Farbe eines Eintrags zeigt den Status.
+
+{{ :extension:studenttimeline.png }}
+
+=== Entschuldigung hochladen ===
+
+Öffnen Sie den Tab "Entschuldigungen" und klicken Sie auf "Entschuldigung hochladen". Geben Sie den Zeitraum an und wählen Sie die Datei. Der Zeitraum darf bis zu 5 Werktage in der Vergangenheit beginnen. Diese Dateitypen sind erlaubt:
+
+  * PDF
+  * JPG und JPEG
+  * PNG
+
+{{ :extension:entschuldigungen.png }}
+
+Schlägt der Upload fehl, nennt das System den genauen Grund. Beispiele: falscher Dateityp, leere Datei, Datei zu groß. Bei einem technischen Fehler zeigt das System eine Fehlernummer. Nennen Sie diese Nummer bei einer Anfrage an den Support.
+
+=== Dokument nachreichen ===
+
+Erwarten Sie eine begründete Abwesenheit ohne Dokument, aktivieren Sie beim Hochladen die Option "Dokument wird nachgereicht". Reichen Sie das Dokument danach nach:
+
+  - Öffnen Sie den Tab "Entschuldigungen".
+  - Suchen Sie die offene Entschuldigung.
+  - Klicken Sie auf die Aktion "Hochladen" mit dem Pfeil-nach-oben-Symbol.
+  - Wählen Sie das Dokument.
+
+{{ :extension:entschuldigungnachreichen.png }}
+
+Sie können das Dokument bis zu 5 Werktage nach dem Erstellen der Entschuldigung nachreichen. Wochenenden zählen nicht als Werktage. Nach dieser Frist zeigt das System die Aktion "Hochladen" nicht mehr. Die Studiengangsassistenz akzeptiert eine Entschuldigung nur mit gültigem Dokument. Ohne Dokument kann die Studiengangsassistenz die Entschuldigung löschen oder ablehnen.
+
+{{ :extension:entschuldigungupload.png }}
+
+Solange eine Entschuldigung offen ist, können Studierende sie samt Datei löschen. Hat die Studiengangsassistenz die Entschuldigung akzeptiert oder abgelehnt, ist das Löschen nicht mehr möglich.
+
+{{:extension:entschuldigungstatusoffen.png?400|}}
+{{:extension:entschuldigungstatusakzeptiert.png?400|}}
+{{:extension:entschuldigungstatusabgelehnt.png?400|}}
+
+=== Code eingeben ===
+
+Klicken Sie auf "Code eingeben", wenn der QR-Code-Scan nicht funktioniert. Geben Sie den 8-stelligen Code ein. Das System prüft die Gültigkeit des Codes. Ein Code gilt nur für Studierende des zugehörigen LV-Teils. Bei Erfolg trägt das System eine Anwesenheit ein.
+
+{{:extension:mobilscan.png?250|}}
+
+{{ :extension:eintragerfolgreich.png }}
+
+=== Dashboard-Widget ===
+
+Das Widget "Anwesenheiten" im CIS-Dashboard zeigt diese Bereiche:
+
+  * "Zugangscode": die Codeeingabe,
+  * "Anwesenheiten": die Anwesenheitsquoten,
+  * "Entschuldigungen": die eigenen Entschuldigungen mit Status.
+
+{{ :extension:dashboardwidget.png }}
+
+==== Entschuldigungsmanagement Studiengangsadministration ====
+<note>Der Zugriff auf das Entschuldigungsmanagement erfordert die Berechtigung "extension/anw_r_ent_assistenz".
+
+Administrierende erreichen das Entschuldigungsmanagement im CIS über das Menü einer Lehrveranstaltung, Eintrag "Digitales Anwesenheitsmanagement". Die gewählte Lehrveranstaltung schränkt die Funktionen hier nicht ein. Zusätzlich gibt es einen direkten Link unter "Studium" -> "Entschuldigungsmanagement".</note>
+
+{{ :extension:admin.png }}
+
+=== Liste filtern ===
+
+Die Liste zeigt die Entschuldigungen nach Studiengang und Antragsdatum. Wählen Sie den Studiengang und den Zeitraum "Antragsdatum von" bis "Antragsdatum bis". Die Liste zeigt offene Entschuldigungen zuerst. Innerhalb eines Status sortiert sie nach Antragsdatum, die älteste zuerst.
+
+Über der Tabelle steht der Zähler "Gefiltert/Gesamt". Die erste Zahl nennt die angezeigten Entschuldigungen, die zweite Zahl die geladenen Entschuldigungen. Ist die erste Zahl kleiner, blendet ein Filter im Tabellenkopf Einträge aus. Leeren Sie in diesem Fall die Filterfelder.
+
+Gibt es offene Entschuldigungen außerhalb des gewählten Zeitraums, zeigt das System eine rote Schaltfläche mit der Anzahl. Die Schaltfläche heißt "Alle offenen Entschuldigungen unabhängig vom gewählten Zeitraum anzeigen". Klicken Sie darauf. Das System erweitert den Zeitraum und lädt alle offenen Entschuldigungen. Klicken Sie auf "Vorherigen Zeitraum wiederherstellen", um den alten Zeitraum wiederherzustellen. Ändern Sie ein Datum von Hand, gilt der neue Zeitraum.
+
+{{ :extension:adminoffeneausserhalb.png }}
+
+{{ :extension:adminalleoffenen.png }}
+
+=== Entschuldigung prüfen ===
+
+Klicken Sie in der Spalte "Aktion" auf die Schaltfläche "Download". Prüfen Sie das Dokument. Akzeptieren oder lehnen Sie die Entschuldigung danach ab:
+
+  * **Akzeptieren**: Die Schaltfläche erscheint nur, wenn ein Dokument vorhanden ist. Eine Notiz ist optional. Tragen Sie die Notiz in der Spalte "Begründung" ein.
+  * **Ablehnen**: Geben Sie eine Begründung ein. Ohne Begründung ist das Ablehnen nicht möglich.
+
+{{ :extension:entschuldigungablehnen.png }}
+
+Studierende erhalten bei jeder Statusänderung eine E-Mail.
+
+{{ :extension:adminakzeptiert.png }}
+
+Hat eine Person mehrere Studierenden-Accounts, zeigt die Liste ein Personen-Symbol vor den UIDs. Die Spalten UID, Studiengang und Organisationsform zeigen alle Accounts. Vor dem Akzeptieren oder Ablehnen zeigt das System einen Hinweis. Prüfen Sie, ob die Studiengangsassistenz eines anderen Studiengangs zuständig ist.
+
+=== Auswirkung auf die Anwesenheiten ===
+
+Akzeptieren Sie eine Entschuldigung für einen vergangenen Zeitraum, setzt das System alle betroffenen Einträge auf "entschuldigt". Liegt der Zeitraum in der Zukunft, setzt das System den Status bei jeder neuen Kontrolle automatisch. Eine Entschuldigung gilt nur für Kontrollen, die vollständig im Zeitraum liegen.
+
+Lehnen Sie eine akzeptierte Entschuldigung später ab, erhalten die Einträge ihren vorherigen Status zurück. Das gilt auch für Einträge mit Fehlminuten. Hat eine Person während der Entschuldigung den QR-Code gescannt, gilt sie danach als anwesend. Bei überlappenden Zeiträumen gilt jede akzeptierte Entschuldigung vor jeder abgelehnten Entschuldigung.
+
+=== Entschuldigung bearbeiten ===
+
+Klicken Sie auf die Schaltfläche "Entschuldigung bearbeiten". Bei offenen Entschuldigungen können Sie den Zeitraum ändern. Für längere Notizen und Begründungen steht ein Textfeld bereit.
+
+{{ :extension:entschuldigungedit.png }}
+
+=== Timeline ===
+
+Klicken Sie auf die Schaltfläche mit dem Timeline-Symbol. Die Timeline zeigt die Anwesenheiten und Entschuldigungen der Person im zeitlichen Verlauf. So sehen Sie, welche Kontrollen eine Entschuldigung betrifft.
+
+{{ :extension:admintimeline.png }}
+
+=== Automatische Aufgaben ===
+
+  * Hat eine Entschuldigung nach 3 Werktagen noch kein Dokument, erhält die zuständige Studiengangsassistenz eine Sammel-E-Mail.
+  * Hat eine Entschuldigung nach 60 Tagen noch kein Dokument, lehnt das System sie automatisch ab.
+
+==== Administration ====
+<note>Der Zugriff auf alle Karteireiter erfordert die Berechtigung "extension/anw_r_full_assistenz".</note>
+
+Mit dieser Berechtigung zeigt das System diese Karteireiter:
+
+  * "Anwesenheitskontrolle": die LV-Teil Kontrolle wie für Lehrende,
+  * "Profil": das Anwesenheitsprofil einer gewählten Person,
+  * "Entschuldigungsmanagement": die Verwaltung der Entschuldigungen.
+
+Die Fristen für das Löschen einer Kontrolle, das Hochladen einer Entschuldigung und das Nachreichen eines Dokuments gelten hier nicht.
+
+{{ :extension:adminlanding.png }}
+
+Wählen Sie im Karteireiter "Profil" die Person im Feld "Studenten". Das System zeigt dann die Anwesenheiten, Entschuldigungen und die Timeline dieser Person.
+
+{{ :extension:adminstudentprofil.png }}
+
+===== FAQ =====
+**Wie wird verhindert, dass Studierende die QR-Codes an abwesende Personen weiterschicken?**
+
+Das System generiert den QR-Code alle 30 Sekunden neu. Ein Code ist höchstens 60 Sekunden gültig. Dadurch bleibt nur ein kurzes Zeitfenster zum Weiterschicken und Scannen.
+
+**Wie gehe ich vor, wenn Studierende kein Smartphone dabei haben oder keines verwenden dürfen, zum Beispiel im Labor?**
+
+Setzen Sie die Anwesenheit manuell in der Übersicht oder in der Detailansicht. Für bestimmte Lehrformen kann die Administration die Schaltfläche "Anwesenheiten ohne QR-Code einfügen" freischalten.
+
+**Ich habe einen spontan verschobenen Unterricht, der nicht im LV-Plan aufscheint. Kann ich hier auch Anwesenheiten erfassen?**
+
+Ja. Gibt es einen LV-Plan-Eintrag, übernimmt das System die Zeiten automatisch. Ohne LV-Plan-Eintrag geben Sie Datum und Zeiten selbst ein. Das Datum darf dann bis zu 14 Tage zurück und bis zu 3 Tage voraus liegen.
+
+**Eine Person kam 20 Minuten zu spät. Wie erfasse ich das?**
+
+Setzen Sie den Status "Fehlminuten" und geben Sie 20 Minuten ein. Für die Quote zählt die Kontrolle ohne diese 20 Minuten. Das gilt auch, wenn eine Person früher gegangen ist.
+
+**Zählt eine Person mit Fehlminuten als anwesend?**
+
+Ja, mit Abzug der Fehlminuten. In den Zählern der Kontrolle zählt die Person als anwesend.
+
+**Werden Fehlstunden automatisch auf entschuldigt gesetzt, wenn eine Entschuldigung akzeptiert wird?**
+
+Ja. Nach der Prüfung des Dokuments setzt das System alle Einträge im Zeitraum auf "entschuldigt". Das gilt auch für Einträge mit Fehlminuten.
+
+**Muss für jedes Fach eine eigene Entschuldigung hochgeladen werden?**
+
+Nein. Laden Sie eine Entschuldigung einmal hoch. Diese gilt für alle Lehrveranstaltungen.
+
+**Wann muss ich die Anwesenheitskontrolle durchführen?**
+
+Sie wählen den Zeitpunkt frei. Die Kontrolle kann am Beginn, im Laufe oder am Ende der Lehrveranstaltung stattfinden.
+
+**Was mache ich, wenn eine Person nach der Anwesenheitskontrolle gegangen ist?**
+
+Korrigieren Sie die Anwesenheit nachträglich. Setzen Sie den Status "Fehlminuten" mit den Minuten oder den Status "abwesend". In der Detailansicht können Sie eine Notiz hinzufügen.
+
+**Wie lange können Studierende Entschuldigungen hochladen?**
+
+Studierende reichen Entschuldigungen zeitnah ein. Der Zeitraum darf bis zu 5 Werktage in der Vergangenheit beginnen.
+
+**Bis wann kann ich ein Dokument nachreichen?**
+
+Bis zu 5 Werktage nach dem Erstellen der Entschuldigung. Danach ist kein Upload mehr möglich. Wenden Sie sich in diesem Fall an Ihre Studiengangsassistenz.
+
+**Wie kann ich als Lehrende*r die Entschuldigungen einsehen?**
+
+Lehrende haben keinen Zugriff auf die Dokumente. Fällt eine Entschuldigung in das gewählte Datum, markiert das System die Zeile farblich. Der Tooltip der Zeile zeigt die Zeiträume und den Status der Entschuldigungen. Das Dokument ist aus Datenschutzgründen nicht einsehbar.
+
+**Ich hatte technische Probleme während der Anwesenheitskontrolle. Kann ich sie ein zweites Mal starten?**
+
+Ja. Starten Sie die Kontrolle im Dialog "Anwesenheitskontrolle bearbeiten" beliebig oft neu. Bereits registrierte Personen bleiben anwesend.
+
+**Kann ich die Anwesenheitskontrolle zurücksetzen?**
+
+Ja. Sie können eine Kontrolle bis zu 1 Tag nach dem Anlegen löschen. Das System löscht dabei alle zugehörigen Anwesenheitseinträge.
+
+**Ich unterrichte 2 LV-Teile zur selben Zeit. Ich sehe aber immer nur die Personen aus einer Gruppe.**
+
+Führen Sie für jeden LV-Teil eine eigene Kontrolle durch. Das gilt nicht für mehrere Gruppen innerhalb eines LV-Teils. Klicken Sie auf "Gesamtansicht", um alle Personen gemeinsam zu sehen. Die Gesamtansicht ist schreibgeschützt.
+
+**Ich vertrete eine Kollegin oder einen Kollegen. Kann ich eine Anwesenheitskontrolle starten?**
+
+Ja, wenn Sie die Berechtigung "extension/anw_supplierung" haben und im selben Semester einen LV-Teil derselben Lehrveranstaltung unterrichten. Ohne diese Berechtigung können Sie den LV-Teil nur ansehen. Öffnen Sie das Auswahlfeld. Klicken Sie auf "Weitere LV-Teile dieser LV anzeigen". Wählen Sie den LV-Teil Ihrer Kollegin oder Ihres Kollegen. Bestätigen Sie die Nachfrage des Systems. Unterrichten Sie keinen LV-Teil dieser Lehrveranstaltung, muss die Vertretung im System eingetragen sein.
+
+**Ich habe zwei Anwesenheitskontrollen an unterschiedlichen Tagen durchgeführt. Die Anwesenheit der Studierenden liegt aber nicht bei 50 %, sondern bei 33 %.**
+
+Das System berechnet die Anwesenheit nach der Dauer der Unterrichtseinheiten, nicht nach der Anzahl der Kontrollen. Beispiel: Der erste Termin dauert 2 Stunden, der zweite Termin 4 Stunden. Personen, die nur beim ersten Termin anwesend waren, haben 33 % Anwesenheit.
+
+**Was passiert, wenn Studierende eine Entschuldigung ankündigen und nie ein Dokument hochladen?**
+
+Nach 3 Werktagen ohne Dokument erhält die Studiengangsassistenz eine Erinnerung. Die Studiengangsassistenz kann die Entschuldigung löschen oder ablehnen. Nach 60 Tagen ohne Dokument lehnt das System die Entschuldigung automatisch ab.
+
+
+===== Installation =====
+
+== Notwendige Berechtigungen für den Zugang: ==
+    Lehrende:
+        'extension/anw_r_lektor'
+        'extension/anw_supplierung' -> Kontrollen und Änderungen in LV-Teilen von Kolleg*innen derselben LV (Vertretung)
+
+    Entschuldigungen administrativ verwalten:
+        'extension/anw_r_ent_assistenz'
+
+    Zugriff auf alle Karteireiter für Assistenz / Admin:
+        'extension/anw_r_full_assistenz'
+        -> ausgenommen von den Fristen für Kontrolle löschen, Entschuldigung hochladen und Dokument nachreichen
+
+    Studentenrechte:
+        'extension/anw_r_student' -> Anwesenheitskontrolle
+        'extension/anw_stud_ent' -> Entschuldigungsupload
+
+== Direkte Links für das CIS Content Menü: ==
+    '../extensions/FHC-Core-Anwesenheiten/Administration' -> Entschuldigungsmanagement
+    '../extensions/FHC-Core-Anwesenheiten/Profil' -> 'Übersicht Anwesenheiten eines Studenten'
+    '../extensions/FHC-Core-Anwesenheiten/Profil/Entschuldigung' -> 'Entschuldigungen eines Studenten'
+    '../extensions/FHC-Core-Anwesenheiten/Profil/Scan' -> 'Anwesenheitscode Eingabe'
+
+== CMS Sichtbarkeitsgruppen für CIS Content Menü Links: ==
+    'ANW_EXT_STUDENT' -> CMS Sichtbarkeitsgruppe für Studenten
+    'ANW_EXT_ENT_ADMIN' -> CMS Sichtbarkeitsgruppe für Entschuldigungsmanagement
+
+== Menüeintrag im LV-Menü: ==
+    CIS_LEHRVERANSTALTUNG_ANWESENHEIT_ANZEIGEN -> Menüeintrag "Digitales Anwesenheitsmanagement" anzeigen
+    CIS_LEHRVERANSTALTUNG_ANWESENHEIT_ANZEIGEN_STG -> optional, serialisierte Liste erlaubter Studiengangskennzahlen
+    CIS_LEHRVERANSTALTUNG_ANWESENHEIT_ANZEIGEN_LVA -> optional, serialisierte Liste erlaubter LV-IDs
+
+== Dashboard Widgets (CIS4): ==
+    'anwesenheiten' -> Anwesenheiten (Studierende): Quoten, Entschuldigungen, Codeeingabe
+
+== Link im LV-Plan (CIS4): ==
+    extendStundenplanData in config/Events.php -> Link "Anwesenheitskontrolle öffnen" an jedem Termin mit Gruppe
+    Für Lehrende gibt es kein eigenes Widget. Der Link im LV-Plan ersetzt es.
+
+== Email Vorlagen: ==
+    AnwesenheitSanchoEntschuldigung - "Neue Entschuldigung von XYZ hochgeladen" an Administration
+    AnwEntUpdate - "Status update von Administration" an Student
+    AnwEntUpdateNotiz - "Status update von Administration mit Notiz" an Student
+    AnwEntFileAfter - "Entschuldigung Dokument nachträglich hochgeladen" an Administration
+    AnwEntNoFile - "Entschuldigung ohne Dokument angekündigt" an Administration
+    AnwEntDeleted - "Entschuldigung vom Studenten gelöscht" an Administration
+    AnwEntMissingDocInfo - "Entschuldigungen ohne Dokument" Sammelmail an Administration (Job)
+
+== DMS Kategorien: ==
+    "ext_anw_entschuldigungen" unter Menüpunkt FAS als gesperrte Gruppe "CMS_LOCK"
+
+== Cronjobs: ==
+    jobs/QRDeleteJob/deleteOldCodes -> löscht abgelaufene QR-Codes
+    jobs/EntschuldigungJob/notifyAssistenzAboutMissingEntschuldigungDokumente -> Sammelmail über Entschuldigungen ohne Dokument
+    jobs/EntschuldigungJob/setOldApplicationsRejected -> lehnt alte Entschuldigungen ohne Dokument automatisch ab
+
+== Konfiguration (config/qrsettings.php): ==
+    REGENERATE_QR_TIMER = 30000 -> Intervall für einen neuen Zugangscode in ms, ein Code gilt das Doppelte
+    USE_REGENERATE_QR = true -> Zugangscode regelmäßig erneuern
+    QR_EXPIRATION_TIMER = 3600000 -> Alter in ms, ab dem der Cronjob QR-Codes löscht
+    ENTSCHULDIGUNG_MAX_REACH = 3 -> Werktage für Rückdatierung und Nachreichen einer Entschuldigung
+    KONTROLLE_DELETE_MAX_REACH = 1 -> Tage nach dem Anlegen, in denen Lehrende eine Kontrolle löschen dürfen
+    KONTROLLE_CREATE_MAX_REACH_PAST = 14 -> Tage zurück für Kontrollen ohne LV-Plan-Termin
+    KONTROLLE_CREATE_MAX_REACH_FUTURE = 3 -> Tage voraus für Kontrollen ohne LV-Plan-Termin
+    EINHEIT_DAUER = 0.75 -> Mindestdauer einer Kontrolle in Stunden
+    POSITIVE_RATING_THRESHOLD = 0.75 -> Quote, unter der die Summe rot erscheint
+    ENTSCHULDIGUNGEN_ENABLED = true -> Entschuldigungen ein- oder ausschalten
+    ENTSCHULDIGUNG_EMAIL_INTERVAL = 3 -> Werktage bis zur Sammelmail über fehlende Dokumente
+    ENTSCHULDIGUNG_AUTODECLINE_THRESHOLD = '60 days' -> Alter, ab dem der Job Entschuldigungen ohne Dokument ablehnt
+    NO_QR_LEHRFORM = [] -> Lehrformen mit der Schaltfläche "Anwesenheiten ohne QR-Code einfügen"
+    ALERT_LEHRFORM = [] -> Hinweistexte für bestimmte Lehrformen beim Start einer Kontrolle
+    SHOW_GUIDE / GUIDE_LINK -> Link auf diese Wiki-Seite in der Oberfläche anzeigen
+    SHOW_OUTGOING_SEMESTER_OVERLAP(_MIN_DAYS) -> Namenszusatz (o) für Outgoings über Semestergrenzen
+    LEGACY_LE_SELECTION = false -> true: Lehrende sehen nur die eigenen LV-Teile, keine Kontrollen in fremden LV-Teilen
+    ANWESEND_STATUS / ABWESEND_STATUS / ENTSCHULDIGT_STATUS / FEHLMINUTEN_STATUS -> Statuskürzel, nicht ändern
+
+== Update auf Version 2 (Fehlminuten): ==
+    Die Extension Version 2 führt die Skripte unter sql/2/ aus:
+        - Status 'fehlminuten' und Spalte fehlminuten in tbl_anwesenheit_user und der History
+        - neue Funktion get_anwesenheiten_by_time() mit Abzug der Fehlminuten
+        - Index auf tbl_anwesenheit_user_history
+    Reihenfolge: zuerst die Core-Phrasen (phrasesupdate), dann SQL, dann PHP/JS.
