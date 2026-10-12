@@ -339,6 +339,7 @@ export const AssistenzComponent = {
 				button.className = 'btn btn-outline-secondary';
 				button.style.minWidth = minwidth;
 				button.innerHTML = '<i class="fa fa-download"></i>';
+				button.dataset.cy = 'ent-download';
 				button.addEventListener('click', () => this.downloadEntschuldigung(cell.getData().dms_id));
 				button.title = this.$p.t('table/download');
 				actionwrapper.append(button);
@@ -348,6 +349,7 @@ export const AssistenzComponent = {
 			button.className = 'btn btn-outline-secondary';
 			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-pen-to-square"></i>';
+			button.dataset.cy = 'ent-edit';
 			button.addEventListener('click', () => this.openEditEntschuldigungModal(cell.getData()));
 			button.title = this.$p.t('global/entschuldigungEditieren');
 			actionwrapper.append(button);
@@ -356,6 +358,7 @@ export const AssistenzComponent = {
 			button.className = 'btn btn-outline-secondary';
 			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-timeline"></i>';
+			button.dataset.cy = 'ent-timeline';
 			button.addEventListener('click', () => this.openTimelineModal(cell.getData()));
 			button.title = this.$p.t('global/anwTimelineV3');
 			actionwrapper.append(button);
@@ -365,6 +368,7 @@ export const AssistenzComponent = {
 				button.className = 'btn btn-outline-secondary';
 				button.style.minWidth = minwidth;
 				button.innerHTML = '<i class="fa fa-check"></i>';
+				button.dataset.cy = 'ent-accept';
 				button.title = this.$p.t('global/entschuldigungAkzeptieren');
 				button.addEventListener('click', () => this.acceptEntschuldigung(cell));
 				actionwrapper.append(button);
@@ -374,6 +378,7 @@ export const AssistenzComponent = {
 			button.className = 'btn btn-outline-secondary';
 			button.style.minWidth = minwidth;
 			button.innerHTML = '<i class="fa fa-xmark"></i>';
+			button.dataset.cy = 'ent-reject';
 			button.title = this.$p.t('global/entschuldigungAblehnen');
 			button.addEventListener('click', () => this.openStatusModal(cell, false));
 			actionwrapper.append(button);
@@ -575,7 +580,7 @@ export const AssistenzComponent = {
 
 	<core-base-layout>
 		<template #main>
-			<bs-modal ref="modalContainerStatus" class="bootstrap-prompt" dialogClass="modal-lg">
+			<bs-modal ref="modalContainerStatus" data-cy="ent-status-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>{{ statusAkzeptiert ? $p.t('global/entschuldigungAkzeptieren') : $p.t('global/entschuldigungAblehnen') }}</template>
 				<template v-slot:default>
 					<div>
@@ -584,20 +589,20 @@ export const AssistenzComponent = {
 							<AccountList :accounts="statusAccounts"></AccountList>
 						</div>
 						<div v-if="!statusAkzeptiert" class="mt-2">
-							<input maxlength=255 class="form-control" :value="notiz" @input="handleInputNotiz" :placeholder="$p.t('global/begruendungAnw')">
+							<input maxlength=255 data-cy="ent-status-notiz" class="form-control" :value="notiz" @input="handleInputNotiz" :placeholder="$p.t('global/begruendungAnw')">
 						</div>
 					</div>
 					
 				</template>
 				<template v-slot:footer>
-					<button type="button" class="btn btn-outline-secondary" @click="$refs.modalContainerStatus.hide()">{{ $p.t('ui','cancel') }}</button>
+					<button type="button" data-cy="ent-status-abbrechen" class="btn btn-outline-secondary" @click="$refs.modalContainerStatus.hide()">{{ $p.t('ui','cancel') }}</button>
 					<button v-if="statusAkzeptiert" type="button" class="btn btn-primary" @click="confirmStatus">{{ $p.t('ui/bestaetigen') }}</button>
 					<button v-else type="button" class="btn btn-primary" :disabled="!notiz" @click="confirmStatus">{{ $p.t('global/reject') }}</button>
 				</template>
 			</bs-modal>
 
 
-			<bs-modal ref="modalContainerTimeline" class="bootstrap-prompt" bodyClass="px-0 pt-3 pb-0" dialogClass="modal-dialog modal-fullscreen">
+			<bs-modal ref="modalContainerTimeline" data-cy="ent-timeline-modal" class="bootstrap-prompt" bodyClass="px-0 pt-3 pb-0" dialogClass="modal-dialog modal-fullscreen">
 				<template v-slot:title>
 					<div>
 						{{ $p.t('global/anwTimelineV3') }}
@@ -609,11 +614,11 @@ export const AssistenzComponent = {
 					
 				</template>
 				<template v-slot:footer>
-					<button type="button" class="btn btn-outline-secondary " @click="closeTimelineModal">{{$p.t('ui','cancel')}}</button>    
+					<button type="button" data-cy="ent-timeline-schliessen" class="btn btn-outline-secondary " @click="closeTimelineModal">{{$p.t('ui','cancel')}}</button>    
 				</template>
 			</bs-modal>	
 
-			<bs-modal ref="modalContainerEditEntschuldigung" class="bootstrap-prompt" dialogClass="modal-lg">
+			<bs-modal ref="modalContainerEditEntschuldigung" data-cy="ent-edit-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
 					<div>
 						{{ $p.t('global/entschuldigungEditieren') }}
@@ -625,7 +630,7 @@ export const AssistenzComponent = {
 					
 				</template>
 				<template v-slot:footer>
-					<button type="button" class="btn btn-outline-secondary " @click="cancelEdit">{{$p.t('ui','cancel')}}</button>    
+					<button type="button" data-cy="ent-edit-abbrechen" class="btn btn-outline-secondary " @click="cancelEdit">{{$p.t('ui','cancel')}}</button>    
 					<button type="button" class="btn btn-primary" :disabled="!selectedEntschuldigungValid" @click="saveEditEntschuldigung">{{ $p.t('ui', 'speichern') }}</button>
 				</template>
 			</bs-modal>	
@@ -650,6 +655,7 @@ export const AssistenzComponent = {
 					<div class="row mb-3 align-items-center">
 						<label class="form-label small mb-1">{{ $p.t('global/entAntragsdatumVon') }}</label>
 						<datepicker
+							data-cy="ent-zeitraum-von"
 							:model-value="zeitraum.von"
 							@update:model-value="setZeitraum('von', $event)"
 							:placeholder="$capitalize($p.t('ui/dateFrom'))"
@@ -677,7 +683,7 @@ export const AssistenzComponent = {
 					</div>
 				</div>
 			</div>
-			<div class="position-relative" :class="{'anw-loading': loading}">
+			<div class="position-relative" :class="{'anw-loading': loading}" data-cy="ent-admin-table">
 				<div v-if="loading" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-body bg-opacity-50" style="z-index: 20;" role="status">
 					<i class="fa-solid fa-spinner fa-pulse fa-3x" aria-hidden="true"></i>
 					<span class="visually-hidden">{{ $p.t('ui/loading') }}</span>
@@ -699,7 +705,7 @@ export const AssistenzComponent = {
 							{{ $capitalize($p.t('global/gefiltert')) }}/{{ $capitalize($p.t('global/gesamt')) }}:
 							<strong>{{ counts.gefiltert }}</strong>/{{ counts.gesamt }}
 						</span>
-						<button v-if="offene.anzahl > 0" type="button" class="btn btn-sm btn-outline-danger" v-tooltip.bottom.sticky="$p.t('global/tooltipEntAlleOffenenAnzeigenv2')" @click="alleOffenenLaden">
+						<button v-if="offene.anzahl > 0" type="button" data-cy="ent-alle-offenen" class="btn btn-sm btn-outline-danger" v-tooltip.bottom.sticky="$p.t('global/tooltipEntAlleOffenenAnzeigenv2')" @click="alleOffenenLaden">
 							<i class="fa fa-triangle-exclamation"></i> {{ $p.t('global/entAlleOffenenAnzeigen') }} - {{ $p.t('global/entAnzahlVerfuegbar', {count: offene.anzahl}) }}
 						</button>
 						<button v-if="savedZeitraum" type="button" class="btn btn-sm btn-outline-secondary" @click="zeitraumZuruecksetzen">

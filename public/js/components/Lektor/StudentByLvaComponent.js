@@ -410,7 +410,7 @@ export const StudentByLvaComponent = {
 	},
 	template:`
 		<div class="row">
-			<div class="col-10" style="mx-width: 80%">
+			<div class="col-10" style="mx-width: 80%" data-cy="sbylva-table">
 				<core-filter-cmpt
 					ref="anwesenheitenByStudentByLvaTable"
 					title=""
@@ -425,13 +425,13 @@ export const StudentByLvaComponent = {
 					noColumnFilter>
 					<template #actions>
 
-						<button @click="setSelectedRowsAnwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
+						<button @click="setSelectedRowsAnwesend" data-cy="sbylva-anwesend" role="button" class="btn btn-success align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwesendV2')) }}
 						</button>
-						<button @click="setSelectedRowsFehlminuten" role="button" class="btn anw-btn-fehlminuten align-self-end" :disabled="!selected">
+						<button @click="setSelectedRowsFehlminuten" data-cy="sbylva-fehlminuten" role="button" class="btn anw-btn-fehlminuten align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/anwStatusFehlminuten')) }}
 						</button>
-						<button @click="setSelectedRowsAbwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
+						<button @click="setSelectedRowsAbwesend" data-cy="sbylva-abwesend" role="button" class="btn btn-primary align-self-end" :disabled="!selected">
 							{{ $capitalize($p.t('global/abwesend')) }}
 						</button>
 						

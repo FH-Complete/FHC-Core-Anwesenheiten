@@ -38,7 +38,7 @@ export const StudentDropdown = {
 	template: `
 		<div class="d-flex align-items-center gap-2">
 			<label for="studentSelect" class="mb-0 text-nowrap">{{ $p.t('global/students') }}</label>
-			<Dropdown @change="studentChanged" class="flex-grow-1" style="min-width: 0;" inputId="studentSelect" :optionLabel="getOptionLabel"
+			<Dropdown data-cy="student-dropdown" :panelProps="{'data-cy': 'student-dropdown-panel'}" @change="studentChanged" class="flex-grow-1" style="min-width: 0;" inputId="studentSelect" :optionLabel="getOptionLabel"
 			v-model="internal_selected_student_info" :options="internal_available_student_info">
 			</Dropdown>
 		</div>

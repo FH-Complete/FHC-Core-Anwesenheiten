@@ -377,7 +377,7 @@ export default {
 				<in-view-help class="ms-auto" button-class="fs-5 text-body-secondary" :text="helpText"></in-view-help>
 			</div>
 
-			<div v-show="!isNarrow" class="anw-student-table">
+			<div v-show="!isNarrow" class="anw-student-table" data-cy="student-anw-table">
 				<core-filter-cmpt
 					ref="uebersichtTable"
 					@uuidDefined="handleUuidDefined"
@@ -396,7 +396,7 @@ export default {
 				</div>
 				<div v-else-if="!lvGroups.length" class="anw-list-empty">{{ $p.t('global/noDataAvailable') }}</div>
 
-				<div v-for="group in lvGroups" :key="group.id" class="anw-card">
+				<div v-for="group in lvGroups" :key="group.id" class="anw-card" data-cy="anw-card">
 					<button
 						type="button"
 						class="anw-lv-head"

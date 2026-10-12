@@ -686,7 +686,7 @@ export const AnwTimeline = {
 		this.resizeObserver = null
 	},
 	template: /*html*/ `
-	<div v-if="anwArray && entArray" class="anw-tl row g-3" :class="{ 'anw-tl--fit': fitHeightPx }" :style="fitStyle">
+	<div v-if="anwArray && entArray" class="anw-tl row g-3" data-cy="anw-timeline" :class="{ 'anw-tl--fit': fitHeightPx }" :style="fitStyle">
 
 		<div class="col-xl-3">
 			<div class="card h-100">

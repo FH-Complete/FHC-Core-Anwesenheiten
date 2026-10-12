@@ -313,9 +313,10 @@ export default {
 			return this.$refs.entschuldigungsTable?.tabulator?.getRows()
 				.find(row => row.getData().entschuldigung_id == entschuldigung_id)
 		},
-		createActionButton(icon, title, variant, onClick) {
+		createActionButton(cy, icon, title, variant, onClick) {
 			const button = document.createElement('button');
 			button.type = 'button';
+			button.dataset.cy = cy;
 			button.className = 'btn btn-sm anw-action-btn ' + variant;
 			button.innerHTML = '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>';
 			button.title = title;
@@ -330,18 +331,18 @@ export default {
 			actions.className = "d-flex gap-2";
 
 			if(data.dms_id) {
-				actions.append(this.createActionButton('fa-download', this.$p.t('global/download'), 'btn-outline-secondary',
+				actions.append(this.createActionButton('ent-download', 'fa-download', this.$p.t('global/download'), 'btn-outline-secondary',
 					() => this.downloadEntschuldigung(data.dms_id)));
 			} else if (this.uploadAllowed(data)) {
 				// the backend accepts a document only while the entschuldigung is open and the deadline is not over
-				actions.append(this.createActionButton('fa-upload', this.$p.t('global/upload'), 'btn-outline-primary',
+				actions.append(this.createActionButton('ent-upload', 'fa-upload', this.$p.t('global/upload'), 'btn-outline-primary',
 					() => this.addEntschuldigungFile(data)));
 			}
 
 			if (data.akzeptiert == null)
 			{
 				// the dark theme of cis4 turns btn-outline-danger into white text on light red, so only the icon is red
-				actions.append(this.createActionButton('fa-trash-can text-danger', this.$p.t('global/entschuldigungLöschen'), 'btn-outline-secondary',
+				actions.append(this.createActionButton('ent-delete', 'fa-trash-can text-danger', this.$p.t('global/entschuldigungLöschen'), 'btn-outline-secondary',
 					() => this.deleteEntschuldigung(data)));
 			}
 
@@ -544,7 +545,7 @@ export default {
 	<core-base-layout
 		:title="filterTitle">
 		<template #main>
-			<bs-modal ref="modalContainerEntschuldigungUpload" class="bootstrap-prompt" dialogClass="modal-lg">
+			<bs-modal ref="modalContainerEntschuldigungUpload" data-cy="ent-upload-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
 					<span class="d-inline-flex align-items-center gap-2">
 						{{$p.t('global/addEntschuldigung')}}
@@ -585,7 +586,7 @@ export default {
 								>
 							</datepicker>
 						</div>
-						<div class="col-12">
+						<div class="col-12" data-cy="ent-upload-file">
 							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
 							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
 							<div class="form-text">{{ uploadHint }}</div>
@@ -603,7 +604,7 @@ export default {
 				</template>
 			</bs-modal>
 
-			<bs-modal ref="modalContainerEntschuldigungEdit" class="bootstrap-prompt" dialogClass="modal-lg">
+			<bs-modal ref="modalContainerEntschuldigungEdit" data-cy="ent-nachreichen-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
 					<span class="d-inline-flex align-items-center gap-2">
 						{{$p.t('global/editEntschuldigung')}}
@@ -649,7 +650,7 @@ export default {
 				</template>
 			</bs-modal>
 
-			<div v-show="!isNarrow">
+			<div v-show="!isNarrow" data-cy="ent-table">
 				<core-filter-cmpt
 					ref="entschuldigungsTable"
 					@uuidDefined="handleUuidDefined"
@@ -675,7 +676,7 @@ export default {
 				</div>
 				<div v-else-if="!listItems.length" class="anw-list-empty">{{ $p.t('global/noDataAvailable') }}</div>
 
-				<div v-for="item in listItems" :key="item.ent.entschuldigung_id" class="anw-card anw-ent">
+				<div v-for="item in listItems" :key="item.ent.entschuldigung_id" class="anw-card anw-ent" data-cy="ent-card">
 					<div class="anw-ent-head">
 						<span class="anw-pill" :class="'anw-pill--' + item.status.tone">
 							<i class="fa-solid" :class="item.status.icon" aria-hidden="true"></i>{{ item.status.label }}

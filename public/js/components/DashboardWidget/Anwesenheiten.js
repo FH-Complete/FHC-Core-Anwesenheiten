@@ -69,7 +69,7 @@ export default {
 		this.$emit('setConfig', false)
 	},
 	template: /*html*/ `
-    <div class="widgets-anw w-100 h-100">
+    <div class="widgets-anw w-100 h-100" data-cy="anw-widget">
 		<div style="height: 100%; overflow-y: auto">
 			<Accordion ref="accordion" :multiple="true" :activeIndex="[0, 1, 2]">
 				<AccordionTab :header="$p.t('global/zugangscode')" :pt="tabPassthroughStyle">

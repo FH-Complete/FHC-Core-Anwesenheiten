@@ -139,7 +139,7 @@ export default {
 			<template v-if="!zugangscodeProcessed">
 				<i class="fa-solid fa-qrcode d-block" :style="iconStyle" aria-hidden="true"></i>
 				<component :is="titleTag" class="mb-3" :style="titleStyle">{{ getBaseLayoutTitle }}</component>
-				<form class="d-flex flex-column mx-auto" style="gap: 0.75rem; max-width: 22rem;" @submit.prevent="sendCode">
+				<form class="d-flex flex-column mx-auto" data-cy="scan-form" style="gap: 0.75rem; max-width: 22rem;" @submit.prevent="sendCode">
 					<input
 						:maxlength="calculatedMaxLength"
 						class="form-control"
@@ -158,7 +158,7 @@ export default {
 					</button>
 				</form>
 			</template>
-			<div v-else-if="viewData" role="status">
+			<div v-else-if="viewData" role="status" data-cy="scan-success">
 				<i class="fa-solid fa-circle-check d-block" :style="[iconStyle, {color: 'var(--bs-success, #198754)'}]" aria-hidden="true"></i>
 				<component :is="titleTag" class="mb-3" :style="titleStyle">{{ getBaseLayoutTitle }}</component>
 				<p class="mb-1" style="font-weight: 600;">{{viewData.bezeichnung}} ({{viewData.kurzbz}})</p>

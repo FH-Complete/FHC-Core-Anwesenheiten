@@ -13,11 +13,14 @@
 // The run writes into the test database (lib/seed.js): it deletes the Kontrollen and Entschuldigungen the run accounts
 // created in the chosen LV, then creates Kontrollen, statuses and Entschuldigungen. The Entschuldigung API sends its
 // usual e-mails. Never run it against a production instance.
+//
+// The suite finds the elements of the extension by their data-cy attribute (byCy in lib/ui.js).
+// Keep these attributes when you change a template.
 
 import { ANW, API, CORE_API, LEKTOREN, users, state, requestAs, apiStaff, checkAccount, failReason, needsLogin, visitAs } from './lib/api.js'
 import {
-	setSection, shot, shotEl, shotModal, shotSubject, writeIndex, collapseMenu, closeModal,
-	acceptConfirm, rejectConfirm, clearToasts, closeTooltips, CONFIRM, tabulatorOf, cellOf, rowOf, waitRows, pickDate
+	byCy, setSection, shot, shotEl, shotModal, shotSubject, writeIndex, collapseMenu, closeModal, acceptConfirm,
+	rejectConfirm, clearToasts, closeTooltips, CONFIRM, tabulatorOf, cellOf, rowOf, waitRows, dateInput, pickDate
 } from './lib/ui.js'
 import { seed, isoDate, deDate, addDays } from './lib/seed.js'
 
@@ -210,13 +213,12 @@ function preflight() {
 
 // ---------- Lektor page ----------
 
-const MAIN = '#lektorWrap .tabulator'
-const HEADER = '#lektorContentHeader'
+const MAIN = `${byCy('lektor-table')} .tabulator`
 const isStudent = s => d => String(d.prestudent_id) === String(s.prestudent_id)
 const isOther = s => d => String(d.prestudent_id) !== String(s.prestudent_id)
 
 function lektorIdle() {
-	cy.get('div[style*="z-index: 8500"]', { timeout: 60000 }).should('not.be.visible')
+	cy.get(byCy('lektor-loading'), { timeout: 60000 }).should('not.be.visible')
 	cy.wait(1500)
 }
 
@@ -226,8 +228,8 @@ function ensureLe(attempt = 0) {
 		const rows = tabulatorOf(win, MAIN).getData()
 		if (rows.some(isStudent(state.lv.student))) return
 
-		cy.get(`${HEADER} .p-dropdown`).click()
-		cy.get('.p-dropdown-panel .p-dropdown-item').then($items => {
+		cy.get(byCy('le-dropdown')).click()
+		cy.get(byCy('le-option')).then($items => {
 			if (attempt >= $items.length) throw new Error('No LV-Teil shows ' + state.lv.student.uid)
 			cy.wrap($items.eq(attempt)).click()
 		})
@@ -247,21 +249,26 @@ function openLektor() {
 }
 
 function showAllKontrollen() {
-	cy.get('#all').then($c => { if (!$c.is(':checked')) cy.wrap($c).click() })
+	cy.get(byCy('show-all-kontrollen')).then($c => { if (!$c.is(':checked')) cy.wrap($c).click() })
 	lektorIdle()
 }
 
 function selectDate(date) {
-	cy.get(`${HEADER} .dp__input`).clear().type(`${deDate(date)}{enter}`)
+	cy.get(dateInput('lektor-datum')).clear().type(`${deDate(date)}{enter}`)
 	cy.get('body').type('{esc}')
 	lektorIdle()
 }
 
 const seedDate = i => state.seed?.dates?.[i] ?? NOW
 
-const FEHLMINUTEN = '.anw-fehlminuten-dialog:visible'
-// the dashboard card of the widget, its header shows the name of the widget setup
-const WIDGET = '.dashboard-item:has(.card-header h4:contains("Anwesenheiten"))'
+// the core filter renders the new button of a table, without a data-cy
+const clickNew = table => cy.get(`${byCy(table)} button:has(.fa-plus)`).first().click()
+
+// the core tabs render their titles without a data-cy, the titles are phrases
+const tab = title => cy.contains('.nav-tabs .nav-link', title)
+
+// the dashboard card is core markup, its header shows the name of the widget setup
+const WIDGET = `.dashboard-item:has(${byCy('anw-widget')})`
 
 // ---------- the suite ----------
 
@@ -288,76 +295,69 @@ describe('Wiki Anwesenheiten', () => {
 			showAllKontrollen()
 			shot('lektor4', 'Alle Kontrollen des LV-Teils')
 
-			cy.get(`${HEADER} .p-dropdown`).click()
+			cy.get(byCy('le-dropdown')).click()
 			shot('lvteilauswahl', 'Auswahlfeld mit den eigenen LV-Teilen')
-			cy.get('body').then($b => {
-				const more = $b.find('.p-dropdown-panel button.btn-link:visible')
-				if (!more.length) return
-				cy.wrap(more.first()).click()
-				shot('lvteilauswahlweitere', 'Auswahlfeld mit den LV-Teilen der Kolleginnen und Kollegen')
-				cy.get('.p-dropdown-panel .p-dropdown-item').last().click()
-				lektorIdle()
-				shot('lvteilfremd', 'LV-Teil einer Kollegin: nur Ansicht')
-			})
+			// the toggle needs the colleague LV-Teil of prepare_cy_db.sql part 2
+			cy.get(byCy('le-fremde-toggle')).click()
+			shot('lvteilauswahlweitere', 'Auswahlfeld mit den LV-Teilen der Kolleginnen und Kollegen')
+			cy.get(byCy('le-option')).last().click()
+			lektorIdle()
+			shot('lvteilfremd', 'LV-Teil einer Kollegin: nur Ansicht')
 		})
 
 		it('Gesamtansicht', () => {
 			openLektor()
-			cy.contains(`${HEADER} button`, /gesamtansicht/i).click()
+			cy.get(byCy('gesamtansicht-start')).click()
 			lektorIdle()
 			shot('gesamtansicht', 'Gesamtansicht mehrerer LV-Teile, schreibgeschützt')
-			cy.get(`${HEADER} .p-multiselect`).click()
+			cy.get(byCy('le-multiselect')).click()
 			shot('gesamtansichtauswahl', 'Auswahl der LV-Teile in der Gesamtansicht')
-			cy.get('body').type('{esc}')
-			cy.get(`${HEADER} button:has(.fa-xmark)`).click()
-			lektorIdle()
 		})
 
 		it('Datumsauswahl', () => {
 			openLektor()
 			// default: the days a Kontrolle without LV-Plan Termin is allowed on, around today
 			selectDate(NOW)
-			cy.get(`${HEADER} .dp__input`).click()
-			cy.get('.dp__menu').should('be.visible')
+			cy.get(dateInput('lektor-datum')).click()
+			cy.get(`${byCy('lektor-datum')} .dp__menu`).should('be.visible')
 			shot('lektor5', 'Datumsauswahl: aktuell prüfbare Tage')
 			cy.get('body').type('{esc}')
 
 			selectDate(seedDate(3))
-			cy.get(`${HEADER} .dp__input`).click()
-			cy.get('.dp__menu button.option-entry').eq(1).click()
+			cy.get(dateInput('lektor-datum')).click()
+			cy.get(`${byCy('lektor-datum')} ${byCy('highlight-kontrollen')}`).click()
 			shot('lektor5kontrollen', 'Datumsauswahl: Tage mit Kontrollen')
-			cy.get('.dp__menu button.option-entry').eq(0).click()
+			cy.get(`${byCy('lektor-datum')} ${byCy('highlight-termine')}`).click()
 			shot('lektor5termine', 'Datumsauswahl: Unterricht laut LV-Plan')
-			cy.get('body').type('{esc}')
 		})
 
 		it('Legende', () => {
 			openLektor()
-			cy.get('#lektorWrap button:has(.fa-book)').click()
-			shotModal('legende', 'Legende der Status, Zeichen und Namenszusätze')
-			closeModal()
+			cy.get(byCy('legende-open')).click()
+			shotModal('legende-modal', 'legende', 'Legende der Status, Zeichen und Namenszusätze')
 		})
 
 		it('Detailansicht einer Person', () => {
 			openLektor()
 			cellOf(MAIN, isStudent(state.lv.student), 'nachname').then($c => cy.wrap($c).click())
-			cy.get('.modal.show .tabulator-row', { timeout: 30000 }).should('have.length.greaterThan', 0)
+			const ROWS = `${byCy('sbylva-table')} .tabulator-row`
+			cy.get(ROWS, { timeout: 30000 }).should('have.length.greaterThan', 0)
 			closeTooltips()
-			shotModal('sbylvapreupdate', 'Detailansicht: alle Anwesenheiten einer Person in der LV')
+			shotModal('student-detail-modal', 'sbylvapreupdate', 'Detailansicht: alle Anwesenheiten einer Person in der LV')
 
-			const firstRow = () => cy.get('.modal.show .tabulator-row').first()
+			const firstRow = () => cy.get(ROWS).first()
 			// a click on a selected row deselects it, the status buttons then stay disabled
 			const selectFirstRow = () => firstRow().then($r => { if (!$r.hasClass('tabulator-selected')) cy.wrap($r).click() })
 
 			selectFirstRow()
-			cy.contains('.modal.show button', /^\s*abwesend\s*$/i).click()
+			cy.get(byCy('sbylva-abwesend')).click()
 			acceptConfirm()
 			cy.wait(1500)
-			shotModal('sbylvapostupdate', 'Detailansicht nach dem Setzen eines Status')
+			shotModal('student-detail-modal', 'sbylvapostupdate', 'Detailansicht nach dem Setzen eines Status')
 
 			// back to the seeded status
 			selectFirstRow()
-			cy.contains('.modal.show button', /^\s*anwesend\s*$/i).click()
+			cy.get(byCy('sbylva-anwesend')).click()
 			acceptConfirm()
 			cy.wait(1500)
 
@@ -365,7 +365,7 @@ describe('Wiki Anwesenheiten', () => {
 			cy.focused().clear().type('Laborübung nachgeholt{enter}')
 			acceptConfirm()
 			cy.wait(1500)
-			shotModal('sbylvanote', 'Detailansicht: Notiz zu einem Eintrag')
+			shotModal('student-detail-modal', 'sbylvanote', 'Detailansicht: Notiz zu einem Eintrag')
 		})
 
 		it('Entschuldigte Person', () => {
@@ -384,54 +384,54 @@ describe('Wiki Anwesenheiten', () => {
 
 		it('Neue Kontrolle und QR-Code', () => {
 			openLektor()
-			cy.contains('#lektorWrap button:visible', /Anwesenheitskontrolle/i).click()
-			cy.get('.modal.show').should('be.visible')
-			shotModal('lektor2', 'Neue Kontrolle starten')
+			clickNew('lektor-table')
+			cy.get(`${byCy('new-kontrolle-modal')}.show`).should('be.visible')
+			shotModal('new-kontrolle-modal', 'lektor2', 'Neue Kontrolle starten')
 
 			// Escape would close the modal too, a click outside closes only the dropdown or the date picker.
 			// Not on the title: a click pins its help tooltip, the tooltip then covers the date fields
-			const clickOutside = () => cy.get('.modal.show .modal-body h5').first().click()
+			const clickOutside = () => cy.get(byCy('new-kontrolle-heading')).click()
 
-			cy.get('.modal.show .p-dropdown').click()
+			cy.get(byCy('termine-dropdown')).click()
 			shot('lektor2termine', 'Neue Kontrolle: Termine laut LV-Plan')
 			clickOutside()
-			cy.get('.p-dropdown-panel').should('not.exist')
+			cy.get(byCy('termine-dropdown-panel')).should('not.exist')
 
 			// date first, a new date resets the times to the Termin
-			cy.get('.modal.show .dp__input').eq(2).clear().type(`${TODAY_DE}{enter}`)
+			cy.get(dateInput('new-kontrolle-datum')).clear().type(`${TODAY_DE}{enter}`)
 			clickOutside()
-			cy.get('.modal.show .dp__input').eq(0).clear().type(`${VON}{enter}`)
-			cy.get('.modal.show .dp__input').eq(1).clear().type(`${BIS}{enter}`)
+			cy.get(dateInput('new-kontrolle-von')).clear().type(`${VON}{enter}`)
+			cy.get(dateInput('new-kontrolle-bis')).clear().type(`${BIS}{enter}`)
 			clickOutside()
-			shotModal('lektor3', 'Neue Kontrolle: Warnung bei Zeiten außerhalb des LV-Plans')
+			shotModal('new-kontrolle-modal', 'lektor3', 'Neue Kontrolle: Warnung bei Zeiten außerhalb des LV-Plans')
 
-			cy.contains('.modal.show .modal-footer button', /start/i).click()
+			cy.get(byCy('new-kontrolle-start')).click()
 			acceptConfirm()
 			acceptConfirm()
 
-			cy.get('#qrcontent h1', { timeout: 30000 }).should($h => expect($h.text()).to.match(/Code:\s*\S{4,}/))
-			cy.get('#qrcontent h1').invoke('text').then(t => { state.code = t.replace(/Code:\s*/, '').trim() })
-			shotModal('qr', 'QR-Code und Zugangscode einer laufenden Kontrolle')
+			// the screenshot of the QR code follows with the check-in in "Kontrolle beenden"
+			cy.get(byCy('qr-code'), { timeout: 30000 }).should($c => expect($c.text().trim()).to.match(/^\S{4,}$/))
+			cy.get(byCy('qr-code')).invoke('text').then(t => { state.code = t.trim() })
 		})
 
 		it('Code eingeben', () => {
 			needsLogin('student')
 			expect(state.code, 'Zugangscode of the previous test').to.exist
 			visitAs('student', `${ANW}/Profil/Scan/${state.code}`)
-			cy.get('.fa-circle-check', { timeout: 30000 }).should('be.visible')
+			cy.get(byCy('scan-success'), { timeout: 30000 }).should('be.visible')
 			clearToasts()
 			shot('eintragerfolgreich', 'Erfolgreiche Registrierung mit dem Zugangscode')
 		})
 
 		it('Kontrolle beenden', () => {
 			openLektor()
-			cy.get('#qrwrap .modal.show', { timeout: 30000 }).should('be.visible')
+			cy.get(`${byCy('qr-modal')}.show`, { timeout: 30000 }).should('be.visible')
 			// the counter polls every 3 seconds
 			cy.wait(4000)
-			shotModal('qr', 'QR-Code und Zugangscode einer laufenden Kontrolle')
-			cy.get('#qrwrap .modal.show .modal-footer .btn-primary').click()
+			shotModal('qr-modal', 'qr', 'QR-Code und Zugangscode einer laufenden Kontrolle')
+			cy.get(byCy('qr-stop')).click()
 			acceptConfirm()
-			cy.get('#qrwrap .modal.show').should('not.exist')
+			cy.get(`${byCy('qr-modal')}.show`).should('not.exist')
 			lektorIdle()
 			selectDate(NOW)
 			shot('afterkontrolle', 'Die beendete Kontrolle als neue Spalte')
@@ -443,15 +443,17 @@ describe('Wiki Anwesenheiten', () => {
 			// another student than the one with the login, that one keeps the scanned status.
 			// The date columns have the field "<yyyy-mm-dd> | <von> - <bis>"
 			cellOf(MAIN, isOther(state.lv.student), TODAY_ISO).then($c => cy.wrap($c).click())
-			cy.get('.tabulator-edit-list').should('be.visible')
+			cy.get(byCy('status-option-fehlminuten')).should('be.visible')
 			shot('anwoverviewupdate1', 'Status direkt in der Übersicht ändern')
 
-			cy.contains('.tabulator-edit-list-item', /fehlminuten/i).click()
+			// the detail view holds a second Fehlminuten dialog, only the open one has .show
+			const FEHLMINUTEN = `${byCy('fehlminuten-dialog')}.show`
+			cy.get(byCy('status-option-fehlminuten')).click()
 			cy.get(FEHLMINUTEN).should('exist')
-			cy.get(`${FEHLMINUTEN} input[type=number]`).clear().type('15')
-			cy.contains(`${FEHLMINUTEN} button`, /versp/i).click()
-			shotModal('fehlminuten', 'Dialog Fehlminuten erfassen')
-			cy.get(`${FEHLMINUTEN} .modal-footer .btn-primary`).click()
+			cy.get(`${FEHLMINUTEN} ${byCy('fehlminuten-minuten')}`).clear().type('15')
+			cy.get(`${FEHLMINUTEN} ${byCy('fehlminuten-grund-verspaetung')}`).click()
+			shotModal('fehlminuten-dialog', 'fehlminuten', 'Dialog Fehlminuten erfassen')
+			cy.get(`${FEHLMINUTEN} ${byCy('fehlminuten-anwenden')}`).click()
 			cy.get(FEHLMINUTEN).should('not.exist')
 			shot('anwoverviewupdate2', 'Ungespeicherte Änderungen in der Übersicht')
 
@@ -461,7 +463,7 @@ describe('Wiki Anwesenheiten', () => {
 			shotEl(CONFIRM, 'anwdiscardconfirm', 'Nachfrage bei ungespeicherten Änderungen')
 			rejectConfirm()
 
-			cy.get('#lektorWrap button:has(.fa-save)').click()
+			cy.get(byCy('save-changes')).click()
 			acceptConfirm()
 			lektorIdle()
 			clearToasts()
@@ -470,14 +472,13 @@ describe('Wiki Anwesenheiten', () => {
 
 		it('Kontrollen bearbeiten', () => {
 			openLektor()
-			cy.get('#lektorWrap button:has(.fa-pen):visible').first().click()
-			cy.get('.modal.show').should('be.visible')
-			shotModal('lektor6', 'Dialog Anwesenheitskontrolle bearbeiten')
+			cy.get(byCy('edit-kontrollen')).click()
+			cy.get(`${byCy('edit-kontrolle-modal')}.show`).should('be.visible')
+			shotModal('edit-kontrolle-modal', 'lektor6', 'Dialog Anwesenheitskontrolle bearbeiten')
 
 			// the live Kontrolle of today: lektors may edit it
-			cy.contains('.modal.show .row.p-2', TODAY_DE).find('button.btn-success').click()
-			shotModal('lektor7', 'Zeiten einer Kontrolle bearbeiten')
-			closeModal()
+			cy.contains(byCy('edit-kontrolle-row'), TODAY_DE).find(byCy('edit-kontrolle-zeiten')).click()
+			shotModal('edit-kontrolle-modal', 'lektor7', 'Zeiten einer Kontrolle bearbeiten')
 		})
 	})
 
@@ -488,28 +489,26 @@ describe('Wiki Anwesenheiten', () => {
 			needsLogin('student')
 			visitAs('student', `${ANW}/Profil`)
 			// the profile starts in the current semester, the LV of the dump can be older
-			cy.get('select#studiensemester', { timeout: 60000 }).select(state.lv.sem_kurzbz)
+			cy.get(byCy('studiensemester'), { timeout: 60000 }).select(state.lv.sem_kurzbz)
 			collapseMenu()
-			waitRows('#main')
-			cy.get('#main .tabulator-group').first().click()
+			waitRows(byCy('student-anw-table'))
+			cy.get(`${byCy('student-anw-table')} .tabulator-group`).first().click()
 			cy.wait(800)
 			shot('studentanwprofilv2', 'Anwesenheiten pro Lehrveranstaltung')
 
-			cy.get('body').then($b => {
-				const tab = [...$b.find('.nav-tabs .nav-link')].find(t => /timeline/i.test(t.innerText))
-				if (!tab) return
-				cy.wrap(tab).click()
-				cy.wait(3000)
-				shot('studenttimeline', 'Timeline der Anwesenheiten und Entschuldigungen')
-			})
+			// the tab needs the timeline permission of the instance config
+			tab(/timeline/i).click()
+			cy.get(byCy('anw-timeline'), { timeout: 30000 }).should('be.visible')
+			cy.wait(1000)
+			shot('studenttimeline', 'Timeline der Anwesenheiten und Entschuldigungen')
 		})
 
 		it('Entschuldigungen', () => {
 			needsLogin('student')
 			visitAs('student', `${ANW}/Profil/Entschuldigung`)
 			collapseMenu()
-			const TABLE = '#main .tabulator'
-			waitRows('#main')
+			const TABLE = `${byCy('ent-table')} .tabulator`
+			waitRows(byCy('ent-table'))
 			shot('entschuldigungen', 'Liste der eigenen Entschuldigungen')
 
 			rowOf(TABLE, d => d.akzeptiert == null).then($r => shotSubject($r, 'entschuldigungstatusoffen', 'Offene Entschuldigung'))
@@ -517,14 +516,13 @@ describe('Wiki Anwesenheiten', () => {
 			rowOf(TABLE, d => d.akzeptiert === false || d.akzeptiert === 'f').then($r => shotSubject($r, 'entschuldigungstatusabgelehnt', 'Abgelehnte Entschuldigung'))
 
 			// the seeded Entschuldigung without document: upload later
-			rowOf(TABLE, d => d.akzeptiert == null && !d.dms_id).then($r => cy.wrap($r).find('button:has(.fa-upload)').click())
-			shotModal('entschuldigungnachreichen', 'Dokument nachreichen')
-			closeModal()
+			rowOf(TABLE, d => d.akzeptiert == null && !d.dms_id).then($r => cy.wrap($r).find(byCy('ent-upload')).click())
+			shotModal('ent-nachreichen-modal', 'entschuldigungnachreichen', 'Dokument nachreichen')
+			closeModal('ent-nachreichen-modal')
 
-			cy.contains('button:visible', /Entschuldigung hochladen/i).click()
-			cy.get('.modal.show input[type=file]').selectFile('fixtures/entschuldigung.pdf', { force: true })
-			shotModal('entschuldigungupload', 'Entschuldigung hochladen')
-			closeModal()
+			clickNew('ent-table')
+			cy.get(`${byCy('ent-upload-file')} input[type=file]`).selectFile('fixtures/entschuldigung.pdf', { force: true })
+			shotModal('ent-upload-modal', 'entschuldigungupload', 'Entschuldigung hochladen')
 		})
 
 		it('Dashboard-Widget', () => {
@@ -544,16 +542,18 @@ describe('Wiki Anwesenheiten', () => {
 		it('Kartenlisten und Codeeingabe', () => {
 			needsLogin('student')
 			visitAs('student', `${ANW}/Profil`)
-			cy.get('select#studiensemester', { timeout: 60000 }).select(state.lv.sem_kurzbz)
+			cy.get(byCy('studiensemester'), { timeout: 60000 }).select(state.lv.sem_kurzbz)
+			// the list of the current semester shows first, the wait lets the chosen semester load
 			cy.wait(3000)
+			cy.get(byCy('anw-card')).should('have.length.greaterThan', 0)
 			shot('mobilanwesenheiten', 'Smartphone: Anwesenheiten als Kartenliste')
 
 			visitAs('student', `${ANW}/Profil/Entschuldigung`)
-			cy.wait(4000)
+			cy.get(byCy('ent-card'), { timeout: 30000 }).should('have.length.greaterThan', 0)
 			shot('mobilentschuldigungen', 'Smartphone: Entschuldigungen als Kartenliste')
 
 			visitAs('student', `${ANW}/Profil/Scan`)
-			cy.wait(3000)
+			cy.get(byCy('scan-form'), { timeout: 30000 }).should('be.visible')
 			shot('mobilscan', 'Smartphone: Codeeingabe')
 		})
 	})
@@ -561,12 +561,12 @@ describe('Wiki Anwesenheiten', () => {
 	describe('Entschuldigungsmanagement', () => {
 		before(() => setSection('Entschuldigungsmanagement Studiengangsadministration'))
 
-		const TABLE = '#main .tabulator'
+		const TABLE = `${byCy('ent-admin-table')} .tabulator`
 		const openAdministration = () => {
 			needsLogin('assistenz')
 			visitAs('assistenz', `${ANW}/Administration`)
 			collapseMenu()
-			waitRows('#main')
+			waitRows(byCy('ent-admin-table'))
 		}
 
 		it('Liste und Zeitraum', () => {
@@ -574,12 +574,11 @@ describe('Wiki Anwesenheiten', () => {
 			shot('admin', 'Entschuldigungsmanagement')
 
 			// every Entschuldigung of the seed is from today: a range from tomorrow on hides the open ones
-			// the first date field is "Antragsdatum von"
-			pickDate('#main .dp__input', addDays(NOW, 1))
-			cy.get('#main button.btn-outline-danger', { timeout: 20000 }).should('be.visible')
+			pickDate('ent-zeitraum-von', addDays(NOW, 1))
+			cy.get(byCy('ent-alle-offenen'), { timeout: 20000 }).should('be.visible')
 			cy.wait(1000)
 			shot('adminoffeneausserhalb', 'Offene Entschuldigungen außerhalb des Zeitraums')
-			cy.get('#main button.btn-outline-danger').click()
+			cy.get(byCy('ent-alle-offenen')).click()
 			cy.wait(3000)
 			shot('adminalleoffenen', 'Alle offenen Entschuldigungen geladen')
 		})
@@ -587,27 +586,28 @@ describe('Wiki Anwesenheiten', () => {
 		it('Prüfen, bearbeiten, Timeline', () => {
 			openAdministration()
 			const openWithDocument = d => d.akzeptiert == null && d.dms_id
+			const rowButton = cyName => rowOf(TABLE, openWithDocument).then($r => cy.wrap($r).find(byCy(cyName)).click())
 
-			rowOf(TABLE, openWithDocument).then($r => cy.wrap($r).find('button:has(.fa-pen-to-square)').click())
-			shotModal('entschuldigungedit', 'Entschuldigung bearbeiten')
-			cy.get('.modal.show .modal-footer .btn-outline-secondary').click()
-			cy.get('.modal.show').should('not.exist')
+			rowButton('ent-edit')
+			shotModal('ent-edit-modal', 'entschuldigungedit', 'Entschuldigung bearbeiten')
+			cy.get(byCy('ent-edit-abbrechen')).click()
+			cy.get(`${byCy('ent-edit-modal')}.show`).should('not.exist')
 
-			rowOf(TABLE, openWithDocument).then($r => cy.wrap($r).find('button:has(.fa-timeline)').click())
-			cy.get('.modal.show').should('be.visible')
-			cy.wait(3000)
+			rowButton('ent-timeline')
+			cy.get(`${byCy('ent-timeline-modal')}.show ${byCy('anw-timeline')}`, { timeout: 30000 }).should('be.visible')
+			cy.wait(1000)
 			shot('admintimeline', 'Timeline der Anwesenheiten und Entschuldigungen einer Person')
-			cy.get('.modal.show .modal-footer .btn-outline-secondary').click()
-			cy.get('.modal.show').should('not.exist')
+			cy.get(byCy('ent-timeline-schliessen')).click()
+			cy.get(`${byCy('ent-timeline-modal')}.show`).should('not.exist')
 
-			rowOf(TABLE, openWithDocument).then($r => cy.wrap($r).find('button:has(.fa-xmark)').click())
-			cy.get('.modal.show input').type('Zeitraum passt nicht zum Dokument')
-			shotModal('entschuldigungablehnen', 'Entschuldigung ablehnen mit Begründung')
-			cy.get('.modal.show .modal-footer .btn-outline-secondary').click()
-			cy.get('.modal.show').should('not.exist')
+			rowButton('ent-reject')
+			cy.get(byCy('ent-status-notiz')).type('Zeitraum passt nicht zum Dokument')
+			shotModal('ent-status-modal', 'entschuldigungablehnen', 'Entschuldigung ablehnen mit Begründung')
+			cy.get(byCy('ent-status-abbrechen')).click()
+			cy.get(`${byCy('ent-status-modal')}.show`).should('not.exist')
 
 			// a single account: the check accepts at once, the row shows the new status
-			rowOf(TABLE, openWithDocument).then($r => cy.wrap($r).find('button:has(.fa-check)').click())
+			rowButton('ent-accept')
 			acceptConfirm()
 			cy.wait(2500)
 			clearToasts()
@@ -627,15 +627,11 @@ describe('Wiki Anwesenheiten', () => {
 			cy.wait(2000)
 			shot('adminlanding', 'Ansicht mit allen Karteireitern für Administration')
 
-			cy.get('body').then($b => {
-				const tab = [...$b.find('.nav-tabs .nav-link')].find(t => /profil|anwesenheiten/i.test(t.innerText) && !/kontrolle/i.test(t.innerText))
-				if (!tab) return
-				cy.wrap(tab).click()
-				cy.get('#studentUID .p-dropdown, .p-dropdown:has(#studentSelect)', { timeout: 30000 }).first().click()
-				cy.get('.p-dropdown-panel .p-dropdown-item').contains(state.lv.student.nachname).click()
-				cy.wait(3000)
-				shot('adminstudentprofil', 'Anwesenheitsprofil einer Person aus Sicht der Administration')
-			})
+			tab(/profil/i).click()
+			cy.get(byCy('student-dropdown'), { timeout: 30000 }).click()
+			cy.contains(`${byCy('student-dropdown-panel')} .p-dropdown-item`, state.lv.student.nachname).click()
+			cy.wait(3000)
+			shot('adminstudentprofil', 'Anwesenheitsprofil einer Person aus Sicht der Administration')
 		})
 	})
 })

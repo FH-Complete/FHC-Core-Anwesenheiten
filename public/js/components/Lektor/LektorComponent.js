@@ -1479,7 +1479,7 @@ export const LektorComponent = {
 			if (p.admin || p.assistenz) stati = [p.anwesend_status, p.fehlminuten_status, p.abwesend_status, p.entschuldigt_status]
 			else if (p.lektor) stati = [p.anwesend_status, p.fehlminuten_status, p.abwesend_status]
 
-			return stati.map(status => ({value: status, label: this.statusLabel(status)}))
+			return stati.map(status => ({value: status, label: this.statusLabel(status), elementAttributes: {'data-cy': 'status-option-' + status}}))
 		},
 		baseColumns() {
 			const fields = ['foto', 'prestudent_id', 'student_uid', 'vorname', 'nachname', 'gruppe']
@@ -1830,13 +1830,13 @@ export const LektorComponent = {
 		}
 	},
 	template:`
-		<div v-show="loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.5); z-index: 8500;"></div>
+		<div v-show="loading" data-cy="lektor-loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.5); z-index: 8500;"></div>
 		
 		<core-base-layout>			
 			<template #main>
 				<div id="lektorWrap" v-bind="$attrs">
 				
-					<bs-modal ref="modalContainerNewKontrolle" class="bootstrap-prompt" dialogClass="modal-xl">
+					<bs-modal ref="modalContainerNewKontrolle" data-cy="new-kontrolle-modal" class="bootstrap-prompt" dialogClass="modal-xl">
 						<template v-slot:title>			
 							<div v-tooltip.bottom.sticky="getTooltipKontrolleNeu">
 								{{ $p.t('global/neueAnwKontrolle') }}
@@ -1847,7 +1847,7 @@ export const LektorComponent = {
 						
 							<div class="row">
 								<div class="col-12">
-									<h5 class="mb-4 border-bottom pb-2">{{ $p.t('global/unterrichtzeit') }}</h5>
+									<h5 class="mb-4 border-bottom pb-2" data-cy="new-kontrolle-heading">{{ $p.t('global/unterrichtzeit') }}</h5>
 							
 									<div class="row align-items-center mb-3">
 										<div class="col-3">
@@ -1855,6 +1855,7 @@ export const LektorComponent = {
 										</div>
 										<div class="col-4">
 											<datepicker
+												data-cy="new-kontrolle-von"
 												v-model="lektorState.beginn"
 												@update:model-value="handleChangeBeginn"
 												:clearable="false"
@@ -1879,6 +1880,7 @@ export const LektorComponent = {
 										</div>
 										<div class="col-4">
 											<datepicker
+												data-cy="new-kontrolle-bis"
 												v-model="lektorState.ende"
 												@update:model-value="handleChangeEnde"
 												:clearable="false"
@@ -1904,6 +1906,7 @@ export const LektorComponent = {
 										<div class="col-4">
 											<datepicker
 												ref="insideDateSelect"
+												data-cy="new-kontrolle-datum"
 												v-model="selectedDate"
 												:clearable="false"
 												locale="de"
@@ -1940,14 +1943,14 @@ export const LektorComponent = {
 						<template v-slot:footer>
 							
 							<button v-if="currentLEhasRightToSkipQR" type="button" class="btn btn-primary" @click="insertAnwWithoutQR">{{ $p.t('global/kontrolleOhneQR') }}</button>
-							<button v-show="!showQRLoadingSpinner" :disabled="qr != null" type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/jetztStartenV2') }}</button>
+							<button v-show="!showQRLoadingSpinner" data-cy="new-kontrolle-start" :disabled="qr != null" type="button" class="btn btn-primary" @click="startNewAnwesenheitskontrolle">{{ $p.t('global/jetztStartenV2') }}</button>
 							<div v-show="showQRLoadingSpinner">
 								<i class="fa-solid fa-spinner fa-pulse fa-3x"></i>
 							</div>
 						</template>
 					</bs-modal>
 					
-					<bs-modal ref="modalContainerEditKontrolle" class="bootstrap-prompt"
+					<bs-modal ref="modalContainerEditKontrolle" data-cy="edit-kontrolle-modal" class="bootstrap-prompt"
 					dialogClass="modal-xl">
 						<template v-slot:title>
 							{{ $p.t('global/editAnwKontrolle') }}
@@ -1957,7 +1960,7 @@ export const LektorComponent = {
 						
 							<template v-for="kontrolle in lektorState.kontrollen">
 
-								<div class="row p-2">
+								<div class="row p-2" data-cy="edit-kontrolle-row">
 									<div class="col-5 d-flex align-items-center">
 										<KontrolleDisplay :kontrolle="kontrolle"></KontrolleDisplay>
 									</div>
@@ -1976,7 +1979,7 @@ export const LektorComponent = {
 											</button>
 										</span>
 										
-										<button style="margin-left: 12px;" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
+										<button style="margin-left: 12px;" data-cy="edit-kontrolle-zeiten" @click="editAnwesenheitskontrolle(kontrolle)" role="button" class="btn btn-success" v-tooltip.bottom="getTooltipEditKontrollzeiten">
 											<i class="fa fa-pen"></i>
 										</button>
 										
@@ -2030,7 +2033,7 @@ export const LektorComponent = {
 	
 					<FehlminutenDialog ref="fehlminutenDialog"></FehlminutenDialog>
 
-					<bs-modal ref="modalContainerLegende" class="bootstrap-prompt" dialogClass="modal-lg">
+					<bs-modal ref="modalContainerLegende" data-cy="legende-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 						<template v-slot:title>
 							<div>
 								{{ $p.t('global/anwLegende') }}
@@ -2041,7 +2044,7 @@ export const LektorComponent = {
 						</template>
 					</bs-modal>
 					
-					<bs-modal ref="modalContainerStudentByLva" class="bootstrap-prompt" dialogClass="modal-xl" :allowFullscreenExpand="true">
+					<bs-modal ref="modalContainerStudentByLva" data-cy="student-detail-modal" class="bootstrap-prompt" dialogClass="modal-xl" :allowFullscreenExpand="true">
 						<template v-slot:title>
 							<div>
 								{{ $capitalize($p.t('global/studentByLVATitle'))}}: {{ selectedStudent?.title }}
@@ -2059,14 +2062,14 @@ export const LektorComponent = {
 					</bs-modal>
 					
 					<div id="qrwrap">
-						<bs-modal ref="modalContainerQR" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
+						<bs-modal ref="modalContainerQR" data-cy="qr-modal" class="bootstrap-prompt" dialogClass="modal-lg"  backdrop="static" 
 						 :keyboard=false :noCloseBtn="true" :allowFullscreenExpand="true">
 							<template v-slot:title>{{ $capitalize($p.t('global/kontrolle')) }}: {{ kontrolleVonBis }}
 							
 							</template>
 							<template v-slot:default>
 								<div id="qrcontent">
-									<h1 class="text-center">Code: {{code}}</h1>
+									<h1 class="text-center">Code: <span data-cy="qr-code">{{code}}</span></h1>
 									<div v-html="qr" class="text-center"></div>
 									
 									<AnwCountDisplay :anwesend="checkInCount" :abwesend="abwesendCount" :entschuldigt="entschuldigtCount"/>
@@ -2082,7 +2085,7 @@ export const LektorComponent = {
 								
 							</template>
 							<template v-slot:footer>
-								<button type="button" class="btn btn-primary" @click="stopAnwesenheitskontrolle">{{ $capitalize($p.t('global/endAnwKontrolle')) }}</button>
+								<button type="button" data-cy="qr-stop" class="btn btn-primary" @click="stopAnwesenheitskontrolle">{{ $capitalize($p.t('global/endAnwKontrolle')) }}</button>
 							</template>
 						</bs-modal>
 					</div>
@@ -2104,6 +2107,7 @@ export const LektorComponent = {
 								<div class="col-12 d-flex align-items-center gap-2" style="padding-right: 24px">
 									<template v-if="!multiLeMode">
 										<Dropdown
+											data-cy="le-dropdown"
 											:modelValue="$entryParams.selected_le_info.value"
 											:options="getLeDropdownOptions"
 											optionLabel="infoString"
@@ -2116,26 +2120,27 @@ export const LektorComponent = {
 											@change="handleLeDropdownChanged"
 										>
 											<template #option="slotProps">
-												<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
+												<div data-cy="le-option" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
 													<span>{{ slotProps.option.infoString }}</span>
 													<span v-if="!isOwnLe(slotProps.option)">{{ slotProps.option.lektor_names?.join(', ') }}</span>
 												</div>
 											</template>
 											<template #footer>
 												<div v-if="showFremdeLeToggle" class="border-top px-3 py-2">
-													<button type="button" class="btn btn-link btn-sm p-0" @click="showFremdeLe = !showFremdeLe">
+													<button type="button" data-cy="le-fremde-toggle" class="btn btn-link btn-sm p-0" @click="showFremdeLe = !showFremdeLe">
 														<i class="fa fa-users me-1"></i>{{ showFremdeLe ? $p.t('global/anwWeitereLvTeileAusblenden') : $p.t('global/anwWeitereLvTeileAnzeigen') }}
 													</button>
 												</div>
 											</template>
 										</Dropdown>
-										<button type="button" class="btn btn-outline-secondary text-nowrap" @click="enterCombinedView" v-tooltip.bottom="getTooltipGesamtansicht">
+										<button type="button" data-cy="gesamtansicht-start" class="btn btn-outline-secondary text-nowrap" @click="enterCombinedView" v-tooltip.bottom="getTooltipGesamtansicht">
 											<i class="fa fa-layer-group me-1"></i>{{ $p.t('global/anwGesamtansicht') }}
 										</button>
 									</template>
 									<template v-else>
 										<Multiselect
 											ref="leMultiselect"
+											data-cy="le-multiselect"
 											v-model="selectedLehreinheiten"
 											:options="getLEOptions"
 											optionLabel="infoString"
@@ -2197,6 +2202,7 @@ export const LektorComponent = {
 								<div class="col-4">
 									<datepicker
 										ref="outsideDateSelect"
+										data-cy="lektor-datum"
 										v-model="selectedDate"
 										:clearable="false"
 										locale="de"
@@ -2219,6 +2225,7 @@ export const LektorComponent = {
 											@click="handleShowAllToggle" 
 											id="all" 
 											ref="showAllTickbox"
+											data-cy="show-all-kontrollen"
 											style="cursor: pointer; width: 1.2rem; height: 1.2rem;"
 										>
 										<label class="form-check-label mb-0" for="all" style="cursor: pointer; white-space: nowrap;">
@@ -2230,41 +2237,43 @@ export const LektorComponent = {
 							</div>
 						</div>
 					</div>
-					<core-filter-cmpt
-						title=""
-						@uuidDefined="handleUuidDefined"
-						ref="anwesenheitenTable"
-						:tabulator-options="anwesenheitenTabulatorOptions"
-						:tabulator-events="anwesenheitenTabulatorEventHandlers"
-						:isUsingPresets="true"
-						presetsId="anwesenheitenLektorTable"
-						:presetColumns="presetColumns"
-						:id-field="'anwesenheiten_id'"
-						:tableOnly="true"
-						:newBtnShow="true"
-						:newBtnLabel="$p.t('global/neueAnwKontrolle')"
-						:newBtnDisabled="!lektorState.students.length || multiLeMode || !canEditSelectedLe"
-						@click:new=openNewAnwesenheitskontrolleModal
-						:sideMenu="false"
-						noColumnFilter>
-							<template #actions>
-								<button @click="saveChanges" :disabled="!changedData.length" role="button" :class="getSaveBtnClass" v-tooltip.bottom="getTooltipSaveChanges">
-									<i class="fa fa-save"></i>
-								</button>
+					<div data-cy="lektor-table">
+						<core-filter-cmpt
+							title=""
+							@uuidDefined="handleUuidDefined"
+							ref="anwesenheitenTable"
+							:tabulator-options="anwesenheitenTabulatorOptions"
+							:tabulator-events="anwesenheitenTabulatorEventHandlers"
+							:isUsingPresets="true"
+							presetsId="anwesenheitenLektorTable"
+							:presetColumns="presetColumns"
+							:id-field="'anwesenheiten_id'"
+							:tableOnly="true"
+							:newBtnShow="true"
+							:newBtnLabel="$p.t('global/neueAnwKontrolle')"
+							:newBtnDisabled="!lektorState.students.length || multiLeMode || !canEditSelectedLe"
+							@click:new=openNewAnwesenheitskontrolleModal
+							:sideMenu="false"
+							noColumnFilter>
+								<template #actions>
+									<button @click="saveChanges" data-cy="save-changes" :disabled="!changedData.length" role="button" :class="getSaveBtnClass" v-tooltip.bottom="getTooltipSaveChanges">
+										<i class="fa fa-save"></i>
+									</button>
 								
-								<button @click="openEditModal" :disabled="!lektorState.kontrollen.length || multiLeMode || !canEditSelectedLe" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
-									<i class="fa fa-pen"></i>
-								</button>
+									<button @click="openEditModal" data-cy="edit-kontrollen" :disabled="!lektorState.kontrollen.length || multiLeMode || !canEditSelectedLe" role="button" :class="getEditBtnClass" v-tooltip.bottom="getTooltipEdit">
+										<i class="fa fa-pen"></i>
+									</button>
 								
-								<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipCsv">
-									<i class="fa fa-file-csv"></i>
-								</button>
+									<button @click="downloadCSV" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipCsv">
+										<i class="fa fa-file-csv"></i>
+									</button>
 								
-								<button @click="openLegend" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipLegende">
-									<i class="fa fa-book"></i>
-								</button>
-							</template>
-					</core-filter-cmpt>	
+									<button @click="openLegend" data-cy="legende-open" role="button" class="btn btn-secondary ml-2" v-tooltip.bottom="getTooltipLegende">
+										<i class="fa fa-book"></i>
+									</button>
+								</template>
+						</core-filter-cmpt>
+					</div>	
 				</div>
 
 			</template>

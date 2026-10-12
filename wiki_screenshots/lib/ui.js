@@ -1,5 +1,9 @@
 // screenshots, the index of the run and the helpers for the CIS4 page, modals, dialogs and tabulator
 
+// the extension templates mark every element the suite uses with data-cy. Other selectors only address
+// markup of the core (menu, modal frame, confirm dialog, tabs) and of the libraries (tabulator, PrimeVue, VueDatePicker)
+export const byCy = name => `[data-cy="${name}"]`
+
 // ---------- screenshots and png/index.json ----------
 
 const shots = []
@@ -61,9 +65,10 @@ export function shotEl(selector, name, title, padding = 8) {
 	headerScrolls(false)
 }
 
-// only the own dialog: a modal can hold a hidden modal (the Fehlminuten dialog in the detail view)
-export function shotModal(name, title) {
-	shotEl('.modal.show > .modal-dialog', name, title)
+// modal: the data-cy of the bs-modal. Only its own dialog: a modal can hold a hidden modal
+// (the Fehlminuten dialog in the detail view)
+export function shotModal(modal, name, title) {
+	shotEl(`${byCy(modal)}.show > .modal-dialog`, name, title)
 }
 
 // a subject from cellOf/rowOf
@@ -102,9 +107,9 @@ export function collapseMenu() {
 	})
 }
 
-export function closeModal() {
-	cy.get('.modal.show > .modal-dialog > .modal-content > .modal-header .btn-close').last().click({ force: true })
-	cy.get('.modal.show').should('not.exist')
+export function closeModal(modal) {
+	cy.get(`${byCy(modal)}.show > .modal-dialog > .modal-content > .modal-header .btn-close`).click({ force: true })
+	cy.get(`${byCy(modal)}.show`).should('not.exist')
 }
 
 // a hover tooltip of a table cell opens after its delay, also over the modal that the click on the cell opened.
@@ -139,23 +144,27 @@ export function clearToasts() {
 	cy.wait(300)
 }
 
+// the input of a VueDatePicker; picker: its data-cy. The menu renders inside the picker
+export const dateInput = picker => `${byCy(picker)} .dp__input`
+
 // a VueDatePicker without text input opens on the month of its value: step from there to the month of
 // the date, then click the day. The value of the input has the format dd.MM.yyyy
-export function pickDate(inputSelector, date) {
-	cy.get(inputSelector).first().invoke('val').then(value => {
+export function pickDate(picker, date) {
+	const menu = `${byCy(picker)} .dp__menu`
+	cy.get(dateInput(picker)).invoke('val').then(value => {
 		const [, month, year] = String(value).split('.').map(Number)
 		const steps = month && year ? (date.getFullYear() * 12 + date.getMonth()) - (year * 12 + month - 1) : 0
-		cy.get(inputSelector).first().click()
-		cy.get('.dp__menu').should('be.visible')
+		cy.get(dateInput(picker)).click()
+		cy.get(menu).should('be.visible')
 		const arrow = steps > 0 ? 'Next month' : 'Previous month'
-		for (let i = 0; i < Math.abs(steps); i++) cy.get(`.dp__menu [aria-label="${arrow}"]`).first().click()
-		cy.get('.dp__menu .dp__cell_inner:not(.dp__cell_offset)').contains(new RegExp(`^\\s*${date.getDate()}\\s*$`)).click()
+		for (let i = 0; i < Math.abs(steps); i++) cy.get(`${menu} [aria-label="${arrow}"]`).first().click()
+		cy.get(`${menu} .dp__cell_inner:not(.dp__cell_offset)`).contains(new RegExp(`^\\s*${date.getDate()}\\s*$`)).click()
 	})
 }
 
 // ---------- tabulator ----------
 
-// the main table is the last one in the container, modals hold more tables before it
+// selector: the .tabulator inside the data-cy wrapper of the table
 export function tabulatorOf(win, selector) {
 	const el = [...win.document.querySelectorAll(selector)].pop()
 	const table = el && win.Tabulator?.findTable(el)?.[0]

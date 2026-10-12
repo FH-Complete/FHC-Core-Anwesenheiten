@@ -33,8 +33,10 @@ export const FehlminutenDialog = {
 		},
 		// common reasons, a click writes the text into the notiz
 		reasons() {
-			return ['global/anwFehlminutenGrundVerspaetung', 'global/anwFehlminutenGrundFrueherGegangen']
-				.map(phrase => this.$p.t(phrase))
+			return {
+				verspaetung: this.$p.t('global/anwFehlminutenGrundVerspaetung'),
+				frueherGegangen: this.$p.t('global/anwFehlminutenGrundFrueherGegangen')
+			}
 		}
 	},
 	methods: {
@@ -71,7 +73,7 @@ export const FehlminutenDialog = {
 		}
 	},
 	template: `
-		<bs-modal ref="modal" class="bootstrap-prompt" dialogClass="anw-fehlminuten-dialog" bodyClass="px-4 py-4"
+		<bs-modal ref="modal" data-cy="fehlminuten-dialog" class="bootstrap-prompt" dialogClass="anw-fehlminuten-dialog" bodyClass="px-4 py-4"
 			@hidden-bs-modal="handleHidden" @shown-bs-modal="focusInput">
 			<template v-slot:title>
 				{{ $p.t('global/anwFehlminutenErfassen') }}
@@ -91,7 +93,7 @@ export const FehlminutenDialog = {
 						</button>
 					</div>
 					<div class="input-group">
-						<input :id="inputId" ref="input" type="number" class="form-control"
+						<input :id="inputId" ref="input" data-cy="fehlminuten-minuten" type="number" class="form-control"
 							:class="{'is-invalid': showInvalid}"
 							min="1" :max="max" step="1"
 							v-model.number="dialog.value"
@@ -106,7 +108,7 @@ export const FehlminutenDialog = {
 
 					<label :for="inputId + '-notiz'" class="form-label fw-semibold mt-3">{{ $p.t('global/anwFehlminutenBegruendung') }}</label>
 					<div class="d-flex flex-wrap gap-1 mb-2" role="group">
-						<button v-for="reason in reasons" :key="reason" type="button"
+						<button v-for="(reason, key) in reasons" :key="key" :data-cy="'fehlminuten-grund-' + key" type="button"
 							class="btn btn-sm" :class="dialog.notiz === reason ? 'btn-primary' : 'btn-outline-primary'"
 							:aria-pressed="dialog.notiz === reason"
 							@click="dialog.notiz = reason">
@@ -120,7 +122,7 @@ export const FehlminutenDialog = {
 			</template>
 			<template v-slot:footer>
 				<button type="button" class="btn btn-outline-secondary" @click="$refs.modal.hide()">{{ $p.t('ui/abbrechen') }}</button>
-				<button type="button" class="btn btn-primary" :disabled="!valid" @click="confirm">{{ $p.t('ui/anwenden') }}</button>
+				<button type="button" data-cy="fehlminuten-anwenden" class="btn btn-primary" :disabled="!valid" @click="confirm">{{ $p.t('ui/anwenden') }}</button>
 			</template>
 		</bs-modal>
 	`
