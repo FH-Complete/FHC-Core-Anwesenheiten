@@ -364,7 +364,7 @@ class Anwesenheit_User_model extends \DB_Model
 	public function getAnwesenheitenCheckViewData($prestudent_id, $lehreinheit_id)
 	{
 		$query = "
-			SELECT vorname, nachname, bezeichnung, kurzbz, verband
+			SELECT COALESCE(NULLIF(wahlname, ''), vorname) AS vorname, nachname, bezeichnung, kurzbz, verband
 			FROM campus.vw_student_lehrveranstaltung
 					 JOIN public.tbl_student ON (uid = student_uid)
 					 JOIN public.tbl_benutzer USING (uid)

@@ -353,12 +353,24 @@ export const LektorComponent = {
 		confirmEditFremdeLe() {
 			return this.confirmFremdeLe('global/anwEditFremdeLeConfirm', 'global/anwFortfahren')
 		},
-		getLeLabel(le_id) {
+		getLeOption(le_id) {
 			const options = this.$entryParams.available_le_info_lva.value?.length
 				? this.$entryParams.available_le_info_lva.value
 				: this.$entryParams.available_le_info.value
-			const le = options?.find(o => o.lehreinheit_id == le_id)
+			return options?.find(o => o.lehreinheit_id == le_id)
+		},
+		getLeLabel(le_id) {
+			const le = this.getLeOption(le_id)
 			return le?.groupString ?? le?.csvInfoString ?? le?.infoString ?? ('LE ' + le_id)
+		},
+		// le info below the timespan of a kontrolle column. Parallel les often share groups and
+		// timespan and differ by the lehrform only
+		getColumnLeInfo(le_id) {
+			if (!this.multiLeMode && !this.lektorState.showAllVar) return {lehrform: '', groups: ''}
+			return {
+				lehrform: this.getLeOption(le_id)?.lehrform_kurzbz ?? '',
+				groups: this.getLeLabel(le_id)
+			}
 		},
 		// '10:00:00 - 11:30:00' -> '10:00 - 11:30', column keys keep the raw times
 		stripSeconds(timespan) {
@@ -376,10 +388,12 @@ export const LektorComponent = {
 			// text-body-secondary follows the theme, a fixed gray reaches 4:1 on the light and 2.9:1 on the dark header
 			container.innerHTML = `<span style="font-weight: bold;">${selectedDateFrontendFormatted}</span><br><span class="text-body-secondary">${this.stripSeconds(titleParts[1])}</span>`;
 
-			// in the combined multi le view show which lehreinheit the kontrolle belongs to
-			if (this.multiLeMode && titleParts[2] !== undefined) {
-				const leLabel = this.getLeLabel(titleParts[2].trim())
-				container.innerHTML += `<br><span class="text-body-secondary" style="font-size: 0.75em;">${leLabel}</span>`;
+			// in the combined view and in the all kontrollen view show which lv-teil the kontrolle belongs to
+			if (titleParts[2] !== undefined) {
+				const {lehrform, groups} = this.getColumnLeInfo(titleParts[2].trim())
+				const lehrformHtml = lehrform ? `<span class="fw-bold">${lehrform}</span>` : ''
+				const leInfo = [lehrformHtml, groups].filter(Boolean).join(' - ')
+				if (leInfo) container.innerHTML += `<br><span class="text-body-secondary" style="font-size: 0.75em;">${leInfo}</span>`;
 			}
 			return container;
 		},
@@ -633,13 +647,15 @@ export const LektorComponent = {
 			}
 		},
 		setShowAll() {
+			// set the flag first, the column headers read it when the columns get built
+			this.lektorState.showAllVar = true
+
 			this.lektorState.tabulatorCols = this.buildColsForDates(this.lektorState.dates)
 			this.lektorState.tableStudentData = this.setupAllData()
 			this.setAllColsAndData()
 
 			this.$refs.showAllTickbox.checked = true
 			if (!this.multiLeMode) localStorage.setItem('DigiAnwShowAll', true)
-			this.lektorState.showAllVar = true
 		},
 		setupAllData() {
 			const data = []
@@ -1494,7 +1510,11 @@ export const LektorComponent = {
 			// build a readable header for downloads
 			const keyParts = date.split(' | ')
 			let titleDownload = this.toFrontendDate(keyParts[0]) + ' ' + (keyParts[1] ? this.stripSeconds(keyParts[1]) : '')
-			if (this.multiLeMode && keyParts[2] !== undefined) titleDownload += ' ' + this.getLeLabel(keyParts[2])
+			if (keyParts[2] !== undefined) {
+				const {lehrform, groups} = this.getColumnLeInfo(keyParts[2])
+				const leInfo = [lehrform, groups].filter(Boolean).join(' - ')
+				if (leInfo) titleDownload += ' ' + leInfo
+			}
 
 			return {
 				title: date,

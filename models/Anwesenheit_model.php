@@ -71,7 +71,7 @@ class Anwesenheit_model extends \DB_Model
 		// bisio and mobilitaet can have several rows per student: the ORDER BY makes DISTINCT ON keep
 		// the mobility of this semester and the exchange that overlaps this semester, else the latest one
 		$query = "SELECT
-				distinct on(nachname, vorname, public.tbl_benutzer.person_id) vorname, nachname, prestudent_id, public.tbl_student.student_uid, public.tbl_benutzer.person_id,
+				distinct on(nachname, vorname, public.tbl_benutzer.person_id) COALESCE(NULLIF(wahlname, ''), vorname) AS vorname, nachname, prestudent_id, public.tbl_student.student_uid, public.tbl_benutzer.person_id,
 				    CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || public.tbl_benutzer.person_id as foto   
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe,
@@ -140,7 +140,7 @@ class Anwesenheit_model extends \DB_Model
 
 	public function getStudentViewData($uid)
 	{
-		$query = "SELECT vorname, nachname, prestudent_id, public.tbl_person.person_id, student_uid, semester, verband, gruppe
+		$query = "SELECT COALESCE(NULLIF(wahlname, ''), vorname) AS vorname, nachname, prestudent_id, public.tbl_person.person_id, student_uid, semester, verband, gruppe
 					FROM public.tbl_person
 						JOIN public.tbl_prestudent ON (public.tbl_person.person_id = public.tbl_prestudent.person_id)
 						JOIN public.tbl_student USING (prestudent_id, studiengang_kz)
@@ -219,7 +219,7 @@ class Anwesenheit_model extends \DB_Model
 	public function getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, $root)
 	{
 		$query = "
-			SELECT vorname, nachname,
+			SELECT COALESCE(NULLIF(wahlname, ''), vorname) AS vorname, nachname,
 			       person_id, prestudent_id,
 			      CONCAT(?, 'cis/public/bild.php?src=person&person_id=') || person_id as foto,
 			    semester, verband, gruppe, extension.get_anwesenheiten_by_time(?, ?, ?) as sum
