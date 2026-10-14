@@ -181,6 +181,12 @@ function preflight() {
 			.then(res => check(`seed permission ${users.admin.username}`, res.status === 200 && res.body?.meta?.status === 'success',
 				`${failReason(res)}: anw_r_full_assistenz on the oe of the LV, prepare_cy_db.sql part 1`))
 
+		// the student must not pass the same call. A pass means every user has every permission (a dev hack in
+		// isBerechtigt of the core): the screenshots show the admin UI and the seed deletes fail
+		if (state.loggedIn.student) requestAs('student', 'GET', `${API}/KontrolleApi/getLehreinheitenForLehrveranstaltung`, { lva_id: lv.lv_id, sem_kurzbz: lv.sem_kurzbz })
+			.then(res => check(`no staff permission ${users.student.username}`, !(res.status === 200 && res.body?.meta?.status === 'success'),
+				'200: the server grants every permission to every user, check benutzerberechtigung::isBerechtigt of the core'))
+
 		if (lektor.anw !== 200) return
 		requestAs('lektor', 'POST', `${API}/KontrolleApi/fetchAllAnwesenheitenByLvaAssigned`,
 			{ lv_id: lv.lv_id, sem_kurzbz: lv.sem_kurzbz, le_id: lv.student.lehreinheit_id, ma_uid: lektor.uid })
