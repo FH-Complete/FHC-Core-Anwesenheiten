@@ -1,6 +1,7 @@
 import {CoreNavigationCmpt} from '../../../../../js/components/navigation/Navigation.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
+import { absoluteJsImportUrl } from '../../../../../js/helpers/UrlHelpers.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import {StudentDropdown} from "../Setup/StudentDropdown.js"
 import StudentAnwesenheitComponent from "./StudentAnwesenheitComponent.js";
@@ -31,10 +32,10 @@ export const StudentComponent = {
 	methods: {
 		getTabsStudent() {
 			const tabs = {
-				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js'},
+				anwesenheiten: { title: this.$p.t('global/anwesenheiten'), component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentAnwesenheitComponent.js')},
 			}
-			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js'}
-			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimelineV2'), component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js'}
+			if(this.$entryParams.permissions.entschuldigungen_enabled) tabs['entschuldigungen'] = { title: this.$p.t('global/entschuldigungen'), component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentEntschuldigungComponent.js')}
+			if(this.$entryParams.permissions.admin) tabs['timeline'] = { title: this.$p.t('global/anwTimelineV2'), component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/AnwTimelineWrapper.js')}
 			
 			return tabs
 		},

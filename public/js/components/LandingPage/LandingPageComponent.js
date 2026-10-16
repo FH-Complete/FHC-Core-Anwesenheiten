@@ -1,6 +1,7 @@
 import {CoreRESTClient} from '../../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../../js/components/layout/BaseLayout.js';
 import CoreTabs from '../../../../../js/components/Tabs.js';
+import { absoluteJsImportUrl } from '../../../../../js/helpers/UrlHelpers.js';
 
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import StudentComponent from "../Student/StudentComponent.js"
@@ -80,7 +81,7 @@ export default {
 				tabs.push({
 					key: 'Kontrolle',
 					title: kontrolleTitle,
-					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js'
+					component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Lektor/LektorComponent.js')
 				})
 			}
 
@@ -92,7 +93,7 @@ export default {
 				tabs.push({
 					key: 'Profil',
 					title: profilTitle,
-					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js'
+					component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Student/StudentComponent.js')
 				})
 			}
 
@@ -104,7 +105,7 @@ export default {
 				tabs.push({
 					key: 'Admin',
 					title: adminTitle,
-					component: '../../extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js'
+					component: absoluteJsImportUrl('public/extensions/FHC-Core-Anwesenheiten/js/components/Assistenz/AssistenzComponent.js')
 				})
 			}
 
