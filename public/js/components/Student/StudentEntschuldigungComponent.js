@@ -5,6 +5,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
+import DateTimeInput from '../DateTimeInput.js';
 import NarrowScreen from '../../mixins/NarrowScreen.js';
 import ApiProfil from '../../api/factory/profil.js'
 export default {
@@ -14,6 +15,7 @@ export default {
 		CoreFilterCmpt,
 		BsModal,
 		Upload,
+		DateTimeInput,
 		"datepicker": VueDatePicker
 	},
 	mixins: [NarrowScreen],
@@ -404,9 +406,17 @@ export default {
 				return false
 			}
 
-			if (this.entschuldigung.bis < this.entschuldigung.von)
+			const von = luxon.DateTime.fromJSDate(this.entschuldigung.von)
+			const bis = luxon.DateTime.fromJSDate(this.entschuldigung.bis)
+			if (bis.startOf('day') < von.startOf('day'))
 			{
 				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateTimes'));
+				return false
+			}
+			// same day: the date message would confuse, the times are wrong
+			if (bis <= von)
+			{
+				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateUhrzeit'));
 				return false
 			}
 
@@ -573,41 +583,27 @@ export default {
 					</div>
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
-							<label for="von" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
-							<datepicker
-								id="von"
+							<label for="dp-input-entVon" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
+							<date-time-input
+								uid="entVon"
 								v-model="entschuldigung.von"
-								:clearable="false"
-								auto-apply
-								:enable-time-picker="true"
-								:start-time="entschuldigung.von"
-								:format="formatDate"
+								:label="$capitalize($p.t('ui/dateFrom'))"
 								:min-date="new Date(minDate)"
-								:start-date="new Date(minDate)"
-								:text-input="true"
-								>
-							</datepicker>
+							></date-time-input>
 						</div>
 						<div class="col-12 col-sm-6">
-							<label for="bis" class="form-label">{{$capitalize($p.t('global/bis'))}}</label>
-							<datepicker
-								id="bis"
+							<label for="dp-input-entBis" class="form-label">{{$capitalize($p.t('global/bis'))}}</label>
+							<date-time-input
+								uid="entBis"
 								v-model="entschuldigung.bis"
-								:clearable="false"
-								auto-apply
-								:enable-time-picker="true"
-								:start-time="entschuldigung.bis"
-								:format="formatDate"
+								:label="$capitalize($p.t('global/bis'))"
 								:min-date="new Date(minDate)"
-								:start-date="new Date(minDate)"
-								:text-input="true"
-								>
-							</datepicker>
+							></date-time-input>
 						</div>
 						<div class="col-12">
 							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
-							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
-							<div class="form-text">{{ uploadHint }}</div>
+							<div class="form-text mt-0 mb-2">{{ uploadHint }}</div>
+							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" :preview="true" v-model="entschuldigung.files"></Upload>
 							<div class="form-check mt-2">
 								<input id="noFileUpload" v-model="noFileUpload" class="form-check-input" type="checkbox">
 								<label for="noFileUpload" class="form-check-label">{{$p.t('global/excuseUploadNoFile')}}</label>
@@ -661,8 +657,8 @@ export default {
 						</div>
 						<div class="col-12">
 							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
-							<Upload :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
-							<div class="form-text">{{ uploadHint }}</div>
+							<div class="form-text mt-0 mb-2">{{ uploadHint }}</div>
+							<Upload :accept="acceptedFiletypes" :preview="true" v-model="entschuldigung.files"></Upload>
 						</div>
 					</div>
 				</template>

@@ -370,7 +370,10 @@ class ProfilApi extends FHCAPI_Controller
 		if($isAdmin || $isAssistenz) $berechtigt = true;
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
-		
+
+		$zeitraumError = $this->_ci->entschuldigunguploadlib->checkZeitraum($vonTimestamp, $bisTimestamp);
+		if ($zeitraumError !== null) $this->terminateWithError($zeitraumError, 'general');
+
 		$dateLimitTimestamp = $this->calcMinDate($this->_ci->config->item('ENTSCHULDIGUNG_MAX_REACH') + 1); // +1 since frontend validates with a 1day larger range currently
 		
 		if ($vonTimestamp < $dateLimitTimestamp && !$isAdmin) {

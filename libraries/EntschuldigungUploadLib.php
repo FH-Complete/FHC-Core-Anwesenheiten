@@ -2,7 +2,7 @@
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 /**
- * Checks the document upload of an Entschuldigung and explains a failed upload to the user.
+ * Checks the document upload and the Zeitraum of an Entschuldigung and explains a failed upload to the user.
  *
  * The messages use phrases of the category 'global', the calling controller must load this category.
  */
@@ -52,6 +52,23 @@ class EntschuldigungUploadLib
 		$this->_log($context, 'request_too_large');
 
 		return $this->_getFileTooLargeMessage($contentLength);
+	}
+
+	/**
+	 * Checks the order of the von and bis timestamps with the rules of the student upload form.
+	 * The day is the day in the server timezone.
+	 *
+	 * Returns the error message, else null.
+	 */
+	public function checkZeitraum($vonTimestamp, $bisTimestamp)
+	{
+		if (date('Y-m-d', $bisTimestamp) < date('Y-m-d', $vonTimestamp))
+			return $this->_ci->p->t('global', 'errorValidateTimes');
+		// same day: the date message would confuse, the times are wrong
+		if ($bisTimestamp <= $vonTimestamp)
+			return $this->_ci->p->t('global', 'errorValidateUhrzeit');
+
+		return null;
 	}
 
 	/**
