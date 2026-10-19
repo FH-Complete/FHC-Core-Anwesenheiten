@@ -5,7 +5,6 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-import InViewHelp from '../../../../../js/components/InViewHelp.js';
 import NarrowScreen from '../../mixins/NarrowScreen.js';
 import ApiProfil from '../../api/factory/profil.js'
 export default {
@@ -15,7 +14,6 @@ export default {
 		CoreFilterCmpt,
 		BsModal,
 		Upload,
-		InViewHelp,
 		"datepicker": VueDatePicker
 	},
 	mixins: [NarrowScreen],
@@ -23,6 +21,7 @@ export default {
 		return {
 			noFileUpload: false,
 			uploading: false,
+			infoMinimized: this.loadInfoMinimized(),
 			editEntschuldigung: null,
 			tabulatorUuid: Vue.ref(0),
 			entschuldigung: this.initEntschuldigungForm(),
@@ -77,6 +76,21 @@ export default {
 		};
 	},
 	methods: {
+		// the info box above the form is open, unless the student minimized it before.
+		// a blocked localStorage throws, then the box stays open
+		loadInfoMinimized() {
+			try {
+				return localStorage.getItem('DigiAnwEntInfoMinimized') === 'true'
+			} catch (e) {
+				return false
+			}
+		},
+		toggleInfo() {
+			this.infoMinimized = !this.infoMinimized
+			try {
+				localStorage.setItem('DigiAnwEntInfoMinimized', this.infoMinimized)
+			} catch (e) {}
+		},
 		initEntschuldigungForm() {
 			return{
 				von: new Date(new Date(Date.now()).getFullYear(), new Date(Date.now()).getMonth(), new Date(Date.now()).getDate(), 0, 0, 0, 0),
@@ -527,7 +541,7 @@ export default {
 			return hint.join(' ')
 		},
 		helpText() {
-			return this.$p.t('global/tooltipStudentEntschuldigungV2', [this.$entryParams.permissions.entschuldigungMaxReach])
+			return this.$p.t('global/tooltipStudentEntschuldigungV3', [this.$entryParams.permissions.entschuldigungMaxReach])
 		},
 		// the entschuldigungen as the list shows them
 		listItems() {
@@ -546,12 +560,17 @@ export default {
 		<template #main>
 			<bs-modal ref="modalContainerEntschuldigungUpload" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
-					<span class="d-inline-flex align-items-center gap-2">
-						{{$p.t('global/addEntschuldigung')}}
-						<in-view-help button-class="fs-5" :text="helpText"></in-view-help>
-					</span>
+					{{$p.t('global/addEntschuldigung')}}
 				</template>
 				<template v-slot:default>
+					<div class="alert alert-info anw-ent-info">
+						<button type="button" class="anw-ent-info-toggle" :aria-expanded="!infoMinimized" @click="toggleInfo">
+							<i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+							<span class="me-auto">{{$p.t('global/entInfoTitle')}}</span>
+							<i class="fa-solid" :class="infoMinimized ? 'fa-chevron-down' : 'fa-chevron-up'" aria-hidden="true"></i>
+						</button>
+						<div v-show="!infoMinimized" class="anw-ent-info-text">{{ helpText }}</div>
+					</div>
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
 							<label for="von" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
@@ -605,12 +624,17 @@ export default {
 
 			<bs-modal ref="modalContainerEntschuldigungEdit" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
-					<span class="d-inline-flex align-items-center gap-2">
-						{{$p.t('global/editEntschuldigung')}}
-						<in-view-help button-class="fs-5" :text="helpText"></in-view-help>
-					</span>
+					{{$p.t('global/editEntschuldigung')}}
 				</template>
 				<template v-slot:default v-if="editEntschuldigung">
+					<div class="alert alert-info anw-ent-info">
+						<button type="button" class="anw-ent-info-toggle" :aria-expanded="!infoMinimized" @click="toggleInfo">
+							<i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+							<span class="me-auto">{{$p.t('global/entInfoTitle')}}</span>
+							<i class="fa-solid" :class="infoMinimized ? 'fa-chevron-down' : 'fa-chevron-up'" aria-hidden="true"></i>
+						</button>
+						<div v-show="!infoMinimized" class="anw-ent-info-text">{{ helpText }}</div>
+					</div>
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
 							<label for="vonEdit" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
