@@ -5,7 +5,7 @@ import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
 import BsModal from '../../../../../js/components/Bootstrap/Modal.js';
 import Upload from '../../../../../js/components/Form/Upload/Dms.js';
 import VueDatePicker from '../../../../../js/components/vueDatepicker.js.php';
-import InViewHelp from '../../../../../js/components/InViewHelp.js';
+import DateTimeInput from '../DateTimeInput.js';
 import NarrowScreen from '../../mixins/NarrowScreen.js';
 import ApiProfil from '../../api/factory/profil.js'
 export default {
@@ -15,7 +15,7 @@ export default {
 		CoreFilterCmpt,
 		BsModal,
 		Upload,
-		InViewHelp,
+		DateTimeInput,
 		"datepicker": VueDatePicker
 	},
 	mixins: [NarrowScreen],
@@ -23,6 +23,7 @@ export default {
 		return {
 			noFileUpload: false,
 			uploading: false,
+			infoMinimized: this.loadInfoMinimized(),
 			editEntschuldigung: null,
 			tabulatorUuid: Vue.ref(0),
 			entschuldigung: this.initEntschuldigungForm(),
@@ -77,6 +78,21 @@ export default {
 		};
 	},
 	methods: {
+		// the info box above the form is open, unless the student minimized it before.
+		// a blocked localStorage throws, then the box stays open
+		loadInfoMinimized() {
+			try {
+				return localStorage.getItem('DigiAnwEntInfoMinimized') === 'true'
+			} catch (e) {
+				return false
+			}
+		},
+		toggleInfo() {
+			this.infoMinimized = !this.infoMinimized
+			try {
+				localStorage.setItem('DigiAnwEntInfoMinimized', this.infoMinimized)
+			} catch (e) {}
+		},
 		initEntschuldigungForm() {
 			return{
 				von: new Date(new Date(Date.now()).getFullYear(), new Date(Date.now()).getMonth(), new Date(Date.now()).getDate(), 0, 0, 0, 0),
@@ -391,9 +407,17 @@ export default {
 				return false
 			}
 
-			if (this.entschuldigung.bis < this.entschuldigung.von)
+			const von = luxon.DateTime.fromJSDate(this.entschuldigung.von)
+			const bis = luxon.DateTime.fromJSDate(this.entschuldigung.bis)
+			if (bis.startOf('day') < von.startOf('day'))
 			{
 				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateTimes'));
+				return false
+			}
+			// same day: the date message would confuse, the times are wrong
+			if (bis <= von)
+			{
+				this.$fhcAlert.alertWarning(this.$p.t('global/errorValidateUhrzeit'));
 				return false
 			}
 
@@ -528,7 +552,7 @@ export default {
 			return hint.join(' ')
 		},
 		helpText() {
-			return this.$p.t('global/tooltipStudentEntschuldigungV2', [this.$entryParams.permissions.entschuldigungMaxReach])
+			return this.$p.t('global/tooltipStudentEntschuldigungV3', [this.$entryParams.permissions.entschuldigungMaxReach])
 		},
 		// the entschuldigungen as the list shows them
 		listItems() {
@@ -547,49 +571,40 @@ export default {
 		<template #main>
 			<bs-modal ref="modalContainerEntschuldigungUpload" data-cy="ent-upload-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
-					<span class="d-inline-flex align-items-center gap-2">
-						{{$p.t('global/addEntschuldigung')}}
-						<in-view-help button-class="fs-5" :text="helpText"></in-view-help>
-					</span>
+					{{$p.t('global/addEntschuldigung')}}
 				</template>
 				<template v-slot:default>
+					<div class="alert alert-info anw-ent-info">
+						<button type="button" class="anw-ent-info-toggle" :aria-expanded="!infoMinimized" @click="toggleInfo">
+							<i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+							<span class="me-auto">{{$p.t('global/entInfoTitle')}}</span>
+							<i class="fa-solid" :class="infoMinimized ? 'fa-chevron-down' : 'fa-chevron-up'" aria-hidden="true"></i>
+						</button>
+						<div v-show="!infoMinimized" class="anw-ent-info-text">{{ helpText }}</div>
+					</div>
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
-							<label for="von" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
-							<datepicker
-								id="von"
+							<label for="dp-input-entVon" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
+							<date-time-input
+								uid="entVon"
 								v-model="entschuldigung.von"
-								:clearable="false"
-								auto-apply
-								:enable-time-picker="true"
-								:start-time="entschuldigung.von"
-								:format="formatDate"
+								:label="$capitalize($p.t('ui/dateFrom'))"
 								:min-date="new Date(minDate)"
-								:start-date="new Date(minDate)"
-								:text-input="true"
-								>
-							</datepicker>
+							></date-time-input>
 						</div>
 						<div class="col-12 col-sm-6">
-							<label for="bis" class="form-label">{{$capitalize($p.t('global/bis'))}}</label>
-							<datepicker
-								id="bis"
+							<label for="dp-input-entBis" class="form-label">{{$capitalize($p.t('global/bis'))}}</label>
+							<date-time-input
+								uid="entBis"
 								v-model="entschuldigung.bis"
-								:clearable="false"
-								auto-apply
-								:enable-time-picker="true"
-								:start-time="entschuldigung.bis"
-								:format="formatDate"
+								:label="$capitalize($p.t('global/bis'))"
 								:min-date="new Date(minDate)"
-								:start-date="new Date(minDate)"
-								:text-input="true"
-								>
-							</datepicker>
+							></date-time-input>
 						</div>
 						<div class="col-12" data-cy="ent-upload-file">
 							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
-							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
-							<div class="form-text">{{ uploadHint }}</div>
+							<div class="form-text mt-0 mb-2">{{ uploadHint }}</div>
+							<Upload :disabled="noFileUpload" :accept="acceptedFiletypes" :preview="true" v-model="entschuldigung.files"></Upload>
 							<div class="form-check mt-2">
 								<input id="noFileUpload" v-model="noFileUpload" class="form-check-input" type="checkbox">
 								<label for="noFileUpload" class="form-check-label">{{$p.t('global/excuseUploadNoFile')}}</label>
@@ -606,12 +621,17 @@ export default {
 
 			<bs-modal ref="modalContainerEntschuldigungEdit" data-cy="ent-nachreichen-modal" class="bootstrap-prompt" dialogClass="modal-lg">
 				<template v-slot:title>
-					<span class="d-inline-flex align-items-center gap-2">
-						{{$p.t('global/editEntschuldigung')}}
-						<in-view-help button-class="fs-5" :text="helpText"></in-view-help>
-					</span>
+					{{$p.t('global/editEntschuldigung')}}
 				</template>
 				<template v-slot:default v-if="editEntschuldigung">
+					<div class="alert alert-info anw-ent-info">
+						<button type="button" class="anw-ent-info-toggle" :aria-expanded="!infoMinimized" @click="toggleInfo">
+							<i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+							<span class="me-auto">{{$p.t('global/entInfoTitle')}}</span>
+							<i class="fa-solid" :class="infoMinimized ? 'fa-chevron-down' : 'fa-chevron-up'" aria-hidden="true"></i>
+						</button>
+						<div v-show="!infoMinimized" class="anw-ent-info-text">{{ helpText }}</div>
+					</div>
 					<div class="row g-3">
 						<div class="col-12 col-sm-6">
 							<label for="vonEdit" class="form-label">{{$capitalize($p.t('ui/dateFrom'))}}</label>
@@ -638,8 +658,8 @@ export default {
 						</div>
 						<div class="col-12">
 							<div class="form-label">{{$capitalize($p.t('global/dokument'))}}</div>
-							<Upload :accept="acceptedFiletypes" v-model="entschuldigung.files"></Upload>
-							<div class="form-text">{{ uploadHint }}</div>
+							<div class="form-text mt-0 mb-2">{{ uploadHint }}</div>
+							<Upload :accept="acceptedFiletypes" :preview="true" v-model="entschuldigung.files"></Upload>
 						</div>
 					</div>
 				</template>

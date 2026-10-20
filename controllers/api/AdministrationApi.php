@@ -29,6 +29,7 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -160,6 +161,18 @@ class AdministrationApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$entschuldigung = getData($entschuldigung)[0];
+
+		// new von/bis from the edit modal: check them before the status update changes any anwesenheit.
+		// a status change from the table sends no von/bis
+		if (isset($vonParam) || isset($bisParam)) {
+			$vonTimestamp = strtotime(isset($vonParam) ? $vonParam : $entschuldigung->von);
+			$bisTimestamp = strtotime(isset($bisParam) ? $bisParam : $entschuldigung->bis);
+			if ($vonTimestamp === false || $bisTimestamp === false)
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+			$zeitraumError = $this->_ci->entschuldigunguploadlib->checkZeitraum($vonTimestamp, $bisTimestamp);
+			if ($zeitraumError !== null) $this->terminateWithError($zeitraumError, 'general');
+		}
 
 		// check if status is being updated at all
 		$statusChanged = $status !== $entschuldigung->akzeptiert;

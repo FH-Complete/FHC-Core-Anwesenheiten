@@ -372,6 +372,29 @@ html.dark .anw-status--fehlminuten {
 	gap: 0.5rem;
 }
 
+/* info box above the entschuldigung form, its title row minimizes the text */
+.anw-ent-info {
+	padding: 0.5rem 1rem;
+}
+
+.anw-ent-info-toggle {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font-weight: 600;
+	text-align: start;
+}
+
+.anw-ent-info-text {
+	margin-top: 0.5rem;
+	white-space: pre-line;
+}
+
 /* ---------------------------- anwesenheiten timeline ---------------------------- */
 
 /* the timeline brings its own space: no negative side margins of the bootstrap row (they
