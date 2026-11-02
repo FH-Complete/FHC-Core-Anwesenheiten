@@ -39,6 +39,42 @@ Events::on('lvMenuBuild', function ($menu_reference, $params) {
 	}
 });
 
+// cis4 profile quick links; only permission checks here, a db error in an event handler kills the profile request
+Events::on('profilQuickLinksBuild', function ($links_reference) {
+
+	$links =& $links_reference();
+
+	if (!defined('CIS_LEHRVERANSTALTUNG_ANWESENHEIT_ANZEIGEN') || !CIS_LEHRVERANSTALTUNG_ANWESENHEIT_ANZEIGEN)
+		return;
+
+	$ci =& get_instance();
+	$ci->load->library('PermissionLib');
+	$ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
+
+	$base = APP_ROOT.'cis.php/extensions/FHC-Core-Anwesenheiten';
+
+	if ($ci->permissionlib->isBerechtigt('extension/anw_r_student'))
+	{
+		$links[] = array(
+			'phrase' => 'global/anwesenheitenUndEntschuldigungen',
+			'icon' => 'fa-clipboard-user',
+			'url' => $base.'/Profil/Entschuldigung'
+		);
+	}
+
+	// no lektor link, the Kontrolle needs lvid, stg_kz and sem_kurzbz
+	if ($ci->config->item('ENTSCHULDIGUNGEN_ENABLED')
+		&& ($ci->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz')
+			|| $ci->permissionlib->isBerechtigt('extension/anw_r_full_assistenz')))
+	{
+		$links[] = array(
+			'phrase' => 'global/digitalesAnwManagement',
+			'icon' => 'fa-clipboard-list',
+			'url' => $base.'/Administration'
+		);
+	}
+});
+
 Events::on('getAnwesenheitenForLvAndSemester', function ($prestudent_ids, $lv_id, $sem_kurzbz, $downloadFunc) {
 	$ci =& get_instance();
 
