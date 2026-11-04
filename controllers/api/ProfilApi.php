@@ -409,7 +409,8 @@ class ProfilApi extends FHCAPI_Controller
 
 		$berechtigt = false;
 		if($isStudent && $person_id == getAuthPersonId()) $berechtigt = true;
-		if($isAdmin || $isAssistenz) $berechtigt = true;
+		// the staff only for students of their studiengaenge
+		if(($isAdmin || $isAssistenz) && $this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id)) $berechtigt = true;
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 
@@ -533,7 +534,8 @@ class ProfilApi extends FHCAPI_Controller
 
 		$berechtigt = false;
 		if($isStudent && $person_id == getAuthPersonId()) $berechtigt = true;
-		if($isAdmin || $isAssistenz) $berechtigt = true;
+		// the staff only for students of their studiengaenge
+		if(($isAdmin || $isAssistenz) && $this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id)) $berechtigt = true;
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
 
@@ -713,7 +715,11 @@ class ProfilApi extends FHCAPI_Controller
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
 		} else if($isAdmin) {
 			$person_id_param = (string)$data['person_id'];
-			
+
+			// only students of the studiengaenge of the admin
+			if(!$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id_param))
+				$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, $person_id_param);
 		}
 		
@@ -833,7 +839,10 @@ class ProfilApi extends FHCAPI_Controller
 		$isStaff = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz')
 			|| $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
 
-		if(!$isStaff && $person_id != getAuthPersonId()) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+		// the own timeline, or for the staff the one of a student of their studiengaenge
+		if($person_id != getAuthPersonId()
+			&& (!$isStaff || !$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id)))
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 		$anw = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByPersonId($person_id);
 		if(isError($anw)) $this->terminateWithError(getError($anw), 'general');
@@ -860,66 +869,59 @@ class ProfilApi extends FHCAPI_Controller
 	}
 
 	/**
-	 * @param $le_id
+	 * true for the staff (admin/assistenz), who see the data of the students of their studiengaenge only
+	 */
+	private function isStaff()
+	{
+		return $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz')
+			|| $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
+	}
+
+	/**
+	 * @param $uid
 	 * @return bool
 	 *
-	 * checks Berechtigungen for Admin/Assistenz or is Student and sending their own $uid
+	 * checks if a Student sends their own $uid, or Admin/Assistenz send the uid of a student of their studiengaenge
 	 */
 	private function isAdminOrStudentCheckingItself($uid)
 	{
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
-		if($isAdmin) return true;
-
-		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
-		if($isAssistenz) return true;
-
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anw_r_student');
-		if($isStudent) {
-			return getAuthUID() == $uid;
-		}
+		if($isStudent && getAuthUID() == $uid) return true;
 
-		return false;
+		return $this->isStaff() && $this->_ci->anwesenheitenlib->isUidInEntitledStudiengaenge($uid);
 	}
 
 	/**
 	 * @param $person_id
 	 * @return bool
 	 *
-	 * checks Berechtigungen for Admin/Assistenz or $person_id is the own person.
+	 * checks if $person_id is the own person, or Admin/Assistenz send the person of a student of their studiengaenge.
 	 * loose compare: GET values are strings, getAuthPersonId() and JSON values are ints
 	 */
 	private function isAdminOrPersonCheckingItself($person_id)
 	{
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
-		if($isAdmin) return true;
-
-		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
-		if($isAssistenz) return true;
-
 		// is_numeric first: in PHP 7 "123abc" == 123 is true
-		return is_numeric($person_id) && $person_id == getAuthPersonId();
+		if(is_numeric($person_id) && $person_id == getAuthPersonId()) return true;
+
+		return $this->isStaff() && $this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id);
 	}
 
 	/**
 	 * @param $prestudent_id
 	 * @return bool
 	 *
-	 * checks Berechtigungen for Admin/Assistenz or $prestudent_id belongs to the own person
+	 * checks if $prestudent_id belongs to the own person, or Admin/Assistenz send a prestudent of their studiengaenge
 	 */
 	private function isAdminOrPrestudentCheckingItself($prestudent_id)
 	{
-		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
-		if($isAdmin) return true;
-
-		$isAssistenz = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
-		if($isAssistenz) return true;
-
 		if(!is_numeric($prestudent_id)) return false;
 
 		$result = $this->_ci->PrestudentModel->load($prestudent_id);
 		if(!hasData($result)) return false;
 
-		return getData($result)[0]->person_id == getAuthPersonId();
+		if(getData($result)[0]->person_id == getAuthPersonId()) return true;
+
+		return $this->isStaff() && $this->_ci->anwesenheitenlib->isPrestudentInEntitledStudiengaenge($prestudent_id);
 	}
 
 	private function _setAuthUID()

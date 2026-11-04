@@ -34,14 +34,13 @@ class Entschuldigung_model extends \DB_Model
 					FROM extension.tbl_anwesenheit
 					JOIN
 			
+						-- every other accepted entschuldigung of the person, the ON clause checks that it covers the kontrolle.
+						-- a filter on the range here missed an entschuldigung that lies inside this one
 						(SELECT extension.tbl_anwesenheit_entschuldigung.*, person_id as pid, student_uid, prestudent_id
 						FROM extension.tbl_anwesenheit_entschuldigung
 							JOIN tbl_benutzer USING (person_id)
 							JOIN tbl_student ON (tbl_benutzer.uid = tbl_student.student_uid)
 						WHERE person_id = ?
-						AND (
-							von <= ?
-							OR bis >= ?)
 						AND akzeptiert = true
 						AND entschuldigung_id != ?) AS andereEntsch
 						ON (
@@ -53,7 +52,7 @@ class Entschuldigung_model extends \DB_Model
 					) AS gedeckteAnwesenheiten
 				JOIN extension.tbl_anwesenheit_user USING (anwesenheit_id)';
 
-		return $this->execReadOnlyQuery($query, array($von, $bis, $person_id, $person_id, $von, $bis, $entschuldigung_id));
+		return $this->execReadOnlyQuery($query, array($von, $bis, $person_id, $person_id, $entschuldigung_id));
 	}
 
 	public function getEntschuldigungenByPerson($person_id)

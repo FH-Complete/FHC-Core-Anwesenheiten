@@ -18,7 +18,8 @@ class InfoApi extends FHCAPI_Controller
 				'getStudentsForLvaInSemester' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r'),
 				'getLvViewDataInfo' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
 				'getViewDataStudent' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r'),
-				'getLektorLessons' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r')
+				'getLektorLessons' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r'),
+				'getViewPermissions' => array('extension/anw_r_full_assistenz:r', 'extension/anw_r_ent_assistenz:r', 'extension/anw_r_lektor:r', 'extension/anw_r_student:r')
 			)
 		);
 
@@ -47,6 +48,21 @@ class InfoApi extends FHCAPI_Controller
 	 */
 	public function getViewDataStudent() {
 		$this->terminateWithSuccess(array('uid' => getAuthUID(), 'person_id' => getAuthPersonId()));
+	}
+
+	/**
+	 * GET METHOD
+	 * returns the permissions and config items the Anwesenheiten view gets, plus the date of the server.
+	 * The Cypress suite in tests/cypress reads its rule values from here
+	 */
+	public function getViewPermissions()
+	{
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
+
+		$permissions = $this->_ci->anwesenheitenlib->getViewPermissions();
+		$permissions['today'] = date('Y-m-d');
+
+		$this->terminateWithSuccess($permissions);
 	}
 	
 	/**

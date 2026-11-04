@@ -30,6 +30,7 @@ class AdministrationApi extends FHCAPI_Controller
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 
@@ -59,7 +60,7 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
-		$stg_kz_arr = $result->stg_kz_arr;
+		$stg_kz_arr = $this->_ci->anwesenheitenlib->filterEntitledStudiengaenge($result->stg_kz_arr);
 		$von = $result->von;
 		$bis = $result->bis;
 		$nurOffene = isset($result->nurOffene) && $result->nurOffene === true;
@@ -110,7 +111,7 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
-		$stg_kz_arr = $result->stg_kz_arr;
+		$stg_kz_arr = $this->_ci->anwesenheitenlib->filterEntitledStudiengaenge($result->stg_kz_arr);
 		$von = $result->von;
 		$bis = $result->bis;
 
@@ -144,13 +145,15 @@ class AdministrationApi extends FHCAPI_Controller
 
 		$data = json_decode($this->input->raw_input_stream, true);
 
-		$entschuldigung_id = $data['entschuldigung_id'];
-		$status = $data['status'];
-		$notiz = $data['notiz'];
+		// a string: isEmptyString reads the integers 9 to 13 and 32 as whitespace on PHP 7.0 (ctype_space)
+		$entschuldigung_id = isset($data['entschuldigung_id']) ? (string) $data['entschuldigung_id'] : '';
+		$status = isset($data['status']) ? $data['status'] : null;
+		$notiz = isset($data['notiz']) ? $data['notiz'] : '';
 		$vonParam = $this->input->post('von');
 		$bisParam = $this->input->post('bis');
-		
-		if (isEmptyString($entschuldigung_id) || !in_array($status, [true, false]))
+
+		// strict: the loose in_array let 'x' through as true. null is the status of an open entschuldigung
+		if (isEmptyString($entschuldigung_id) || !in_array($status, array(true, false, null), true))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$entschuldigung = $this->_ci->EntschuldigungModel->load($entschuldigung_id);
@@ -161,6 +164,13 @@ class AdministrationApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$entschuldigung = getData($entschuldigung)[0];
+
+		if (!$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($entschuldigung->person_id))
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		// the edit modal of an open entschuldigung sends null. A decision is not taken back
+		if ($status === null && $entschuldigung->akzeptiert !== null)
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		// new von/bis from the edit modal: check them before the status update changes any anwesenheit.
 		// a status change from the table sends no von/bis
@@ -176,63 +186,51 @@ class AdministrationApi extends FHCAPI_Controller
 
 		// check if status is being updated at all
 		$statusChanged = $status !== $entschuldigung->akzeptiert;
-		
-		if($statusChanged) {
-			// if updateStatus goes entschuldigt -> abwesend, look into extension.anwesenheit_user_history in case the
-			// entries that have been set to entschuldigt by this now invalid entschuldigung revert back to their last
-			// history entry,(which can be anwesend due to normal scan) instead of default to abwesend
-			$updateStatus = $status ? $this->_ci->config->item('ENTSCHULDIGT_STATUS') : $this->_ci->config->item('ABWESEND_STATUS');
-			
-			$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan($entschuldigung_id, $entschuldigung->person_id, $entschuldigung->von, $entschuldigung->bis);
-			if (isError($result))
-				$this->terminateWithError($result);
-			$anwesenheit_user_idsArr = getData($result);
-			
-			if($anwesenheit_user_idsArr) {
-				$funcAUID = function ($value) {
-					return $value->anwesenheit_user_id;
-				};
 
-				$anwesenheit_user_ids = array_map($funcAUID, $anwesenheit_user_idsArr);
-				
-				if(count($anwesenheit_user_ids) > 0) {
-					if($updateStatus == $this->_ci->config->item('ABWESEND_STATUS')) {
-						// only entries with the entschuldigt status go back, to their state before the entschuldigung
-						// (a qr scan during it counts as anwesend, see ProfilApi::checkInAnwesenheit). A declined
-						// entschuldigung never overwrites a positive anwesenheitskontrolle, an entry with another
-						// status stays. An entschuldigung from offen to abgelehnt never wrote an entschuldigt status.
-						$updateAnwesenheit = $this->_ci->AnwesenheitUserModel->revertEntschuldigt(
-							$anwesenheit_user_ids,
-							$this->_ci->config->item('ENTSCHULDIGT_STATUS'),
-							$this->_ci->config->item('FEHLMINUTEN_STATUS'),
-							$updateStatus
-						);
-
-						if (isError($updateAnwesenheit)) {
-							$this->terminateWithError($updateAnwesenheit);
-						}
-					} else { // just update all stati in question to entschuldigt
-						$updateAnwesenheit = $this->_ci->AnwesenheitModel->updateAnwesenheiten($anwesenheit_user_ids, $updateStatus);
-
-						if (isError($updateAnwesenheit)) {
-							$this->terminateWithError($updateAnwesenheit);
-						}
-					}
-				}
-			}
-		}
-		
-		// check notiz size and trim to char varying 255 if it is too big
-		$notiz = substr($notiz, 0, 255);
-		$version = $entschuldigung->version + 1;
-		
 		// check if von/bis are being sent, else retrieve previous values
 		$von = isset($vonParam) ? $vonParam : $entschuldigung->von;
 		$bis = isset($bisParam) ? $bisParam : $entschuldigung->bis;
-		
+
+		// the entries, the history and the entschuldigung go together: all or nothing
+		$this->_ci->db->trans_begin();
+
+		// the entries follow the change from the old state (range, accepted) to the new one: entries the old state
+		// covered and the new one does not go back, entries only the new one covers get entschuldigt. Entries that
+		// another accepted entschuldigung covers do not change
+		$akzeptiert = $statusChanged ? $status : $entschuldigung->akzeptiert;
+		$coveredBefore = $entschuldigung->akzeptiert === true
+			? $this->_uncoveredEntries($entschuldigung, $entschuldigung->von, $entschuldigung->bis)
+			: array();
+		$coveredAfter = $akzeptiert === true ? $this->_uncoveredEntries($entschuldigung, $von, $bis) : array();
+
+		$revertIds = array_values(array_diff($coveredBefore, $coveredAfter));
+		$entschuldigtIds = array_values(array_diff($coveredAfter, $coveredBefore));
+
+		if (count($revertIds)) {
+			// only entries with the entschuldigt status go back, to their state before the entschuldigung
+			// (a qr scan during it counts as anwesend, see ProfilApi::checkInAnwesenheit). An entry with another
+			// status stays, a declined entschuldigung never overwrites a positive anwesenheitskontrolle
+			$result = $this->_ci->AnwesenheitUserModel->revertEntschuldigt(
+				$revertIds,
+				$this->_ci->config->item('ENTSCHULDIGT_STATUS'),
+				$this->_ci->config->item('FEHLMINUTEN_STATUS'),
+				$this->_ci->config->item('ABWESEND_STATUS')
+			);
+			if (isError($result)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateEntschuldigung'));
+		}
+
+		if (count($entschuldigtIds)) {
+			$result = $this->_ci->AnwesenheitModel->updateAnwesenheiten($entschuldigtIds, $this->_ci->config->item('ENTSCHULDIGT_STATUS'));
+			if (isError($result)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateEntschuldigung'));
+		}
+
+		// check notiz size and trim to char varying 255 if it is too big
+		$notiz = substr($notiz, 0, 255);
+		$version = $entschuldigung->version + 1;
+
 		// add old version to history table
 		$this->_ci->EntschuldigungHistoryModel->insertVersion($entschuldigung, $entschuldigung->dms_id);
-		
+
 		// only apply statusset cols when akzeptiert flag is different
 		if($statusChanged) {
 			$updateEntries = array(
@@ -262,8 +260,10 @@ class AdministrationApi extends FHCAPI_Controller
 			$updateEntries
 		);
 
-		if (isError($update))
-			$this->terminateWithError($this->p->t('global', 'errorUpdateEntschuldigung'), 'general');
+		if (isError($update) || $this->_ci->db->trans_status() === false)
+			$this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateEntschuldigung'));
+
+		$this->_ci->db->trans_commit();
 
 		if($statusChanged) { // send mail to student
 
@@ -329,17 +329,46 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
-		$person_id = $result->person_id;
+		$person_id = isset($result->person_id) ? $result->person_id : null;
+
+		// only students of the studiengaenge of the assistenz
+		if (!$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id))
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 		// fetch all anw_user entries for persons prestudent_ids
 		$anw = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByPersonId($person_id);
-		
+
 		// fetch all entschuldigungen
 		$ent = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
-		
+
 		$this->terminateWithSuccess(array($anw, $ent));
 	}
-	
+
+	/**
+	 * the ids of the entries of kontrollen in von - bis that no other accepted entschuldigung of the person covers.
+	 * Runs inside the transaction of updateEntschuldigung
+	 */
+	private function _uncoveredEntries($entschuldigung, $von, $bis)
+	{
+		$result = $this->_ci->EntschuldigungModel->getAllUncoveredAnwesenheitenInTimespan(
+			$entschuldigung->entschuldigung_id, $entschuldigung->person_id, $von, $bis
+		);
+		if (isError($result)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateEntschuldigung'));
+
+		return array_map(function ($row) {
+			return $row->anwesenheit_user_id;
+		}, getData($result) ?: array());
+	}
+
+	/**
+	 * rolls back the open transaction and terminates with $message
+	 */
+	private function _rollbackAndTerminate($message)
+	{
+		$this->_ci->db->trans_rollback();
+		$this->terminateWithError($message, 'general');
+	}
+
 	private function _setAuthUID()
 	{
 		$this->_uid = getAuthUID();

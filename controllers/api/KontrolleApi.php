@@ -675,6 +675,13 @@ class KontrolleApi extends FHCAPI_Controller
 			}
 		}
 
+		// the max date of the frontend: day based, a date exactly $reachFuture days ahead is still allowed. For everyone,
+		// the admin exception above is for old data only
+		$reachFuture = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_FUTURE');
+		if ($dateTime > strtotime("+$reachFuture day midnight")) {
+			$this->terminateWithError($this->p->t('global', 'providedDateTooFarInFuture'), 'general');
+		}
+
 		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id)) {
 			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');
 		}
@@ -1192,6 +1199,9 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
+		// the lehreinheiten and termine of a lva only for its lektoren and the admin, like getLehreinheitenForLehrveranstaltung
+		$berechtigt = $this->isAdminOrTeachesLva($lva_id);
+		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
 

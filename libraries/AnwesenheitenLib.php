@@ -13,6 +13,72 @@ class AnwesenheitenLib
 		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/EntschuldigungUploadLib');
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
 		$this->_ci->load->helper('hlp_language');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
+		$this->_ci->load->model('person/Benutzer_model', 'BenutzerModel');
+		$this->_ci->load->model('crm/Prestudent_model', 'PrestudentModel');
+	}
+
+	/**
+	 * the studiengaenge of $stg_kz_arr with a right of the user: anw_r_ent_assistenz or anw_r_full_assistenz.
+	 * A client sends the list, so the list alone must not decide what the user sees
+	 */
+	public function filterEntitledStudiengaenge($stg_kz_arr)
+	{
+		if (!is_array($stg_kz_arr)) return array();
+
+		$entitled = array_map('strval', array_merge(
+			$this->_ci->permissionlib->getSTG_isEntitledFor('extension/anw_r_ent_assistenz') ?: array(),
+			$this->_ci->permissionlib->getSTG_isEntitledFor('extension/anw_r_full_assistenz') ?: array()
+		));
+
+		return array_values(array_filter($stg_kz_arr, function ($stg_kz) use ($entitled) {
+			return in_array((string) $stg_kz, $entitled, true);
+		}));
+	}
+
+	/**
+	 * true if the person has an active student account in a studiengang with a right of the user,
+	 * see filterEntitledStudiengaenge. The scope of the assistenz for the data of a student
+	 */
+	public function isPersonInEntitledStudiengaenge($person_id)
+	{
+		// is_numeric first: in PHP 7 "123abc" == 123 is true
+		if (!is_numeric($person_id)) return false;
+
+		$result = $this->_ci->EntschuldigungModel->getStudentAccountsForPersons(array($person_id));
+		if (isError($result) || !hasData($result)) return false;
+
+		$stg_kz_arr = array_map(function ($account) {
+			return $account->studiengang_kz;
+		}, getData($result));
+
+		return count($this->filterEntitledStudiengaenge($stg_kz_arr)) > 0;
+	}
+
+	/**
+	 * isPersonInEntitledStudiengaenge for the person of a uid
+	 */
+	public function isUidInEntitledStudiengaenge($uid)
+	{
+		if (isEmptyString((string) $uid)) return false;
+
+		$result = $this->_ci->BenutzerModel->loadWhere(array('uid' => $uid));
+		if (isError($result) || !hasData($result)) return false;
+
+		return $this->isPersonInEntitledStudiengaenge(getData($result)[0]->person_id);
+	}
+
+	/**
+	 * isPersonInEntitledStudiengaenge for the person of a prestudent_id
+	 */
+	public function isPrestudentInEntitledStudiengaenge($prestudent_id)
+	{
+		if (!is_numeric($prestudent_id)) return false;
+
+		$result = $this->_ci->PrestudentModel->load($prestudent_id);
+		if (isError($result) || !hasData($result)) return false;
+
+		return $this->isPersonInEntitledStudiengaenge(getData($result)[0]->person_id);
 	}
 
 	/**
