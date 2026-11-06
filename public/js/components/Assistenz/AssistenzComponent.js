@@ -77,8 +77,12 @@ export const AssistenzComponent = {
 						headerSort: true,
 						tooltip:false
 					},
+					// filter and sort use the shown text like the orgform column
 					{title: Vue.computed(()=>this.$capitalize(this.$p.t('lehre/ausbildungssemester'))), field: 'semester',
+						formatter: cell => this.semesterText(cell.getData()),
 						headerFilter: true,
+						headerFilterFunc: (filterVal, rowVal, rowData) => this.semesterText(rowData).includes(filterVal),
+						sorter: (a, b, aRow, bRow) => this.semesterText(aRow.getData()).localeCompare(this.semesterText(bRow.getData()), undefined, {numeric: true}),
 						headerSort: true,
 						tooltip:false
 					} ,
@@ -281,8 +285,8 @@ export const AssistenzComponent = {
 			const rank = value => value === null ? 0 : value === true ? 1 : 2
 			return rank(a) - rank(b)
 		},
-		// a person with more than one account can belong to another assistenz. The uid, studiengang and
-		// orgform column then list every account, all from data.accounts, so the order is always the same
+		// a person with more than one account can belong to another assistenz. The uid, semester, studiengang
+		// and orgform column then list every account, all from data.accounts, so the order is always the same
 		hasMehrereAccounts(data) {
 			return data.accounts?.length > 1
 		},
@@ -305,6 +309,11 @@ export const AssistenzComponent = {
 			if (!this.hasMehrereAccounts(data)) return data.studentorgform ?? ''
 
 			return data.accounts.map(account => account.orgform_kurzbz ?? '-').join(', ')
+		},
+		semesterText(data) {
+			if (!this.hasMehrereAccounts(data)) return String(data.semester ?? '')
+
+			return data.accounts.map(account => account.semester ?? '-').join(', ')
 		},
 		// the colors live in FhcMain.css with a variant for the dark theme
 		entschuldigungstatusFormatter(cell) {
