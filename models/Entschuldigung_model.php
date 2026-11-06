@@ -189,11 +189,11 @@ class Entschuldigung_model extends \DB_Model
 		return $this->execReadOnlyQuery($query, $params);
 	}
 
-	// active student accounts of the persons with their studiengang and the orgform of the last status
+	// active student accounts of the persons with their studiengang, semester and the orgform of the last status
 	// (same order as Prestudentstatus_model::getLastStatus), one row per account in the order of the uids
 	public function getStudentAccountsForPersons($person_ids)
 	{
-		$query = 'SELECT tbl_benutzer.person_id, tbl_benutzer.uid, tbl_student.studiengang_kz, tbl_studiengang.kurzbzlang, tbl_studiengang.bezeichnung,
+		$query = 'SELECT tbl_benutzer.person_id, tbl_benutzer.uid, tbl_student.studiengang_kz, tbl_student.semester, tbl_studiengang.kurzbzlang, tbl_studiengang.bezeichnung,
 						(SELECT tbl_prestudentstatus.orgform_kurzbz
 							FROM public.tbl_prestudentstatus
 							WHERE tbl_prestudentstatus.prestudent_id = tbl_student.prestudent_id
