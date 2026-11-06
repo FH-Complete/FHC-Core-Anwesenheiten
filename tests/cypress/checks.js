@@ -1,5 +1,5 @@
 // The fixture checks of the suite for dbCheck.js of core. They only read; "seed" applies seed/anw.sql first.
-//   node tests/cypress/tools/dbCheck.js application/extensions/FHC-Core-Anwesenheiten/tests/cypress [seed]
+//   in tests/cypress of core: node tools/dbCheck.js ../../application/extensions/FHC-Core-Anwesenheiten/tests/cypress [seed]
 // A check with a list as value names what is missing: an empty list passes.
 
 const path = require('path');

@@ -27,7 +27,7 @@ const phrasePattern = (key, account) => {
 	const [category, phrase] = key.split('/');
 
 	return cy
-		.fhcGet(`/index.ci.php/api/frontend/v1/Phrasen/loadModule/${category}`, undefined, account)
+		.fhcGet(`api/frontend/v1/Phrasen/loadModule/${category}`, undefined, account)
 		.fhcData()
 		.then(phrases => {
 			const found = (phrases || []).find(p => p.category === category && p.phrase === phrase);

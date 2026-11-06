@@ -1,7 +1,8 @@
 // The extension API: one function per endpoint, with the method name of the controller.
 // account: an object of support/accounts.js, null sends no credentials. Dates and times: support/anwDates.js.
 
-export const API = '/index.ci.php/extensions/FHC-Core-Anwesenheiten/api';
+// the path after the entry point: cy.fhcGet and cy.fhcPost of core send it through cis.php
+export const API = 'extensions/FHC-Core-Anwesenheiten/api';
 
 const INFO = `${API}/InfoApi`;
 const KONTROLLE = `${API}/KontrolleApi`;

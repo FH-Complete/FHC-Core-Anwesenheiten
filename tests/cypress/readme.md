@@ -1,6 +1,6 @@
 # Cypress suite Anwesenheiten
 
-API tests for the extension. The Cypress runner of FH-Complete core runs the suite.
+API tests for the extension. The Cypress project of FH-Complete core (`tests/cypress`) runs the suite.
 The contract between core and a suite is in `tests/cypress/suites/readme_suites.txt` of core.
 
 **Warning:** the suite writes and deletes attendance data. Run it only against a test instance with a test database.
@@ -12,27 +12,28 @@ The contract between core and a suite is in `tests/cypress/suites/readme_suites.
 2. Put the instance values into `tests/cypress/.env` of core: `BASE_URL`, `USER_NAME`, `USER_PASSWORD`, `TEST_DB_*`.
 3. Put the passwords of the accounts into `.env` of this folder. The template is `.env.example`.
    The local stack and the pipeline set all values in the environment.
-4. Seed and check the fixture in the core root:
+4. Seed and check the fixture in `tests/cypress` of core:
 
    ```bash
-   node tests/cypress/tools/dbCheck.js application/extensions/FHC-Core-Anwesenheiten/tests/cypress seed
+   node tools/dbCheck.js ../../application/extensions/FHC-Core-Anwesenheiten/tests/cypress seed
    ```
 
 ## Run
 
-In the core root:
+In `tests/cypress` of core:
 
 ```bash
-CY_SUITE=application/extensions/FHC-Core-Anwesenheiten/tests/cypress npx cypress run
+CY_SUITE=../../application/extensions/FHC-Core-Anwesenheiten/tests/cypress npx cypress run
 ```
 
-For a run from a separate clone of the extension, set `CY_SUITE` to the `tests/cypress` folder of the clone.
+`CY_SUITE` is relative to `tests/cypress` of core, or absolute. For a run from a separate clone of the extension,
+set it to the `tests/cypress` folder of the clone.
 
 ## Files
 
 | File | Content |
 |---|---|
-| `suite.js` | The contract: spec pattern, `cy.task` functions, `Cypress.env()` keys |
+| `suite.js` | The contract: `specPattern` and `setupNodeEvents` with the `cy.task` functions and `Cypress.env()` keys |
 | `checks.js`, `seed/anw.sql` | Fixture checks and seed for `dbCheck.js` of core |
 | `e2e/api/setup.cy.js` | Smoke spec: the logins of all roles and the database |
 | `e2e/api/<suite>/<topic>.cy.js` | The specs: `kontrolle/`, later `profil/`, `entschuldigung/`, `assistenz/` |
@@ -45,15 +46,15 @@ For a run from a separate clone of the extension, set `CY_SUITE` to the `tests/c
 | `tasks/anwDb.js` | The database tasks: context, scoped resets, backdating, reads |
 | `fixtures/entschuldigung.pdf` | The document of an Entschuldigung, a PDF in plain ASCII: `cy.fhcUpload` sends text only |
 
-Run one suite with `--spec "application/extensions/FHC-Core-Anwesenheiten/tests/cypress/e2e/api/kontrolle/*.cy.js"`.
+Run one folder of specs with `--spec "../../application/extensions/FHC-Core-Anwesenheiten/tests/cypress/e2e/api/kontrolle/*.cy.js"`.
 
 ## Rules
 
 - The suite runs without a file change on every test instance with the extension. Do not write an instance value into a file.
 - Get the LV, the semester, the students and all ids from the API at runtime.
 - A spec imports no core file. Use the custom commands of core: `cy.login`, `cy.fhcGet`, `cy.fhcPost`,
-  `cy.fhcUpload`, `.fhcData()`, `.fhcErrors()`.
-- A Node file requires no npm package and no core file. `registerTasks` gets the DB part of core.
+  `cy.fhcUpload`, `.fhcData()`, `.fhcErrors()`. Pass the path after the entry point; core sends it through `cis.php`.
+- A Node file requires no npm package and no core file. `setupNodeEvents` gets the DB part of core.
 - The extension API sends a translated phrase as error message. Check it with
   `expectPhraseError(response, 'global/<phrase>', account)`: it compares with the phrase text of the phrase API
   in the language of the account. Never compare a literal text.

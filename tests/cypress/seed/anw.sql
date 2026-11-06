@@ -1,5 +1,5 @@
 -- The fixture of the Cypress suite on a test database with the repository dump and seeders. Idempotent.
--- Apply it with dbCheck.js of core: node tests/cypress/tools/dbCheck.js <this tests/cypress folder> seed
+-- Apply it with dbCheck.js of core, in tests/cypress of core: node tools/dbCheck.js <this tests/cypress folder> seed
 -- The uids are the demo accounts of the seeders, the defaults of .env.example:
 --   demolektor1 (LEKTOR), demolektor2 (LEKTOR2), demoassistenz (ENT_ASSISTENZ), demoadmin (FULL_ASSISTENZ),
 --   s325b311 (STUDENT) and s125b101 (STUDENT2).

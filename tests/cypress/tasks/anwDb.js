@@ -277,7 +277,7 @@ const readHistory = db => ({ anwesenheitUserIds }) =>
 const registerAnwDbTasks = (on, db) => {
 	on('task', {
 		// the specs that reset data need the database of the instance and its write guard
-		'anw:db:available': () => db.checkAvailability({ requireWrites: true }),
+		'anw:db:available': () => db.checkConnection({ requireWrites: true }),
 		'anw:db:context': context(db),
 		'anw:db:resetKontrollen': resetKontrollen(db),
 		'anw:db:resetEntschuldigungen': resetEntschuldigungen(db),
