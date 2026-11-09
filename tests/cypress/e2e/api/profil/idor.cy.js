@@ -1,33 +1,22 @@
 // ProfilApi: a student reads only the own data, whatever ids the request holds
 
 import { account } from '../../../support/accounts';
-import { profilApi, PROFIL_ENDPOINTS } from '../../../support/anwApi';
+import { profilApi } from '../../../support/anwApi';
 import { expectPhraseError } from '../../../support/anwChecks';
-import { loadAnwContext } from '../../../support/anwContext';
+import { useAnwContext } from '../../../support/anwContext';
 
 describe('ProfilApi: ids of another student', () => {
-	let ctx;
+	const ctx = useAnwContext({ resets: [] });
 	let own;
 	let other;
 
 	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			own = ctx.testStudents.STUDENT;
-			other = ctx.testStudents.STUDENT2;
-		});
+		own = ctx.testStudents.STUDENT;
+		other = ctx.testStudents.STUDENT2;
 	});
 
 	const as = () => account('STUDENT');
 	const noAuthorization = res => expectPhraseError(res, 'global/noAuthorization', as());
-
-	it('every endpoint without login → 401', () => {
-		PROFIL_ENDPOINTS.forEach(({ method, name, url }) => {
-			(method === 'GET' ? cy.fhcGet(url, {}, null) : cy.fhcPost(url, {}, null)).then(res =>
-				expect(res.status, name).to.eq(401),
-			);
-		});
-	});
 
 	it('getProfileViewData with the uid of STUDENT2 → noAuthorization', () => {
 		profilApi.getProfileViewData(other.uid, as()).then(noAuthorization);

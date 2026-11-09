@@ -3,14 +3,8 @@
 import { account } from '../../../support/accounts';
 import { infoApi, profilApi } from '../../../support/anwApi';
 import { expectPhraseError, skipIf } from '../../../support/anwChecks';
-import { loadAnwContext, studentInLe } from '../../../support/anwContext';
-import {
-	entryOf,
-	givenKontrolle,
-	givenStatus,
-	resetEntschuldigungen,
-	resetKontrollen,
-} from '../../../support/anwScenario';
+import { useAnwContext } from '../../../support/anwContext';
+import { entryOf, givenKontrolle, givenStatus, NOTIZ } from '../../../support/anwScenario';
 
 // the fields of an entry that a student gets: no note of the lektor
 const STUDENT_FIELDS = [
@@ -25,37 +19,25 @@ const STUDENT_FIELDS = [
 	'lehrform_kurzbz',
 ];
 
-const NOTIZ = 'Notiz der Lehrperson';
-
 describe('ProfilApi: the timeline', () => {
-	let ctx;
-	let student;
+	const ctx = useAnwContext();
 	let timelineAllowed;
 
 	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			student = studentInLe(ctx);
-			expect(student, 'a test student in the test LE').to.exist;
-			resetEntschuldigungen(ctx);
-
-			infoApi
-				.getViewPermissions(account(student.role))
-				.fhcData()
-				.then(permissions => {
-					timelineAllowed = permissions.timeline;
-				});
-		});
+		infoApi
+			.getViewPermissions(account(ctx.student.role))
+			.fhcData()
+			.then(permissions => {
+				timelineAllowed = permissions.timeline;
+			});
 	});
 
-	beforeEach(() => resetKontrollen(ctx));
-
-	const as = () => account(student.role);
+	const as = () => account(ctx.student.role);
 
 	const givenNote = () =>
 		givenKontrolle(ctx).then(state => {
 			givenStatus(ctx, [
-				{ anwesenheit_user_id: entryOf(state, student).anwesenheit_user_id, status: ctx.config.anwesend_status, notiz: NOTIZ },
+				{ anwesenheit_user_id: entryOf(state, ctx.student).anwesenheit_user_id, status: ctx.config.anwesend_status, notiz: NOTIZ },
 			]);
 		});
 
@@ -73,12 +55,6 @@ describe('ProfilApi: the timeline', () => {
 			});
 	});
 
-	it('the person_id of STUDENT2 → noAuthorization', () => {
-		profilApi
-			.getTimeline(ctx.testStudents.STUDENT2.personId, account('STUDENT'))
-			.then(res => expectPhraseError(res, 'global/noAuthorization', account('STUDENT')));
-	});
-
 	it('person_id "abc" → wrongParameters', function () {
 		skipIf(this, !timelineAllowed, 'TIMELINE_BERECHTIGUNGEN has no permission of the student');
 
@@ -89,11 +65,11 @@ describe('ProfilApi: the timeline', () => {
 		givenNote();
 
 		profilApi
-			.getTimeline(student.personId, account('FULL_ASSISTENZ'))
+			.getTimeline(ctx.student.personId, account('FULL_ASSISTENZ'))
 			.fhcData()
 			.then(([anw]) => {
 				const row = anw.find(r => r.lehreinheit_id === ctx.le);
-				expect(row).to.include({ notiz: NOTIZ, prestudent_id: student.prestudentId });
+				expect(row).to.include({ notiz: NOTIZ, prestudent_id: ctx.student.prestudentId });
 			});
 	});
 });

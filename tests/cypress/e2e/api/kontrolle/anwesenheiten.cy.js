@@ -2,33 +2,22 @@
 
 import { account } from '../../../support/accounts';
 import { kontrolleApi } from '../../../support/anwApi';
-import { expectPhraseError } from '../../../support/anwChecks';
-import { loadAnwContext } from '../../../support/anwContext';
-import { givenKontrolle, readKontrolle, resetEntschuldigungen, resetKontrollen } from '../../../support/anwScenario';
+import { expectPhraseError, requireFixture } from '../../../support/anwChecks';
+import { useAnwContext } from '../../../support/anwContext';
+import { entryById, givenKontrolle, readKontrolle } from '../../../support/anwScenario';
 
 describe('KontrolleApi: change the status of entries', () => {
-	let ctx;
-
-	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			resetEntschuldigungen(ctx);
-		});
-	});
-
-	beforeEach(() => resetKontrollen(ctx));
+	const ctx = useAnwContext();
 
 	const update = (entries, { le = ctx.le, as = account('LEKTOR') } = {}) =>
 		kontrolleApi.updateAnwesenheiten(le, entries, as);
 
-	const entryOf = (anwesenheitId, anwesenheitUserId) =>
-		readKontrolle(anwesenheitId).then(({ entries }) => entries.find(e => e.anwesenheit_user_id === anwesenheitUserId));
 
 	it('anwesend → abwesend → saved, version + 1, a history row with anwesend', () => {
 		givenKontrolle(ctx).then(({ kontrolle, entries: [entry] }) => {
 			update([{ anwesenheit_user_id: entry.anwesenheit_user_id, status: ctx.config.abwesend_status }]).fhcData();
 
-			entryOf(kontrolle.anwesenheit_id, entry.anwesenheit_user_id).then(changed => {
+			entryById(kontrolle, entry.anwesenheit_user_id).then(changed => {
 				expect(changed.status).to.eq(ctx.config.abwesend_status);
 				expect(changed.version).to.eq(entry.version + 1);
 			});
@@ -45,11 +34,11 @@ describe('KontrolleApi: change the status of entries', () => {
 			expect(kontrolle.dauer, 'counted minutes of 08:00 - 09:30').to.be.greaterThan(2);
 
 			update([{ anwesenheit_user_id: id, status: fehlminuten, fehlminuten: 1 }]).fhcData();
-			entryOf(kontrolle.anwesenheit_id, id).should('include', { status: fehlminuten, fehlminuten: 1 });
+			entryById(kontrolle, id).should('include', { status: fehlminuten, fehlminuten: 1 });
 
 			const max = kontrolle.dauer - 1;
 			update([{ anwesenheit_user_id: id, status: fehlminuten, fehlminuten: max }]).fhcData();
-			entryOf(kontrolle.anwesenheit_id, id).should('include', { status: fehlminuten, fehlminuten: max });
+			entryById(kontrolle, id).should('include', { status: fehlminuten, fehlminuten: max });
 		});
 	});
 
@@ -61,7 +50,11 @@ describe('KontrolleApi: change the status of entries', () => {
 		it(`status fehlminuten with ${label} → anwFehlminutenUngueltig, nothing saved`, () => {
 			givenKontrolle(ctx, { von: '08:00', bis: '09:30' }).then(({ kontrolle, entries }) => {
 				update([
-					{ anwesenheit_user_id: entries[0].anwesenheit_user_id, status: ctx.config.fehlminuten_status, fehlminuten: value(kontrolle) },
+					{
+						anwesenheit_user_id: entries[0].anwesenheit_user_id,
+						status: ctx.config.fehlminuten_status,
+						fehlminuten: value(kontrolle),
+					},
 				]).then(res => expectPhraseError(res, 'global/anwFehlminutenUngueltig', account('LEKTOR')));
 				readKontrolle(kontrolle.anwesenheit_id).its('entries').should('deep.equal', entries);
 			});
@@ -74,7 +67,7 @@ describe('KontrolleApi: change the status of entries', () => {
 			update([{ anwesenheit_user_id: id, status: ctx.config.fehlminuten_status, fehlminuten: 30 }]).fhcData();
 			update([{ anwesenheit_user_id: id, status: ctx.config.anwesend_status }]).fhcData();
 
-			entryOf(kontrolle.anwesenheit_id, id).should('include', { status: ctx.config.anwesend_status, fehlminuten: 0 });
+			entryById(kontrolle, id).should('include', { status: ctx.config.anwesend_status, fehlminuten: 0 });
 		});
 	});
 
@@ -98,6 +91,83 @@ describe('KontrolleApi: change the status of entries', () => {
 				expectPhraseError(res, 'global/wrongParameters', account('LEKTOR')),
 			);
 			readKontrolle(kontrolle.anwesenheit_id).its('entries').should('deep.equal', entries);
+		});
+	});
+
+	it('LEKTOR sets entschuldigt → noAuthorization, nothing saved', () => {
+		givenKontrolle(ctx).then(({ kontrolle, entries }) => {
+			update([{ anwesenheit_user_id: entries[0].anwesenheit_user_id, status: ctx.config.entschuldigt_status }]).then(res =>
+				expectPhraseError(res, 'global/noAuthorization', account('LEKTOR')),
+			);
+			readKontrolle(kontrolle.anwesenheit_id).its('entries').should('deep.equal', entries);
+		});
+	});
+
+	it('FULL_ASSISTENZ sets entschuldigt → saved', () => {
+		givenKontrolle(ctx).then(({ kontrolle, entries: [entry] }) => {
+			update([{ anwesenheit_user_id: entry.anwesenheit_user_id, status: ctx.config.entschuldigt_status }], {
+				as: account('FULL_ASSISTENZ'),
+			}).fhcData();
+			entryById(kontrolle, entry.anwesenheit_user_id).its('status').should('eq', ctx.config.entschuldigt_status);
+		});
+	});
+
+	it('LEKTOR saves a list with an entry that is entschuldigt already → saved, the entry stays entschuldigt', () => {
+		givenKontrolle(ctx).then(({ kontrolle, entries }) => {
+			requireFixture(entries.length >= 2, 'two students in the test LE');
+			const [kept, changed] = entries;
+			update([{ anwesenheit_user_id: kept.anwesenheit_user_id, status: ctx.config.entschuldigt_status }], {
+				as: account('FULL_ASSISTENZ'),
+			}).fhcData();
+
+			update([
+				{ anwesenheit_user_id: kept.anwesenheit_user_id, status: ctx.config.entschuldigt_status },
+				{ anwesenheit_user_id: changed.anwesenheit_user_id, status: ctx.config.abwesend_status },
+			]).fhcData();
+
+			entryById(kontrolle, kept.anwesenheit_user_id).its('status').should('eq', ctx.config.entschuldigt_status);
+			entryById(kontrolle, changed.anwesenheit_user_id).its('status').should('eq', ctx.config.abwesend_status);
+		});
+	});
+
+	it('a valid entry and an entry with an unknown status → wrongParameters, nothing saved, no history row', () => {
+		givenKontrolle(ctx).then(({ kontrolle, entries }) => {
+			requireFixture(entries.length >= 2, 'two students in the test LE');
+			update([
+				{ anwesenheit_user_id: entries[0].anwesenheit_user_id, status: ctx.config.abwesend_status },
+				{ anwesenheit_user_id: entries[1].anwesenheit_user_id, status: 'gelangweilt' },
+			]).then(res => expectPhraseError(res, 'global/wrongParameters', account('LEKTOR')));
+
+			readKontrolle(kontrolle.anwesenheit_id).then(state => {
+				expect(state.entries).to.deep.equal(entries);
+				expect(state.history).to.eq(0);
+			});
+		});
+	});
+
+	it('a notiz → saved, the lektor table shows it', () => {
+		givenKontrolle(ctx).then(({ entries: [entry] }) => {
+			const withNote = { anwesenheit_user_id: entry.anwesenheit_user_id, status: ctx.config.anwesend_status, notiz: 'kam später' };
+			update([withNote]).fhcData();
+
+			kontrolleApi
+				.fetchAllAnwesenheitenByLvaAssigned(ctx.lvId, ctx.semKurzbz, ctx.le, account('LEKTOR').username, account('LEKTOR'))
+				.fhcData()
+				.then(({ anwEntries }) => {
+					const row = anwEntries.find(e => e.anwesenheit_user_id === entry.anwesenheit_user_id);
+					expect(row, 'the entry in the lektor table').to.exist;
+					expect(row.notiz).to.eq('kam später');
+				});
+		});
+	});
+
+	it('FULL_ASSISTENZ, an entry of the LE of LEKTOR2 → saved', () => {
+		givenKontrolle(ctx, { le: ctx.foreignLe, as: account('FULL_ASSISTENZ') }).then(({ kontrolle, entries: [entry] }) => {
+			update([{ anwesenheit_user_id: entry.anwesenheit_user_id, status: ctx.config.abwesend_status }], {
+				le: ctx.foreignLe,
+				as: account('FULL_ASSISTENZ'),
+			}).fhcData();
+			entryById(kontrolle, entry.anwesenheit_user_id).its('status').should('eq', ctx.config.abwesend_status);
 		});
 	});
 

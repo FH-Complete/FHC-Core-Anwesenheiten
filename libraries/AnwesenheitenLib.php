@@ -16,6 +16,7 @@ class AnwesenheitenLib
 		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Entschuldigung_model', 'EntschuldigungModel');
 		$this->_ci->load->model('person/Benutzer_model', 'BenutzerModel');
 		$this->_ci->load->model('crm/Prestudent_model', 'PrestudentModel');
+		$this->_ci->load->model('extensions/FHC-Core-Anwesenheiten/Anwesenheit_model', 'AnwesenheitModel');
 	}
 
 	/**
@@ -79,6 +80,47 @@ class AnwesenheitenLib
 		if (isError($result) || !hasData($result)) return false;
 
 		return $this->isPersonInEntitledStudiengaenge(getData($result)[0]->person_id);
+	}
+
+	/**
+	 * true for anw_r_full_assistenz on an oe of the lva: the admin of the lva in the kontrolle view
+	 */
+	public function isAdminOfLva($lva_id)
+	{
+		if (!is_numeric($lva_id)) return false;
+
+		require_once(FHCPATH.'include/lehrveranstaltung.class.php');
+		$lva = new lehrveranstaltung();
+		$lva->load($lva_id);
+		$oes = $lva->getAllOe();
+		$oes[] = $lva->oe_kurzbz;
+
+		return $this->_ci->permissionlib->isBerechtigtMultipleOe('extension/anw_r_full_assistenz', $oes);
+	}
+
+	/**
+	 * the rule of the kontrolle view for the data of an lva and its students: the admin of the lva or a lektor
+	 * who teaches a lehreinheit of it. The studiengang of a student does not count here, unlike on the students page
+	 */
+	public function isAdminOrLektorOfLva($lva_id)
+	{
+		if (!is_numeric($lva_id)) return false;
+		if ($this->isAdminOfLva($lva_id)) return true;
+		if (!$this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor')) return false;
+
+		$result = $this->_ci->AnwesenheitModel->getLektorIsTeachingLva($lva_id, getAuthUID());
+		return !isError($result) && hasData($result) && ((int) getData($result)[0]->teaches) > 0;
+	}
+
+	/**
+	 * true if the prestudent belongs to the logged in person
+	 */
+	public function isOwnPrestudent($prestudent_id)
+	{
+		if (!is_numeric($prestudent_id)) return false;
+
+		$result = $this->_ci->PrestudentModel->load($prestudent_id);
+		return hasData($result) && getData($result)[0]->person_id == getAuthPersonId();
 	}
 
 	/**

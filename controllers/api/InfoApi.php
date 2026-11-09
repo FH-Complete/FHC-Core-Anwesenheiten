@@ -113,9 +113,28 @@ class InfoApi extends FHCAPI_Controller
 		$lva_id = $this->input->get('lva_id');
 		$sem_kurzbz = $this->input->get('sem_kurzbz');
 
+		if (!is_numeric($prestudent_id) || !is_numeric($lva_id) || isEmptyString((string) $sem_kurzbz))
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		if (!$this->_mayReadStudentInfo($prestudent_id, $lva_id))
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
 		$studentLvaData = $this->_ci->AnwesenheitModel->getStudentInfo($prestudent_id, $lva_id, $sem_kurzbz, APP_ROOT);
+		if (isError($studentLvaData)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$this->terminateWithSuccess(getData($studentLvaData));
+	}
+
+	/**
+	 * the student detail of the kontrolle view: the rule of the kontrolle view (the admin of the lva or a lektor
+	 * of it), like ProfilApi::getAnwesenheitSumByLva. A student reads only itself
+	 */
+	private function _mayReadStudentInfo($prestudent_id, $lva_id)
+	{
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
+
+		return $this->_ci->anwesenheitenlib->isAdminOrLektorOfLva($lva_id)
+			|| $this->_ci->anwesenheitenlib->isOwnPrestudent($prestudent_id);
 	}
 
 	/**
@@ -125,9 +144,13 @@ class InfoApi extends FHCAPI_Controller
 	public function getStudiengaenge()
 	{
 		$result = $this->getPostJSON();
-		$allowed_stg = $result->allowed_stg;
+		$allowed_stg = isset($result->allowed_stg) ? $result->allowed_stg : null;
 
 		$admin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
+
+		// the query needs a list, anything else is a database error
+		if(!$admin && (!is_array($allowed_stg) || !count($allowed_stg)))
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		if($admin) {
 			$result = $this->_ci->AnwesenheitModel->getStudiengaenge();
@@ -195,10 +218,12 @@ class InfoApi extends FHCAPI_Controller
 	 */
 	public function getLvViewDataInfo() {
 		$result = $this->getPostJSON();
-		$lv_id = $result->lv_id;
+		$lv_id = isset($result->lv_id) ? $result->lv_id : null;
+
+		if(!is_numeric($lv_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$result = $this->_ci->AnwesenheitModel->getLvViewDataInfo($lv_id);
-		if(!isSuccess($result)) $this->terminateWithError($result);
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$this->terminateWithSuccess($result);
 	}
 

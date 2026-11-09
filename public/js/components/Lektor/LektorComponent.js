@@ -893,7 +893,10 @@ export const LektorComponent = {
 				minutes: now.getMinutes(),
 				seconds: now.getSeconds()
 			}
-			this.lektorState.ende = {hours: now.getHours() + 1, minutes: now.getMinutes(), seconds: now.getSeconds()}
+			// the backend accepts a time of the same day only: after 23:00 the end is 23:59
+			this.lektorState.ende = now.getHours() < 23
+				? {hours: now.getHours() + 1, minutes: now.getMinutes(), seconds: now.getSeconds()}
+				: {hours: 23, minutes: 59, seconds: 0}
 		},
 		setTimespanForKontrolleTermin(termin, setDate = true) {
 			if (setDate) {

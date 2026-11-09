@@ -33,7 +33,9 @@ END $$;
 COMMENT ON COLUMN extension.tbl_anwesenheit_user.fehlminuten IS 'Versäumte Minuten der Kontrolle. Die Anwesenheitsquote zieht sie nur beim Status fehlminuten ab.';
 COMMENT ON COLUMN extension.tbl_anwesenheit_user_history.fehlminuten IS 'Versäumte Minuten der Kontrolle zum Zeitpunkt des History-Eintrags.';
 
--- replaces the version of sql/1/001_function.sql
+-- replaces the version of sql/1/001_function.sql.
+-- A kontrolle outside the Stunden raster counts 0 minutes: without NULLIF the quote of a student with only such
+-- kontrollen is a division by zero, and the student list of the lektor fails for the whole lehreinheit. Quote 100 then
 CREATE OR REPLACE FUNCTION extension.get_anwesenheiten_by_time(integer, integer, character varying) RETURNS float
 	stable
 	LANGUAGE plpgsql
@@ -51,7 +53,7 @@ BEGIN
 									 WHEN status = 'fehlminuten'
 										 THEN GREATEST(extension.get_epoch_from_anw_times(von, bis) - fehlminuten * 60, 0)
 									 ELSE 0 END) * 100.0)
-							   / SUM(extension.get_epoch_from_anw_times(von, bis)), 2) AS anwesenheitsquote
+							   / NULLIF(SUM(extension.get_epoch_from_anw_times(von, bis)), 0), 2) AS anwesenheitsquote
 	FROM
 		extension.tbl_anwesenheit_user
 			JOIN extension.tbl_anwesenheit ON tbl_anwesenheit_user.anwesenheit_id = tbl_anwesenheit.anwesenheit_id

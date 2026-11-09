@@ -23,12 +23,26 @@ export const expectPhraseText = (response, key, account) =>
 		.fhcData()
 		.then(text => phrasePattern(key, account).then(pattern => expect(text, key).to.match(pattern)));
 
-const phrasePattern = (key, account) => {
-	const [category, phrase] = key.split('/');
+// the phrases per account and category: the language of the account decides the text. One request per spec file
+const phraseCache = new Map();
+
+const loadPhrases = (category, account) => {
+	const cacheKey = `${account ? account.username : ''}|${category}`;
+	if (phraseCache.has(cacheKey)) return cy.wrap(phraseCache.get(cacheKey), { log: false });
 
 	return cy
 		.fhcGet(`api/frontend/v1/Phrasen/loadModule/${category}`, undefined, account)
 		.fhcData()
+		.then(phrases => {
+			phraseCache.set(cacheKey, phrases || []);
+			return phrases || [];
+		});
+};
+
+const phrasePattern = (key, account) => {
+	const [category, phrase] = key.split('/');
+
+	return loadPhrases(category, account)
 		.then(phrases => {
 			const found = (phrases || []).find(p => p.category === category && p.phrase === phrase);
 			expect(found, `phrase ${key}`).to.exist;
@@ -37,6 +51,19 @@ const phrasePattern = (key, account) => {
 			return new RegExp(`^${parts.join('[\\s\\S]+')}$`);
 		});
 };
+
+// the text of a database error that the client must never get
+const DB_TEXT = /SQLSTATE|ERROR:\s|invalid input syntax|syntax error at|pg_query|Severity:/i;
+
+/** Checks that a response holds no database error text */
+export const expectNoDbText = response =>
+	expect(JSON.stringify(response.body ?? ''), 'database text in the response').to.not.match(DB_TEXT);
+
+/**
+ * A precondition of the test data that checks.js checks too. It fails the test instead of a skip: a broken seed shows
+ * as a failure, not as a green run with more skips
+ */
+export const requireFixture = (value, what) => expect(value, `fixture: ${what}, see checks.js`).to.be.ok;
 
 /** The only way to skip: call it in a test written as function () {}, the message names the reason */
 export const skipIf = (test, condition, reason) => {

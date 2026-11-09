@@ -4,6 +4,16 @@
 // the path after the entry point: cy.fhcGet and cy.fhcPost of core send it through cis.php
 export const API = 'extensions/FHC-Core-Anwesenheiten/api';
 
+/** An id that no row has: for the tests of an unknown id */
+export const UNKNOWN_ID = 999999999;
+
+/** A call of an endpoint of the *_ENDPOINTS lists: GET with query parameters, POST with a JSON body */
+export const callEndpoint = ({ method, url }, params, account) =>
+	method === 'GET' ? cy.fhcGet(url, params, account) : cy.fhcPost(url, params, account);
+
+// the query without undefined values: cy.request sends an undefined value as an empty one, axios leaves it out
+const query = params => Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
+
 const INFO = `${API}/InfoApi`;
 const KONTROLLE = `${API}/KontrolleApi`;
 const PROFIL = `${API}/ProfilApi`;
@@ -11,7 +21,48 @@ const ADMINISTRATION = `${API}/AdministrationApi`;
 
 export const infoApi = {
 	getViewPermissions: account => cy.fhcGet(`${INFO}/getViewPermissions`, undefined, account),
+
+	getViewDataStudent: account => cy.fhcGet(`${INFO}/getViewDataStudent`, undefined, account),
+
+	getStudiensemester: account => cy.fhcGet(`${INFO}/getStudiensemester`, undefined, account),
+
+	getStudentInfo: (prestudent_id, lva_id, sem_kurzbz, account) =>
+		cy.fhcGet(`${INFO}/getStudentInfo`, { prestudent_id, lva_id, sem_kurzbz }, account),
+
+	/** allowed_stg: the Studiengaenge of a non-admin, an admin gets all */
+	getStudiengaenge: (allowed_stg, account) => cy.fhcPost(`${INFO}/getStudiengaenge`, { allowed_stg }, account),
+
+	getLektorsForLvaInSemester: (lva_id, sem, account) =>
+		cy.fhcGet(`${INFO}/getLektorsForLvaInSemester`, { lva_id, sem }, account),
+
+	getStudentsForLvaInSemester: (lva_id, sem, account) =>
+		cy.fhcGet(`${INFO}/getStudentsForLvaInSemester`, { lva_id, sem }, account),
+
+	getLvViewDataInfo: (lv_id, account) => cy.fhcPost(`${INFO}/getLvViewDataInfo`, { lv_id }, account),
+
+	/** von, bis: 'YYYY-MM-DD', an invalid value means today */
+	getLektorLessons: (von, bis, account) => cy.fhcGet(`${INFO}/getLektorLessons`, { von, bis }, account),
 };
+
+// every InfoApi endpoint with its HTTP method, for the role matrix
+export const INFO_ENDPOINTS = [
+	['GET', 'getStudiensemester'],
+	['GET', 'getStudentInfo'],
+	['POST', 'getStudiengaenge'],
+	['GET', 'getLektorsForLvaInSemester'],
+	['GET', 'getStudentsForLvaInSemester'],
+	['POST', 'getLvViewDataInfo'],
+	['GET', 'getViewDataStudent'],
+	['GET', 'getLektorLessons'],
+	['GET', 'getViewPermissions'],
+].map(([method, name]) => ({ method, name, url: `${INFO}/${name}` }));
+
+/**
+ * The document of an Entschuldigung (Profil::getEntschuldigungFile, not an API: the body is the file, no JSON).
+ * A refused download has no Content-Disposition header.
+ */
+export const entschuldigungFile = (dms_id, account) =>
+	cy.fhcGet('extensions/FHC-Core-Anwesenheiten/Profil/getEntschuldigungFile', { entschuldigung: dms_id }, account);
 
 export const kontrolleApi = {
 	fetchAllAnwesenheitenByLvaAssigned: (lv_id, sem_kurzbz, le_id, ma_uid, account) =>
@@ -70,11 +121,12 @@ export const profilApi = {
 	/** uid null: the own data */
 	getProfileViewData: (uid, account) => cy.fhcPost(`${PROFIL}/getProfileViewData`, { uid }, account),
 
+	/** studiensemester undefined: the current semester */
 	getAllAnwByUID: (studiensemester, uid, person_id, account) =>
-		cy.fhcGet(`${PROFIL}/getAllAnwByUID`, { studiensemester, uid, person_id }, account),
+		cy.fhcGet(`${PROFIL}/getAllAnwByUID`, query({ studiensemester, uid, person_id }), account),
 
 	getAllAnwQuotasForLvaByUID: (studiensemester, uid, account) =>
-		cy.fhcGet(`${PROFIL}/getAllAnwQuotasForLvaByUID`, { studiensemester, uid }, account),
+		cy.fhcGet(`${PROFIL}/getAllAnwQuotasForLvaByUID`, query({ studiensemester, uid }), account),
 
 	getAllAnwesenheitenByStudentByLva: (sem_kurzbz, lv_id, prestudent_id, uid, account) =>
 		cy.fhcPost(`${PROFIL}/getAllAnwesenheitenByStudentByLva`, { sem_kurzbz, lv_id, prestudent_id, uid }, account),

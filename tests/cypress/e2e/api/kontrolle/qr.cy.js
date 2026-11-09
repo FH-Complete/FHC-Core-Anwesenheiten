@@ -1,23 +1,14 @@
 // KontrolleApi: the QR code of a Kontrolle from start to end
 
 import { account } from '../../../support/accounts';
-import { kontrolleApi } from '../../../support/anwApi';
-import { expectPhraseError, expectPhraseText, skipIf } from '../../../support/anwChecks';
-import { loadAnwContext } from '../../../support/anwContext';
-import { dateParam } from '../../../support/anwDates';
-import { givenKontrolle, readKontrolle, resetEntschuldigungen, resetKontrollen } from '../../../support/anwScenario';
+import { kontrolleApi, profilApi, UNKNOWN_ID } from '../../../support/anwApi';
+import { expectPhraseError, expectPhraseText, requireFixture, skipIf } from '../../../support/anwChecks';
+import { useAnwContext } from '../../../support/anwContext';
+import { addDays, dateParam } from '../../../support/anwDates';
+import { givenKontrolle, givenStatus, readKontrolle } from '../../../support/anwScenario';
 
 describe('KontrolleApi: the QR code of a Kontrolle', () => {
-	let ctx;
-
-	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			resetEntschuldigungen(ctx);
-		});
-	});
-
-	beforeEach(() => resetKontrollen(ctx));
+	const ctx = useAnwContext();
 
 	const restart = kontrolle =>
 		kontrolleApi.restartKontrolle(ctx.le, dateParam(ctx.today), kontrolle.anwesenheit_id, account('LEKTOR')).fhcData();
@@ -86,9 +77,7 @@ describe('KontrolleApi: the QR code of a Kontrolle', () => {
 		});
 	});
 
-	it('pollAnwesenheiten with the lv_id of another LV of LEKTOR → notAuthorizedForLva', function () {
-		skipIf(this, !ctx.otherLv, 'LEKTOR teaches no other LV');
-
+	it('pollAnwesenheiten with the lv_id of another LV of LEKTOR → notAuthorizedForLva', () => {
 		givenKontrolle(ctx, { qr: true }).then(({ kontrolle }) => {
 			kontrolleApi
 				.pollAnwesenheiten(kontrolle.anwesenheit_id, ctx.otherLv, account('LEKTOR'))
@@ -96,12 +85,103 @@ describe('KontrolleApi: the QR code of a Kontrolle', () => {
 		});
 	});
 
-	it('regenerateQRCode for a Kontrolle of the LE of LEKTOR2 → notAuthorizedForLe, the code stays', () => {
-		givenKontrolle(ctx, { qr: true, le: ctx.foreignLe, as: account('FULL_ASSISTENZ') }).then(({ kontrolle, code }) => {
-			kontrolleApi
-				.regenerateQRCode(kontrolle.anwesenheit_id, account('LEKTOR'))
-				.then(res => expectPhraseError(res, 'global/notAuthorizedForLe', account('LEKTOR')));
-			readKontrolle(kontrolle.anwesenheit_id).its('codes').should('deep.equal', [code]);
+	describe('restartKontrolle of an old Kontrolle: the date rules of a new one', () => {
+		const pastLimit = () => addDays(ctx.today, -ctx.config.kontrolleCreateMaxReachPast);
+
+		// only the admin creates a Kontrolle before the reach; without a code it waits for a restart
+		const givenOldWithoutCode = date =>
+			givenKontrolle(ctx, { qr: true, date, as: account('FULL_ASSISTENZ') }).then(({ kontrolle }) =>
+				kontrolleApi
+					.deleteQRCode(kontrolle.anwesenheit_id, ctx.lvId, account('FULL_ASSISTENZ'))
+					.fhcData()
+					.then(() => kontrolle),
+			);
+
+		const restartAs = (kontrolle, role) =>
+			kontrolleApi.restartKontrolle(ctx.le, dateParam(kontrolle.von.slice(0, 10)), kontrolle.anwesenheit_id, account(role));
+
+		it('LEKTOR, a Kontrolle one day before the reach → providedDateTooOld, no code', function () {
+			const date = addDays(pastLimit(), -1);
+			skipIf(this, ctx.termine.includes(date), `the LE has a Termin on ${date}, the Termin rule allows that date`);
+
+			givenOldWithoutCode(date).then(kontrolle => {
+				restartAs(kontrolle, 'LEKTOR').then(res => expectPhraseError(res, 'global/providedDateTooOld', account('LEKTOR')));
+				readKontrolle(kontrolle.anwesenheit_id).its('codes').should('be.empty');
+			});
+		});
+
+		it('LEKTOR, a Kontrolle on a Termin before the reach → a new code', function () {
+			const termin = ctx.termine.find(datum => datum < pastLimit());
+			skipIf(this, !termin, 'the LE has no Termin before the reach');
+
+			givenOldWithoutCode(termin).then(kontrolle => {
+				restartAs(kontrolle, 'LEKTOR').fhcData().its('code').should('match', /^[0-9a-f]{8}$/);
+			});
+		});
+
+		it('FULL_ASSISTENZ, a Kontrolle one day before the reach → a new code', () => {
+			givenOldWithoutCode(addDays(pastLimit(), -1)).then(kontrolle => {
+				restartAs(kontrolle, 'FULL_ASSISTENZ').fhcData().its('code').should('match', /^[0-9a-f]{8}$/);
+			});
 		});
 	});
+
+	[
+		['regenerateQRCode', k => kontrolleApi.regenerateQRCode(k.anwesenheit_id, account('LEKTOR'))],
+		['restartKontrolle', k => kontrolleApi.restartKontrolle(ctx.le, dateParam(ctx.today), k.anwesenheit_id, account('LEKTOR'))],
+		['degenerateQRCode', (k, code) => kontrolleApi.degenerateQRCode(k.anwesenheit_id, code, account('LEKTOR'))],
+		['deleteQRCode', k => kontrolleApi.deleteQRCode(k.anwesenheit_id, ctx.lvId, account('LEKTOR'))],
+	].forEach(([name, call]) => {
+		it(`${name} for a Kontrolle of the LE of LEKTOR2 → notAuthorizedForLe, the code stays`, () => {
+			givenKontrolle(ctx, { qr: true, le: ctx.foreignLe, as: account('FULL_ASSISTENZ') }).then(({ kontrolle, code }) => {
+				call(kontrolle, code).then(res => expectPhraseError(res, 'global/notAuthorizedForLe', account('LEKTOR')));
+				readKontrolle(kontrolle.anwesenheit_id).its('codes').should('deep.equal', [code]);
+			});
+		});
+	});
+
+	it('regenerateQRCode with an unknown anwesenheit_id → errorKontrolleDoesNotExist', () => {
+		kontrolleApi
+			.regenerateQRCode(UNKNOWN_ID, account('LEKTOR'))
+			.then(res => expectPhraseError(res, 'global/errorKontrolleDoesNotExist', account('LEKTOR')));
+	});
+
+	it('getExistingQRCode without a Kontrolle, and after deleteQRCode → noExistingKontrolleFound', () => {
+		kontrolleApi
+			.getExistingQRCode(ctx.le, account('LEKTOR'))
+			.then(res => expectPhraseText(res, 'global/noExistingKontrolleFound', account('LEKTOR')));
+
+		givenKontrolle(ctx, { qr: true }).then(({ kontrolle }) => {
+			kontrolleApi.deleteQRCode(kontrolle.anwesenheit_id, ctx.lvId, account('LEKTOR')).fhcData();
+			kontrolleApi
+				.getExistingQRCode(ctx.le, account('LEKTOR'))
+				.then(res => expectPhraseText(res, 'global/noExistingKontrolleFound', account('LEKTOR')));
+		});
+	});
+
+	it('pollAnwesenheiten after a scan, Fehlminuten and entschuldigt → Fehlminuten count as anwesend', () => {
+		const { student } = ctx;
+		givenKontrolle(ctx, { qr: true }).then(state => {
+			const others = state.entries.filter(e => e.prestudent_id !== student.prestudentId);
+			requireFixture(others.length >= 2, 'three students in the test LE');
+
+			profilApi.checkInAnwesenheit(state.code, account(student.role)).fhcData();
+			givenStatus(ctx, [
+				{ anwesenheit_user_id: others[0].anwesenheit_user_id, status: ctx.config.fehlminuten_status, fehlminuten: 10 },
+			]);
+			givenStatus(ctx, [{ anwesenheit_user_id: others[1].anwesenheit_user_id, status: ctx.config.entschuldigt_status }], {
+				as: account('FULL_ASSISTENZ'),
+			});
+
+			kontrolleApi
+				.pollAnwesenheiten(state.kontrolle.anwesenheit_id, ctx.lvId, account('LEKTOR'))
+				.fhcData()
+				.then(counts => {
+					expect(Number(counts.anwesend), 'anwesend').to.eq(2);
+					expect(Number(counts.entschuldigt), 'entschuldigt').to.eq(1);
+					expect(Number(counts.abwesend), 'abwesend').to.eq(state.entries.length - 3);
+				});
+		});
+	});
+
 });

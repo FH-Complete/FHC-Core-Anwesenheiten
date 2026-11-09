@@ -3,6 +3,19 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 class ProfilApi extends FHCAPI_Controller
 {
+	/**
+	 * the fields of an anwesenheit of the lva detail that a student gets: no note of the lektor, no uid of the staff
+	 */
+	const STUDENT_ANW_FIELDS = array(
+		'anwesenheit_user_id', 'datum', 'status', 'lehreinheit_id', 'lehrform', 'lehrfach_bez', 'von', 'bis', 'fehlminuten', 'dauer'
+	);
+
+	/**
+	 * the fields of an entschuldigung that a student gets: no uid of the staff
+	 */
+	const STUDENT_ENT_FIELDS = array(
+		'entschuldigung_id', 'person_id', 'von', 'bis', 'akzeptiert', 'notiz', 'dms_id', 'version', 'insertamum', 'updateamum', 'statussetamum'
+	);
 
 	private $_ci;
 	private $_uid;
@@ -134,12 +147,16 @@ class ProfilApi extends FHCAPI_Controller
 			$result = $this->_ci->AnwesenheitModel->getAllByStudent($uid, $studiensemester);
 
 			if($this->_ci->config->item('ENTSCHULDIGUNGEN_ENABLED')) {
-				$entschuldigungen = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+				$entschuldigungen = $this->_entschuldigungenForCaller(
+					$this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id)
+				);
 				$this->terminateWithSuccess(array($result, $entschuldigungen));
 			} else {
 				$this->terminateWithSuccess(array($result));
 			}
 		}
+
+		$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 	}
 
 	/**
@@ -182,6 +199,8 @@ class ProfilApi extends FHCAPI_Controller
 			
 			$this->terminateWithSuccess($data);
 		}
+
+		$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 	}
 	
 	/**
@@ -203,6 +222,8 @@ class ProfilApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrStudentCheckingItself($uid) && $this->isAdminOrPrestudentCheckingItself($prestudent_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
+		if(!is_numeric($lv_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
 		if($sem_kurzbz === null || $sem_kurzbz === 'null') {
 
 			$result = $this->_ci->StudiensemesterModel->getAktOrNextSemester(0);
@@ -212,8 +233,36 @@ class ProfilApi extends FHCAPI_Controller
 		
 		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLvaForStudent($prestudent_id, $lv_id, $sem_kurzbz);
 
-		if(!isSuccess($res)) $this->terminateWithError($res);
+		// no database text to the client
+		if(!isSuccess($res)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		// students do not see the note of the lektor and the uids of the staff
+		if(!$this->isStaff())
+			$res = success($this->_onlyFields(getData($res) ?: array(), self::STUDENT_ANW_FIELDS));
+
 		$this->terminateWithSuccess($res);
+	}
+
+	/**
+	 * the rows as objects with only the given fields
+	 */
+	private function _onlyFields($rows, $fields)
+	{
+		$keep = array_flip($fields);
+		return array_map(function ($row) use ($keep) {
+			return (object) array_intersect_key((array) $row, $keep);
+		}, $rows);
+	}
+
+	/**
+	 * the result of EntschuldigungModel::getEntschuldigungenByPerson for the caller: the staff gets all fields,
+	 * a student the fields of STUDENT_ENT_FIELDS
+	 */
+	private function _entschuldigungenForCaller($result)
+	{
+		if (isError($result) || $this->isStaff()) return $result;
+
+		return success($this->_onlyFields(getData($result) ?: array(), self::STUDENT_ENT_FIELDS));
 	}
 
 	/**
@@ -244,7 +293,11 @@ class ProfilApi extends FHCAPI_Controller
 	public function checkInAnwesenheit() {
 
 		$result = $this->getPostJSON();
-		$zugangscode = $result->zugangscode;
+		$zugangscode = isset($result->zugangscode) ? $result->zugangscode : null;
+
+		// a code is text: a number, an array or an object only gives a database error
+		if (!is_string($zugangscode) || isEmptyString($zugangscode))
+			$this->terminateWithError($this->p->t('global', 'errorInvalidCode'), 'general');
 
 		$uid = getAuthUID();
 
@@ -253,15 +306,10 @@ class ProfilApi extends FHCAPI_Controller
 
 		if(!hasData($result)) $this->terminateWithError($this->p->t('global', 'errorInvalidCode'), 'general');
 
-		// calculate age of zugangscode, since it might be a data relic a student abuses
+		// calculate age of zugangscode, since it might be a data relic a student abuses.
+		// the total seconds: the day part of a DateInterval ignores months and years
 		$codeDateString = $result->retval[0]->insertamum;
-		$codeDateTime = new DateTime($codeDateString);
-
-		$nowString = date("Y-m-d H:i:s");
-		$nowDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $nowString);
-
-		$interval = $nowDateTime->diff($codeDateTime, true);
-		$timeDiffInMilliseconds = $interval->d * 24 * 60 * 60 * 1000 + $interval->h * 60 * 60 * 1000 + $interval->i * 60 * 1000 + $interval->s * 1000;
+		$timeDiffInMilliseconds = abs(time() - strtotime($codeDateString)) * 1000;
 
 		if($timeDiffInMilliseconds > ($this->_ci->config->item('REGENERATE_QR_TIMER')) * 2) {
 			$this->terminateWithError(
@@ -408,7 +456,8 @@ class ProfilApi extends FHCAPI_Controller
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anw_r_student');
 
 		$berechtigt = false;
-		if($isStudent && $person_id == getAuthPersonId()) $berechtigt = true;
+		// is_numeric first: in PHP 7 "123abc" == 123 is true
+		if($isStudent && is_numeric($person_id) && $person_id == getAuthPersonId()) $berechtigt = true;
 		// the staff only for students of their studiengaenge
 		if(($isAdmin || $isAssistenz) && $this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id)) $berechtigt = true;
 
@@ -463,6 +512,12 @@ class ProfilApi extends FHCAPI_Controller
 				'version' => 1
 			)
 		);
+
+		// no success without a stored entschuldigung: remove the uploaded document again
+		if (isError($result) || !hasData($result)) {
+			if ($dmsId !== null) $this->_ci->dmslib->delete($person_id, $dmsId);
+			$this->terminateWithError($this->p->t('global', 'errorEntschuldigungUpload'), 'general');
+		}
 
 		$entschuldigung_id = getData($result);
 		
@@ -533,11 +588,14 @@ class ProfilApi extends FHCAPI_Controller
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anw_r_student');
 
 		$berechtigt = false;
-		if($isStudent && $person_id == getAuthPersonId()) $berechtigt = true;
+		// is_numeric first: in PHP 7 "123abc" == 123 is true
+		if($isStudent && is_numeric($person_id) && $person_id == getAuthPersonId()) $berechtigt = true;
 		// the staff only for students of their studiengaenge
 		if(($isAdmin || $isAssistenz) && $this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id)) $berechtigt = true;
 
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'errorNoRightsToChangeData'), 'general');
+
+		if(!is_numeric($entschuldigung_id)) $this->terminateWithError($this->p->t('global', 'errorNoEntschuldigungFound'), 'general');
 
 		$result = $this->_ci->EntschuldigungModel->load($entschuldigung_id);
 		if(isError($result) || !hasData($result)) {
@@ -702,7 +760,7 @@ class ProfilApi extends FHCAPI_Controller
 		}
 
 		$data = json_decode($this->input->raw_input_stream, true);
-		$entschuldigung_id = (string)$data['entschuldigung_id'];
+		$entschuldigung_id = isset($data['entschuldigung_id']) ? (string)$data['entschuldigung_id'] : '';
 
 		if (isEmptyString($entschuldigung_id)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
@@ -710,19 +768,27 @@ class ProfilApi extends FHCAPI_Controller
 
 		$isStudent = $this->permissionlib->isBerechtigt('extension/anw_r_student');
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
-		
+
+		// the person whose open entschuldigung the caller may delete
+		$owner = null;
 		if($isStudent) {
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, getAuthPersonId());
+			$owner = getAuthPersonId();
 		} else if($isAdmin) {
-			$person_id_param = (string)$data['person_id'];
+			$owner = isset($data['person_id']) ? (string)$data['person_id'] : '';
 
 			// only students of the studiengaenge of the admin
-			if(!$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id_param))
+			if(!$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($owner))
 				$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
-
-			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, $person_id_param);
 		}
-		
+		if($owner === null) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		$zuordnung = is_numeric($entschuldigung_id)
+			? $this->_ci->EntschuldigungModel->checkZuordnung($entschuldigung_id, $owner)
+			: null;
+
+		if (!hasData($zuordnung))
+			$this->_terminateDeleteRefused($entschuldigung_id, $owner);
+
 		if (hasData($zuordnung))
 		{
 			$entschuldigung = getData($zuordnung)[0];
@@ -751,9 +817,22 @@ class ProfilApi extends FHCAPI_Controller
 			$this->sendEmailToAssistenz($person_id, $entschuldigung->dms_id, 'delete', $entschuldigung->entschuldigung_id, $entschuldigung->von, $entschuldigung->bis);
 
 			$this->terminateWithSuccess($this->p->t('global', 'successDeleteEnschuldigung'));
-		} else {
-			$this->terminateWithError('Keine Zuordnung gefunden');
 		}
+	}
+
+	/**
+	 * the answer of deleteEntschuldigung when $owner has no open entschuldigung $entschuldigung_id: a decided one of
+	 * $owner may not be deleted (noAuthorization). An unknown id and the id of another person get the same answer
+	 * (errorNoEntschuldigungFound), so a student cannot test which ids exist
+	 */
+	private function _terminateDeleteRefused($entschuldigung_id, $owner)
+	{
+		$result = is_numeric($entschuldigung_id) ? $this->_ci->EntschuldigungModel->load($entschuldigung_id) : null;
+
+		if (hasData($result) && getData($result)[0]->person_id == $owner && getData($result)[0]->akzeptiert !== null)
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		$this->terminateWithError($this->p->t('global', 'errorNoEntschuldigungFound'), 'general');
 	}
 
 	/**
@@ -783,7 +862,7 @@ class ProfilApi extends FHCAPI_Controller
 		// students are only allowed to fetch their own entschuldigungen
 		if(!$this->isAdminOrPersonCheckingItself($person_id)) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
-		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
+		$result = $this->_entschuldigungenForCaller($this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id));
 
 		$this->terminateWithSuccess($result);
 	}
@@ -801,9 +880,10 @@ class ProfilApi extends FHCAPI_Controller
 		$sem_kurzbz = $result->sem_kz;
 		$prestudent_id = $result->id;
 
-		// students may only read their own quota
-		$isLektor = $this->permissionlib->isBerechtigt('extension/anw_r_lektor');
-		if(!$isLektor && !$this->isAdminOrPrestudentCheckingItself($prestudent_id)) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+		// the student detail of the kontrolle view: the rule of the kontrolle view, not the studiengaenge of the
+		// students page. A student reads only the own quota
+		if(!$this->_ci->anwesenheitenlib->isAdminOrLektorOfLva($lv_id) && !$this->_ci->anwesenheitenlib->isOwnPrestudent($prestudent_id))
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 		$result = $this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
@@ -914,12 +994,7 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrPrestudentCheckingItself($prestudent_id)
 	{
-		if(!is_numeric($prestudent_id)) return false;
-
-		$result = $this->_ci->PrestudentModel->load($prestudent_id);
-		if(!hasData($result)) return false;
-
-		if(getData($result)[0]->person_id == getAuthPersonId()) return true;
+		if($this->_ci->anwesenheitenlib->isOwnPrestudent($prestudent_id)) return true;
 
 		return $this->isStaff() && $this->_ci->anwesenheitenlib->isPrestudentInEntitledStudiengaenge($prestudent_id);
 	}

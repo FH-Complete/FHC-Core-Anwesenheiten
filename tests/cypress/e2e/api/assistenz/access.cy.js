@@ -1,7 +1,7 @@
 // AdministrationApi: who may call which endpoint
 
 import { account } from '../../../support/accounts';
-import { ADMINISTRATION_ENDPOINTS } from '../../../support/anwApi';
+import { ADMINISTRATION_ENDPOINTS, callEndpoint } from '../../../support/anwApi';
 
 describe('AdministrationApi: access', () => {
 	[
@@ -11,8 +11,8 @@ describe('AdministrationApi: access', () => {
 	].forEach(([label, role, status]) => {
 		it(`every endpoint ${label} → ${status}`, () => {
 			// the permission check comes before the parameters, so an empty request is enough
-			ADMINISTRATION_ENDPOINTS.forEach(({ name, url }) => {
-				cy.fhcPost(url, {}, role && account(role)).then(res => expect(res.status, name).to.eq(status));
+			ADMINISTRATION_ENDPOINTS.forEach(endpoint => {
+				callEndpoint(endpoint, {}, role && account(role)).then(res => expect(res.status, endpoint.name).to.eq(status));
 			});
 		});
 	});

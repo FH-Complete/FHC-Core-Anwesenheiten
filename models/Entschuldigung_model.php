@@ -211,7 +211,7 @@ class Entschuldigung_model extends \DB_Model
 	
 	public function checkZuordnungByDms($dms_id, $person_id = null)
 	{
-		$query = 'SELECT 1
+		$query = 'SELECT person_id
 					FROM extension.tbl_anwesenheit_entschuldigung
 					WHERE dms_id = ?';
 

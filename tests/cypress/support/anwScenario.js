@@ -30,9 +30,8 @@ export const resetEntschuldigungen = ctx => cy.task('anw:db:resetEntschuldigunge
 /** The number of Entschuldigungen of these persons */
 export const countEntschuldigungen = ctx => cy.task('anw:db:countEntschuldigungen', { personIds: personIdsOf(ctx) });
 
-/** The stored Entschuldigung: { entschuldigung, history (rows of the person), document (DMS row exists) } */
-export const readEntschuldigung = (entschuldigungId, student) =>
-	cy.task('anw:db:readEntschuldigung', { entschuldigungId, personId: student.personId });
+/** The stored Entschuldigung: { entschuldigung, history (its history rows), document (DMS row exists) } */
+export const readEntschuldigung = entschuldigungId => cy.task('anw:db:readEntschuldigung', { entschuldigungId });
 
 /** A document for addEntschuldigung and editEntschuldigung. content: the text of the PDF fixture */
 export const pdfFile = content => ({ field: 'files', name: 'bestaetigung.pdf', type: 'application/pdf', content });
@@ -51,7 +50,7 @@ export const addEntschuldigung = (student, { von, bis, pdf = null, as } = {}) =>
 export const givenEntschuldigung = (student, options) =>
 	addEntschuldigung(student, options)
 		.fhcData()
-		.then(({ entschuldigung_id }) => readEntschuldigung(entschuldigung_id, student));
+		.then(({ entschuldigung_id }) => readEntschuldigung(entschuldigung_id));
 
 /**
  * An open Entschuldigung through the database, for a student outside the Studiengaenge of the staff accounts:
@@ -60,16 +59,19 @@ export const givenEntschuldigung = (student, options) =>
 export const seedEntschuldigung = (ctx, student, { von, bis }) =>
 	cy
 		.task('anw:db:seedEntschuldigung', { personId: student.personId, personIds: personIdsOf(ctx), von, bis })
-		.then(entschuldigungId => readEntschuldigung(entschuldigungId, student));
+		.then(entschuldigungId => readEntschuldigung(entschuldigungId));
 
 /**
- * Accepts (true) or declines (false) an Entschuldigung, as ENT_ASSISTENZ by default. The id goes as a string like in
- * AssistenzComponent: isEmptyString rejects the integers 9 to 13 and 32 on PHP 7.0 (ctype_space reads them as ASCII)
+ * The request of AdministrationApi::updateEntschuldigung, as ENT_ASSISTENZ by default. Yields the response.
+ * status: true accepts, false declines, null keeps it open. range: { von, bis } of the edit modal, else it stays.
+ * The id goes as a string like in AssistenzComponent: isEmptyString rejects the integers 9 to 13 and 32 on PHP 7.0
+ * (ctype_space reads them as ASCII)
  */
-export const decide = (entschuldigungId, status, { notiz = '', as } = {}) =>
-	administrationApi
-		.updateEntschuldigung(String(entschuldigungId), status, notiz, as || account('ENT_ASSISTENZ'))
-		.fhcData();
+export const requestDecision = (entschuldigungId, status, { notiz = '', range, as } = {}) =>
+	administrationApi.updateEntschuldigung(String(entschuldigungId), status, notiz, as || account('ENT_ASSISTENZ'), range);
+
+/** Accepts (true) or declines (false) an Entschuldigung, see requestDecision. Fails on an error response */
+export const decide = (entschuldigungId, status, options) => requestDecision(entschuldigungId, status, options).fhcData();
 
 /**
  * Creates a Kontrolle, by default as LEKTOR on ctx.le today from 08:00 to 09:30 without a QR code.
@@ -86,11 +88,39 @@ export const givenKontrolle = (ctx, { date = ctx.today, von = '08:00', bis = '09
 		});
 };
 
-/** The entry of a student (ctx.testStudents.*) in the state of readKontrolle */
+/** The entry of a student (ctx.testStudents.*, ctx.students) in the state of readKontrolle */
 export const entryOf = (state, student) => {
 	const entry = state.entries.find(e => e.prestudent_id === student.prestudentId);
-	expect(entry, `entry of ${student.role} in Kontrolle ${state.kontrolle.anwesenheit_id}`).to.exist;
+	expect(entry, `entry of ${student.role || student.uid} in Kontrolle ${state.kontrolle.anwesenheit_id}`).to.exist;
 	return entry;
+};
+
+/** A note of the lektor on an entry: the student must not see it */
+export const NOTIZ = 'Notiz der Lehrperson';
+
+/** The stored entry with this id in a Kontrolle, read now */
+export const entryById = (kontrolle, anwesenheitUserId) =>
+	readKontrolle(kontrolle.anwesenheit_id).then(({ entries }) => entries.find(e => e.anwesenheit_user_id === anwesenheitUserId));
+
+/** The stored entry of a student in a Kontrolle, read now */
+export const entryNow = (kontrolle, student) => readKontrolle(kontrolle.anwesenheit_id).then(state => entryOf(state, student));
+
+/** The stored status of a student in a Kontrolle, read now */
+export const statusNow = (kontrolle, student) => entryNow(kontrolle, student).its('status');
+
+/**
+ * The quota of extension.get_anwesenheiten_by_time for attendances [{ dauer, status, fehlminuten }], dauer in counted
+ * minutes: anwesend and entschuldigt count fully, Fehlminuten are deducted, abwesend counts 0. 100 without minutes
+ */
+export const expectedQuota = (config, attendances) => {
+	const present = ({ dauer, status, fehlminuten = 0 }) => {
+		if ([config.anwesend_status, config.entschuldigt_status].includes(status)) return dauer;
+		if (status === config.fehlminuten_status) return Math.max(dauer - fehlminuten, 0);
+		return 0;
+	};
+	const total = attendances.reduce((sum, a) => sum + a.dauer, 0);
+	if (!total) return 100;
+	return Math.round((attendances.reduce((sum, a) => sum + present(a), 0) * 10000) / total) / 100;
 };
 
 /** Sets the status of entries as LEKTOR. entries: [{ anwesenheit_user_id, status, fehlminuten, notiz }] */

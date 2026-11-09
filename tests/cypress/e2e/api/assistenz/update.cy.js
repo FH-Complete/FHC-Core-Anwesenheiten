@@ -1,54 +1,41 @@
 // AdministrationApi: the decision and the edit of an Entschuldigung (updateEntschuldigung)
 
 import { account } from '../../../support/accounts';
-import { administrationApi } from '../../../support/anwApi';
-import { expectPhraseError, expectPhraseText, skipIf } from '../../../support/anwChecks';
-import { loadAnwContext, loadAssistenzScope, studentInLe } from '../../../support/anwContext';
+import { UNKNOWN_ID } from '../../../support/anwApi';
+import { expectPhraseError, expectPhraseText, requireFixture } from '../../../support/anwChecks';
+import { loadAssistenzScope, useAnwContext } from '../../../support/anwContext';
 import { addDays } from '../../../support/anwDates';
 import {
 	decide,
-	entryOf,
 	givenEntschuldigung,
 	givenKontrolle,
 	readEntschuldigung,
-	readKontrolle,
-	resetEntschuldigungen,
-	resetKontrollen,
+	requestDecision,
 	seedEntschuldigung,
+	statusNow,
 } from '../../../support/anwScenario';
 
 describe('AdministrationApi: decide and edit an Entschuldigung', () => {
-	let ctx;
-	let student;
-	let scope;
+	const ctx = useAnwContext({ entschuldigungen: true });
+	let ent;
+	let full;
 
 	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			student = studentInLe(ctx);
-			expect(student, 'a test student in the test LE').to.exist;
-			loadAssistenzScope(ctx).then(loadedScope => {
-				scope = loadedScope;
-			});
+		loadAssistenzScope(ctx).then(loaded => {
+			ent = loaded;
+		});
+		loadAssistenzScope(ctx, 'FULL_ASSISTENZ').then(loaded => {
+			full = loaded;
 		});
 	});
 
-	beforeEach(function () {
-		skipIf(this, !ctx.config.entschuldigungen_enabled, 'ENTSCHULDIGUNGEN_ENABLED is off');
-		resetKontrollen(ctx);
-		resetEntschuldigungen(ctx);
-	});
-
 	const at = time => `${ctx.today} ${time}:00`;
-	const givenOpen = (von = '07:00', bis = '12:00', owner = student, as = undefined) =>
-		givenEntschuldigung(owner, { von: at(von), bis: at(bis), as }).its('entschuldigung');
+	// an open Entschuldigung of the test student today
+	const givenOpen = ({ von = '07:00', bis = '12:00' } = {}) =>
+		givenEntschuldigung(ctx.student, { von: at(von), bis: at(bis) }).its('entschuldigung');
 
-	// the id as a string, like AssistenzComponent
-	const update = (entschuldigung, status, { notiz = '', range, as = account('ENT_ASSISTENZ') } = {}) =>
-		administrationApi.updateEntschuldigung(String(entschuldigung.entschuldigung_id), status, notiz, as, range);
-
-	const stored = (entschuldigung, owner = student) => readEntschuldigung(entschuldigung.entschuldigung_id, owner);
-	const statusNow = kontrolle => readKontrolle(kontrolle.anwesenheit_id).then(state => entryOf(state, student).status);
+	const update = (entschuldigung, status, options) => requestDecision(entschuldigung.entschuldigung_id, status, options);
+	const stored = entschuldigung => readEntschuldigung(entschuldigung.entschuldigung_id);
 
 	it('accept → akzeptiert, statussetvon, version + 1, one history row', () => {
 		givenOpen().then(entschuldigung => {
@@ -86,13 +73,13 @@ describe('AdministrationApi: decide and edit an Entschuldigung', () => {
 				update(entschuldigung, true).fhcData();
 				update(entschuldigung, true).fhcData();
 				stored(entschuldigung).its('entschuldigung.akzeptiert').should('eq', true);
-				statusNow(kontrolle).should('eq', ctx.config.entschuldigt_status);
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.entschuldigt_status);
 			});
 		});
 	});
 
 	it('an unknown entschuldigung_id → wrongParameters', () => {
-		update({ entschuldigung_id: 999999999 }, true).then(res =>
+		requestDecision(UNKNOWN_ID, true).then(res =>
 			expectPhraseError(res, 'global/wrongParameters', account('ENT_ASSISTENZ')),
 		);
 	});
@@ -120,7 +107,7 @@ describe('AdministrationApi: decide and edit an Entschuldigung', () => {
 			givenOpen().then(entschuldigung => {
 				update(entschuldigung, 'x').then(res => {
 					// the stored state first: it shows a half done update
-					statusNow(kontrolle).should('eq', ctx.config.abwesend_status);
+					statusNow(kontrolle, ctx.student).should('eq', ctx.config.abwesend_status);
 					stored(entschuldigung).its('entschuldigung.akzeptiert').should('eq', null);
 					expectPhraseError(res, 'global/wrongParameters', account('ENT_ASSISTENZ'));
 				});
@@ -132,41 +119,66 @@ describe('AdministrationApi: decide and edit an Entschuldigung', () => {
 		givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(({ kontrolle }) => {
 			givenOpen().then(entschuldigung => {
 				decide(entschuldigung.entschuldigung_id, true);
-				update(entschuldigung, null).fhcErrors();
+				update(entschuldigung, null).then(res => expectPhraseError(res, 'global/wrongParameters', account('ENT_ASSISTENZ')));
 				stored(entschuldigung).its('entschuldigung.akzeptiert').should('eq', true);
-				statusNow(kontrolle).should('eq', ctx.config.entschuldigt_status);
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.entschuldigt_status);
 			});
 		});
 	});
 
 	it('accept with a new range in the same request → the Kontrolle in the new range gets entschuldigt', () => {
 		givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(({ kontrolle }) => {
-			givenOpen('07:00', '07:30').then(entschuldigung => {
+			givenOpen({ bis: '07:30' }).then(entschuldigung => {
 				update(entschuldigung, true, { range: { von: at('07:00'), bis: at('12:00') } }).fhcData();
-				statusNow(kontrolle).should('eq', ctx.config.entschuldigt_status);
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.entschuldigt_status);
 			});
 		});
 	});
 
 	it('a new range of an accepted one, status unchanged → the entries follow the new range', () => {
 		givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(({ kontrolle }) => {
-			givenOpen('07:00', '10:00').then(entschuldigung => {
+			givenOpen({ bis: '10:00' }).then(entschuldigung => {
 				decide(entschuldigung.entschuldigung_id, true);
-				statusNow(kontrolle).should('eq', ctx.config.entschuldigt_status);
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.entschuldigt_status);
 
 				// the edit modal sends the current status with the new range
 				update(entschuldigung, true, { range: { von: at('10:00'), bis: at('12:00') } }).fhcData();
-				statusNow(kontrolle).should('eq', ctx.config.abwesend_status);
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.abwesend_status);
 			});
 		});
 	});
 
-	it('ENT_ASSISTENZ decides one of a Studiengang outside its rights → rejected, it stays open', function () {
-		skipIf(this, !scope.outsider, 'ENT_ASSISTENZ has a right on every Studiengang');
+	it('without entschuldigung_id → wrongParameters', () => {
+		requestDecision('', true).then(res => expectPhraseError(res, 'global/wrongParameters', account('ENT_ASSISTENZ')));
+	});
 
-		seedEntschuldigung(ctx, scope.outsider, { von: at('07:00'), bis: at('12:00') }).its('entschuldigung').then(entschuldigung => {
-			update(entschuldigung, true).fhcErrors();
-			stored(entschuldigung, scope.outsider).its('entschuldigung.akzeptiert').should('eq', null);
+	// the entries: entschuldigung/effect.cy.js. Here the stored Entschuldigung
+	it('accept → decline → accept → akzeptiert of every step, version + 3', () => {
+		givenOpen().then(entschuldigung => {
+			[true, false, true].forEach(status => {
+				update(entschuldigung, status).fhcData();
+				stored(entschuldigung).its('entschuldigung.akzeptiert').should('eq', status);
+			});
+			stored(entschuldigung).its('entschuldigung.version').should('eq', entschuldigung.version + 3);
+		});
+	});
+
+	[
+		['FULL_ASSISTENZ', () => full],
+		['ENT_ASSISTENZ', () => ent],
+	].forEach(([role, scopeOf]) => {
+		it(`${role} decides one of a Studiengang outside its rights → noAuthorization, it stays open`, () => {
+			const { outsider } = scopeOf();
+			requireFixture(outsider, `a student outside the Studiengaenge of ${role}`);
+
+			seedEntschuldigung(ctx, outsider, { von: at('07:00'), bis: at('12:00') })
+				.its('entschuldigung')
+				.then(entschuldigung => {
+					update(entschuldigung, true, { as: account(role) }).then(res =>
+						expectPhraseError(res, 'global/noAuthorization', account(role)),
+					);
+					stored(entschuldigung).its('entschuldigung.akzeptiert').should('eq', null);
+				});
 		});
 	});
 });

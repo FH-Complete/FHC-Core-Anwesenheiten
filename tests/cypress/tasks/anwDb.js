@@ -24,43 +24,50 @@ const TEACHES = `
 		JOIN lehre.tbl_lehreinheitmitarbeiter m USING (lehreinheit_id)`;
 
 /**
- * The test LV: an LE of the lektor with active students and an LE of the kollege in the same LV and semester.
- * An LE with a test student and the newest semester win. Also an LE of the lektor in an LV the kollege does not teach.
+ * The test LE of the suite: an LE of the lektor ($1) with active students, and an LE of the kollege ($2) in the same
+ * LV and semester. An LE with a test student ($3, uids) and the newest semester win. One row: lv_id, sem_kurzbz, le_id,
+ * with_test_student, foreign_le_id. checks.js runs the same query, so the fixture check sees the LE of the run.
  */
+const TEST_LE_SQL = `
+	WITH active AS (${ACTIVE_STUDENTS}), teaches AS (${TEACHES})
+	SELECT * FROM (
+		SELECT own.lehrveranstaltung_id AS lv_id, own.studiensemester_kurzbz AS sem_kurzbz, own.lehreinheit_id AS le_id,
+			sem.start,
+			EXISTS (SELECT 1 FROM active a WHERE a.lehreinheit_id = own.lehreinheit_id AND a.uid = ANY($3)) AS with_test_student,
+			(SELECT min(f.lehreinheit_id) FROM teaches f
+				WHERE f.uid = $2 AND f.lehrveranstaltung_id = own.lehrveranstaltung_id
+					AND f.studiensemester_kurzbz = own.studiensemester_kurzbz
+					AND NOT EXISTS (SELECT 1 FROM teaches x WHERE x.lehreinheit_id = f.lehreinheit_id AND x.uid = $1)
+			) AS foreign_le_id
+		FROM teaches own
+			JOIN public.tbl_studiensemester sem USING (studiensemester_kurzbz)
+		WHERE own.uid = $1
+			AND NOT EXISTS (SELECT 1 FROM teaches x WHERE x.lehreinheit_id = own.lehreinheit_id AND x.uid = $2)
+			AND EXISTS (SELECT 1 FROM active a WHERE a.lehreinheit_id = own.lehreinheit_id)
+	) c
+	WHERE c.foreign_le_id IS NOT NULL
+	ORDER BY c.with_test_student DESC, c.start DESC, c.le_id
+	LIMIT 1`;
+
+/** An LV of the lektor ($1) that the kollege ($2) does not teach, other than the test LV (lvSql) */
+const otherLvSql = lvSql => `
+	WITH teaches AS (${TEACHES})
+	SELECT t.lehrveranstaltung_id AS lv_id, t.studiensemester_kurzbz AS sem_kurzbz, min(t.lehreinheit_id) AS le_id
+	FROM teaches t
+	WHERE t.uid = $1 AND t.lehrveranstaltung_id <> ${lvSql}
+		AND NOT EXISTS (SELECT 1 FROM teaches x WHERE x.lehrveranstaltung_id = t.lehrveranstaltung_id AND x.uid = $2)
+	GROUP BY t.lehrveranstaltung_id, t.studiensemester_kurzbz
+	ORDER BY t.lehrveranstaltung_id, t.studiensemester_kurzbz
+	LIMIT 1`;
+
+/** The test LV: TEST_LE_SQL, the other LV, the students and the test students. Null without a test LE */
 const context = db => ({ lektor, kollege, students }) =>
 	db.withClient(async client => {
 		const params = [lektor.toLowerCase(), kollege.toLowerCase()];
-		const found = (await client.query(`
-			WITH active AS (${ACTIVE_STUDENTS}), teaches AS (${TEACHES})
-			SELECT * FROM (
-				SELECT own.lehrveranstaltung_id AS lv_id, own.studiensemester_kurzbz AS sem_kurzbz, own.lehreinheit_id AS le_id,
-					sem.start,
-					EXISTS (SELECT 1 FROM active a WHERE a.lehreinheit_id = own.lehreinheit_id AND a.uid = ANY($3)) AS with_test_student,
-					(SELECT min(f.lehreinheit_id) FROM teaches f
-						WHERE f.uid = $2 AND f.lehrveranstaltung_id = own.lehrveranstaltung_id
-							AND f.studiensemester_kurzbz = own.studiensemester_kurzbz
-							AND NOT EXISTS (SELECT 1 FROM teaches x WHERE x.lehreinheit_id = f.lehreinheit_id AND x.uid = $1)
-					) AS foreign_le_id
-				FROM teaches own
-					JOIN public.tbl_studiensemester sem USING (studiensemester_kurzbz)
-				WHERE own.uid = $1
-					AND NOT EXISTS (SELECT 1 FROM teaches x WHERE x.lehreinheit_id = own.lehreinheit_id AND x.uid = $2)
-					AND EXISTS (SELECT 1 FROM active a WHERE a.lehreinheit_id = own.lehreinheit_id)
-			) c
-			WHERE c.foreign_le_id IS NOT NULL
-			ORDER BY c.with_test_student DESC, c.start DESC, c.le_id
-			LIMIT 1`, [...params, students.map(uid => uid.toLowerCase())])).rows[0];
+		const found = (await client.query(TEST_LE_SQL, [...params, students.map(uid => uid.toLowerCase())])).rows[0];
 		if (!found) return null;
 
-		const other = (await client.query(`
-			WITH teaches AS (${TEACHES})
-			SELECT t.lehrveranstaltung_id AS lv_id, t.studiensemester_kurzbz AS sem_kurzbz, min(t.lehreinheit_id) AS le_id
-			FROM teaches t
-			WHERE t.uid = $1 AND t.lehrveranstaltung_id <> $3
-				AND NOT EXISTS (SELECT 1 FROM teaches x WHERE x.lehrveranstaltung_id = t.lehrveranstaltung_id AND x.uid = $2)
-			GROUP BY t.lehrveranstaltung_id, t.studiensemester_kurzbz
-			ORDER BY t.lehrveranstaltung_id, t.studiensemester_kurzbz
-			LIMIT 1`, [...params, found.lv_id])).rows[0];
+		const other = (await client.query(otherLvSql('$3'), [...params, found.lv_id])).rows[0];
 
 		const studentsOf = async leId =>
 			(await client.query(`
@@ -157,17 +164,17 @@ const backdateKontrolle = db => ({ anwesenheitId, leIds, days }) => {
 };
 
 /** Moves the insertamum of the codes of a Kontrolle into the past: checkInAnwesenheit rejects an old code. */
-const backdateCode = db => ({ anwesenheitId, leIds, seconds }) => {
+const backdateCode = db => ({ anwesenheitId, leIds, seconds = 0, months = 0 }) => {
 	db.assertWritable();
 	ids([anwesenheitId], 'anwesenheitId');
 	ids(leIds, 'leIds');
 
 	return db.inTransaction(async client => {
 		const result = await client.query(
-			`UPDATE extension.tbl_anwesenheit_check SET insertamum = insertamum - make_interval(secs => $3)
+			`UPDATE extension.tbl_anwesenheit_check SET insertamum = insertamum - make_interval(months => $4, secs => $3)
 			WHERE anwesenheit_id = $1
 				AND anwesenheit_id IN (SELECT anwesenheit_id FROM extension.tbl_anwesenheit WHERE lehreinheit_id = ANY($2::int[]))`,
-			[anwesenheitId, leIds, seconds]);
+			[anwesenheitId, leIds, seconds, months]);
 		if (!result.rowCount) throw new Error(`anw:db:backdateCode - no code of Kontrolle ${anwesenheitId} in the LEs`);
 		return result.rowCount;
 	});
@@ -183,7 +190,9 @@ const backdateEntschuldigung = db => ({ entschuldigungId, personIds, days }) => 
 		const result = await client.query(
 			`UPDATE extension.tbl_anwesenheit_entschuldigung SET insertamum = insertamum - make_interval(days => $3)
 			WHERE entschuldigung_id = $1 AND person_id = ANY($2::int[])`, [entschuldigungId, personIds, days]);
-		if (result.rowCount !== 1) throw new Error(`anw:db:backdateEntschuldigung - no Entschuldigung ${entschuldigungId} of the persons`);
+		if (result.rowCount !== 1) {
+			throw new Error(`anw:db:backdateEntschuldigung - no Entschuldigung ${entschuldigungId} of the persons`);
+		}
 		return result.rowCount;
 	});
 };
@@ -206,17 +215,78 @@ const seedEntschuldigung = db => ({ personId, personIds, von, bis }) => {
 			[personId, von, bis])).rows[0].entschuldigung_id);
 };
 
-/** The stored Entschuldigung, the number of history rows of the person and whether its DMS document exists. */
-const readEntschuldigung = db => ({ entschuldigungId, personId }) =>
+/**
+ * Gives an Entschuldigung to another person of the suite, with its document. The API lets no account of the suite
+ * upload a document for a student outside the Studiengaenge of the staff accounts.
+ */
+const moveEntschuldigung = db => ({ entschuldigungId, personId, personIds }) => {
+	db.assertWritable();
+	ids([entschuldigungId], 'entschuldigungId');
+	ids([personId], 'personId');
+	if (!ids(personIds, 'personIds').includes(personId)) {
+		throw new Error(`anw:db:moveEntschuldigung refused - person ${personId} is no person of the suite`);
+	}
+
+	return db.inTransaction(async client => {
+		const result = await client.query(
+			`UPDATE extension.tbl_anwesenheit_entschuldigung SET person_id = $2
+			WHERE entschuldigung_id = $1 AND person_id = ANY($3::int[])`, [entschuldigungId, personId, personIds]);
+		if (result.rowCount !== 1) throw new Error(`anw:db:moveEntschuldigung - no Entschuldigung ${entschuldigungId} of the persons`);
+		return result.rowCount;
+	});
+};
+
+/**
+ * A time range on the day that counts 0 minutes: one hour before the first Stunde of the raster, 30 minutes long.
+ * null if the raster starts before 01:00.
+ */
+const zeroMinuteSlot = db => ({ date }) =>
+	db.withClient(async client => {
+		const row = (await client.query(
+			`SELECT to_char(min(beginn) - interval '60 minutes', 'HH24:MI') AS von,
+				to_char(min(beginn) - interval '30 minutes', 'HH24:MI') AS bis,
+				min(beginn) >= time '01:00' AS possible
+			FROM lehre.tbl_stunde`)).rows[0];
+		if (!row || !row.possible) return null;
+
+		const counted = (await client.query(
+			'SELECT extension.get_epoch_from_anw_times($1::timestamp, $2::timestamp) AS s',
+			[`${date} ${row.von}:00`, `${date} ${row.bis}:00`])).rows[0].s;
+		return Number(counted) === 0 ? { von: row.von, bis: row.bis } : null;
+	});
+
+/** The webservicelog rows of a Kontrolle with this beschreibung: { executeUser, requestData } */
+const readKontrolleLog = db => ({ beschreibung, anwesenheitId }) =>
+	db.withClient(async client =>
+		(await client.query(
+			`SELECT execute_user AS "executeUser", request_data AS "requestData" FROM system.tbl_webservicelog
+			WHERE beschreibung = $1 AND request_data ~ ('"anwesenheit_id":"?' || $2::int || '"?[,}]')
+			ORDER BY webservicelog_id`, [beschreibung, anwesenheitId])).rows);
+
+/** The stored file of a DMS document: { filename (on the disk), name (the upload name), mimetype } */
+const readDmsFile = db => ({ dmsId }) =>
+	db.withClient(async client =>
+		(await client.query(
+			'SELECT filename, name, mimetype FROM campus.tbl_dms_version WHERE dms_id = $1 ORDER BY version DESC LIMIT 1',
+			[dmsId])).rows[0] || null);
+
+/** The number of DMS versions that an account uploaded */
+const countDmsOf = db => ({ uid }) =>
+	db.withClient(async client =>
+		(await client.query('SELECT count(*)::int AS n FROM campus.tbl_dms_version WHERE insertvon = $1', [uid])).rows[0].n);
+
+/** The stored Entschuldigung, the number of its history rows and whether its DMS document exists. */
+const readEntschuldigung = db => ({ entschuldigungId }) =>
 	db.withClient(async client => {
 		const entschuldigung = (await client.query(
 			`SELECT entschuldigung_id, person_id, von::text, bis::text, akzeptiert, notiz, dms_id, version, statussetvon
 			FROM extension.tbl_anwesenheit_entschuldigung WHERE entschuldigung_id = $1`, [entschuldigungId])).rows[0] || null;
 		const history = (await client.query(
-			'SELECT count(*)::int AS n FROM extension.tbl_anwesenheit_entschuldigung_history WHERE person_id = $1',
-			[personId])).rows[0].n;
+			'SELECT count(*)::int AS n FROM extension.tbl_anwesenheit_entschuldigung_history WHERE entschuldigung_id = $1',
+			[entschuldigungId])).rows[0].n;
 		const document = entschuldigung && entschuldigung.dms_id !== null
-			? (await client.query('SELECT count(*)::int AS n FROM campus.tbl_dms WHERE dms_id = $1', [entschuldigung.dms_id])).rows[0].n > 0
+			? (await client.query('SELECT count(*)::int AS n FROM campus.tbl_dms WHERE dms_id = $1', [entschuldigung.dms_id]))
+				.rows[0].n > 0
 			: null;
 
 		return { entschuldigung, history, document };
@@ -285,6 +355,11 @@ const registerAnwDbTasks = (on, db) => {
 		'anw:db:backdateCode': backdateCode(db),
 		'anw:db:backdateEntschuldigung': backdateEntschuldigung(db),
 		'anw:db:seedEntschuldigung': seedEntschuldigung(db),
+		'anw:db:moveEntschuldigung': moveEntschuldigung(db),
+		'anw:db:zeroMinuteSlot': zeroMinuteSlot(db),
+		'anw:db:readKontrolleLog': readKontrolleLog(db),
+		'anw:db:countDmsOf': countDmsOf(db),
+		'anw:db:readDmsFile': readDmsFile(db),
 		'anw:db:readEntschuldigung': readEntschuldigung(db),
 		'anw:db:countEntschuldigungen': countEntschuldigungen(db),
 		'anw:db:dmsExists': dmsExists(db),
@@ -295,4 +370,4 @@ const registerAnwDbTasks = (on, db) => {
 	});
 };
 
-module.exports = { registerAnwDbTasks };
+module.exports = { registerAnwDbTasks, ACTIVE_STUDENTS, TEST_LE_SQL, otherLvSql };

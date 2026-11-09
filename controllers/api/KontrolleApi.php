@@ -78,6 +78,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 		$this->_ci->load->model('system/Webservicelog_model', 'WebservicelogModel');
 
 
@@ -87,8 +88,6 @@ class KontrolleApi extends FHCAPI_Controller
 				'ui'
 			)
 		);
-		
-		require_once(FHCPATH.'include/lehrveranstaltung.class.php');
 
 		$this->_setAuthUID(); // sets property uid
 		$this->_ci->load->config('extensions/FHC-Core-Anwesenheiten/qrsettings');
@@ -124,6 +123,11 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
+		// the lehreinheit has to belong to the authorized lehrveranstaltung, like in fetchAllAnwesenheitenByLva
+		$leCheck = $this->_ci->AnwesenheitModel->countLehreinheitenInLva(array($le_id), $lv_id);
+		if(isError($leCheck) || !hasData($leCheck) || ((int) getData($leCheck)[0]->cnt) !== 1)
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		$this->_terminateWithLektorState($lv_id, array($le_id), $sem_kurzbz, [$ma_uid, $le_id]);
 	}
@@ -283,6 +287,8 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLe'), 'general');
 		}
 
+		$this->_validateStatus($changedAnwesenheiten, $le_id);
+
 		$fehlminutenStatus = $this->_ci->config->item('FEHLMINUTEN_STATUS');
 		$this->_validateFehlminuten($changedAnwesenheiten, $fehlminutenStatus);
 
@@ -290,6 +296,39 @@ class KontrolleApi extends FHCAPI_Controller
 
 		if(!isSuccess($result)) $this->terminateWithError($result);
 		$this->terminateWithSuccess(getData($result));
+	}
+
+	/**
+	 * every entry needs one of the four status of the config. Only the admin of the lva sets the status entschuldigt,
+	 * a lektor never does (the lektor table offers it to the admin only). An entry that is entschuldigt already
+	 * may keep it, so a lektor can save a list with such an entry. Terminates on a violation
+	 */
+	private function _validateStatus($changedAnwesenheiten, $le_id)
+	{
+		$entschuldigtStatus = $this->_ci->config->item('ENTSCHULDIGT_STATUS');
+		$allowed = array(
+			$this->_ci->config->item('ANWESEND_STATUS'),
+			$this->_ci->config->item('ABWESEND_STATUS'),
+			$this->_ci->config->item('FEHLMINUTEN_STATUS'),
+			$entschuldigtStatus
+		);
+
+		$setsEntschuldigt = array();
+		foreach ($changedAnwesenheiten as $entry) {
+			if (!property_exists($entry, 'status') || !in_array($entry->status, $allowed, true))
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+			if ($entry->status === $entschuldigtStatus) $setsEntschuldigt[] = $entry->anwesenheit_user_id;
+		}
+		if (!count($setsEntschuldigt)) return;
+
+		$le = getData($this->_ci->LehreinheitModel->load($le_id))[0];
+		if ($this->isAdmin($le->lehrveranstaltung_id)) return;
+
+		foreach ($setsEntschuldigt as $anwesenheit_user_id) {
+			$stored = $this->_ci->AnwesenheitUserModel->load($anwesenheit_user_id);
+			if (!hasData($stored) || getData($stored)[0]->status !== $entschuldigtStatus)
+				$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+		}
 	}
 
 	/**
@@ -643,26 +682,44 @@ class KontrolleApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
 		}
 
-		$beginn = $result->beginn;
-		$von = date('Y-m-d H:i:s', mktime($beginn->hours, $beginn->minutes, $beginn->seconds, $date->month, $date->day, $date->year));
+		$dateString = $this->_dateParam($date);
+		$beginn = $this->_timeParam($result->beginn);
+		$ende = $this->_timeParam($result->ende);
 
-		$ende = $result->ende;
-		$bis = date('Y-m-d H:i:s', mktime($ende->hours, $ende->minutes, $ende->seconds, $date->month, $date->day, $date->year));
+		// the time of day only: an hour like 48 would move the kontrolle to another day, past the reach checks
+		if ($ende <= $beginn) $this->terminateWithError($this->p->t('global', 'errorValidateUhrzeit'), 'general');
 
-		$dateString = sprintf('%04d-%02d-%02d', $date->year, $date->month, $date->day);
-		$dateTime = strtotime($dateString);
-		// midnight: day based like the minDate of the frontend, a date exactly $reach days ago is still allowed
-		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_PAST');
-		$dateLimit = strtotime("-$reach day midnight");
+		$von = $dateString.' '.$beginn;
+		$bis = $dateString.' '.$ende;
 
 		$leResult = $this->_ci->LehreinheitModel->load($le_id);
 		if(!hasData($leResult)) $this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
 		$le = getData($leResult)[0];
 
-		$isAdmin = $this->isAdmin($le->lehrveranstaltung_id);
-		if ($dateTime < $dateLimit && !$isAdmin) {
+		$this->_checkKontrolleDate($le, $dateString);
+
+		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id)) {
+			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');
+		}
+
+		return array($le_id, $von, $bis, $dateString);
+	}
+
+	/**
+	 * the date rules of a kontrolle on $dateString ('Y-m-d') in lehreinheit $le, for a new and for a restarted kontrolle.
+	 * Past: KONTROLLE_CREATE_MAX_REACH_PAST days, older only on a termin of the lehreinheit or for the admin.
+	 * Future: KONTROLLE_CREATE_MAX_REACH_FUTURE days for everyone. Terminates if the date breaks a rule
+	 */
+	private function _checkKontrolleDate($le, $dateString)
+	{
+		$dateTime = strtotime($dateString);
+		// midnight: day based like the minDate of the frontend, a date exactly $reach days ago is still allowed
+		$reach = $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_PAST');
+		$dateLimit = strtotime("-$reach day midnight");
+
+		if ($dateTime < $dateLimit && !$this->isAdmin($le->lehrveranstaltung_id)) {
 			// lektor chooses to run kontrolle on old termin outside of usual reach -> check if that termin exists
-			$termineResult = $this->_ci->AnwesenheitModel->getLETermine($le_id);
+			$termineResult = $this->_ci->AnwesenheitModel->getLETermine($le->lehreinheit_id);
 			if(isError($termineResult) || !hasData($termineResult)) $this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
 
 			$isAllowed = false;
@@ -681,12 +738,42 @@ class KontrolleApi extends FHCAPI_Controller
 		if ($dateTime > strtotime("+$reachFuture day midnight")) {
 			$this->terminateWithError($this->p->t('global', 'providedDateTooFarInFuture'), 'general');
 		}
+	}
 
-		if(!$this->checkTimesAgainstOtherKontrollen($von, $bis, $dateString, $le_id)) {
-			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');
+	/**
+	 * 'Y-m-d' of a date parameter { year, month, day }. Terminates on a date that does not exist
+	 */
+	private function _dateParam($date)
+	{
+		$parts = array();
+		foreach (array('year', 'month', 'day') as $key) {
+			if (!is_object($date) || !isset($date->$key) || !preg_match('/^\d{1,4}$/', (string) $date->$key))
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+			$parts[$key] = (int) $date->$key;
 		}
 
-		return array($le_id, $von, $bis, $dateString);
+		if (!checkdate($parts['month'], $parts['day'], $parts['year']))
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		return sprintf('%04d-%02d-%02d', $parts['year'], $parts['month'], $parts['day']);
+	}
+
+	/**
+	 * 'H:i:s' of a time parameter { hours, minutes, seconds }, seconds optional.
+	 * Terminates on a value outside of one day: mktime and setTime would move the time to another day
+	 */
+	private function _timeParam($time)
+	{
+		$max = array('hours' => 23, 'minutes' => 59, 'seconds' => 59);
+		$parts = array();
+		foreach ($max as $key => $limit) {
+			$value = is_object($time) && isset($time->$key) ? $time->$key : ($key === 'seconds' ? 0 : null);
+			if (!preg_match('/^\d{1,2}$/', (string) $value) || (int) $value > $limit)
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+			$parts[] = (int) $value;
+		}
+
+		return vsprintf('%02d:%02d:%02d', $parts);
 	}
 
 	private function _insertKontrolle($le_id, $von, $bis)
@@ -839,28 +926,12 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLva($lva_id)
 	{
-
-		$isAdmin = $this->isAdmin($lva_id);
-		if($isAdmin) return true;
-
-		$isLektor = $this->_ci->permissionlib->isBerechtigt('extension/anw_r_lektor');
-
-		if($isLektor) {
-			$lektorIsTeaching = $this->AnwesenheitModel->getLektorIsTeachingLva($lva_id, $this->_uid);
-			if(!isError($lektorIsTeaching) && hasData($lektorIsTeaching)
-				&& ((int) getData($lektorIsTeaching)[0]->teaches) > 0) return true;
-		}
-
-		return false;
+		// the rule of the kontrolle view, also for ProfilApi::getAnwesenheitSumByLva and InfoApi::getStudentInfo
+		return $this->_ci->anwesenheitenlib->isAdminOrLektorOfLva($lva_id);
 	}
 
 	private function isAdmin($lva_id) {
-		$lva = new lehrveranstaltung();
-		$lva->load($lva_id);
-		$oes = $lva->getAllOe();
-		$oes[]=$lva->oe_kurzbz;
-
-		return $this->_ci->permissionlib->isBerechtigtMultipleOe('extension/anw_r_full_assistenz', $oes);
+		return $this->_ci->anwesenheitenlib->isAdminOfLva($lva_id);
 	}
 
 	/**
@@ -1042,7 +1113,12 @@ class KontrolleApi extends FHCAPI_Controller
 		}
 
 		// authorizes against the lehreinheit the kontrolle actually belongs to
-		$this->_loadKontrolleAuthorized($anwesenheit_id);
+		$kontrolle = $this->_loadKontrolleAuthorized($anwesenheit_id);
+
+		// a restart opens the kontrolle for scans again: the same date rules as for a new kontrolle
+		$leResult = $this->_ci->LehreinheitModel->load($kontrolle->lehreinheit_id);
+		if(!hasData($leResult)) $this->terminateWithError($this->p->t('global', 'errorStartAnwKontrolleV2'), 'general');
+		$this->_checkKontrolleDate(getData($leResult)[0], (new DateTime($kontrolle->von))->format('Y-m-d'));
 
 		$qrcode = $this->_buildQRCode();
 
@@ -1068,13 +1144,17 @@ class KontrolleApi extends FHCAPI_Controller
 		$oldVon = $kontrolle->von;
 		$oldBis = $kontrolle->bis;
 
-		$vonDate = new DateTime($kontrolle->von);
-		$vonDate->setTime($von->hours, $von->minutes, $von->seconds);
-		$bisDate = new DateTime($kontrolle->bis);
-		$bisDate->setTime($bis->hours, $bis->minutes, $bis->seconds);
+		// the time of day only: setTime with an hour like 48 would move the kontrolle to another day
+		$vonTime = $this->_timeParam($von);
+		$bisTime = $this->_timeParam($bis);
+		if ($bisTime <= $vonTime) $this->terminateWithError($this->p->t('global', 'errorValidateUhrzeit'), 'general');
 
 		$date = new DateTime($kontrolle->von);
 		$dateString = $date->format('Y-m-d');
+
+		// the new times stay on the day of the kontrolle
+		$vonDate = new DateTime($dateString.' '.$vonTime);
+		$bisDate = new DateTime($dateString.' '.$bisTime);
 		
 		if(!$this->checkTimesAgainstOtherKontrollen($vonDate->format('H:i:s'), $bisDate->format('H:i:s'), $dateString, $kontrolle->lehreinheit_id, $anwesenheit_id)) {
 			$this->terminateWithError($this->p->t('global', 'errorKontrolleTimesCollide'), 'general');

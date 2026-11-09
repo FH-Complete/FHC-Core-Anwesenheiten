@@ -67,10 +67,19 @@ class Profil extends Auth_Controller
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 		$isEntAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_ent_assistenz');
 
-		if ($this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid) && ($isAdmin || $isEntAdmin))
+		$isStaff = $this->_ci->MitarbeiterModel->isMitarbeiter($this->_uid) && ($isAdmin || $isEntAdmin);
+
+		if (!is_numeric($dms_id))
+			$zuordnung = null;
+		else if ($isStaff)
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id);
 		else
 			$zuordnung = $this->_ci->EntschuldigungModel->checkZuordnungByDms($dms_id, $person_id);
+
+		// the staff only gets the documents of the students of their studiengaenge, like in the Entschuldigungsmanagement
+		if ($isStaff && hasData($zuordnung)
+			&& !$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge(getData($zuordnung)[0]->person_id))
+			$zuordnung = null;
 
 		if (hasData($zuordnung)) {
 			$file = $this->_ci->dmslib->download($dms_id, null, 'attachment');

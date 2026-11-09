@@ -1,26 +1,15 @@
 // KontrolleApi: who may call which endpoint
 
 import { account } from '../../../support/accounts';
-import { infoApi, kontrolleApi, KONTROLLE_ENDPOINTS } from '../../../support/anwApi';
-import { expectPhraseError, skipIf } from '../../../support/anwChecks';
-import { loadAnwContext } from '../../../support/anwContext';
-import { givenKontrolle, readKontrolle, resetEntschuldigungen, resetKontrollen } from '../../../support/anwScenario';
+import { callEndpoint, infoApi, KONTROLLE_ENDPOINTS, kontrolleApi } from '../../../support/anwApi';
+import { expectPhraseError, requireFixture } from '../../../support/anwChecks';
+import { useAnwContext } from '../../../support/anwContext';
+import { givenKontrolle, readKontrolle } from '../../../support/anwScenario';
 
 describe('KontrolleApi: access', () => {
-	let ctx;
-
-	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			resetEntschuldigungen(ctx);
-		});
-	});
-
-	beforeEach(() => resetKontrollen(ctx));
+	const ctx = useAnwContext();
 
 	// the permission check comes before the parameters, so an empty request is enough
-	const call = ({ method, url }, acc) => (method === 'GET' ? cy.fhcGet(url, {}, acc) : cy.fhcPost(url, {}, acc));
-
 	[
 		['without login', null, 401],
 		['as STUDENT', 'STUDENT', 403],
@@ -28,7 +17,7 @@ describe('KontrolleApi: access', () => {
 	].forEach(([label, role, status]) => {
 		it(`every endpoint ${label} → ${status}`, () => {
 			KONTROLLE_ENDPOINTS.forEach(endpoint => {
-				call(endpoint, role && account(role)).then(res => expect(res.status, endpoint.name).to.eq(status));
+				callEndpoint(endpoint, {}, role && account(role)).then(res => expect(res.status, endpoint.name).to.eq(status));
 			});
 		});
 	});
@@ -44,12 +33,12 @@ describe('KontrolleApi: access', () => {
 			});
 	});
 
-	it('LEKTOR2 without anw_supplierung changes an entry of the LE of LEKTOR → notAuthorizedForLe, nothing saved', function () {
+	it('LEKTOR2 without anw_supplierung changes an entry of the LE of LEKTOR → notAuthorizedForLe, nothing saved', () => {
 		infoApi
 			.getViewPermissions(account('LEKTOR2'))
 			.fhcData()
 			.then(permissions => {
-				skipIf(this, permissions.supplierung && !permissions.legacy_le_selection, 'LEKTOR2 has anw_supplierung');
+				requireFixture(!permissions.supplierung || permissions.legacy_le_selection, 'LEKTOR2 without anw_supplierung');
 
 				givenKontrolle(ctx).then(({ kontrolle, entries }) => {
 					kontrolleApi
@@ -64,25 +53,19 @@ describe('KontrolleApi: access', () => {
 			});
 	});
 
-	it('fetchAllAnwesenheitenByLva with an LE of another LV → notAuthorizedForLva', function () {
-		skipIf(this, !ctx.otherLe, 'LEKTOR teaches no other LV');
-
+	it('fetchAllAnwesenheitenByLva with an LE of another LV → notAuthorizedForLva', () => {
 		kontrolleApi
 			.fetchAllAnwesenheitenByLva(ctx.lvId, ctx.semKurzbz, [ctx.otherLe], account('LEKTOR'))
 			.then(res => expectPhraseError(res, 'global/notAuthorizedForLva', account('LEKTOR')));
 	});
 
-	it('fetchAllAnwesenheitenByLvaAssigned with an LE of another LV → rejected', function () {
-		skipIf(this, !ctx.otherLe, 'LEKTOR teaches no other LV');
-
+	it('fetchAllAnwesenheitenByLvaAssigned with an LE of another LV → notAuthorizedForLva', () => {
 		kontrolleApi
 			.fetchAllAnwesenheitenByLvaAssigned(ctx.lvId, ctx.semKurzbz, ctx.otherLe, account('LEKTOR').username, account('LEKTOR'))
-			.fhcErrors();
+			.then(res => expectPhraseError(res, 'global/notAuthorizedForLva', account('LEKTOR')));
 	});
 
-	it('getLehreinheitenForLehrveranstaltungAndMaUid for an LV that LEKTOR2 does not teach → notAuthorizedForLva', function () {
-		skipIf(this, !ctx.otherLv, 'LEKTOR teaches no LV without LEKTOR2');
-
+	it('getLehreinheitenForLehrveranstaltungAndMaUid for an LV that LEKTOR2 does not teach → notAuthorizedForLva', () => {
 		kontrolleApi
 			.getLehreinheitenForLehrveranstaltungAndMaUid(
 				ctx.otherLv,

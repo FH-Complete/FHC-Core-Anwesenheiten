@@ -3,41 +3,28 @@
 
 import { account } from '../../../support/accounts';
 import { administrationApi, profilApi } from '../../../support/anwApi';
-import { expectPhraseError, skipIf } from '../../../support/anwChecks';
-import { loadAnwContext, loadAssistenzScope } from '../../../support/anwContext';
+import { expectPhraseError, requireFixture } from '../../../support/anwChecks';
+import { loadAssistenzScope, useAnwContext } from '../../../support/anwContext';
 import {
 	addEntschuldigung,
 	countEntschuldigungen,
 	pdfFile,
 	readEntschuldigung,
-	resetEntschuldigungen,
 	seedEntschuldigung,
 } from '../../../support/anwScenario';
 
 describe('staff scope: the students of the own Studiengaenge', () => {
-	let ctx;
-	let pdf;
+	const ctx = useAnwContext({ resets: ['entschuldigungen'], entschuldigungen: true, pdf: true });
 	let ent;
 	let full;
 
 	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			loadAssistenzScope(ctx, 'ENT_ASSISTENZ').then(scope => {
-				ent = scope;
-			});
-			loadAssistenzScope(ctx, 'FULL_ASSISTENZ').then(scope => {
-				full = scope;
-			});
+		loadAssistenzScope(ctx, 'ENT_ASSISTENZ').then(loaded => {
+			ent = loaded;
 		});
-		cy.fixture('entschuldigung.pdf', 'utf8').then(content => {
-			pdf = content;
+		loadAssistenzScope(ctx, 'FULL_ASSISTENZ').then(loaded => {
+			full = loaded;
 		});
-	});
-
-	beforeEach(function () {
-		skipIf(this, !ctx.config.entschuldigungen_enabled, 'ENTSCHULDIGUNGEN_ENABLED is off');
-		resetEntschuldigungen(ctx);
 	});
 
 	const range = () => ({ von: `${ctx.today} 08:00:00`, bis: `${ctx.today} 12:00:00` });
@@ -57,19 +44,15 @@ describe('staff scope: the students of the own Studiengaenge', () => {
 		['getTimeline', (s, as) => profilApi.getTimeline(s.personId, as)],
 	];
 
-	it('ENT_ASSISTENZ, AdministrationApi::getTimeline of the test student → allowed', () => {
-		administrationApi.getTimeline(ctx.testStudents.STUDENT.personId, account('ENT_ASSISTENZ')).fhcData();
-	});
-
-	it('ENT_ASSISTENZ, AdministrationApi::getTimeline of a student outside its Studiengaenge → noAuthorization', function () {
-		skipIf(this, !ent.outsider, 'ENT_ASSISTENZ has a right on every Studiengang');
+	it('ENT_ASSISTENZ, AdministrationApi::getTimeline of a student outside its Studiengaenge → noAuthorization', () => {
+		requireFixture(ent.outsider, 'a student outside the Studiengaenge of ENT_ASSISTENZ');
 		administrationApi
 			.getTimeline(ent.outsider.personId, account('ENT_ASSISTENZ'))
 			.then(res => noAuthorization(res, 'ENT_ASSISTENZ'));
 	});
 
-	it('ENT_ASSISTENZ, ProfilApi::getTimeline of a student outside its Studiengaenge → noAuthorization', function () {
-		skipIf(this, !ent.outsider, 'ENT_ASSISTENZ has a right on every Studiengang');
+	it('ENT_ASSISTENZ, ProfilApi::getTimeline of a student outside its Studiengaenge → noAuthorization', () => {
+		requireFixture(ent.outsider, 'a student outside the Studiengaenge of ENT_ASSISTENZ');
 		profilApi.getTimeline(ent.outsider.personId, account('ENT_ASSISTENZ')).then(res => noAuthorization(res, 'ENT_ASSISTENZ'));
 	});
 
@@ -79,15 +62,16 @@ describe('staff scope: the students of the own Studiengaenge', () => {
 		});
 	});
 
-	PROFIL_READS.forEach(([name, call]) => {
-		it(`FULL_ASSISTENZ, ${name} for a student outside its Studiengaenge → noAuthorization`, function () {
-			skipIf(this, !full.outsider, 'FULL_ASSISTENZ has a right on every Studiengang');
+	// the reads of the students page. getAnwesenheitSumByLva belongs to the Kontrolle view: security/staff-scope.cy.js
+	PROFIL_READS.filter(([name]) => name !== 'getAnwesenheitSumByLva').forEach(([name, call]) => {
+		it(`FULL_ASSISTENZ, ${name} for a student outside its Studiengaenge → noAuthorization`, () => {
+			requireFixture(full.outsider, 'a student outside the Studiengaenge of FULL_ASSISTENZ');
 			call(full.outsider, account('FULL_ASSISTENZ')).then(res => noAuthorization(res, 'FULL_ASSISTENZ'));
 		});
 	});
 
-	it('FULL_ASSISTENZ, addEntschuldigung for a student outside its Studiengaenge → errorNoRightsToChangeData, nothing stored', function () {
-		skipIf(this, !full.outsider, 'FULL_ASSISTENZ has a right on every Studiengang');
+	it('FULL_ASSISTENZ, addEntschuldigung for a student outside its Studiengaenge → errorNoRightsToChangeData', () => {
+		requireFixture(full.outsider, 'a student outside the Studiengaenge of FULL_ASSISTENZ');
 
 		addEntschuldigung(full.outsider, { ...range(), as: account('FULL_ASSISTENZ') }).then(res =>
 			expectPhraseError(res, 'global/errorNoRightsToChangeData', account('FULL_ASSISTENZ')),
@@ -95,8 +79,8 @@ describe('staff scope: the students of the own Studiengaenge', () => {
 		countEntschuldigungen(ctx).should('eq', 0);
 	});
 
-	it('FULL_ASSISTENZ, editEntschuldigung of a student outside its Studiengaenge → errorNoRightsToChangeData, no document', function () {
-		skipIf(this, !full.outsider, 'FULL_ASSISTENZ has a right on every Studiengang');
+	it('FULL_ASSISTENZ, editEntschuldigung of a student outside its Studiengaenge → errorNoRightsToChangeData', () => {
+		requireFixture(full.outsider, 'a student outside the Studiengaenge of FULL_ASSISTENZ');
 
 		seedEntschuldigung(ctx, full.outsider, range())
 			.its('entschuldigung')
@@ -104,16 +88,16 @@ describe('staff scope: the students of the own Studiengaenge', () => {
 				profilApi
 					.editEntschuldigung(
 						{ person_id: full.outsider.personId, entschuldigung_id: entschuldigung.entschuldigung_id },
-						pdfFile(pdf),
+						pdfFile(ctx.pdf),
 						account('FULL_ASSISTENZ'),
 					)
 					.then(res => expectPhraseError(res, 'global/errorNoRightsToChangeData', account('FULL_ASSISTENZ')));
-				readEntschuldigung(entschuldigung.entschuldigung_id, full.outsider).its('entschuldigung.dms_id').should('eq', null);
+				readEntschuldigung(entschuldigung.entschuldigung_id).its('entschuldigung.dms_id').should('eq', null);
 			});
 	});
 
-	it('FULL_ASSISTENZ, deleteEntschuldigung of a student outside its Studiengaenge → noAuthorization, it stays', function () {
-		skipIf(this, !full.outsider, 'FULL_ASSISTENZ has a right on every Studiengang');
+	it('FULL_ASSISTENZ, deleteEntschuldigung of a student outside its Studiengaenge → noAuthorization, it stays', () => {
+		requireFixture(full.outsider, 'a student outside the Studiengaenge of FULL_ASSISTENZ');
 
 		seedEntschuldigung(ctx, full.outsider, range())
 			.its('entschuldigung')
@@ -121,7 +105,7 @@ describe('staff scope: the students of the own Studiengaenge', () => {
 				profilApi
 					.deleteEntschuldigung(entschuldigung.entschuldigung_id, full.outsider.personId, account('FULL_ASSISTENZ'))
 					.then(res => noAuthorization(res, 'FULL_ASSISTENZ'));
-				readEntschuldigung(entschuldigung.entschuldigung_id, full.outsider).its('entschuldigung').should('exist');
+				readEntschuldigung(entschuldigung.entschuldigung_id).its('entschuldigung').should('exist');
 			});
 	});
 });

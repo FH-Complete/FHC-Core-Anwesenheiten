@@ -1,29 +1,14 @@
 // KontrolleApi: delete a Kontrolle with deleteAnwesenheitskontrolle
 
 import { account } from '../../../support/accounts';
-import { kontrolleApi } from '../../../support/anwApi';
+import { kontrolleApi, UNKNOWN_ID } from '../../../support/anwApi';
 import { expectPhraseError, expectPhraseText } from '../../../support/anwChecks';
-import { loadAnwContext } from '../../../support/anwContext';
+import { useAnwContext } from '../../../support/anwContext';
 import { dateParam } from '../../../support/anwDates';
-import {
-	givenKontrolle,
-	givenStatus,
-	readKontrolle,
-	resetEntschuldigungen,
-	resetKontrollen,
-} from '../../../support/anwScenario';
+import { givenKontrolle, givenStatus, readKontrolle } from '../../../support/anwScenario';
 
 describe('KontrolleApi: delete a Kontrolle', () => {
-	let ctx;
-
-	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-			resetEntschuldigungen(ctx);
-		});
-	});
-
-	beforeEach(() => resetKontrollen(ctx));
+	const ctx = useAnwContext();
 
 	const remove = (kontrolle, { le = ctx.le, as = account('LEKTOR') } = {}) =>
 		kontrolleApi.deleteAnwesenheitskontrolle(le, dateParam(kontrolle.von.slice(0, 10)), kontrolle.anwesenheit_id, as);
@@ -78,9 +63,27 @@ describe('KontrolleApi: delete a Kontrolle', () => {
 		});
 	});
 
+	it('a delete → one webservicelog row with the deleted Kontrolle, its entries and the user', () => {
+		givenKontrolle(ctx).then(({ kontrolle, entries }) => {
+			remove(kontrolle).fhcData();
+
+			cy.task('anw:db:readKontrolleLog', { beschreibung: 'AnwKontrolle Delete', anwesenheitId: kontrolle.anwesenheit_id }).then(
+				rows => {
+					expect(rows).to.have.length(1);
+					expect(rows[0].executeUser).to.eq(account('LEKTOR').username);
+					const [loggedKontrolle, loggedEntries] = JSON.parse(rows[0].requestData);
+					expect(Number(loggedKontrolle.anwesenheit_id)).to.eq(kontrolle.anwesenheit_id);
+					expect(loggedEntries.map(e => Number(e.anwesenheit_user_id))).to.have.members(
+						entries.map(e => e.anwesenheit_user_id),
+					);
+				},
+			);
+		});
+	});
+
 	it('unknown anwesenheit_id → errorDeleteKontrolleKeineLEAnDatum', () => {
 		kontrolleApi
-			.deleteAnwesenheitskontrolle(ctx.le, dateParam(ctx.today), 0, account('LEKTOR'))
+			.deleteAnwesenheitskontrolle(ctx.le, dateParam(ctx.today), UNKNOWN_ID, account('LEKTOR'))
 			.then(res => expectPhraseError(res, 'global/errorDeleteKontrolleKeineLEAnDatum', account('LEKTOR')));
 	});
 });

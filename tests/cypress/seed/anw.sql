@@ -1,8 +1,8 @@
 -- The fixture of the Cypress suite on a test database with the repository dump and seeders. Idempotent.
 -- Apply it with dbCheck.js of core, in tests/cypress of core: node tools/dbCheck.js <this tests/cypress folder> seed
 -- The uids are the demo accounts of the seeders, the defaults of .env.example:
---   demolektor1 (LEKTOR), demolektor2 (LEKTOR2), demoassistenz (ENT_ASSISTENZ), demoadmin (FULL_ASSISTENZ),
---   s325b311 (STUDENT) and s125b101 (STUDENT2).
+--   demolektor1 (LEKTOR), demolektor2 (LEKTOR2), demolektor3 (SUPPL_LEKTOR), demoassistenz (ENT_ASSISTENZ),
+--   demoadmin (FULL_ASSISTENZ), s325b311 (STUDENT) and s125b101 (STUDENT2).
 -- The Kontrollen, statuses and Entschuldigungen come from the specs through the API, not from this file.
 
 -- ---------- permissions ----------
@@ -18,6 +18,8 @@ FROM (
 		CROSS JOIN (VALUES
 			('extension/anw_r_lektor', 'demolektor1', 'suid'),
 			('extension/anw_r_lektor', 'demolektor2', 'suid'),
+			('extension/anw_r_lektor', 'demolektor3', 'suid'),
+			('extension/anw_supplierung', 'demolektor3', 'suid'),
 			('extension/anw_r_ent_assistenz', 'demoassistenz', 'suid'),
 			('extension/anw_r_full_assistenz', 'demoadmin', 'suid')
 		) AS b(berechtigung_kurzbz, uid, art)
@@ -93,3 +95,18 @@ WHERE lem.mitarbeiter_uid = 'demolektor1'
 					AND m2.mitarbeiter_uid = 'demolektor2')
 		ORDER BY le.lehreinheit_id
 		LIMIT 1);
+
+-- the substitute: demolektor3 (SUPPL_LEKTOR, with anw_supplierung) teaches the LV-Teil of demolektor2 too.
+-- So demolektor3 is a lektor of the LV, but not of the LV-Teil of demolektor1
+
+INSERT INTO lehre.tbl_lehreinheitmitarbeiter (lehreinheit_id, mitarbeiter_uid, lehrfunktion_kurzbz, insertamum, insertvon)
+SELECT DISTINCT lem.lehreinheit_id, 'demolektor3', lem.lehrfunktion_kurzbz, now(), 'cypress'
+FROM lehre.tbl_lehreinheitmitarbeiter lem
+	JOIN lehre.tbl_lehreinheit le USING (lehreinheit_id)
+WHERE lem.mitarbeiter_uid = 'demolektor2'
+	AND EXISTS (SELECT 1 FROM lehre.tbl_lehreinheit le1
+			JOIN lehre.tbl_lehreinheitmitarbeiter m1 USING (lehreinheit_id)
+		WHERE m1.mitarbeiter_uid = 'demolektor1'
+			AND le1.lehrveranstaltung_id = le.lehrveranstaltung_id AND le1.studiensemester_kurzbz = le.studiensemester_kurzbz)
+	AND NOT EXISTS (SELECT 1 FROM lehre.tbl_lehreinheitmitarbeiter x
+		WHERE x.lehreinheit_id = lem.lehreinheit_id AND x.mitarbeiter_uid IN ('demolektor1', 'demolektor3'));

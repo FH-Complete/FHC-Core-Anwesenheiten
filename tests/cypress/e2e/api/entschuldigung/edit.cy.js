@@ -1,34 +1,13 @@
 // ProfilApi: a document for an open Entschuldigung with editEntschuldigung
 
 import { account } from '../../../support/accounts';
-import { profilApi } from '../../../support/anwApi';
-import { expectPhraseError, skipIf } from '../../../support/anwChecks';
-import { loadAnwContext } from '../../../support/anwContext';
-import {
-	decide,
-	givenEntschuldigung,
-	pdfFile,
-	readEntschuldigung,
-	resetEntschuldigungen,
-} from '../../../support/anwScenario';
+import { profilApi, UNKNOWN_ID } from '../../../support/anwApi';
+import { expectPhraseError } from '../../../support/anwChecks';
+import { useAnwContext } from '../../../support/anwContext';
+import { decide, givenEntschuldigung, pdfFile, readEntschuldigung } from '../../../support/anwScenario';
 
 describe('ProfilApi: hand in a document later', () => {
-	let ctx;
-	let pdf;
-
-	before(() => {
-		loadAnwContext().then(loaded => {
-			ctx = loaded;
-		});
-		cy.fixture('entschuldigung.pdf', 'utf8').then(content => {
-			pdf = content;
-		});
-	});
-
-	beforeEach(function () {
-		skipIf(this, !ctx.config.entschuldigungen_enabled, 'ENTSCHULDIGUNGEN_ENABLED is off');
-		resetEntschuldigungen(ctx);
-	});
+	const ctx = useAnwContext({ resets: ['entschuldigungen'], entschuldigungen: true, pdf: true });
 
 	const student = () => ctx.testStudents.STUDENT;
 
@@ -39,7 +18,7 @@ describe('ProfilApi: hand in a document later', () => {
 	const edit = (entschuldigung, as = account(student().role)) =>
 		profilApi.editEntschuldigung(
 			{ person_id: student().personId, entschuldigung_id: entschuldigung.entschuldigung_id },
-			pdfFile(pdf),
+			pdfFile(ctx.pdf),
 			as,
 		);
 
@@ -56,12 +35,49 @@ describe('ProfilApi: hand in a document later', () => {
 	it('an open one without a document → the document is added, version 2, one history row', () => {
 		givenOpen().then(entschuldigung => {
 			edit(entschuldigung).fhcData();
-			readEntschuldigung(entschuldigung.entschuldigung_id, student()).then(state => {
+			readEntschuldigung(entschuldigung.entschuldigung_id).then(state => {
 				expect(state.entschuldigung.version).to.eq(2);
 				expect(state.entschuldigung.dms_id).to.be.a('number');
 				expect(state.document).to.eq(true);
 				expect(state.history).to.eq(1);
 			});
+		});
+	});
+
+	it('a second document → version 3, two history rows, a new dms_id', () => {
+		givenOpen().then(entschuldigung => {
+			edit(entschuldigung)
+				.fhcData()
+				.then(({ dms_id: firstDms }) => {
+					edit(entschuldigung).fhcData();
+					readEntschuldigung(entschuldigung.entschuldigung_id).then(state => {
+						expect(state.entschuldigung.version).to.eq(3);
+						expect(state.history).to.eq(2);
+						expect(state.entschuldigung.dms_id).to.not.eq(Number(firstDms));
+						expect(state.document).to.eq(true);
+					});
+				});
+		});
+	});
+
+	it('an unknown entschuldigung_id → errorNoEntschuldigungFound', () => {
+		edit({ entschuldigung_id: UNKNOWN_ID }).then(res =>
+			expectPhraseError(res, 'global/errorNoEntschuldigungFound', account(student().role)),
+		);
+	});
+
+	it('a .txt file → errorEntUploadFiletype, no document, version 1', () => {
+		givenOpen().then(entschuldigung => {
+			profilApi
+				.editEntschuldigung(
+					{ person_id: student().personId, entschuldigung_id: entschuldigung.entschuldigung_id },
+					{ field: 'files', name: 'bestaetigung.txt', type: 'text/plain', content: 'Text' },
+					account(student().role),
+				)
+				.then(res => expectPhraseError(res, 'global/errorEntUploadFiletype', account(student().role)));
+			readEntschuldigung(entschuldigung.entschuldigung_id)
+				.its('entschuldigung')
+				.should('include', { dms_id: null, version: 1 });
 		});
 	});
 
@@ -71,7 +87,7 @@ describe('ProfilApi: hand in a document later', () => {
 			edit(entschuldigung).then(res =>
 				expectPhraseError(res, 'global/errorEntUploadDeadlinePassed', account(student().role)),
 			);
-			readEntschuldigung(entschuldigung.entschuldigung_id, student())
+			readEntschuldigung(entschuldigung.entschuldigung_id)
 				.its('entschuldigung')
 				.should('include', { dms_id: null, version: 1 });
 		});
@@ -81,7 +97,7 @@ describe('ProfilApi: hand in a document later', () => {
 		givenOpen().then(entschuldigung => {
 			backdate(entschuldigung);
 			edit(entschuldigung, account('FULL_ASSISTENZ')).fhcData();
-			readEntschuldigung(entschuldigung.entschuldigung_id, student()).its('document').should('eq', true);
+			readEntschuldigung(entschuldigung.entschuldigung_id).its('document').should('eq', true);
 		});
 	});
 
@@ -93,7 +109,7 @@ describe('ProfilApi: hand in a document later', () => {
 			givenOpen().then(entschuldigung => {
 				decide(entschuldigung.entschuldigung_id, status);
 				edit(entschuldigung).then(res => expectPhraseError(res, `global/${phrase}`, account(student().role)));
-				readEntschuldigung(entschuldigung.entschuldigung_id, student()).its('entschuldigung.dms_id').should('eq', null);
+				readEntschuldigung(entschuldigung.entschuldigung_id).its('entschuldigung.dms_id').should('eq', null);
 			});
 		});
 	});
@@ -101,7 +117,7 @@ describe('ProfilApi: hand in a document later', () => {
 	it('the Entschuldigung of STUDENT2 with the own person_id → noAuthorization, no document', () => {
 		givenOpen(ctx.testStudents.STUDENT2).then(entschuldigung => {
 			edit(entschuldigung).then(res => expectPhraseError(res, 'global/noAuthorization', account(student().role)));
-			readEntschuldigung(entschuldigung.entschuldigung_id, ctx.testStudents.STUDENT2)
+			readEntschuldigung(entschuldigung.entschuldigung_id)
 				.its('entschuldigung.dms_id')
 				.should('eq', null);
 		});
