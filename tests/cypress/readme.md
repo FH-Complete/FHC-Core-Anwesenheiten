@@ -37,13 +37,15 @@ set it to the `tests/cypress` folder of the clone.
 | `checks.js`, `seed/anw.sql` | Fixture checks and seed for `dbCheck.js` of core. The checks of the test LE run the query of the context task (`TEST_LE_SQL` of `tasks/anwDb.js`) |
 | `e2e/api/setup.cy.js` | Smoke spec: the logins of all roles and the database |
 | `e2e/api/<suite>/<topic>.cy.js` | The specs per controller: `info/`, `kontrolle/`, `profil/`, `entschuldigung/`, `assistenz/` |
-| `e2e/api/security/` | How far a student and the staff reach: other students, staff fields, documents, ids that are no ids, the pages |
+| `e2e/api/<suite>/access.cy.js` | The permission map of the controller as a table: the endpoints that each role may call |
+| `e2e/api/security/` | How far a student and the staff reach: other students, staff fields, documents, values of the wrong type, requests without parameters, the pages |
 | `e2e/api/scenario/` | Chains of events in one `it`, one `step()` per event: Kontrolle, Entschuldigung, late events |
 | `support/anwApi.js` | One function per endpoint of the extension API |
-| `support/accounts.js` | The accounts per role. SUPPL_LEKTOR (demolektor3, `anw_supplierung`) teaches the LE of LEKTOR2, not the one of LEKTOR: the seed adds it |
-| `support/anwContext.js` | `useAnwContext()`: the setup of a spec. `ctx` holds the test LV, LEs, students, `ctx.student` (the test student in the test LE), rule values, the day of the server and the PDF fixture |
+| `support/accounts.js` | The accounts per role. SUPPL_LEKTOR (demolektor3, `anw_supplierung`) teaches the LE of LEKTOR2, not the one of LEKTOR: the seed adds it. ENT_RO, STUDENT_NOENT and NORIGHT have fewer rights than their role, for the permission maps |
+| `support/anwAccess.js` | `itFollowsPermissionMap(endpoints, { ROLE: [endpoint names] })`: the tests of an `access.cy.js` |
+| `support/anwContext.js` | `useAnwContext()`: the setup of a spec. `ctx` holds the test LV, LEs, students, `ctx.student` (the test student in the test LE), rule values, the day of the server and the PDF fixture. `loadAssistenzScope` and `loadAdminForeignLv` find what PermissionLib decides through the OE tree: a student outside the Studiengaenge of a staff role, an LV where FULL_ASSISTENZ is no admin |
 | `support/anwScenario.js` | `givenKontrolle`, `givenStatus`, resets and `readKontrolle` |
-| `support/anwChecks.js` | `expectPhraseError`, `expectPhraseText`, `expectNoDbText`, `skipIf` |
+| `support/anwChecks.js` | `expectPhraseError`, `expectPhraseText`, `phraseText`, `expectNoDbText`, `requireFixture`, `skipIf` |
 | `support/anwSteps.js` | `step(name, fn)` for the chains of `e2e/api/scenario/`: a failure names its step |
 | `support/anwDates.js` | Date math on the day of the server, date and time parameters |
 | `tasks/anwDb.js` | The database tasks: context, scoped resets, backdating, reads |
@@ -65,6 +67,13 @@ Run one folder of specs with `--spec "../../application/extensions/FHC-Core-Anwe
 - Get the rule values from `ctx.config` (`InfoApi::getViewPermissions`) and dates from `ctx.today`, the day of the server.
 - Get `ctx` from `useAnwContext()`: it resets the data before each test. Create the data with the `given*` helpers.
 - Use `UNKNOWN_ID` of `anwApi.js` for an id that no row has.
+- A new endpoint goes into its `*_ENDPOINTS` list of `anwApi.js`, into the table of its `access.cy.js` and, for a GET,
+  into `GET_WITHOUT_PARAMETERS` of `security/parameters.cy.js`.
+- A value of the wrong type must give a phrase, never a database error. A test instance in development mode sends
+  the text of every database and PHP error, so check such a request with `expectNoDbText`. A production instance
+  hides the text: there the same test can pass with the error still in the code.
+- A Kontrolle outside the test LEs (`ctx.le`, `ctx.foreignLe`) is outside the reset of `useAnwContext`: reset its LE
+  in the spec, before each test and after the last one.
 - Check the stored state with `readKontrolle`, not only the response.
 - Never compute a duration from the times. The server counts only the time inside the Stunden raster
   (`extension.get_epoch_from_anw_times`), so 10:00 - 11:30 can count 80 minutes. Use `kontrolle.dauer` of

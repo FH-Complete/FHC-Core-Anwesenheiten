@@ -2,7 +2,19 @@
 // The contract is in tests/cypress/suites/readme_suites.txt of core, the suite rules in readme.md.
 
 // the accounts per role; support/accounts.js reads them
-const ROLES = ['LEKTOR', 'LEKTOR2', 'SUPPL_LEKTOR', 'ENT_ASSISTENZ', 'FULL_ASSISTENZ', 'STUDENT', 'STUDENT2'];
+const ROLES = [
+	'LEKTOR',
+	'LEKTOR2',
+	'SUPPL_LEKTOR',
+	'ENT_ASSISTENZ',
+	'FULL_ASSISTENZ',
+	'STUDENT',
+	'STUDENT2',
+	// the accounts of the permission matrix: fewer rights than the role they stand next to
+	'ENT_RO',
+	'STUDENT_NOENT',
+	'NORIGHT',
+];
 
 // the keys of .env.example that the specs read
 const env = () =>

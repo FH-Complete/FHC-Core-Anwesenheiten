@@ -15,11 +15,15 @@ describe('KontrolleApi: create a Kontrolle', () => {
 
 	const pastLimit = () => addDays(ctx.today, -ctx.config.kontrolleCreateMaxReachPast);
 
-	it('without QR → one entry per active student, status anwesend, no code', () => {
-		givenKontrolle(ctx).then(({ entries, codes }) => {
+	it('without QR → one entry per active student, status anwesend, no code; insertvon and statussetvon are LEKTOR', () => {
+		givenKontrolle(ctx).then(({ kontrolle, entries, codes }) => {
 			expect(entries.map(e => e.prestudent_id)).to.have.members(ctx.students.map(s => s.prestudentId));
 			expect([...new Set(entries.map(e => e.status))]).to.deep.equal([ctx.config.anwesend_status]);
 			expect(codes).to.be.empty;
+
+			const lektor = account('LEKTOR').username.toLowerCase();
+			expect(kontrolle).to.include({ insertvon: lektor, updatevon: null });
+			entries.forEach(entry => expect(entry).to.include({ insertvon: lektor, statussetvon: lektor }));
 		});
 	});
 
@@ -76,6 +80,11 @@ describe('KontrolleApi: create a Kontrolle', () => {
 		givenKontrolle(ctx, { date: addDays(ctx.today, -1) }).its('kontrolle').should('exist');
 	});
 
+	it('the same times in the LE of LEKTOR2 → created: the times collide per LE only', () => {
+		givenKontrolle(ctx);
+		givenKontrolle(ctx, { le: ctx.foreignLe, as: account('FULL_ASSISTENZ') }).its('kontrolle').should('exist');
+	});
+
 	it('LE of LEKTOR2 as LEKTOR → notAuthorizedForLe, nothing stored', () => {
 		create(ctx.today, { le: ctx.foreignLe }).then(res =>
 			expectPhraseError(res, 'global/notAuthorizedForLe', account('LEKTOR')),
@@ -124,6 +133,13 @@ describe('KontrolleApi: create a Kontrolle', () => {
 		const year = Number(ctx.today.slice(0, 4));
 		kontrolleApi
 			.getNewQRCode(ctx.le, { year, month: 2, day: 30 }, timeParam('08:00'), timeParam('09:30'), account('LEKTOR'))
+			.then(res => expectPhraseError(res, 'global/wrongParameters', account('LEKTOR')));
+		countKontrollen(ctx).should('eq', 0);
+	});
+
+	it('datum as the text of a date → wrongParameters, nothing stored', () => {
+		kontrolleApi
+			.insertAnwWithoutQR(ctx.le, ctx.today, timeParam('08:00'), timeParam('09:30'), account('LEKTOR'))
 			.then(res => expectPhraseError(res, 'global/wrongParameters', account('LEKTOR')));
 		countKontrollen(ctx).should('eq', 0);
 	});

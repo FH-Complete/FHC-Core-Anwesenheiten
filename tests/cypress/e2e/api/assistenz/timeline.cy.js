@@ -1,7 +1,7 @@
 // AdministrationApi: the timeline of a student for the assistenz (getTimeline)
 
 import { account } from '../../../support/accounts';
-import { administrationApi } from '../../../support/anwApi';
+import { administrationApi, UNKNOWN_ID } from '../../../support/anwApi';
 import { expectPhraseError } from '../../../support/anwChecks';
 import { useAnwContext } from '../../../support/anwContext';
 import { entryOf, givenEntschuldigung, givenKontrolle, givenStatus, NOTIZ } from '../../../support/anwScenario';
@@ -45,10 +45,15 @@ describe('AdministrationApi: the timeline of a student', () => {
 		});
 	});
 
-	it('without person_id → noAuthorization', () => {
-		administrationApi
-			.getTimeline(null, account('ENT_ASSISTENZ'))
-			.then(res => expectPhraseError(res, 'global/noAuthorization', account('ENT_ASSISTENZ')));
+	[
+		['person_id null', null],
+		['a person_id that no person has', UNKNOWN_ID],
+	].forEach(([label, personId]) => {
+		it(`${label} → noAuthorization`, () => {
+			administrationApi
+				.getTimeline(personId, account('ENT_ASSISTENZ'))
+				.then(res => expectPhraseError(res, 'global/noAuthorization', account('ENT_ASSISTENZ')));
+		});
 	});
 
 	it('LEKTOR → 403', () => {

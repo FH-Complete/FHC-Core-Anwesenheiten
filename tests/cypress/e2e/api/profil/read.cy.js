@@ -54,10 +54,35 @@ describe('ProfilApi: the own data of a student', () => {
 		});
 	});
 
-	it('getAllAnwByUID with an unknown semester → wrongParameters', () => {
+	// both reads of a semester: the entries and the quotas per LV
+	const anwOf = studiensemester => profilApi.getAllAnwByUID(studiensemester, as().username, ctx.student.personId, as());
+	const quotasOf = studiensemester => profilApi.getAllAnwQuotasForLvaByUID(studiensemester, as().username, as());
+
+	[
+		['an unknown semester', 'XX1900'],
+		['an empty studiensemester', ''],
+	].forEach(([label, studiensemester]) => {
+		it(`getAllAnwByUID and getAllAnwQuotasForLvaByUID with ${label} → wrongParameters`, () => {
+			[anwOf, quotasOf].forEach(read => {
+				read(studiensemester).then(res => expectPhraseError(res, 'global/wrongParameters', as()));
+			});
+		});
+	});
+
+	// the text 'null' is a null of the frontend, like a request without the parameter
+	it("getAllAnwByUID and getAllAnwQuotasForLvaByUID with 'null' as studiensemester → the current semester", () => {
+		[anwOf, quotasOf].forEach(read => {
+			read(undefined)
+				.fhcData()
+				.then(current => read('null').fhcData().should('deep.equal', current));
+		});
+	});
+
+	// the person_id selects the Entschuldigungen: the server takes no default for it
+	it('getAllAnwByUID without person_id → noAuthorization', () => {
 		profilApi
-			.getAllAnwByUID('XX1900', as().username, ctx.student.personId, as())
-			.then(res => expectPhraseError(res, 'global/wrongParameters', as()));
+			.getAllAnwByUID(ctx.semKurzbz, as().username, undefined, as())
+			.then(res => expectPhraseError(res, 'global/noAuthorization', as()));
 	});
 
 	// the frontend (axios) leaves a null parameter out of the query
@@ -69,12 +94,6 @@ describe('ProfilApi: the own data of a student', () => {
 				expect(data).to.have.length(ctx.config.entschuldigungen_enabled ? 2 : 1);
 				data.forEach(part => expect(part).to.have.property('retval'));
 			});
-	});
-
-	it('getAllAnwByUID with an empty studiensemester → wrongParameters', () => {
-		profilApi
-			.getAllAnwByUID('', as().username, ctx.student.personId, as())
-			.then(res => expectPhraseError(res, 'global/wrongParameters', as()));
 	});
 
 	it('getEntschuldigungenByPersonID with the own person_id → the Entschuldigung of the student', function () {
@@ -90,12 +109,13 @@ describe('ProfilApi: the own data of a student', () => {
 			});
 	});
 
-	it('getEntschuldigungenByPersonID without person_id → missingParameters', function () {
+	it('getEntschuldigungenByPersonID without person_id → missingParameters, with null → wrongParameters', function () {
 		skipIf(this, !ctx.config.entschuldigungen_enabled, 'ENTSCHULDIGUNGEN_ENABLED is off');
 
 		profilApi
 			.getEntschuldigungenByPersonID(undefined, as())
 			.then(res => expectPhraseError(res, 'global/missingParameters', as()));
+		profilApi.getEntschuldigungenByPersonID(null, as()).then(res => expectPhraseError(res, 'global/wrongParameters', as()));
 	});
 
 	it('no entry in the LV → quota 100', () => {
@@ -147,6 +167,22 @@ describe('ProfilApi: the own data of a student', () => {
 					expect(Number(lv.anwesenheit)).to.eq(expectedQuota(ctx.config, attendances));
 				});
 		});
+	});
+
+	it('getAllAnwesenheitenByStudentByLva for an LV without the student → an empty list', () => {
+		givenKontrolle(ctx);
+		profilApi
+			.getAllAnwesenheitenByStudentByLva(ctx.otherSemKurzbz, ctx.otherLv, ctx.student.prestudentId, as().username, as())
+			.fhcData()
+			.should('deep.equal', []);
+	});
+
+	it("getAllAnwesenheitenByStudentByLva with sem_kurzbz null and 'null' → the same answer: the current semester", () => {
+		const entries = semKurzbz =>
+			profilApi.getAllAnwesenheitenByStudentByLva(semKurzbz, ctx.lvId, ctx.student.prestudentId, as().username, as()).fhcData();
+
+		givenKontrolle(ctx);
+		entries(null).then(current => entries('null').should('deep.equal', current));
 	});
 
 	it('getAllAnwesenheitenByStudentByLva → the entries of the LV with status, Fehlminuten and counted duration', () => {

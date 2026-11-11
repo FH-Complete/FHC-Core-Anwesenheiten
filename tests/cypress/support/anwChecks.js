@@ -39,25 +39,36 @@ const loadPhrases = (category, account) => {
 		});
 };
 
-const phrasePattern = (key, account) => {
+/** The text of a phrase in the language of the account, with its {placeholders}. key: 'category/phrase' */
+export const phraseText = (key, account) => {
 	const [category, phrase] = key.split('/');
 
-	return loadPhrases(category, account)
-		.then(phrases => {
-			const found = (phrases || []).find(p => p.category === category && p.phrase === phrase);
-			expect(found, `phrase ${key}`).to.exist;
-
-			const parts = found.text.split(/\{\w+\}/).map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-			return new RegExp(`^${parts.join('[\\s\\S]+')}$`);
-		});
+	return loadPhrases(category, account).then(phrases => {
+		const found = (phrases || []).find(p => p.category === category && p.phrase === phrase);
+		expect(found, `phrase ${key}`).to.exist;
+		return found.text;
+	});
 };
 
-// the text of a database error that the client must never get
-const DB_TEXT = /SQLSTATE|ERROR:\s|invalid input syntax|syntax error at|pg_query|Severity:/i;
+const phrasePattern = (key, account) =>
+	phraseText(key, account).then(text => {
+		const parts = text.split(/\{\w+\}/).map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+		return new RegExp(`^${parts.join('[\\s\\S]+')}$`);
+	});
 
-/** Checks that a response holds no database error text */
+// the text of a database error or of a PHP error that the client must never get. A test instance in development
+// mode sends both: a production instance hides them, so a test that passes there can still fail here
+const DB_TEXT = new RegExp(
+	[
+		'SQLSTATE|ERROR:\\s|invalid input syntax|syntax error at|pg_query|Severity:|A Database Error Occurred',
+		'A PHP Error was encountered|Undefined (property|index|variable|offset)|"type":"php"',
+	].join('|'),
+	'i',
+);
+
+/** Checks that a response holds no text of a database error or of a PHP error */
 export const expectNoDbText = response =>
-	expect(JSON.stringify(response.body ?? ''), 'database text in the response').to.not.match(DB_TEXT);
+	expect(JSON.stringify(response.body ?? ''), 'database or PHP error text in the response').to.not.match(DB_TEXT);
 
 /**
  * A precondition of the test data that checks.js checks too. It fails the test instead of a skip: a broken seed shows

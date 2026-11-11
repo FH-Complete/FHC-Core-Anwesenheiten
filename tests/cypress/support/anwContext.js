@@ -52,6 +52,20 @@ export const loadAssistenzScope = (ctx, role = 'ENT_ASSISTENZ') =>
 			return { entitled, outsider: ctx.stgStudents.find(s => !entitled.includes(Number(s.studiengangKz))) };
 		});
 
+/**
+ * An LV with an LE of LEKTOR where FULL_ASSISTENZ is not the admin: { lvId, semKurzbz, le }, undefined without one.
+ * PermissionLib maps the rights through the OE tree, so the API decides: the first LV of ctx.lektorLvs that it refuses
+ */
+export const loadAdminForeignLv = ctx => {
+	const search = ([lv, ...rest]) => {
+		if (!lv) return cy.wrap(undefined, { log: false });
+		return kontrolleApi
+			.getLehreinheitenForLehrveranstaltung(lv.lvId, lv.semKurzbz, account('FULL_ASSISTENZ'))
+			.then(res => (res.status === 200 ? search(rest) : lv));
+	};
+	return search(ctx.lektorLvs);
+};
+
 /** The test student in the test LE, and one outside of it */
 export const studentInLe = ctx => Object.values(ctx.testStudents).find(student => student.inLe);
 export const studentOutsideLe = ctx => Object.values(ctx.testStudents).find(student => !student.inLe);

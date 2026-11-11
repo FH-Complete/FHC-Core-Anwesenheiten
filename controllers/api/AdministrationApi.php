@@ -60,14 +60,17 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('stg_kz_arr', 'von', 'bis'));
 		$stg_kz_arr = $this->_ci->anwesenheitenlib->filterEntitledStudiengaenge($result->stg_kz_arr);
 		$von = $result->von;
 		$bis = $result->bis;
 		$nurOffene = isset($result->nurOffene) && $result->nurOffene === true;
+		$this->_requireDateRange($von, $bis);
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1) $this->terminateWithSuccess($this->p->t('global', 'errorNoSTGassigned'));
 
 		$result = $this->_ci->EntschuldigungModel->getEntschuldigungenForStudiengaenge($stg_kz_arr, $von, $bis, $nurOffene);
+		if (isError($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$entschuldigungen = getData($result);
 		if($entschuldigungen != null && count($entschuldigungen) > 0) {
 			// one query for the accounts of all persons. A person with more than one account can belong to
@@ -78,7 +81,7 @@ class AdministrationApi extends FHCAPI_Controller
 
 			$result = $this->_ci->EntschuldigungModel->getStudentAccountsForPersons($person_ids);
 			if (isError($result))
-				$this->terminateWithError(getError($result), 'general');
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 			$accountsByPerson = array();
 			foreach ((getData($result) ?: array()) as $account) {
@@ -111,16 +114,18 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('stg_kz_arr', 'von', 'bis'));
 		$stg_kz_arr = $this->_ci->anwesenheitenlib->filterEntitledStudiengaenge($result->stg_kz_arr);
 		$von = $result->von;
 		$bis = $result->bis;
+		$this->_requireDateRange($von, $bis);
 
 		if(!$stg_kz_arr || count($stg_kz_arr) < 1)
 			$this->terminateWithSuccess(array('anzahl' => 0, 'von' => null, 'bis' => null));
 
 		$result = $this->_ci->EntschuldigungModel->getOffeneTimespan($stg_kz_arr, $von, $bis);
 		if (isError($result))
-			$this->terminateWithError(getError($result), 'general');
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$offene = getData($result)[0];
 		$offene->anzahl = (int)$offene->anzahl;
@@ -143,17 +148,19 @@ class AdministrationApi extends FHCAPI_Controller
 			);
 		}
 
+		// the status null is the status of an open entschuldigung
+		$this->_requireProps($this->getPostJSON(), array('entschuldigung_id', 'status'));
+
 		$data = json_decode($this->input->raw_input_stream, true);
 
 		// a string: isEmptyString reads the integers 9 to 13 and 32 as whitespace on PHP 7.0 (ctype_space)
 		$entschuldigung_id = isset($data['entschuldigung_id']) ? (string) $data['entschuldigung_id'] : '';
 		$status = isset($data['status']) ? $data['status'] : null;
-		$notiz = isset($data['notiz']) ? $data['notiz'] : '';
 		$vonParam = $this->input->post('von');
 		$bisParam = $this->input->post('bis');
 
 		// strict: the loose in_array let 'x' through as true. null is the status of an open entschuldigung
-		if (isEmptyString($entschuldigung_id) || !in_array($status, array(true, false, null), true))
+		if (!is_numeric($entschuldigung_id) || !in_array($status, array(true, false, null), true))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$entschuldigung = $this->_ci->EntschuldigungModel->load($entschuldigung_id);
@@ -224,8 +231,9 @@ class AdministrationApi extends FHCAPI_Controller
 			if (isError($result)) $this->_rollbackAndTerminate($this->p->t('global', 'errorUpdateEntschuldigung'));
 		}
 
-		// check notiz size and trim to char varying 255 if it is too big
-		$notiz = substr($notiz, 0, 255);
+		// a text replaces the notiz, also an empty one: trimmed to char varying 255.
+		// A request without notiz (or with null) keeps the stored one
+		$notiz = isset($data['notiz']) && is_string($data['notiz']) ? substr($data['notiz'], 0, 255) : $entschuldigung->notiz;
 		$version = $entschuldigung->version + 1;
 
 		// add old version to history table
@@ -329,7 +337,8 @@ class AdministrationApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
-		$person_id = isset($result->person_id) ? $result->person_id : null;
+		$this->_requireProps($result, array('person_id'));
+		$person_id = $result->person_id;
 
 		// only students of the studiengaenge of the assistenz
 		if (!$this->_ci->anwesenheitenlib->isPersonInEntitledStudiengaenge($person_id))
@@ -342,6 +351,18 @@ class AdministrationApi extends FHCAPI_Controller
 		$ent = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
 
 		$this->terminateWithSuccess(array($anw, $ent));
+	}
+
+	/**
+	 * the date range of the table: a limit is a date 'Y-m-d' or empty, the query takes an empty limit as no limit.
+	 * Terminates on another value
+	 */
+	private function _requireDateRange($von, $bis)
+	{
+		foreach (array($von, $bis) as $limit) {
+			if ($limit && !$this->_ci->anwesenheitenlib->isDate($limit))
+				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		}
 	}
 
 	/**
@@ -367,6 +388,18 @@ class AdministrationApi extends FHCAPI_Controller
 	{
 		$this->_ci->db->trans_rollback();
 		$this->terminateWithError($message, 'general');
+	}
+
+	/**
+	 * terminates with 'missingParameters' if the POST payload is no JSON object or lacks one of the given properties.
+	 * A property with the value null counts as present
+	 */
+	private function _requireProps($obj, array $props)
+	{
+		foreach ($props as $prop) {
+			if (!is_object($obj) || !property_exists($obj, $prop))
+				$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
 	}
 
 	private function _setAuthUID()

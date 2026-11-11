@@ -19,6 +19,20 @@ export const workdaysBack = (iso, n) => {
 	return day;
 };
 
+/**
+ * The last day of the upload deadline of an Entschuldigung created on iso, like ProfilApi::calcUploadDeadline:
+ * reach workdays later, a Saturday or Sunday does not count
+ */
+export const uploadDeadline = (iso, reach) => {
+	let day = iso;
+	for (let left = reach; left > 0; ) {
+		day = addDays(day, 1);
+		const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+		if (weekday !== 0 && weekday !== 6) left -= 1;
+	}
+	return day;
+};
+
 /** { year, month, day } of the KontrolleApi */
 export const dateParam = iso => {
 	const [year, month, day] = iso.split('-').map(Number);

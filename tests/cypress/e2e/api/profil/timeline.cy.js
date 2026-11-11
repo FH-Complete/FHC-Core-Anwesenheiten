@@ -4,7 +4,7 @@ import { account } from '../../../support/accounts';
 import { infoApi, profilApi } from '../../../support/anwApi';
 import { expectPhraseError, skipIf } from '../../../support/anwChecks';
 import { useAnwContext } from '../../../support/anwContext';
-import { entryOf, givenKontrolle, givenStatus, NOTIZ } from '../../../support/anwScenario';
+import { entryOf, givenEntschuldigung, givenKontrolle, givenStatus, NOTIZ } from '../../../support/anwScenario';
 
 // the fields of an entry that a student gets: no note of the lektor
 const STUDENT_FIELDS = [
@@ -41,17 +41,22 @@ describe('ProfilApi: the timeline', () => {
 			]);
 		});
 
-	it('own timeline → the entry with the student fields only, without the note of the lektor', function () {
+	it('own timeline → the entry and the Entschuldigung with the student fields only, no note of the lektor', function () {
 		skipIf(this, !timelineAllowed, 'TIMELINE_BERECHTIGUNGEN has no permission of the student');
+		skipIf(this, !ctx.config.entschuldigungen_enabled, 'ENTSCHULDIGUNGEN_ENABLED is off');
 		givenNote();
+		givenEntschuldigung(ctx.student, { von: `${ctx.today} 13:00:00`, bis: `${ctx.today} 14:00:00` });
 
 		profilApi
 			.getTimeline(null, as())
 			.fhcData()
-			.then(([anw]) => {
+			.then(([anw, ent]) => {
 				const rows = anw.filter(row => row.lehreinheit_id === ctx.le);
 				expect(rows).to.have.length(1);
 				expect(Object.keys(rows[0])).to.have.members(STUDENT_FIELDS);
+
+				expect(ent).to.have.length(1);
+				expect(Object.keys(ent[0])).to.have.members(['entschuldigung_id', 'von', 'bis', 'akzeptiert', 'notiz']);
 			});
 	});
 
@@ -61,15 +66,18 @@ describe('ProfilApi: the timeline', () => {
 		profilApi.getTimeline('abc', as()).then(res => expectPhraseError(res, 'global/wrongParameters', as()));
 	});
 
-	it('FULL_ASSISTENZ with the person_id of the student → all fields with the note of the lektor', () => {
-		givenNote();
+	['FULL_ASSISTENZ', 'ENT_ASSISTENZ'].forEach(role => {
+		it(`${role} with the person_id of a student of its Studiengaenge → all fields with the note of the lektor`, function () {
+			skipIf(this, !ctx.config.entschuldigungen_enabled, 'ENTSCHULDIGUNGEN_ENABLED is off');
+			givenNote();
 
-		profilApi
-			.getTimeline(ctx.student.personId, account('FULL_ASSISTENZ'))
-			.fhcData()
-			.then(([anw]) => {
-				const row = anw.find(r => r.lehreinheit_id === ctx.le);
-				expect(row).to.include({ notiz: NOTIZ, prestudent_id: ctx.student.prestudentId });
-			});
+			profilApi
+				.getTimeline(ctx.student.personId, account(role))
+				.fhcData()
+				.then(([anw]) => {
+					const row = anw.find(r => r.lehreinheit_id === ctx.le);
+					expect(row).to.include({ notiz: NOTIZ, prestudent_id: ctx.student.prestudentId });
+				});
+		});
 	});
 });

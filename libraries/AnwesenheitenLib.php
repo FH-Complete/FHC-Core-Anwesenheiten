@@ -83,6 +83,24 @@ class AnwesenheitenLib
 	}
 
 	/**
+	 * true for a list of numbers that is not empty: the values of an IN clause.
+	 * A value of another type in a query gives a database error, and its text must not reach the client
+	 */
+	public function isIdList($value)
+	{
+		return is_array($value) && count($value) && count(array_filter($value, 'is_numeric')) === count($value);
+	}
+
+	/**
+	 * true for a date 'Y-m-d' that exists
+	 */
+	public function isDate($value)
+	{
+		return is_string($value) && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $parts)
+			&& checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]);
+	}
+
+	/**
 	 * true for anw_r_full_assistenz on an oe of the lva: the admin of the lva in the kontrolle view
 	 */
 	public function isAdminOfLva($lva_id)
@@ -124,6 +142,17 @@ class AnwesenheitenLib
 	}
 
 	/**
+	 * the days after the creation of a kontrolle in which a lektor changes its times.
+	 * The config file of an installed instance can lack the key: 30 days then
+	 */
+	public function getKontrolleUpdateMaxReach()
+	{
+		$reach = $this->_ci->config->item('KONTROLLE_UPDATE_MAX_REACH');
+
+		return $reach === null ? 30 : $reach;
+	}
+
+	/**
 	 * returns the permissions and config items every view controller hands to the frontend
 	 * in the 'permissions' attribute of the Anwesenheiten view
 	 */
@@ -142,6 +171,7 @@ class AnwesenheitenLib
 			'entschuldigungMaxFileSize' => $this->_ci->entschuldigunguploadlib->getMaxFileSize(),
 			'entschuldigungFiletypes' => EntschuldigungUploadLib::ALLOWED_FILETYPES,
 			'kontrolleDeleteMaxReach' => $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH'),
+			'kontrolleUpdateMaxReach' => $this->getKontrolleUpdateMaxReach(),
 			'kontrolleCreateMaxReachPast' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_PAST'),
 			'kontrolleCreateMaxReachFuture' => $this->_ci->config->item('KONTROLLE_CREATE_MAX_REACH_FUTURE'),
 			'positiveRatingThreshold' => $this->_ci->config->item('POSITIVE_RATING_THRESHOLD'),

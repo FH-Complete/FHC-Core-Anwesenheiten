@@ -99,13 +99,15 @@ describe('AdministrationApi: the Entschuldigungen of the Studiengaenge', () => {
 		list([]).then(res => expectPhraseText(res, 'global/errorNoSTGassigned', account('ENT_ASSISTENZ')));
 	});
 
-	it('getOffeneTimespan, a new open one outside the date range → anzahl + 1, bis is the day of the request', () => {
+	// von and bis: the first and the last day of a request of all open ones, not only of the counted ones
+	it('getOffeneTimespan, a new open one outside the date range → anzahl + 1, bis is the day of the request, von stays', () => {
 		const yesterday = addDays(ctx.today, -1);
 		offene([student().studiengangKz], { von: yesterday, bis: yesterday }).then(before => {
 			givenEntschuldigung(student(), range());
 			offene([student().studiengangKz], { von: yesterday, bis: yesterday }).then(after => {
 				expect(after.anzahl).to.eq(before.anzahl + 1);
 				expect(after.bis).to.eq(ctx.today);
+				expect(after.von).to.eq(before.von || ctx.today);
 			});
 		});
 	});

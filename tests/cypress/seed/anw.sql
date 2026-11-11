@@ -3,6 +3,8 @@
 -- The uids are the demo accounts of the seeders, the defaults of .env.example:
 --   demolektor1 (LEKTOR), demolektor2 (LEKTOR2), demolektor3 (SUPPL_LEKTOR), demoassistenz (ENT_ASSISTENZ),
 --   demoadmin (FULL_ASSISTENZ), s325b311 (STUDENT) and s125b101 (STUDENT2).
+--   For the permission matrix: demolektor4 (ENT_RO) reads only, s125b102 (STUDENT_NOENT) has no anw_stud_ent,
+--   demolektor5 (NORIGHT) gets no right at all.
 -- The Kontrollen, statuses and Entschuldigungen come from the specs through the API, not from this file.
 
 -- ---------- permissions ----------
@@ -21,6 +23,7 @@ FROM (
 			('extension/anw_r_lektor', 'demolektor3', 'suid'),
 			('extension/anw_supplierung', 'demolektor3', 'suid'),
 			('extension/anw_r_ent_assistenz', 'demoassistenz', 'suid'),
+			('extension/anw_r_ent_assistenz', 'demolektor4', 's'),
 			('extension/anw_r_full_assistenz', 'demoadmin', 'suid')
 		) AS b(berechtigung_kurzbz, uid, art)
 	WHERE st.student_uid IN ('s325b311', 's125b101')
@@ -35,6 +38,13 @@ FROM (
 			('extension/anw_stud_ent', 'suid')
 		) AS b(berechtigung_kurzbz, art)
 	WHERE st.student_uid IN ('s325b311', 's125b101')
+
+	UNION ALL
+
+	SELECT 'extension/anw_r_student', st.student_uid, sg.oe_kurzbz, 'suid'
+	FROM public.tbl_student st
+		JOIN public.tbl_studiengang sg USING (studiengang_kz)
+	WHERE st.student_uid = 's125b102'
 
 	UNION ALL
 

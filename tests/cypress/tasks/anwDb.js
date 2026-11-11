@@ -11,7 +11,7 @@ const ids = (value, name) => {
 
 // the students that a new Kontrolle gets an entry for, like Anwesenheit_User_model::createNewUserAnwesenheitenEntries
 const ACTIVE_STUDENTS = `
-	SELECT DISTINCT v.lehreinheit_id, s.prestudent_id, p.person_id, v.uid
+	SELECT DISTINCT v.lehreinheit_id, s.prestudent_id, p.person_id, v.uid, s.studiengang_kz
 	FROM campus.vw_student_lehrveranstaltung v
 		JOIN public.tbl_student s ON (s.student_uid = v.uid)
 		JOIN public.tbl_prestudent p ON (p.prestudent_id = s.prestudent_id)
@@ -72,8 +72,8 @@ const context = db => ({ lektor, kollege, students }) =>
 		const studentsOf = async leId =>
 			(await client.query(`
 				WITH active AS (${ACTIVE_STUDENTS})
-				SELECT prestudent_id AS "prestudentId", person_id AS "personId", uid FROM active
-				WHERE lehreinheit_id = $1 ORDER BY prestudent_id`, [leId])).rows;
+				SELECT prestudent_id AS "prestudentId", person_id AS "personId", uid, studiengang_kz AS "studiengangKz"
+				FROM active WHERE lehreinheit_id = $1 ORDER BY prestudent_id`, [leId])).rows;
 
 		// the accounts of the test students, and whether they are in the test LE
 		const testStudents = (await client.query(`
@@ -85,7 +85,8 @@ const context = db => ({ lektor, kollege, students }) =>
 				JOIN public.tbl_prestudent p USING (prestudent_id)
 			WHERE lower(s.student_uid) = ANY($1)`, [students.map(uid => uid.toLowerCase()), found.le_id])).rows;
 
-		// one active student per active Studiengang with a status, the Entschuldigungsmanagement lists only these
+		// one active student per active Studiengang with a status, the Entschuldigungsmanagement lists only these.
+		// A student with an LV wins: the scope specs read the student list of that LV (anw:db:lvOfStudent)
 		const stgStudents = (await client.query(`
 			SELECT DISTINCT ON (s.studiengang_kz) s.studiengang_kz AS "studiengangKz", lower(s.student_uid) AS uid,
 				p.person_id AS "personId", s.prestudent_id AS "prestudentId"
@@ -95,7 +96,20 @@ const context = db => ({ lektor, kollege, students }) =>
 				JOIN public.tbl_studiengang sg ON (sg.studiengang_kz = s.studiengang_kz)
 			WHERE b.aktiv AND sg.aktiv
 				AND EXISTS (SELECT 1 FROM public.tbl_prestudentstatus st WHERE st.prestudent_id = s.prestudent_id)
-			ORDER BY s.studiengang_kz, s.prestudent_id`)).rows;
+			ORDER BY s.studiengang_kz,
+				EXISTS (SELECT 1 FROM campus.vw_student_lehrveranstaltung v WHERE v.uid = s.student_uid) DESC,
+				s.prestudent_id`)).rows;
+
+		// every other LV of the lektor with one of its LEs, an LE with students first: loadAdminForeignLv searches them
+		const lektorLvs = (await client.query(`
+			WITH active AS (${ACTIVE_STUDENTS}), teaches AS (${TEACHES}),
+				les AS (SELECT t.*, EXISTS (SELECT 1 FROM active a WHERE a.lehreinheit_id = t.lehreinheit_id) AS with_students
+					FROM teaches t WHERE t.uid = $1 AND t.lehrveranstaltung_id <> $2)
+			SELECT DISTINCT ON (lehrveranstaltung_id, studiensemester_kurzbz)
+				lehrveranstaltung_id AS "lvId", studiensemester_kurzbz AS "semKurzbz", lehreinheit_id AS le, with_students
+			FROM les
+			ORDER BY lehrveranstaltung_id, studiensemester_kurzbz, with_students DESC, lehreinheit_id`,
+			[params[0], found.lv_id])).rows.sort((a, b) => b.with_students - a.with_students);
 
 		return {
 			lvId: found.lv_id,
@@ -106,6 +120,7 @@ const context = db => ({ lektor, kollege, students }) =>
 			otherLv: other ? other.lv_id : null,
 			otherSemKurzbz: other ? other.sem_kurzbz : null,
 			otherLe: other ? other.le_id : null,
+			lektorLvs,
 			students: await studentsOf(found.le_id),
 			foreignStudents: await studentsOf(found.foreign_le_id),
 			testStudents,
@@ -159,6 +174,22 @@ const backdateKontrolle = db => ({ anwesenheitId, leIds, days }) => {
 			`UPDATE extension.tbl_anwesenheit SET insertamum = insertamum - make_interval(days => $3)
 			WHERE anwesenheit_id = $1 AND lehreinheit_id = ANY($2::int[])`, [anwesenheitId, leIds, days]);
 		if (result.rowCount !== 1) throw new Error(`anw:db:backdateKontrolle - no Kontrolle ${anwesenheitId} in the LEs`);
+		return result.rowCount;
+	});
+};
+
+/** Deletes one entry of a Kontrolle with its history: the state of a student who joined the LE after the Kontrolle. */
+const deleteEntry = db => ({ anwesenheitUserId, leIds }) => {
+	db.assertWritable();
+	ids([anwesenheitUserId], 'anwesenheitUserId');
+	ids(leIds, 'leIds');
+
+	return db.inTransaction(async client => {
+		const inLes = `anwesenheit_user_id = $1 AND anwesenheit_id IN
+			(SELECT anwesenheit_id FROM extension.tbl_anwesenheit WHERE lehreinheit_id = ANY($2::int[]))`;
+		await client.query(`DELETE FROM extension.tbl_anwesenheit_user_history WHERE ${inLes}`, [anwesenheitUserId, leIds]);
+		const result = await client.query(`DELETE FROM extension.tbl_anwesenheit_user WHERE ${inLes}`, [anwesenheitUserId, leIds]);
+		if (result.rowCount !== 1) throw new Error(`anw:db:deleteEntry - no entry ${anwesenheitUserId} in the LEs`);
 		return result.rowCount;
 	});
 };
@@ -263,6 +294,38 @@ const readKontrolleLog = db => ({ beschreibung, anwesenheitId }) =>
 			WHERE beschreibung = $1 AND request_data ~ ('"anwesenheit_id":"?' || $2::int || '"?[,}]')
 			ORDER BY webservicelog_id`, [beschreibung, anwesenheitId])).rows);
 
+/** The webservicelog rows with this beschreibung whose request_data holds the text: { executeUser, requestData } */
+const readWebservicelog = db => ({ beschreibung, contains }) =>
+	db.withClient(async client =>
+		(await client.query(
+			`SELECT execute_user AS "executeUser", request_data AS "requestData" FROM system.tbl_webservicelog
+			WHERE beschreibung = $1 AND position($2 in request_data) > 0
+			ORDER BY webservicelog_id`, [beschreibung, contains])).rows);
+
+/**
+ * The Termine of an LE from the Stundenplan: consecutive Stunden of a day are one Termin, two blocks on one day
+ * are two. [{ datum, beginn, ende }] in the order of the API
+ */
+const readTermine = db => ({ leId }) =>
+	db.withClient(async client =>
+		(await client.query(
+			`SELECT datum::text, min(beginn)::text AS beginn, max(ende)::text AS ende
+			FROM (
+				SELECT datum, stunde, beginn, ende, stunde - row_number() OVER (PARTITION BY datum ORDER BY stunde) AS block
+				FROM (SELECT DISTINCT datum, stunde, beginn, ende
+					FROM lehre.vw_stundenplan JOIN lehre.tbl_stunde USING (stunde) WHERE lehreinheit_id = $1) stunden
+			) blocks
+			GROUP BY datum, block
+			ORDER BY datum, min(stunde)`, [leId])).rows);
+
+/** An LV of a student: { lvId, semKurzbz }, null without one */
+const lvOfStudent = db => ({ uid }) =>
+	db.withClient(async client =>
+		(await client.query(
+			`SELECT lehrveranstaltung_id AS "lvId", studiensemester_kurzbz AS "semKurzbz"
+			FROM campus.vw_student_lehrveranstaltung WHERE uid = $1
+			ORDER BY lehrveranstaltung_id, studiensemester_kurzbz LIMIT 1`, [uid])).rows[0] || null);
+
 /** The stored file of a DMS document: { filename (on the disk), name (the upload name), mimetype } */
 const readDmsFile = db => ({ dmsId }) =>
 	db.withClient(async client =>
@@ -275,15 +338,17 @@ const countDmsOf = db => ({ uid }) =>
 	db.withClient(async client =>
 		(await client.query('SELECT count(*)::int AS n FROM campus.tbl_dms_version WHERE insertvon = $1', [uid])).rows[0].n);
 
-/** The stored Entschuldigung, the number of its history rows and whether its DMS document exists. */
+/** The stored Entschuldigung, its history rows (oldest first) and whether its DMS document exists. */
 const readEntschuldigung = db => ({ entschuldigungId }) =>
 	db.withClient(async client => {
 		const entschuldigung = (await client.query(
-			`SELECT entschuldigung_id, person_id, von::text, bis::text, akzeptiert, notiz, dms_id, version, statussetvon
+			`SELECT entschuldigung_id, person_id, von::text, bis::text, akzeptiert, notiz, dms_id, version,
+				insertvon, updatevon, statussetvon
 			FROM extension.tbl_anwesenheit_entschuldigung WHERE entschuldigung_id = $1`, [entschuldigungId])).rows[0] || null;
 		const history = (await client.query(
-			'SELECT count(*)::int AS n FROM extension.tbl_anwesenheit_entschuldigung_history WHERE entschuldigung_id = $1',
-			[entschuldigungId])).rows[0].n;
+			`SELECT von::text, bis::text, akzeptiert, notiz, dms_id, version
+			FROM extension.tbl_anwesenheit_entschuldigung_history WHERE entschuldigung_id = $1
+			ORDER BY entschuldigung_history_id`, [entschuldigungId])).rows;
 		const document = entschuldigung && entschuldigung.dms_id !== null
 			? (await client.query('SELECT count(*)::int AS n FROM campus.tbl_dms WHERE dms_id = $1', [entschuldigung.dms_id]))
 				.rows[0].n > 0
@@ -303,16 +368,16 @@ const dmsExists = db => ({ dmsId }) =>
 	db.withClient(async client =>
 		(await client.query('SELECT count(*)::int AS n FROM campus.tbl_dms WHERE dms_id = $1', [dmsId])).rows[0].n > 0);
 
-/** The stored state of a Kontrolle: the row, its entries, the number of history rows and its codes. */
+/** The stored state of a Kontrolle: the row, its entries, the number of history rows and its codes. With the audit fields. */
 const readKontrolle = db => ({ anwesenheitId }) =>
 	db.withClient(async client => {
 		// dauer: the minutes that the quota and the Fehlminuten check count, without the breaks of the Stunden raster
 		const kontrolle = (await client.query(
-			`SELECT anwesenheit_id, lehreinheit_id, von::text, bis::text, insertamum::text,
+			`SELECT anwesenheit_id, lehreinheit_id, von::text, bis::text, insertamum::text, insertvon, updatevon,
 				CAST(extension.get_epoch_from_anw_times(von, bis) / 60 AS INTEGER) AS dauer
 			FROM extension.tbl_anwesenheit WHERE anwesenheit_id = $1`, [anwesenheitId])).rows[0] || null;
 		const entries = (await client.query(
-			`SELECT anwesenheit_user_id, prestudent_id, status, fehlminuten, version
+			`SELECT anwesenheit_user_id, prestudent_id, status, fehlminuten, notiz, version, insertvon, updatevon, statussetvon
 			FROM extension.tbl_anwesenheit_user WHERE anwesenheit_id = $1 ORDER BY anwesenheit_user_id`, [anwesenheitId])).rows;
 		const history = (await client.query(
 			'SELECT count(*)::int AS n FROM extension.tbl_anwesenheit_user_history WHERE anwesenheit_id = $1', [anwesenheitId])).rows[0].n;
@@ -340,7 +405,7 @@ const countKontrollen = db => ({ leIds }) =>
 const readHistory = db => ({ anwesenheitUserIds }) =>
 	db.withClient(async client =>
 		(await client.query(
-			`SELECT anwesenheit_user_id, status, fehlminuten, version FROM extension.tbl_anwesenheit_user_history
+			`SELECT anwesenheit_user_id, status, fehlminuten, notiz, version FROM extension.tbl_anwesenheit_user_history
 			WHERE anwesenheit_user_id = ANY($1::int[]) ORDER BY anwesenheit_user_history_id`,
 			[ids(anwesenheitUserIds, 'anwesenheitUserIds')])).rows);
 
@@ -352,12 +417,16 @@ const registerAnwDbTasks = (on, db) => {
 		'anw:db:resetKontrollen': resetKontrollen(db),
 		'anw:db:resetEntschuldigungen': resetEntschuldigungen(db),
 		'anw:db:backdateKontrolle': backdateKontrolle(db),
+		'anw:db:deleteEntry': deleteEntry(db),
 		'anw:db:backdateCode': backdateCode(db),
 		'anw:db:backdateEntschuldigung': backdateEntschuldigung(db),
 		'anw:db:seedEntschuldigung': seedEntschuldigung(db),
 		'anw:db:moveEntschuldigung': moveEntschuldigung(db),
 		'anw:db:zeroMinuteSlot': zeroMinuteSlot(db),
 		'anw:db:readKontrolleLog': readKontrolleLog(db),
+		'anw:db:readWebservicelog': readWebservicelog(db),
+		'anw:db:readTermine': readTermine(db),
+		'anw:db:lvOfStudent': lvOfStudent(db),
 		'anw:db:countDmsOf': countDmsOf(db),
 		'anw:db:readDmsFile': readDmsFile(db),
 		'anw:db:readEntschuldigung': readEntschuldigung(db),

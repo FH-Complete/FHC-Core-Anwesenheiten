@@ -1,19 +1,18 @@
 // AdministrationApi: who may call which endpoint
 
-import { account } from '../../../support/accounts';
-import { ADMINISTRATION_ENDPOINTS, callEndpoint } from '../../../support/anwApi';
+import { itFollowsPermissionMap } from '../../../support/anwAccess';
+import { ADMINISTRATION_ENDPOINTS } from '../../../support/anwApi';
+
+const ALL = ADMINISTRATION_ENDPOINTS.map(endpoint => endpoint.name);
 
 describe('AdministrationApi: access', () => {
-	[
-		['without login', null, 401],
-		['as LEKTOR', 'LEKTOR', 403],
-		['as STUDENT', 'STUDENT', 403],
-	].forEach(([label, role, status]) => {
-		it(`every endpoint ${label} → ${status}`, () => {
-			// the permission check comes before the parameters, so an empty request is enough
-			ADMINISTRATION_ENDPOINTS.forEach(endpoint => {
-				callEndpoint(endpoint, {}, role && account(role)).then(res => expect(res.status, endpoint.name).to.eq(status));
-			});
-		});
+	// the permission map of the constructor. Only updateEntschuldigung needs a write right
+	itFollowsPermissionMap(ADMINISTRATION_ENDPOINTS, {
+		ENT_ASSISTENZ: ALL,
+		FULL_ASSISTENZ: ALL,
+		ENT_RO: ALL.filter(name => name !== 'updateEntschuldigung'),
+		LEKTOR: [],
+		STUDENT: [],
+		NORIGHT: [],
 	});
 });

@@ -32,7 +32,7 @@ describe('ProfilApi: delete an Entschuldigung', () => {
 			);
 			readEntschuldigung(entschuldigung.entschuldigung_id).then(({ entschuldigung: gone, history }) => {
 				expect(gone).to.eq(null);
-				expect(history).to.eq(1);
+				expect(history).to.have.length(1);
 			});
 			cy.task('anw:db:dmsExists', { dmsId: entschuldigung.dms_id }).should('eq', false);
 		});
@@ -60,10 +60,35 @@ describe('ProfilApi: delete an Entschuldigung', () => {
 		});
 	});
 
-	it('an unknown entschuldigung_id → errorNoEntschuldigungFound', () => {
-		profilApi
-			.deleteEntschuldigung(UNKNOWN_ID, student().personId, account(student().role))
-			.then(res => notFound(res, account(student().role)));
+	[
+		['an unknown entschuldigung_id', UNKNOWN_ID, 'errorNoEntschuldigungFound'],
+		['entschuldigung_id "abc"', 'abc', 'errorNoEntschuldigungFound'],
+		['no entschuldigung_id', undefined, 'missingParameters'],
+	].forEach(([label, id, phrase]) => {
+		it(`${label} → ${phrase}`, () => {
+			profilApi
+				.deleteEntschuldigung(id, student().personId, account(student().role))
+				.then(res => expectPhraseError(res, `global/${phrase}`, account(student().role)));
+		});
+	});
+
+	it('FULL_ASSISTENZ, an accepted one → noAuthorization, not deleted', () => {
+		givenOpen().then(entschuldigung => {
+			decide(entschuldigung.entschuldigung_id, true);
+			remove(entschuldigung, account('FULL_ASSISTENZ')).then(res =>
+				expectPhraseError(res, 'global/noAuthorization', account('FULL_ASSISTENZ')),
+			);
+			expectStored(entschuldigung);
+		});
+	});
+
+	it('FULL_ASSISTENZ without person_id → noAuthorization, not deleted', () => {
+		givenOpen().then(entschuldigung => {
+			profilApi
+				.deleteEntschuldigung(entschuldigung.entschuldigung_id, undefined, account('FULL_ASSISTENZ'))
+				.then(res => expectPhraseError(res, 'global/noAuthorization', account('FULL_ASSISTENZ')));
+			expectStored(entschuldigung);
+		});
 	});
 
 	it('FULL_ASSISTENZ with the person_id of another student → errorNoEntschuldigungFound, not deleted', () => {

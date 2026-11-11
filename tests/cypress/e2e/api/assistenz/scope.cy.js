@@ -1,13 +1,16 @@
 // The Studiengaenge of the staff: an assistenz or an admin sees and changes the data of the students of their
-// Studiengaenge only. AdministrationApi::getTimeline and the staff paths of ProfilApi
+// Studiengaenge only. AdministrationApi, the staff paths of ProfilApi and the student list of InfoApi
 
 import { account } from '../../../support/accounts';
-import { administrationApi, profilApi } from '../../../support/anwApi';
+import { administrationApi, infoApi, profilApi } from '../../../support/anwApi';
 import { expectPhraseError, requireFixture } from '../../../support/anwChecks';
 import { loadAssistenzScope, useAnwContext } from '../../../support/anwContext';
+import { addDays } from '../../../support/anwDates';
 import {
 	addEntschuldigung,
 	countEntschuldigungen,
+	decide,
+	givenEntschuldigung,
 	pdfFile,
 	readEntschuldigung,
 	seedEntschuldigung,
@@ -67,6 +70,142 @@ describe('staff scope: the students of the own Studiengaenge', () => {
 		it(`FULL_ASSISTENZ, ${name} for a student outside its Studiengaenge → noAuthorization`, () => {
 			requireFixture(full.outsider, 'a student outside the Studiengaenge of FULL_ASSISTENZ');
 			call(full.outsider, account('FULL_ASSISTENZ')).then(res => noAuthorization(res, 'FULL_ASSISTENZ'));
+		});
+	});
+
+	it('FULL_ASSISTENZ, getEntschuldigungenByPersonID of a student of its Studiengaenge → also the uids of the staff', () => {
+		const student = ctx.testStudents.STUDENT;
+
+		givenEntschuldigung(student, range())
+			.its('entschuldigung')
+			.then(entschuldigung => {
+				decide(entschuldigung.entschuldigung_id, true);
+
+				profilApi
+					.getEntschuldigungenByPersonID(student.personId, account('FULL_ASSISTENZ'))
+					.fhcData()
+					.then(rows => {
+						expect(rows.find(row => row.entschuldigung_id === entschuldigung.entschuldigung_id)).to.include({
+							insertvon: student.uid,
+							statussetvon: account('ENT_ASSISTENZ').username.toLowerCase(),
+						});
+					});
+			});
+	});
+
+	[
+		['FULL_ASSISTENZ', () => full],
+		['ENT_ASSISTENZ', () => ent],
+	].forEach(([role, scopeOf]) => {
+		it(`${role}, the student list of an LV with a student outside its Studiengaenge → without that student`, () => {
+			const { outsider } = scopeOf();
+			requireFixture(outsider, `a student outside the Studiengaenge of ${role}`);
+
+			cy.task('anw:db:lvOfStudent', { uid: outsider.uid }).then(lv => {
+				requireFixture(lv, 'an LV of the student outside the Studiengaenge');
+
+				infoApi
+					.getStudentsForLvaInSemester(lv.lvId, lv.semKurzbz, account(role))
+					.fhcData()
+					.then(rows => expect(rows.map(row => row.prestudent_id)).to.not.include(outsider.prestudentId));
+			});
+		});
+	});
+
+	// the list holds only the names of the Studiengaenge: the server does not check the rights of the caller here
+	it('ENT_ASSISTENZ, InfoApi::getStudiengaenge with a Studiengang outside its rights → the name of that Studiengang', () => {
+		const kzOf = rows => rows.map(row => Number(row.studiengang_kz));
+
+		infoApi
+			.getStudiengaenge([], account('FULL_ASSISTENZ'))
+			.fhcData()
+			.then(all => {
+				const outside = kzOf(all).find(kz => !ent.entitled.includes(kz));
+				requireFixture(outside, 'a Studiengang with a Studienplan outside the rights of ENT_ASSISTENZ');
+
+				infoApi
+					.getStudiengaenge([outside], account('ENT_ASSISTENZ'))
+					.fhcData()
+					.then(rows => expect(kzOf(rows)).to.deep.equal([outside]));
+			});
+	});
+
+	// own: a student of the Studiengaenge of the caller. outside: a student of another Studiengang
+	describe('ids of an own student mixed with ids of an outside student', () => {
+		const own = () => ctx.testStudents.STUDENT;
+		const admin = () => account('FULL_ASSISTENZ');
+		const assistenz = () => account('ENT_ASSISTENZ');
+
+		beforeEach(() => {
+			requireFixture(full.outsider, 'a student outside the Studiengaenge of FULL_ASSISTENZ');
+			requireFixture(ent.outsider, 'a student outside the Studiengaenge of ENT_ASSISTENZ');
+		});
+
+		it('FULL_ASSISTENZ, getAllAnwByUID: the own uid, the outside person_id → noAuthorization', () => {
+			profilApi
+				.getAllAnwByUID(ctx.semKurzbz, own().uid, full.outsider.personId, admin())
+				.then(res => noAuthorization(res, 'FULL_ASSISTENZ'));
+		});
+
+		it('FULL_ASSISTENZ, getAllAnwesenheitenByStudentByLva: the own uid, the outside prestudent_id → noAuthorization', () => {
+			profilApi
+				.getAllAnwesenheitenByStudentByLva(ctx.semKurzbz, ctx.lvId, full.outsider.prestudentId, own().uid, admin())
+				.then(res => noAuthorization(res, 'FULL_ASSISTENZ'));
+		});
+
+		it('FULL_ASSISTENZ, editEntschuldigung: the own person_id, the outside Entschuldigung → noAuthorization, no document', () => {
+			seedEntschuldigung(ctx, full.outsider, range())
+				.its('entschuldigung.entschuldigung_id')
+				.then(id => {
+					profilApi
+						.editEntschuldigung({ person_id: own().personId, entschuldigung_id: id }, pdfFile(ctx.pdf), admin())
+						.then(res => noAuthorization(res, 'FULL_ASSISTENZ'));
+					readEntschuldigung(id).its('entschuldigung.dms_id').should('eq', null);
+				});
+		});
+
+		it('FULL_ASSISTENZ, deleteEntschuldigung: the same ids → errorNoEntschuldigungFound, it stays', () => {
+			seedEntschuldigung(ctx, full.outsider, range())
+				.its('entschuldigung.entschuldigung_id')
+				.then(id => {
+					profilApi
+						.deleteEntschuldigung(id, own().personId, admin())
+						.then(res => expectPhraseError(res, 'global/errorNoEntschuldigungFound', admin()));
+					readEntschuldigung(id).its('entschuldigung').should('exist');
+				});
+		});
+
+		// a filter that takes all or nothing of the list passes the test with the outside Studiengang alone
+		it('ENT_ASSISTENZ, getEntschuldigungen: an own and an outside Studiengang → only the own Entschuldigung', () => {
+			givenEntschuldigung(own(), range())
+				.its('entschuldigung.entschuldigung_id')
+				.then(ownId => {
+					seedEntschuldigung(ctx, ent.outsider, range())
+						.its('entschuldigung.entschuldigung_id')
+						.then(outsideId => {
+							administrationApi
+								.getEntschuldigungen([own().studiengangKz, ent.outsider.studiengangKz], ctx.today, ctx.today, false, assistenz())
+								.fhcData()
+								.then(rows => {
+									const ids = rows.map(row => row.entschuldigung_id);
+									expect(ids).to.include(ownId);
+									expect(ids).to.not.include(outsideId);
+								});
+						});
+				});
+		});
+
+		it('ENT_ASSISTENZ, getOffeneTimespan: an own and an outside Studiengang → the count of the own one', () => {
+			const yesterday = addDays(ctx.today, -1);
+			const offene = stgs => administrationApi.getOffeneTimespan(stgs, yesterday, yesterday, assistenz()).fhcData();
+
+			givenEntschuldigung(own(), range());
+			seedEntschuldigung(ctx, ent.outsider, range());
+
+			offene([own().studiengangKz]).then(ownOnly => {
+				expect(ownOnly.anzahl).to.be.greaterThan(0);
+				offene([own().studiengangKz, ent.outsider.studiengangKz]).should('deep.equal', ownOnly);
+			});
 		});
 	});
 

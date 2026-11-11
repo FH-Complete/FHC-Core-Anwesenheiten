@@ -125,11 +125,24 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		// the lehreinheit has to belong to the authorized lehrveranstaltung, like in fetchAllAnwesenheitenByLva
-		$leCheck = $this->_ci->AnwesenheitModel->countLehreinheitenInLva(array($le_id), $lv_id);
-		if(isError($leCheck) || !hasData($leCheck) || ((int) getData($leCheck)[0]->cnt) !== 1)
+		if(!$this->_lehreinheitenInLva(array($le_id), $lv_id))
 			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		$this->_terminateWithLektorState($lv_id, array($le_id), $sem_kurzbz, [$ma_uid, $le_id]);
+	}
+
+	/**
+	 * true if every id of $le_ids is a lehreinheit of the lva. The ids are numbers: another value would be a
+	 * database error
+	 */
+	private function _lehreinheitenInLva($le_ids, $lv_id)
+	{
+		if(!$this->_ci->anwesenheitenlib->isIdList($le_ids)) return false;
+
+		$leCheck = $this->_ci->AnwesenheitModel->countLehreinheitenInLva($le_ids, $lv_id);
+
+		return !isError($leCheck) && hasData($leCheck)
+			&& ((int) getData($leCheck)[0]->cnt) === count(array_unique($le_ids));
 	}
 
 	/**
@@ -156,11 +169,8 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		// every requested lehreinheit has to belong to the authorized lehrveranstaltung
-		$leCheck = $this->_ci->AnwesenheitModel->countLehreinheitenInLva($le_ids, $lv_id);
-		if(isError($leCheck) || !hasData($leCheck)
-			|| ((int) getData($leCheck)[0]->cnt) !== count(array_unique($le_ids))) {
+		if(!$this->_lehreinheitenInLva($le_ids, $lv_id))
 			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
-		}
 
 		$this->_terminateWithLektorState($lv_id, $le_ids, $sem_kurzbz, [$this->_uid, implode(', ', $le_ids)]);
 	}
@@ -234,9 +244,11 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
+		if(!is_numeric($prestudent_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
 		$res = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByStudentByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
-		if(!isSuccess($res)) $this->terminateWithError($res);
+		if(!isSuccess($res)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		// the entries span every lehreinheit of the lva. flag each row with the same check
 		// updateAnwesenheiten runs, so the ui only offers edits the backend accepts
@@ -276,9 +288,15 @@ class KontrolleApi extends FHCAPI_Controller
 		// make sure all submitted entries actually belong to the authorized lehreinheit
 		$anwesenheitUserIds = array();
 		foreach ($changedAnwesenheiten as $entry) {
-			if(!property_exists($entry, 'anwesenheit_user_id') || $entry->anwesenheit_user_id === null)
+			// an id is a number and a notiz is a text: another value would be a database error
+			$hasNotiz = is_object($entry) && property_exists($entry, 'notiz') && $entry->notiz !== null;
+			if(!is_object($entry) || !property_exists($entry, 'anwesenheit_user_id')
+				|| !is_numeric($entry->anwesenheit_user_id) || ($hasNotiz && !is_string($entry->notiz)))
 				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 			$anwesenheitUserIds[] = $entry->anwesenheit_user_id;
+
+			// trimmed to char varying 255 like the notiz of an entschuldigung
+			if($hasNotiz) $entry->notiz = substr($entry->notiz, 0, 255);
 		}
 
 		$foreignCheck = $this->_ci->AnwesenheitUserModel->countEntriesNotInLehreinheit($anwesenheitUserIds, $le_id);
@@ -294,14 +312,14 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitUserModel->updateAnwesenheiten($changedAnwesenheiten, true, $fehlminutenStatus);
 
-		if(!isSuccess($result)) $this->terminateWithError($result);
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'errorAnwUserUpdate'), 'general');
 		$this->terminateWithSuccess(getData($result));
 	}
 
 	/**
-	 * every entry needs one of the four status of the config. Only the admin of the lva sets the status entschuldigt,
-	 * a lektor never does (the lektor table offers it to the admin only). An entry that is entschuldigt already
-	 * may keep it, so a lektor can save a list with such an entry. Terminates on a violation
+	 * every entry needs one of the four status of the config. Only the admin of the lva sets or removes the status
+	 * entschuldigt, a lektor never does (the lektor table offers it to the admin only). An entry that is entschuldigt
+	 * already keeps it, so a lektor can save a list with such an entry. Terminates on a violation
 	 */
 	private function _validateStatus($changedAnwesenheiten, $le_id)
 	{
@@ -313,20 +331,24 @@ class KontrolleApi extends FHCAPI_Controller
 			$entschuldigtStatus
 		);
 
-		$setsEntschuldigt = array();
+		$ids = array();
 		foreach ($changedAnwesenheiten as $entry) {
 			if (!property_exists($entry, 'status') || !in_array($entry->status, $allowed, true))
 				$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
-			if ($entry->status === $entschuldigtStatus) $setsEntschuldigt[] = $entry->anwesenheit_user_id;
+			$ids[] = $entry->anwesenheit_user_id;
 		}
-		if (!count($setsEntschuldigt)) return;
 
 		$le = getData($this->_ci->LehreinheitModel->load($le_id))[0];
 		if ($this->isAdmin($le->lehrveranstaltung_id)) return;
 
-		foreach ($setsEntschuldigt as $anwesenheit_user_id) {
-			$stored = $this->_ci->AnwesenheitUserModel->load($anwesenheit_user_id);
-			if (!hasData($stored) || getData($stored)[0]->status !== $entschuldigtStatus)
+		$result = $this->_ci->AnwesenheitUserModel->getIdsWithStatus($ids, $entschuldigtStatus);
+		if (isError($result)) $this->terminateWithError($this->p->t('global', 'errorAnwUserUpdate'), 'general');
+		$storedEntschuldigt = array_map('intval', array_column(getData($result) ?: array(), 'anwesenheit_user_id'));
+
+		// entschuldigt before and after, or not entschuldigt before and after
+		foreach ($changedAnwesenheiten as $entry) {
+			$isEntschuldigt = in_array((int) $entry->anwesenheit_user_id, $storedEntschuldigt, true);
+			if ($isEntschuldigt !== ($entry->status === $entschuldigtStatus))
 				$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 		}
 	}
@@ -415,7 +437,7 @@ class KontrolleApi extends FHCAPI_Controller
 		
 		// check for active codes of LE from anw-kontrollen $uid has created
 		// -> avoid jumping in anwesenheitskontrolle of another lektor 
-		$resultQR = $this->_ci->QRModel->getActiveCodeForLE($le_id, getAuthUID());
+		$resultQR = is_numeric($le_id) ? $this->_ci->QRModel->getActiveCodeForLE($le_id, getAuthUID()) : null;
 
 		if(!hasData($resultQR)) $this->terminateWithSuccess($this->p->t('global', 'noExistingKontrolleFound'));
 
@@ -479,12 +501,13 @@ class KontrolleApi extends FHCAPI_Controller
 	}
 
 	/**
-	 * terminates with 'missingParameters' error if any of the given properties is missing on the POST payload
+	 * terminates with 'missingParameters' if the POST payload is no JSON object or lacks one of the given properties.
+	 * A property with the value null counts as present
 	 */
 	private function _requireProps($obj, array $props)
 	{
 		foreach ($props as $prop) {
-			if (!property_exists($obj, $prop))
+			if (!is_object($obj) || !property_exists($obj, $prop))
 				$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 	}
@@ -530,7 +553,7 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function _loadKontrolleAuthorized($anwesenheit_id)
 	{
-		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
+		$resultKontrolle = is_numeric($anwesenheit_id) ? $this->_ci->AnwesenheitModel->load($anwesenheit_id) : null;
 		if(!hasData($resultKontrolle))
 			$this->terminateWithError($this->p->t('global', 'errorKontrolleDoesNotExist'), 'general');
 
@@ -869,6 +892,10 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
+		// make sure the kontrolle actually belongs to the authorized lva, like in pollAnwesenheiten
+		if(!$this->_kontrolleInLva($anwesenheit_id, $lv_id))
+			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
+
 		// make sure the kontrolle whose codes get deleted actually belongs to a le the caller teaches
 		$this->_loadKontrolleAuthorized($anwesenheit_id);
 
@@ -890,7 +917,7 @@ class KontrolleApi extends FHCAPI_Controller
 	 */
 	private function isAdminOrTeachesLE($le_id)
 	{
-		$leResult = $this->_ci->LehreinheitModel->load($le_id);
+		$leResult = is_numeric($le_id) ? $this->_ci->LehreinheitModel->load($le_id) : null;
 		if(!hasData($leResult)) return false;
 		$le = getData($leResult)[0];
 
@@ -935,6 +962,19 @@ class KontrolleApi extends FHCAPI_Controller
 	}
 
 	/**
+	 * true if the kontrolle belongs to a lehreinheit of the lva. The id is a number: another value would be a
+	 * database error
+	 */
+	private function _kontrolleInLva($anwesenheit_id, $lv_id)
+	{
+		if(!is_numeric($anwesenheit_id)) return false;
+
+		$result = $this->_ci->AnwesenheitModel->kontrolleBelongsToLva($anwesenheit_id, $lv_id);
+
+		return hasData($result) && ((int) getData($result)[0]->cnt) > 0;
+	}
+
+	/**
 	 * POST METHOD
 	 * expects parameters 'le_id', 'date'
 	 *
@@ -957,7 +997,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$reach = $this->_ci->config->item('KONTROLLE_DELETE_MAX_REACH');
 		$dateLimit = strtotime("-$reach day midnight");
 
-		$resultKontrolle = $this->_ci->AnwesenheitModel->load($anwesenheit_id);
+		$resultKontrolle = is_numeric($anwesenheit_id) ? $this->_ci->AnwesenheitModel->load($anwesenheit_id) : null;
 
 		if(!hasData($resultKontrolle)) {
 			$this->terminateWithError($this->p->t('global', 'errorDeleteKontrolleKeineLEAnDatum', [
@@ -1066,11 +1106,8 @@ class KontrolleApi extends FHCAPI_Controller
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
 		// make sure the polled kontrolle actually belongs to the authorized lva
-		$belongsCheck = $this->_ci->AnwesenheitModel->kontrolleBelongsToLva($anwesenheit_id, $lv_id);
-		if(isError($belongsCheck) || !hasData($belongsCheck)
-			|| ((int) getData($belongsCheck)[0]->cnt) === 0) {
+		if(!$this->_kontrolleInLva($anwesenheit_id, $lv_id))
 			$this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
-		}
 
 		$countPoll = $this->_getCheckInCounts($anwesenheit_id);
 		$this->terminateWithSuccess(getData($countPoll)[0]);
@@ -1092,9 +1129,12 @@ class KontrolleApi extends FHCAPI_Controller
 		$berechtigt = $this->isAdminOrTeachesLva($lv_id);
 		if(!$berechtigt) $this->terminateWithError($this->p->t('global', 'notAuthorizedForLva'), 'general');
 
+		if(!$this->_ci->anwesenheitenlib->isIdList($ids))
+			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
 		$result = $this->_ci->AnwesenheitUserModel->getAnwQuoteForPrestudentIds($ids, $lv_id,  $sem_kurzbz);
 
-		if(!isSuccess($result)) $this->terminateWithError($result);
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$this->terminateWithSuccess($result);
 	}
@@ -1139,6 +1179,15 @@ class KontrolleApi extends FHCAPI_Controller
 
 		// authorizes against the lehreinheit the kontrolle actually belongs to
 		$kontrolle = $this->_loadKontrolleAuthorized($anwesenheit_id);
+
+		// the reach of a lektor: day based from the insert date like the delete, the admin of the lva has no limit
+		$reach = $this->_ci->anwesenheitenlib->getKontrolleUpdateMaxReach();
+		$insertDay = strtotime((new DateTime($kontrolle->insertamum))->format('Y-m-d'));
+		if ($insertDay < strtotime("-$reach day midnight")) {
+			$le = getData($this->_ci->LehreinheitModel->load($kontrolle->lehreinheit_id))[0];
+			if (!$this->isAdmin($le->lehrveranstaltung_id))
+				$this->terminateWithError($this->p->t('global', 'providedDateTooOld'), 'general');
+		}
 
 		// for the logs
 		$oldVon = $kontrolle->von;
@@ -1286,7 +1335,7 @@ class KontrolleApi extends FHCAPI_Controller
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLvaAndMaUid($lva_id, $ma_uid, $sem_kurzbz);
 
 
-		if(!isSuccess($result)) $this->terminateWithError(getError($result));
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$leForLvaAndMA = getData($result);
 
 		if(is_null($leForLvaAndMA))
@@ -1316,7 +1365,7 @@ class KontrolleApi extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitModel->getAllLehreinheitenForLva($lva_id, $sem_kurzbz);
 		
-		if(!isSuccess($result)) $this->terminateWithError(getError($result));
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$leForLva = getData($result);
 
 		if(is_null($leForLva))
@@ -1345,7 +1394,7 @@ class KontrolleApi extends FHCAPI_Controller
 		forEach($distinctLeId as $leRow)
 		{
 			$result = $this->_ci->AnwesenheitModel->getLETermine($leRow->lehreinheit_id);
-			if(!isSuccess($result)) $this->terminateWithError(getError($result));
+			if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 			$leTermine = getData($result);
 
 			// if someone knows how to this one in the previous sql query, feel free to change it and tell me - johann

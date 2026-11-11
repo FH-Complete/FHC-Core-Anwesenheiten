@@ -107,6 +107,11 @@ class Anwesenheit_User_model extends \DB_Model
 				'updatevon' => getAuthUID(),
 				'updateamum' => date('Y-m-d H:i:s')
 			);
+			// who set the current status and when, like the qr scan (ProfilApi::checkInAnwesenheit)
+			if($entry->status !== $existing->status) {
+				$fields['statussetvon'] = $fields['updatevon'];
+				$fields['statussetamum'] = $fields['updateamum'];
+			}
 			if(property_exists($entry, 'notiz')) $fields['notiz'] = $entry->notiz;
 
 			if($fehlminutenStatus !== null) {
@@ -153,6 +158,18 @@ class Anwesenheit_User_model extends \DB_Model
 			WHERE anwesenheit_user_id IN ? AND lehreinheit_id <> ?";
 
 		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids, $le_id]);
+	}
+
+	/**
+	 * loads the ids of the given entries that have the status $status
+	 */
+	public function getIdsWithStatus($anwesenheit_user_ids, $status)
+	{
+		$query = "SELECT anwesenheit_user_id
+			FROM extension.tbl_anwesenheit_user
+			WHERE anwesenheit_user_id IN ? AND status = ?";
+
+		return $this->execReadOnlyQuery($query, [$anwesenheit_user_ids, $status]);
 	}
 
 	/**

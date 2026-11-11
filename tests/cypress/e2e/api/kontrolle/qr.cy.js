@@ -44,6 +44,30 @@ describe('KontrolleApi: the QR code of a Kontrolle', () => {
 		});
 	});
 
+	it('degenerateQRCode with the code of another Kontrolle → both codes stay', () => {
+		givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(first => {
+			givenKontrolle(ctx, { qr: true, von: '10:00', bis: '11:00' }).then(second => {
+				kontrolleApi.degenerateQRCode(first.kontrolle.anwesenheit_id, second.code, account('LEKTOR'));
+
+				readKontrolle(first.kontrolle.anwesenheit_id).its('codes').should('deep.equal', [first.code]);
+				readKontrolle(second.kontrolle.anwesenheit_id).its('codes').should('deep.equal', [second.code]);
+			});
+		});
+	});
+
+	// the query has no order: with two running Kontrollen of one creator in an LE the answer is one of them
+	it('getExistingQRCode with two running Kontrollen of the creator in the LE → the code of one of them', () => {
+		givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(first => {
+			givenKontrolle(ctx, { qr: true, von: '10:00', bis: '11:00' }).then(second => {
+				kontrolleApi
+					.getExistingQRCode(ctx.le, account('LEKTOR'))
+					.fhcData()
+					.its('code')
+					.should('be.oneOf', [first.code, second.code]);
+			});
+		});
+	});
+
 	it('restartKontrolle with a code → the same code', () => {
 		givenKontrolle(ctx, { qr: true }).then(({ kontrolle, code }) => {
 			restart(kontrolle).its('code').should('eq', code);
@@ -85,6 +109,31 @@ describe('KontrolleApi: the QR code of a Kontrolle', () => {
 		});
 	});
 
+	it('pollAnwesenheiten with an unknown anwesenheit_id → notAuthorizedForLva', () => {
+		kontrolleApi
+			.pollAnwesenheiten(UNKNOWN_ID, ctx.lvId, account('LEKTOR'))
+			.then(res => expectPhraseError(res, 'global/notAuthorizedForLva', account('LEKTOR')));
+	});
+
+	// the read rule of the LV: a lektor of the LV reads every LE of it
+	it('pollAnwesenheiten for a Kontrolle of the LE of LEKTOR2 in the same LV → the counts', () => {
+		givenKontrolle(ctx, { qr: true, le: ctx.foreignLe, as: account('FULL_ASSISTENZ') }).then(({ kontrolle, entries }) => {
+			kontrolleApi
+				.pollAnwesenheiten(kontrolle.anwesenheit_id, ctx.lvId, account('LEKTOR'))
+				.fhcData()
+				.then(counts => expect(Number(counts.abwesend), 'abwesend').to.eq(entries.length));
+		});
+	});
+
+	it('deleteQRCode with the lv_id of another LV of LEKTOR → notAuthorizedForLva, the code stays', () => {
+		givenKontrolle(ctx, { qr: true }).then(({ kontrolle, code }) => {
+			kontrolleApi
+				.deleteQRCode(kontrolle.anwesenheit_id, ctx.otherLv, account('LEKTOR'))
+				.then(res => expectPhraseError(res, 'global/notAuthorizedForLva', account('LEKTOR')));
+			readKontrolle(kontrolle.anwesenheit_id).its('codes').should('deep.equal', [code]);
+		});
+	});
+
 	describe('restartKontrolle of an old Kontrolle: the date rules of a new one', () => {
 		const pastLimit = () => addDays(ctx.today, -ctx.config.kontrolleCreateMaxReachPast);
 
@@ -108,6 +157,24 @@ describe('KontrolleApi: the QR code of a Kontrolle', () => {
 				restartAs(kontrolle, 'LEKTOR').then(res => expectPhraseError(res, 'global/providedDateTooOld', account('LEKTOR')));
 				readKontrolle(kontrolle.anwesenheit_id).its('codes').should('be.empty');
 			});
+		});
+
+		// only the restart follows the date rules: a lektor resumes and stops a running Kontrolle of every age,
+		// for example after the browser closed
+		it('LEKTOR, a running Kontrolle one day before the reach → regenerateQRCode and deleteQRCode work', () => {
+			givenKontrolle(ctx, { qr: true, date: addDays(pastLimit(), -1), as: account('FULL_ASSISTENZ') }).then(
+				({ kontrolle, code }) => {
+					kontrolleApi
+						.regenerateQRCode(kontrolle.anwesenheit_id, account('LEKTOR'))
+						.fhcData()
+						.its('code')
+						.should('match', /^[0-9a-f]{8}$/)
+						.and('not.eq', code);
+
+					kontrolleApi.deleteQRCode(kontrolle.anwesenheit_id, ctx.lvId, account('LEKTOR')).fhcData();
+					readKontrolle(kontrolle.anwesenheit_id).its('codes').should('be.empty');
+				},
+			);
 		});
 
 		it('LEKTOR, a Kontrolle on a Termin before the reach → a new code', function () {
@@ -140,10 +207,13 @@ describe('KontrolleApi: the QR code of a Kontrolle', () => {
 		});
 	});
 
-	it('regenerateQRCode with an unknown anwesenheit_id → errorKontrolleDoesNotExist', () => {
-		kontrolleApi
-			.regenerateQRCode(UNKNOWN_ID, account('LEKTOR'))
-			.then(res => expectPhraseError(res, 'global/errorKontrolleDoesNotExist', account('LEKTOR')));
+	it('regenerateQRCode and restartKontrolle with an unknown anwesenheit_id → errorKontrolleDoesNotExist', () => {
+		[
+			kontrolleApi.regenerateQRCode(UNKNOWN_ID, account('LEKTOR')),
+			kontrolleApi.restartKontrolle(ctx.le, dateParam(ctx.today), UNKNOWN_ID, account('LEKTOR')),
+		].forEach(request =>
+			request.then(res => expectPhraseError(res, 'global/errorKontrolleDoesNotExist', account('LEKTOR'))),
+		);
 	});
 
 	it('getExistingQRCode without a Kontrolle, and after deleteQRCode → noExistingKontrolleFound', () => {

@@ -6,7 +6,7 @@ import { expectPhraseError } from '../../../support/anwChecks';
 import { useAnwContext } from '../../../support/anwContext';
 
 describe('ProfilApi: ids of another student', () => {
-	const ctx = useAnwContext({ resets: [] });
+	const ctx = useAnwContext({ resets: ['kontrollen'] });
 	let own;
 	let other;
 
@@ -62,11 +62,10 @@ describe('ProfilApi: ids of another student', () => {
 		profilApi.getTimeline(other.personId, as()).then(noAuthorization);
 	});
 
-	it('LEKTOR reads the quota of a student → allowed', () => {
+	it('LEKTOR reads the quota of a student of its LV → the quota, 100 without a Kontrolle', () => {
 		profilApi
 			.getAnwesenheitSumByLva(ctx.lvId, ctx.semKurzbz, own.prestudentId, account('LEKTOR'))
 			.fhcData()
-			.its('0.sum')
-			.should('exist');
+			.then(([row]) => expect(Number(row.sum)).to.eq(100));
 	});
 });

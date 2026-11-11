@@ -96,6 +96,7 @@ class ProfilApi extends FHCAPI_Controller
 	 */
 	public function getProfileViewData() {
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('uid'));
 		$uid = $result->uid;
 
 		if($uid === null) $uid = $this->_uid;
@@ -105,7 +106,7 @@ class ProfilApi extends FHCAPI_Controller
 
 		$result = $this->_ci->AnwesenheitModel->getStudentViewData($uid);
 
-		if(isError($result)) $this->terminateWithError($result);
+		if(isError($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$this->terminateWithSuccess($result);
 	}
@@ -212,10 +213,11 @@ class ProfilApi extends FHCAPI_Controller
 	public function getAllAnwesenheitenByStudentByLva() {
 
 		$result = $this->getPostJSON();
-		
+		$this->_requireProps($result, array('prestudent_id', 'lv_id', 'uid'));
+
 		$prestudent_id = $result->prestudent_id;
 		$lv_id = $result->lv_id;
-		$sem_kurzbz = $result->sem_kurzbz;
+		$sem_kurzbz = isset($result->sem_kurzbz) ? $result->sem_kurzbz : null;
 		$uid = $result->uid;
 
 		// the uid check does not cover the prestudent_id of the query
@@ -293,7 +295,8 @@ class ProfilApi extends FHCAPI_Controller
 	public function checkInAnwesenheit() {
 
 		$result = $this->getPostJSON();
-		$zugangscode = isset($result->zugangscode) ? $result->zugangscode : null;
+		$this->_requireProps($result, array('zugangscode'));
+		$zugangscode = $result->zugangscode;
 
 		// a code is text: a number, an array or an object only gives a database error
 		if (!is_string($zugangscode) || isEmptyString($zugangscode))
@@ -440,6 +443,8 @@ class ProfilApi extends FHCAPI_Controller
 		$requestSizeError = $this->_ci->entschuldigunguploadlib->checkRequestSize('addEntschuldigung');
 		if ($requestSizeError !== null) $this->terminateWithError($requestSizeError, 'general');
 
+		$this->_requireProps((object) $_POST, array('von', 'bis', 'person_id'));
+
 		if (isEmptyString($_POST['von']) || isEmptyString($_POST['bis']) || isEmptyString($_POST['person_id']))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
@@ -478,8 +483,8 @@ class ProfilApi extends FHCAPI_Controller
 			$file = array(
 				'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 				'version' => 0,
-				'name' => $_FILES['files']['name'],
-				'mimetype' => $_FILES['files']['type'],
+				'name' => $_FILES['files']['name'] ?? null,
+				'mimetype' => $_FILES['files']['type'] ?? null,
 				'insertamum' => date('Y-m-d H:i:s'),
 				'insertvon' => $this->_uid,
 			);
@@ -578,6 +583,8 @@ class ProfilApi extends FHCAPI_Controller
 		$requestSizeError = $this->_ci->entschuldigunguploadlib->checkRequestSize('editEntschuldigung');
 		if ($requestSizeError !== null) $this->terminateWithError($requestSizeError, 'general');
 
+		$this->_requireProps((object) $_POST, array('person_id', 'entschuldigung_id'));
+
 		if (isEmptyString($_POST['person_id']) || isEmptyString($_POST['entschuldigung_id'])) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		
 		$person_id = $_POST['person_id'];
@@ -629,8 +636,8 @@ class ProfilApi extends FHCAPI_Controller
 		$file = array(
 			'kategorie_kurzbz' => 'ext_anw_entschuldigungen',
 			'version' => 0,
-			'name' => $_FILES['files']['name'],
-			'mimetype' => $_FILES['files']['type'],
+			'name' => $_FILES['files']['name'] ?? null,
+			'mimetype' => $_FILES['files']['type'] ?? null,
 			'insertamum' => date('Y-m-d H:i:s'),
 			'insertvon' => $this->_uid,
 		);
@@ -759,6 +766,9 @@ class ProfilApi extends FHCAPI_Controller
 			);
 		}
 
+		// the person_id is optional: the student view sends none for the own entschuldigung
+		$this->_requireProps($this->getPostJSON(), array('entschuldigung_id'));
+
 		$data = json_decode($this->input->raw_input_stream, true);
 		$entschuldigung_id = isset($data['entschuldigung_id']) ? (string)$data['entschuldigung_id'] : '';
 
@@ -850,10 +860,7 @@ class ProfilApi extends FHCAPI_Controller
 		}
 
 		$result = $this->getPostJSON();
-
-		if(!property_exists($result, 'person_id')) {
-			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
-		}
+		$this->_requireProps($result, array('person_id'));
 
 		$person_id = $result->person_id;
 
@@ -876,6 +883,7 @@ class ProfilApi extends FHCAPI_Controller
 	public function getAnwesenheitSumByLva()
 	{
 		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('lv_id', 'sem_kz', 'id'));
 		$lv_id = $result->lv_id;
 		$sem_kurzbz = $result->sem_kz;
 		$prestudent_id = $result->id;
@@ -884,6 +892,9 @@ class ProfilApi extends FHCAPI_Controller
 		// students page. A student reads only the own quota
 		if(!$this->_ci->anwesenheitenlib->isAdminOrLektorOfLva($lv_id) && !$this->_ci->anwesenheitenlib->isOwnPrestudent($prestudent_id))
 			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
+		// a student passes the check above with the own prestudent_id and any lv_id
+		if(!is_numeric($lv_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$result = $this->_ci->AnwesenheitUserModel->getAnwesenheitSumByLva($prestudent_id, $lv_id, $sem_kurzbz);
 
@@ -908,10 +919,12 @@ class ProfilApi extends FHCAPI_Controller
 			);
 		}
 
+		$result = $this->getPostJSON();
+		$this->_requireProps($result, array('person_id'));
+
 		if(!$this->_ci->anwesenheitenlib->isTimelineAllowed()) $this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
-		$result = $this->getPostJSON();
-		$person_id = isset($result->person_id) ? $result->person_id : null;
+		$person_id = $result->person_id;
 		if($person_id === null) $person_id = getAuthPersonId();
 
 		if(!is_numeric($person_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
@@ -925,10 +938,10 @@ class ProfilApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
 
 		$anw = $this->_ci->AnwesenheitUserModel->getAllAnwesenheitenByPersonId($person_id);
-		if(isError($anw)) $this->terminateWithError(getError($anw), 'general');
+		if(isError($anw)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$ent = $this->_ci->EntschuldigungModel->getEntschuldigungenByPerson($person_id);
-		if(isError($ent)) $this->terminateWithError(getError($ent), 'general');
+		if(isError($ent)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$anw = getData($anw) ?: array();
 		$ent = getData($ent) ?: array();
@@ -997,6 +1010,18 @@ class ProfilApi extends FHCAPI_Controller
 		if($this->_ci->anwesenheitenlib->isOwnPrestudent($prestudent_id)) return true;
 
 		return $this->isStaff() && $this->_ci->anwesenheitenlib->isPrestudentInEntitledStudiengaenge($prestudent_id);
+	}
+
+	/**
+	 * terminates with 'missingParameters' if the POST payload is no JSON object or lacks one of the given properties.
+	 * A property with the value null counts as present
+	 */
+	private function _requireProps($obj, array $props)
+	{
+		foreach ($props as $prop) {
+			if (!is_object($obj) || !property_exists($obj, $prop))
+				$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
 	}
 
 	private function _setAuthUID()

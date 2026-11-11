@@ -7,6 +7,8 @@ const { ACTIVE_STUDENTS, TEST_LE_SQL, otherLvSql } = require('./tasks/anwDb');
 
 const STAFF = ['demolektor1', 'demolektor2', 'demolektor3', 'demoassistenz', 'demoadmin'];
 const STUDENTS = ['s325b311', 's125b101'];
+// the accounts of the permission matrix: ENT_RO, STUDENT_NOENT, NORIGHT
+const MATRIX = ['demolektor4', 's125b102', 'demolektor5'];
 const list = uids => uids.map(uid => `'${uid}'`).join(', ');
 
 const NEEDED = [
@@ -17,7 +19,17 @@ const NEEDED = [
 	['demoassistenz', 'extension/anw_r_ent_assistenz'],
 	['demoadmin', 'extension/anw_r_full_assistenz'],
 	...STUDENTS.flatMap(uid => [[uid, 'extension/anw_r_student'], [uid, 'extension/anw_stud_ent']]),
+	['demolektor4', 'extension/anw_r_ent_assistenz'],
+	['s125b102', 'extension/anw_r_student'],
 ];
+
+// the rights of the extension that an account has, direct or through a role. $1: the uid, $2: one right, or null for all
+const ANW_RIGHTS = `
+	SELECT COALESCE(br.berechtigung_kurzbz, rb.berechtigung_kurzbz) AS berechtigung_kurzbz, COALESCE(rb.art, br.art) AS art
+	FROM system.tbl_benutzerrolle br
+		LEFT JOIN system.tbl_rolleberechtigung rb ON (rb.rolle_kurzbz = br.rolle_kurzbz)
+	WHERE br.uid = $1 AND NOT br.negativ
+		AND COALESCE(br.berechtigung_kurzbz, rb.berechtigung_kurzbz) LIKE COALESCE($2, 'extension/anw%')`;
 
 // a check on the test LE of the run: the query and the parameters of the context task (anw:db:context)
 const onTestLe = select => ({
@@ -48,7 +60,7 @@ module.exports = {
 		{
 			label: 'accounts active',
 			sql: `SELECT COALESCE(string_agg(u, ', '), '') AS value
-				FROM unnest(ARRAY[${list([...STAFF, ...STUDENTS])}]) AS u
+				FROM unnest(ARRAY[${list([...STAFF, ...STUDENTS, ...MATRIX])}]) AS u
 				WHERE NOT EXISTS (SELECT 1 FROM public.tbl_benutzer WHERE uid = u AND aktiv)`,
 			ok: nothingMissing,
 			hint: 'The demo accounts come from the seeders of core. Use a database with the repository dump and seeders.',
@@ -66,9 +78,27 @@ module.exports = {
 			ok: nothingMissing,
 			hint: 'Run the seed.',
 		},
+		{
+			label: 'demolektor4 reads only (art s)',
+			sql: { text: `SELECT COUNT(*)::int AS value FROM (${ANW_RIGHTS}) r WHERE r.art <> 's'`, values: ['demolektor4', null] },
+			ok: r => r.value === 0,
+			hint: 'The access specs need ENT_RO with anw_r_ent_assistenz and the art s only.',
+		},
+		{
+			label: 's125b102 without anw_stud_ent',
+			sql: { text: `SELECT COUNT(*)::int AS value FROM (${ANW_RIGHTS}) r`, values: ['s125b102', 'extension/anw_stud_ent'] },
+			ok: r => r.value === 0,
+			hint: 'The access specs need STUDENT_NOENT with anw_r_student only.',
+		},
+		{
+			label: 'demolektor5 without a right of the extension',
+			sql: { text: `SELECT COUNT(*)::int AS value FROM (${ANW_RIGHTS}) r`, values: ['demolektor5', null] },
+			ok: r => r.value === 0,
+			hint: 'The access specs need NORIGHT without any extension/anw right.',
+		},
 		// the preconditions of requireFixture in the specs, on the test LE of the run. A student outside the
-		// Studiengaenge of the staff is checked at runtime only: PermissionLib maps the rights through the OE tree
-		// of the legacy berechtigung class
+		// Studiengaenge of the staff and an LV of demolektor1 outside the OEs of demoadmin are checked at runtime
+		// only: PermissionLib maps the rights through the OE tree of the legacy berechtigung class
 		{
 			label: 'test LV-Teil of the run, with a test student',
 			sql: onTestLe('SELECT CASE WHEN with_test_student THEN le_id END AS value FROM test_le'),

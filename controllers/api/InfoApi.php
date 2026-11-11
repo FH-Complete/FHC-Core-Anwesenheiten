@@ -29,6 +29,7 @@ class InfoApi extends FHCAPI_Controller
 
 		$this->_ci->load->library('PermissionLib');
 		$this->_ci->load->library('PhrasesLib');
+		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
 
 		$this->loadPhrases(
 			array(
@@ -57,8 +58,6 @@ class InfoApi extends FHCAPI_Controller
 	 */
 	public function getViewPermissions()
 	{
-		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
-
 		$permissions = $this->_ci->anwesenheitenlib->getViewPermissions();
 		$permissions['today'] = date('Y-m-d');
 
@@ -76,13 +75,13 @@ class InfoApi extends FHCAPI_Controller
 		$von = $this->input->get('von');
 		$bis = $this->input->get('bis');
 
-		// fall back to today for missing/invalid dates (query is parameterized, but keep the DB clean)
-		if (!is_string($von) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $von)) $von = date('Y-m-d');
-		if (!is_string($bis) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis)) $bis = $von;
+		// fall back to today for missing/invalid dates, also for a date that does not exist like 2026-13-45
+		if (!$this->_ci->anwesenheitenlib->isDate($von)) $von = date('Y-m-d');
+		if (!$this->_ci->anwesenheitenlib->isDate($bis)) $bis = $von;
 
 		$result = $this->_ci->AnwesenheitModel->getLektorLessonsInRange($this->_uid, $von, $bis);
 
-		if (!isSuccess($result)) $this->terminateWithError($result);
+		if (!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$this->terminateWithSuccess(getData($result));
 	}
 
@@ -131,8 +130,6 @@ class InfoApi extends FHCAPI_Controller
 	 */
 	private function _mayReadStudentInfo($prestudent_id, $lva_id)
 	{
-		$this->_ci->load->library('extensions/FHC-Core-Anwesenheiten/AnwesenheitenLib');
-
 		return $this->_ci->anwesenheitenlib->isAdminOrLektorOfLva($lva_id)
 			|| $this->_ci->anwesenheitenlib->isOwnPrestudent($prestudent_id);
 	}
@@ -144,25 +141,21 @@ class InfoApi extends FHCAPI_Controller
 	public function getStudiengaenge()
 	{
 		$result = $this->getPostJSON();
-		$allowed_stg = isset($result->allowed_stg) ? $result->allowed_stg : null;
+		$this->_requireProps($result, array('allowed_stg'));
+		$allowed_stg = $result->allowed_stg;
 
 		$admin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');
 
-		// the query needs a list, anything else is a database error
-		if(!$admin && (!is_array($allowed_stg) || !count($allowed_stg)))
+		// the query needs a list of numbers, anything else is a database error
+		if(!$admin && !$this->_ci->anwesenheitenlib->isIdList($allowed_stg))
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
-		if($admin) {
-			$result = $this->_ci->AnwesenheitModel->getStudiengaenge();
+		$result = $admin
+			? $this->_ci->AnwesenheitModel->getStudiengaenge()
+			: $this->_ci->AnwesenheitModel->getStudiengaengeFiltered($allowed_stg);
 
-			if(!isSuccess($result)) $this->terminateWithError($result);
-			$this->terminateWithSuccess($result);
-		} else {
-			$result = $this->_ci->AnwesenheitModel->getStudiengaengeFiltered($allowed_stg);
-
-			if(!isSuccess($result)) $this->terminateWithError($result);
-			$this->terminateWithSuccess($result);
-		}
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+		$this->terminateWithSuccess($result);
 
 	}
 
@@ -179,13 +172,17 @@ class InfoApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
-		if(isEmptyString($lva_id) || isEmptyString($sem)) {
+		if(!is_numeric($lva_id) || isEmptyString($sem)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
+		// the list fills the lektor select of the kontrolle view: the rule of that view
+		if(!$this->_ci->anwesenheitenlib->isAdminOrLektorOfLva($lva_id))
+			$this->terminateWithError($this->p->t('global', 'noAuthorization'), 'general');
+
 		$result = $this->_ci->AnwesenheitModel->getLektorenForLvaInSemester($lva_id, $sem);
 
-		if(!isSuccess($result)) $this->terminateWithError($result);
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$this->terminateWithSuccess($result);
 	}
 
@@ -202,13 +199,23 @@ class InfoApi extends FHCAPI_Controller
 			$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
 		}
 
-		if(isEmptyString($lv_id) || isEmptyString($sem_kurzbz)) {
+		if(!is_numeric($lv_id) || isEmptyString($sem_kurzbz)) {
 			$this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		}
 
 		$result = $this->_ci->AnwesenheitModel->getStudentsForLvaInSemester($lv_id, $sem_kurzbz);
-		if(!isSuccess($result)) $this->terminateWithError($result);
-		$this->terminateWithSuccess($result);
+		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
+
+		// the list fills the student dropdown of the student view: only the studiengaenge of the caller, like its reads
+		$students = getData($result) ?: array();
+		$entitled = $this->_ci->anwesenheitenlib->filterEntitledStudiengaenge(
+			array_unique(array_column($students, 'studiengang_kz'))
+		);
+		$students = array_values(array_filter($students, function ($student) use ($entitled) {
+			return in_array($student->studiengang_kz, $entitled);
+		}));
+
+		$this->terminateWithSuccess(success($students));
 	}
 
 	/**
@@ -218,13 +225,26 @@ class InfoApi extends FHCAPI_Controller
 	 */
 	public function getLvViewDataInfo() {
 		$result = $this->getPostJSON();
-		$lv_id = isset($result->lv_id) ? $result->lv_id : null;
+		$this->_requireProps($result, array('lv_id'));
+		$lv_id = $result->lv_id;
 
 		if(!is_numeric($lv_id)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 
 		$result = $this->_ci->AnwesenheitModel->getLvViewDataInfo($lv_id);
 		if(!isSuccess($result)) $this->terminateWithError($this->p->t('global', 'wrongParameters'), 'general');
 		$this->terminateWithSuccess($result);
+	}
+
+	/**
+	 * terminates with 'missingParameters' if the POST payload is no JSON object or lacks one of the given properties.
+	 * A property with the value null counts as present
+	 */
+	private function _requireProps($obj, array $props)
+	{
+		foreach ($props as $prop) {
+			if (!is_object($obj) || !property_exists($obj, $prop))
+				$this->terminateWithError($this->p->t('global', 'missingParameters'), 'general');
+		}
 	}
 
 	private function _setAuthUID()

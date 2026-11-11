@@ -101,6 +101,69 @@ describe('Entschuldigung: the effect of the decision on the entries', () => {
 		});
 	});
 
+	[
+		['an open', undefined],
+		['a declined', false],
+	].forEach(([label, decision]) => {
+		it(`a new Kontrolle inside ${label} Entschuldigung → the default status: abwesend with QR, anwesend without`, () => {
+			givenToday('07:00', '12:00', { decision });
+
+			givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:00' }).then(({ kontrolle }) => {
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.abwesend_status);
+			});
+			givenKontrolle(ctx, { von: '10:00', bis: '11:00' }).then(({ kontrolle }) => {
+				statusNow(kontrolle, ctx.student).should('eq', ctx.config.anwesend_status);
+			});
+		});
+	});
+
+	// three queries decide the same question: the accept (Entschuldigung_model::getAllUncoveredAnwesenheitenInTimespan),
+	// a new Kontrolle (Anwesenheit_User_model::createNewUserAnwesenheitenEntries) and new times of a Kontrolle
+	// (Entschuldigung_model::compareStatusZeitenForLE)
+	describe('the cover rule: an accepted Entschuldigung covers a Kontrolle from von to bis, both limits included', () => {
+		const lektor = () => account('LEKTOR');
+
+		// each path ends with a QR Kontrolle from 08:00 to 09:30 and an accepted Entschuldigung von - bis. Yields the Kontrolle
+		const PATHS = {
+			'the accept after the Kontrolle': (von, bis) =>
+				givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(({ kontrolle }) =>
+					givenToday(von, bis, { decision: true }).then(() => kontrolle),
+				),
+			'a new Kontrolle after the accept': (von, bis) =>
+				givenToday(von, bis, { decision: true })
+					.then(() => givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }))
+					.its('kontrolle'),
+			'new times of a Kontrolle after the accept': (von, bis) =>
+				givenToday(von, bis, { decision: true })
+					.then(() => givenKontrolle(ctx, { qr: true, von: '13:00', bis: '14:00' }))
+					.then(({ kontrolle }) =>
+						kontrolleApi
+							.updateKontrolle(ctx.le, kontrolle.anwesenheit_id, timeParam('08:00'), timeParam('09:30'), lektor())
+							.fhcData()
+							.then(() => kontrolle),
+					),
+		};
+
+		const RANGES = [
+			['equal to the Kontrolle', '08:00', '09:30', true],
+			['one minute later than the Kontrolle', '08:01', '09:30', false],
+			['one minute shorter than the Kontrolle', '08:00', '09:29', false],
+		];
+
+		Object.entries(PATHS).forEach(([path, given]) => {
+			RANGES.forEach(([label, von, bis, covered]) => {
+				it(`${path}, a range ${label} → ${covered ? 'entschuldigt' : 'abwesend'}`, () => {
+					given(von, bis).then(kontrolle => {
+						statusNow(kontrolle, ctx.student).should(
+							'eq',
+							covered ? ctx.config.entschuldigt_status : ctx.config.abwesend_status,
+						);
+					});
+				});
+			});
+		});
+	});
+
 	it('two accepted Entschuldigungen, decline one → the other still covers the entry', () => {
 		givenKontrolle(ctx, { qr: true, von: '08:00', bis: '09:30' }).then(({ kontrolle }) => {
 			givenToday('07:00', '12:00', { decision: true }).then(wide => {

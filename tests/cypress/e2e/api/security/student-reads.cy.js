@@ -154,6 +154,10 @@ describe('security: what a student reads', () => {
 				() => infoApi.getStudentInfo('1 OR 1=1', ctx.lvId, ctx.semKurzbz, as()),
 			],
 			['InfoApi::getLvViewDataInfo with lv_id "abc"', () => infoApi.getLvViewDataInfo('abc', as())],
+			[
+				'getAnwesenheitSumByLva with the own prestudent_id and lv_id "abc"',
+				() => profilApi.getAnwesenheitSumByLva('abc', ctx.semKurzbz, ctx.student.prestudentId, as()),
+			],
 			['InfoApi::getStudiengaenge with allowed_stg "x"', () => infoApi.getStudiengaenge('x', as())],
 		].forEach(([label, call]) => {
 			it(`${label} → wrongParameters, no database text`, () => {

@@ -3,14 +3,17 @@
 
 import { account } from '../../../support/accounts';
 import { entschuldigungFile, infoApi, kontrolleApi, profilApi } from '../../../support/anwApi';
-import { expectPhraseError, requireFixture, skipIf } from '../../../support/anwChecks';
-import { loadAssistenzScope, useAnwContext } from '../../../support/anwContext';
-import { givenEntschuldigung } from '../../../support/anwScenario';
+import { expectNoDbText, expectPhraseError, phraseText, requireFixture, skipIf } from '../../../support/anwChecks';
+import { loadAdminForeignLv, loadAssistenzScope, useAnwContext } from '../../../support/anwContext';
+import { dateParam, timeParam } from '../../../support/anwDates';
+import { givenEntschuldigung, givenKontrolle, readKontrolle, resetEntschuldigungen } from '../../../support/anwScenario';
 
 describe('security: the scope of the staff', () => {
-	const ctx = useAnwContext({ resets: ['entschuldigungen'], pdf: true });
+	const ctx = useAnwContext({ pdf: true });
 	let ent;
 	let full;
+	// an LV of LEKTOR where FULL_ASSISTENZ is not the admin: { lvId, semKurzbz, le }
+	let foreign;
 
 	before(() => {
 		loadAssistenzScope(ctx, 'ENT_ASSISTENZ').then(loaded => {
@@ -18,6 +21,9 @@ describe('security: the scope of the staff', () => {
 		});
 		loadAssistenzScope(ctx, 'FULL_ASSISTENZ').then(loaded => {
 			full = loaded;
+		});
+		loadAdminForeignLv(ctx).then(loaded => {
+			foreign = loaded;
 		});
 	});
 
@@ -61,8 +67,7 @@ describe('security: the scope of the staff', () => {
 			profilApi
 				.getAnwesenheitSumByLva(ctx.lvId, ctx.semKurzbz, full.outsider.prestudentId, admin())
 				.fhcData()
-				.its('0.sum')
-				.should('exist');
+				.then(([row]) => expect(Number(row.sum)).to.eq(100));
 		});
 
 		// both endpoints answer like KontrolleApi for the same account and LV
@@ -89,13 +94,83 @@ describe('security: the scope of the staff', () => {
 		});
 	});
 
+	// FULL_ASSISTENZ has the admin right on the OEs of the test LV and of the Studiengaenge of the test students
+	describe('FULL_ASSISTENZ in an LV outside its OEs: no admin there', () => {
+		const admin = () => account('FULL_ASSISTENZ');
+		const kontrollenThere = () => cy.task('anw:db:countKontrollen', { leIds: [foreign.le] });
+		const resetThere = () => cy.task('anw:db:resetKontrollen', { leIds: [foreign.le] });
+
+		// the reset of the context covers the test LEs only
+		beforeEach(() => {
+			requireFixture(foreign, 'an LV of LEKTOR where FULL_ASSISTENZ is not the admin');
+			resetThere();
+		});
+		after(() => {
+			if (foreign) resetThere();
+		});
+
+		it('insertAnwWithoutQR in an LE of it → notAuthorizedForLe, nothing stored', () => {
+			kontrolleApi
+				.insertAnwWithoutQR(foreign.le, dateParam(ctx.today), timeParam('08:00'), timeParam('09:30'), admin())
+				.then(res => expectPhraseError(res, 'global/notAuthorizedForLe', admin()));
+			kontrollenThere().should('eq', 0);
+		});
+
+		// the reads of the Kontrolle view. The student is in the Studiengaenge of FULL_ASSISTENZ: that does not count here
+		[
+			[
+				'fetchAllAnwesenheitenByLva',
+				'notAuthorizedForLva',
+				() => kontrolleApi.fetchAllAnwesenheitenByLva(foreign.lvId, foreign.semKurzbz, [foreign.le], admin()),
+			],
+			[
+				'InfoApi::getLektorsForLvaInSemester',
+				'noAuthorization',
+				() => infoApi.getLektorsForLvaInSemester(foreign.lvId, foreign.semKurzbz, admin()),
+			],
+			[
+				'InfoApi::getStudentInfo',
+				'noAuthorization',
+				() => infoApi.getStudentInfo(student().prestudentId, foreign.lvId, foreign.semKurzbz, admin()),
+			],
+			[
+				'ProfilApi::getAnwesenheitSumByLva',
+				'noAuthorization',
+				() => profilApi.getAnwesenheitSumByLva(foreign.lvId, foreign.semKurzbz, student().prestudentId, admin()),
+			],
+		].forEach(([name, phrase, call]) => {
+			it(`${name} → ${phrase}`, () => {
+				call().then(res => expectPhraseError(res, `global/${phrase}`, admin()));
+			});
+		});
+
+		// the writes on a Kontrolle of LEKTOR there. id: the anwesenheit_id
+		[
+			[
+				'updateAnwesenheiten',
+				() => kontrolleApi.updateAnwesenheiten(foreign.le, [{ anwesenheit_user_id: 1, status: ctx.config.abwesend_status }], admin()),
+			],
+			['updateKontrolle', id => kontrolleApi.updateKontrolle(foreign.le, id, timeParam('10:00'), timeParam('11:00'), admin())],
+			[
+				'deleteAnwesenheitskontrolle',
+				id => kontrolleApi.deleteAnwesenheitskontrolle(foreign.le, dateParam(ctx.today), id, admin()),
+			],
+		].forEach(([name, call]) => {
+			it(`${name} on a Kontrolle of LEKTOR there → notAuthorizedForLe, nothing changed`, () => {
+				givenKontrolle(ctx, { le: foreign.le }).then(({ code, ...state }) => {
+					call(state.kontrolle.anwesenheit_id).then(res => expectPhraseError(res, 'global/notAuthorizedForLe', admin()));
+					readKontrolle(state.kontrolle.anwesenheit_id).should('deep.equal', state);
+				});
+			});
+		});
+	});
+
 	describe('ProfilApi::getAnwesenheitSumByLva', () => {
-		it('LEKTOR2, a student of the LV it teaches → the quota', () => {
+		it('LEKTOR2, a student of the LV it teaches → the quota, 100 without a Kontrolle', () => {
 			profilApi
 				.getAnwesenheitSumByLva(ctx.lvId, ctx.semKurzbz, student().prestudentId, account('LEKTOR2'))
 				.fhcData()
-				.its('0.sum')
-				.should('exist');
+				.then(([row]) => expect(Number(row.sum)).to.eq(100));
 		});
 
 		it('LEKTOR2 with an LV it does not teach → noAuthorization', () => {
@@ -116,27 +191,65 @@ describe('security: the scope of the staff', () => {
 				'entschuldigung',
 			);
 
-		it('ENT_ASSISTENZ, a student of its Studiengaenge → the PDF', () => {
-			givenDocument().then(({ dms_id: dmsId }) => {
-				entschuldigungFile(dmsId, account('ENT_ASSISTENZ')).then(res => {
-					expect(res.headers['content-disposition']).to.match(/^attachment;/);
-					expect(res.body).to.eq(ctx.pdf);
+		const expectNoFile = res => {
+			expect(res.headers['content-disposition'], 'a file').to.be.undefined;
+			expect(String(res.body)).to.not.include('%PDF');
+		};
+
+		[
+			['ENT_ASSISTENZ', () => ent],
+			['FULL_ASSISTENZ', () => full],
+		].forEach(([role, scopeOf]) => {
+			it(`${role}, a student of its Studiengaenge → the PDF`, () => {
+				givenDocument().then(({ dms_id: dmsId }) => {
+					entschuldigungFile(dmsId, account(role)).then(res => {
+						expect(res.headers['content-disposition']).to.match(/^attachment;/);
+						expect(res.body).to.eq(ctx.pdf);
+					});
+				});
+			});
+
+			it(`${role}, a student outside its Studiengaenge → no file`, () => {
+				const { outsider } = scopeOf();
+				requireFixture(outsider, `a student outside the Studiengaenge of ${role}`);
+
+				givenDocument().then(entschuldigung => {
+					cy.task('anw:db:moveEntschuldigung', {
+						entschuldigungId: entschuldigung.entschuldigung_id,
+						personId: outsider.personId,
+						personIds: [student().personId, outsider.personId],
+					});
+					entschuldigungFile(entschuldigung.dms_id, account(role)).then(expectNoFile);
 				});
 			});
 		});
 
-		it('ENT_ASSISTENZ, a student outside its Studiengaenge → no file', () => {
-			requireFixture(ent.outsider, 'a student outside the Studiengaenge of ENT_ASSISTENZ');
+		// the reset deletes the Entschuldigung, its DMS document stays
+		it('a DMS document that no Entschuldigung links → no file, for the student and for FULL_ASSISTENZ', () => {
+			givenDocument().then(({ dms_id: dmsId }) => {
+				resetEntschuldigungen(ctx);
+				cy.task('anw:db:dmsExists', { dmsId }).should('eq', true);
 
-			givenDocument().then(entschuldigung => {
-				cy.task('anw:db:moveEntschuldigung', {
-					entschuldigungId: entschuldigung.entschuldigung_id,
-					personId: ent.outsider.personId,
-					personIds: [student().personId, ent.outsider.personId],
+				['STUDENT', 'FULL_ASSISTENZ'].forEach(role => entschuldigungFile(dmsId, account(role)).then(expectNoFile));
+			});
+		});
+
+		it('a dms_id "abc" → no file, no database text', () => {
+			['STUDENT', 'FULL_ASSISTENZ'].forEach(role => {
+				entschuldigungFile('abc', account(role)).then(res => {
+					expectNoDbText(res);
+					expectNoFile(res);
 				});
-				entschuldigungFile(entschuldigung.dms_id, account('ENT_ASSISTENZ')).then(res => {
-					expect(res.headers['content-disposition'], 'a file').to.be.undefined;
-					expect(String(res.body)).to.not.include('%PDF');
+			});
+		});
+
+		// a page, not the API: the error is an error page with the text of the phrase
+		it('without a dms_id → the error page with wrongParameters, no file', () => {
+			phraseText('global/wrongParameters', account('STUDENT')).then(text => {
+				entschuldigungFile('', account('STUDENT')).then(res => {
+					expect(res.status).to.eq(500);
+					expect(String(res.body)).to.include(text);
+					expectNoFile(res);
 				});
 			});
 		});

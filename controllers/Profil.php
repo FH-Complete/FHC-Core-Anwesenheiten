@@ -61,7 +61,7 @@ class Profil extends Auth_Controller
 		$dms_id = $this->_ci->input->get('entschuldigung');
 
 		if (isEmptyString($dms_id))
-			$this->terminateWithError($this->_ci->p->t('global', 'wrongParameters'));
+			show_error($this->_ci->p->t('global', 'wrongParameters'));
 
 		$person_id = getAuthPersonId();
 		$isAdmin = $this->permissionlib->isBerechtigt('extension/anw_r_full_assistenz');

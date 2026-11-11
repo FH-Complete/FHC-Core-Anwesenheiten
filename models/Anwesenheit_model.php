@@ -119,6 +119,7 @@ class Anwesenheit_model extends \DB_Model
 	{
 		$query = "SELECT
 				distinct on(semester, verband, gruppe, nachname, vorname, person_id) vorname, nachname, prestudent_id, person_id, uid
+				    , public.tbl_student.studiengang_kz
 				    , campus.vw_student_lehrveranstaltung.studiensemester_kurzbz,
 			   campus.vw_student_lehrveranstaltung.lehreinheit_id, campus.vw_student_lehrveranstaltung.lehrveranstaltung_id,
 			   tbl_studentlehrverband.semester, tbl_studentlehrverband.verband, tbl_studentlehrverband.gruppe
@@ -319,9 +320,13 @@ class Anwesenheit_model extends \DB_Model
 
 		$this->execQuery($query, [$anwesenheiten_user_ids]);
 
-		$query = 'UPDATE extension.tbl_anwesenheit_user SET status = ?, version = version +1, updatevon = ?, updateamum = ?
+		// statussetvon and statussetamum: who set the current status and when
+		$query = 'UPDATE extension.tbl_anwesenheit_user
+					SET status = ?, version = version +1, updatevon = ?, updateamum = ?, statussetvon = ?, statussetamum = ?
 					WHERE anwesenheit_user_id IN ? ';
-		$resultUpdate = $this->execQuery($query, [$updateStatus, getAuthUID(), date('Y-m-d H:i:s'), $anwesenheiten_user_ids]);
+		$uid = getAuthUID();
+		$now = date('Y-m-d H:i:s');
+		$resultUpdate = $this->execQuery($query, [$updateStatus, $uid, $now, $uid, $now, $anwesenheiten_user_ids]);
 
 		return $resultUpdate;
 	}

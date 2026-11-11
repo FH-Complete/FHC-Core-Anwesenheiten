@@ -17,6 +17,8 @@ $config['ENTSCHULDIGUNG_MAX_REACH'] = 3; // 3 days
 // https://media-hp.technikum-wien.at/media/20220818073147/Version-17-vom-07.06.2022.pdf §8 Abs 14
 // frist welche entscheidet wie weit in die Vergangenheit alte Kontrollen gelöscht werden dürfen
 $config['KONTROLLE_DELETE_MAX_REACH'] = 1; // 1 day
+// frist wie lange nach dem Anlegen einer Kontrolle Lektoren deren Zeiten noch ändern dürfen
+$config['KONTROLLE_UPDATE_MAX_REACH'] = 30; // 30 days
 $config['ANWESEND_STATUS'] = 'anwesend';
 $config['ABWESEND_STATUS'] = 'abwesend';
 $config['ENTSCHULDIGT_STATUS'] = 'entschuldigt';
